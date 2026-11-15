@@ -1,0 +1,41 @@
+// A small hand-written VS Code color theme exercising JSONC syntax:
+// line comments, block comments, trailing commas, short hex forms, and a
+// theme with no terminal colors (so the nick palette comes from tokenColors).
+// Written for Vela's tests; MPL-2.0 like the rest of the repository.
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "Harbor",
+  /* no "type": Vela must infer dark from the editor background */
+  "colors": {
+    "editor.background": "#1b2430", // night water
+    "editor.foreground": "#d6dde6",
+    "sideBar.background": "#151c26",
+    "sideBar.foreground": "#9aa7b8",
+    "activityBar.background": "#10161e",
+    "activityBarBadge.background": "#f2a65a",
+    "activityBarBadge.foreground": "#1b2430",
+    "button.background": "#f2a65a",
+    "textLink.foreground": "#7cc4fa",
+    "editorLineNumber.foreground": "#3a4656", // too dim for timestamps
+    "focusBorder": "#f2a65a80",
+    "list.activeSelectionBackground": "#2a3646",
+    "badge.background": "#2a3646",
+    "badge.foreground": "#d6dde6",
+    "input.background": "#121922",
+    "editorWidget.background": "#202b39",
+    "scrollbarSlider.background": "#fff2", // #RGBA short form
+  },
+  "tokenColors": [
+    { "scope": "comment", "settings": { "foreground": "#5c6b7e", "fontStyle": "italic" } },
+    { "scope": "string", "settings": { "foreground": "#a3d9a5" } },
+    { "scope": "string.quoted", "settings": { "foreground": "#a3d9a5" } },
+    { "scope": "keyword", "settings": { "foreground": "#f2a65a" } },
+    { "scope": "keyword.control", "settings": { "foreground": "#f2a65a" } },
+    { "scope": "entity.name.function", "settings": { "foreground": "#7cc4fa" } },
+    { "scope": "entity.name.type", "settings": { "foreground": "#e8c26b" } },
+    { "scope": "constant.numeric", "settings": { "foreground": "#e88388" } },
+    { "scope": "variable.parameter", "settings": { "foreground": "#c9a6f2" } },
+    { "scope": "support.class", "settings": { "foreground": "#6fd3c8" } },
+    { "scope": "punctuation", "settings": { "foreground": "#8592a3" } },
+  ],
+}

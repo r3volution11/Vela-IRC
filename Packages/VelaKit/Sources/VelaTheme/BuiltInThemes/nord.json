@@ -1,0 +1,163 @@
+{
+  "$schema": "https://raw.githubusercontent.com/r3volution11/Vela-IRC/main/schemas/vela-theme.schema.json",
+  "name": "Nord",
+  "type": "dark",
+  "author": "Sven Greb / Nord contributors (ported to Vela)",
+  "description": "A port of the Nord VS Code theme: flat Polar Night surfaces with a Frost accent.",
+  "colors": {
+    // Window
+    "window.background": "#2E3440",
+    "window.foreground": "#D8DEE9",
+    "window.border": "#3B4252",
+    "pane.divider": "#3B4252",
+
+    // Title bar
+    "titleBar.background": "#2E3440",
+    "titleBar.foreground": "#D8DEE9",
+    "titleBar.secondaryForeground": "#8C95A7",
+    "titleBar.border": "#3B4252",
+
+    // Sidebar
+    "sidebar.background": "#2E3440",
+    "sidebar.foreground": "#B4BCC9",
+    "sidebar.secondaryForeground": "#7D8699",
+    "sidebar.headerForeground": "#81A1C1",
+    "sidebar.hoverBackground": "#3B4252",
+    "sidebar.activeBackground": "#88C0D0",
+    "sidebar.activeForeground": "#2E3440",
+    "sidebar.unreadForeground": "#ECEFF4",
+    "sidebar.highlightForeground": "#88C0D0",
+    "sidebar.badgeBackground": "#434C5E",
+    "sidebar.badgeForeground": "#ECEFF4",
+    "sidebar.highlightBadgeBackground": "#88C0D0",
+    "sidebar.highlightBadgeForeground": "#2E3440",
+    "sidebar.disconnectedForeground": "#616E88",
+    "sidebar.border": "#3B4252",
+
+    // Rail
+    "rail.background": "#2E3440",
+    "rail.foreground": "#D8DEE9",
+    "rail.activeIndicator": "#88C0D0",
+
+    // Chat
+    "chat.background": "#2E3440",
+    "chat.foreground": "#D8DEE9",
+    "chat.secondaryForeground": "#9AA3B5",
+    "chat.timestamp": "#6F7B93",
+    "chat.link": "#88C0D0",
+    "chat.selfNick": "#88C0D0",
+    "chat.highlightBackground": "#394551",
+    "chat.highlightBorder": "#88C0D0",
+    "chat.mention": "#8FBCBB",
+    "chat.notice": "#EBCB8B",
+    "chat.action": "#81A1C1",
+    "chat.event": "#8C95A7",
+    "chat.event.join": "#A3BE8C",
+    "chat.event.part": "#C77D85",
+    "chat.event.quit": "#C77D85",
+    "chat.error": "#DC8A92",
+    "chat.serverMessage": "#8C95A7",
+    "chat.dayDivider": "#3B4252",
+    "chat.dayDividerForeground": "#8C95A7",
+    "chat.unreadMarker": "#BF616A",
+    "chat.hoverBackground": "#3B4252AA",
+    "chat.selectionBackground": "#434C5ECC",
+    "chat.findMatchBackground": "#88C0D066",
+    "chat.codeBackground": "#3B4252",
+    "chat.codeForeground": "#A3BE8C",
+
+    // Input
+    "input.containerBackground": "#2E3440",
+    "input.background": "#3B4252",
+    "input.foreground": "#ECEFF4",
+    "input.placeholder": "#9099AB",
+    "input.border": "#434C5E",
+    "input.focusBorder": "#88C0D0",
+    "input.iconForeground": "#8C95A7",
+
+    // Member list
+    "memberList.background": "#2E3440",
+    "memberList.foreground": "#B4BCC9",
+    "memberList.headerForeground": "#81A1C1",
+    "memberList.prefixForeground": "#88C0D0",
+    "memberList.awayForeground": "#6F7B93",
+
+    // Embeds
+    "embed.background": "#3B4252",
+    "embed.border": "#434C5E",
+    "embed.accent": "#88C0D0",
+    "embed.title": "#88C0D0",
+    "embed.description": "#D8DEE9",
+    "embed.siteName": "#9099AB",
+    "embed.placeholderBackground": "#434C5E",
+
+    // Reactions, replies, typing
+    "reaction.background": "#3B4252",
+    "reaction.border": "#434C5E",
+    "reaction.selfBackground": "#425360",
+    "reaction.selfBorder": "#88C0D0",
+    "reply.quoteBar": "#81A1C1",
+    "reply.foreground": "#9AA3B5",
+    "typing.foreground": "#9AA3B5",
+
+    // Controls
+    "accent": "#88C0D0",
+    "accentText": "#88C0D0",
+    "accentForeground": "#2E3440",
+    "focusBorder": "#88C0D0",
+    "button.background": "#88C0D0",
+    "button.foreground": "#2E3440",
+    "button.hoverBackground": "#9FCCD9",
+    "button.secondaryBackground": "#434C5E",
+    "button.secondaryForeground": "#ECEFF4",
+    "scrollbar.thumb": "#434C5E99",
+    "scrollbar.thumbHover": "#4C566AAA",
+    "popover.background": "#3B4252",
+    "popover.foreground": "#D8DEE9",
+    "popover.border": "#434C5E",
+
+    // Status
+    "status.success": "#A3BE8C",
+    "status.warning": "#EBCB8B",
+    "status.error": "#BF616A",
+
+    // Settings window
+    "settings.background": "#2E3440",
+    "settings.sidebarBackground": "#2E3440",
+    "settings.foreground": "#D8DEE9",
+    "settings.secondaryForeground": "#8C95A7",
+    "settings.border": "#3B4252",
+    "settings.controlBackground": "#3B4252"
+  },
+  "nickColors": [
+    "#BF616A",
+    "#D08770",
+    "#EBCB8B",
+    "#A3BE8C",
+    "#8FBCBB",
+    "#88C0D0",
+    "#81A1C1",
+    "#5E81AC",
+    "#B48EAD",
+    "#D99AA0",
+    "#E3A98C"
+  ],
+  "ircColors": {
+    "0": "#ECEFF4",
+    "1": "#3B4252",
+    "2": "#5E81AC",
+    "3": "#A3BE8C",
+    "4": "#BF616A",
+    "5": "#9E5560",
+    "6": "#B48EAD",
+    "7": "#D08770",
+    "8": "#EBCB8B",
+    "9": "#B7D3A0",
+    "10": "#88C0D0",
+    "11": "#8FBCBB",
+    "12": "#81A1C1",
+    "13": "#C895BF",
+    "14": "#4C566A",
+    "15": "#E5E9F0"
+  }
+}

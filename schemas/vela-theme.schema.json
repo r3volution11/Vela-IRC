@@ -1,0 +1,986 @@
+{
+  "$id" : "https://raw.githubusercontent.com/r3volution11/Vela-IRC/main/schemas/vela-theme.schema.json",
+  "$schema" : "http://json-schema.org/draft-07/schema#",
+  "additionalProperties" : false,
+  "description" : "A color theme for the Vela IRC client. See docs/THEMES.md.",
+  "properties" : {
+    "$schema" : {
+      "description" : "Schema URL, for editor autocompletion.",
+      "type" : "string"
+    },
+    "author" : {
+      "description" : "Who made the theme.",
+      "type" : "string"
+    },
+    "colors" : {
+      "additionalProperties" : false,
+      "description" : "Token colors. Anything left out is derived from the other tokens.",
+      "properties" : {
+        "accent" : {
+          "description" : "The theme's accent: selection, badges, buttons, focus rings.\n\nDefault: #C792EA (dark), #39ADB5 (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "accentForeground" : {
+          "description" : "Text and icons drawn on accent-colored fills.\n\nDefault: contrast(accent)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "accentText" : {
+          "description" : "The accent when used as text or thin lines on chat.background (links, your nick, mentions). Set it when accent is too light or dark to read.\n\nDefault: accent (dark), mix(accent, #000000, 36%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "button.background" : {
+          "description" : "Primary button.\n\nDefault: accent",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "button.foreground" : {
+          "description" : "Primary button text.\n\nDefault: accentForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "button.hoverBackground" : {
+          "description" : "Primary button under the pointer.\n\nDefault: mix(button.background, #FFFFFF, 12%) (dark), mix(button.background, #000000, 10%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "button.secondaryBackground" : {
+          "description" : "Secondary button.\n\nDefault: mix(window.background, window.foreground, 12%) (dark), mix(window.background, window.foreground, 8%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "button.secondaryForeground" : {
+          "description" : "Secondary button text.\n\nDefault: window.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.action" : {
+          "description" : "/me action messages.\n\nDefault: mix(chat.foreground, accentText, 35%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.background" : {
+          "description" : "Conversation background.\n\nDefault: window.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.codeBackground" : {
+          "description" : "Background of inline code and preformatted text.\n\nDefault: mix(chat.background, chat.foreground, 7.0%) (dark), mix(chat.background, chat.foreground, 5%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.codeForeground" : {
+          "description" : "Inline code and preformatted text.\n\nDefault: chat.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.dayDivider" : {
+          "description" : "Line separating days.\n\nDefault: mix(chat.background, chat.foreground, 12%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.dayDividerForeground" : {
+          "description" : "Date label on the day divider.\n\nDefault: chat.secondaryForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.error" : {
+          "description" : "Errors shown in the conversation.\n\nDefault: status.error",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.event" : {
+          "description" : "Membership and state events (joins, parts, modes…) unless a more specific token is set.\n\nDefault: chat.secondaryForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.event.join" : {
+          "description" : "Join events.\n\nDefault: mix(chat.event, status.success, 40%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.event.mode" : {
+          "description" : "Mode changes.\n\nDefault: chat.event",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.event.nick" : {
+          "description" : "Nickname changes.\n\nDefault: chat.event",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.event.part" : {
+          "description" : "Part events.\n\nDefault: mix(chat.event, status.error, 35%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.event.quit" : {
+          "description" : "Quit events.\n\nDefault: chat.event.part",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.event.topic" : {
+          "description" : "Topic changes.\n\nDefault: chat.event",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.findMatchBackground" : {
+          "description" : "Matches when searching the conversation. Usually translucent.\n\nDefault: transparent(status.warning, 35%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.foreground" : {
+          "description" : "Message text. Keep at least 4.5:1 contrast with chat.background.\n\nDefault: window.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.highlightBackground" : {
+          "description" : "Background of messages that mention you.\n\nDefault: mix(chat.background, chat.highlightBorder, 12%) (dark), mix(chat.background, chat.highlightBorder, 10%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.highlightBorder" : {
+          "description" : "Bar along the edge of messages that mention you.\n\nDefault: chat.mention",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.hoverBackground" : {
+          "description" : "Message under the pointer. Usually translucent.\n\nDefault: transparent(chat.foreground, 4%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.link" : {
+          "description" : "Links in messages.\n\nDefault: accentText",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.mention" : {
+          "description" : "Your nickname where it's mentioned in message text.\n\nDefault: accentText",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.notice" : {
+          "description" : "NOTICE messages.\n\nDefault: mix(chat.foreground, status.warning, 55.0%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.secondaryForeground" : {
+          "description" : "Secondary conversation text such as hostnames and metadata.\n\nDefault: mix(chat.foreground, chat.background, 35%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.selectionBackground" : {
+          "description" : "Selected text and selected messages. Usually translucent.\n\nDefault: transparent(accent, 30%) (dark), transparent(accent, 25%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.selfMessageBackground" : {
+          "description" : "Background behind your own messages.\n\nDefault: chat.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.selfNick" : {
+          "description" : "Your own nickname on your messages.\n\nDefault: accentText",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.serverMessage" : {
+          "description" : "Server messages: MOTD, numerics, connection progress.\n\nDefault: chat.secondaryForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.timestamp" : {
+          "description" : "Message timestamps.\n\nDefault: mix(chat.foreground, chat.background, 45%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "chat.unreadMarker" : {
+          "description" : "Line and label marking the first unread message.\n\nDefault: accent",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "embed.accent" : {
+          "description" : "Bar along the edge of a link preview.\n\nDefault: accent",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "embed.background" : {
+          "description" : "Link preview card background.\n\nDefault: mix(chat.background, chat.foreground, 4%) (dark), mix(chat.background, chat.foreground, 3%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "embed.border" : {
+          "description" : "Link preview card border.\n\nDefault: mix(chat.background, chat.foreground, 12%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "embed.description" : {
+          "description" : "Link preview description.\n\nDefault: mix(chat.foreground, embed.background, 15%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "embed.placeholderBackground" : {
+          "description" : "Placeholder shown while an image or video loads.\n\nDefault: mix(embed.background, chat.foreground, 6%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "embed.siteName" : {
+          "description" : "Site name above the link preview title.\n\nDefault: chat.secondaryForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "embed.title" : {
+          "description" : "Link preview title.\n\nDefault: chat.link",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "focusBorder" : {
+          "description" : "Focus ring of focused controls.\n\nDefault: accent",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "input.background" : {
+          "description" : "The message field.\n\nDefault: mix(input.containerBackground, chat.foreground, 6%) (dark), mix(input.containerBackground, #FFFFFF, 70%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "input.border" : {
+          "description" : "Border of the message field.\n\nDefault: mix(input.background, input.foreground, 12%) (dark), mix(input.background, input.foreground, 15%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "input.containerBackground" : {
+          "description" : "The bar around the message field.\n\nDefault: chat.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "input.focusBorder" : {
+          "description" : "Border of the message field while it has focus.\n\nDefault: focusBorder",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "input.foreground" : {
+          "description" : "Text typed in the message field.\n\nDefault: chat.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "input.iconForeground" : {
+          "description" : "Buttons and icons inside the composer.\n\nDefault: mix(input.foreground, input.background, 35%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "input.placeholder" : {
+          "description" : "Placeholder text in the empty message field.\n\nDefault: mix(input.foreground, input.background, 50%) (dark), mix(input.foreground, input.background, 42%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "memberList.awayForeground" : {
+          "description" : "Members who are away.\n\nDefault: mix(memberList.foreground, memberList.background, 45%) (dark), mix(memberList.foreground, memberList.background, 36%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "memberList.background" : {
+          "description" : "Member list background.\n\nDefault: sidebar.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "memberList.border" : {
+          "description" : "Edge between the member list and the conversation.\n\nDefault: pane.divider",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "memberList.foreground" : {
+          "description" : "Member nicknames (when nick colors are off).\n\nDefault: sidebar.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "memberList.headerForeground" : {
+          "description" : "Group headers such as “Operators” and member counts.\n\nDefault: sidebar.headerForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "memberList.hoverBackground" : {
+          "description" : "Row under the pointer.\n\nDefault: sidebar.hoverBackground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "memberList.prefixForeground" : {
+          "description" : "Mode prefixes (~ & @ % +) before nicknames.\n\nDefault: memberList.headerForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "pane.divider" : {
+          "description" : "Dividers between the sidebar, conversation and member list.\n\nDefault: mix(window.background, #000000, 30%) (dark), mix(window.background, window.foreground, 12%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "popover.background" : {
+          "description" : "Popovers, autocomplete lists and tooltips drawn by Vela.\n\nDefault: mix(window.background, #FFFFFF, 5%) (dark), mix(window.background, #FFFFFF, 80%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "popover.border" : {
+          "description" : "Popover border.\n\nDefault: mix(popover.background, popover.foreground, 12%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "popover.foreground" : {
+          "description" : "Text in popovers.\n\nDefault: window.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "rail.activeBackground" : {
+          "description" : "Selected item in the collapsed sidebar.\n\nDefault: sidebar.activeBackground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "rail.activeIndicator" : {
+          "description" : "Indicator bar next to the selected item.\n\nDefault: accent",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "rail.background" : {
+          "description" : "Background of the collapsed sidebar.\n\nDefault: sidebar.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "rail.badgeBackground" : {
+          "description" : "Activity badge in the collapsed sidebar.\n\nDefault: sidebar.highlightBadgeBackground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "rail.badgeForeground" : {
+          "description" : "Text of the activity badge.\n\nDefault: sidebar.highlightBadgeForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "rail.border" : {
+          "description" : "Edge of the collapsed sidebar.\n\nDefault: sidebar.border",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "rail.foreground" : {
+          "description" : "Icons and initials in the collapsed sidebar.\n\nDefault: sidebar.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "rail.inactiveForeground" : {
+          "description" : "Icons of disconnected or idle networks in the collapsed sidebar.\n\nDefault: sidebar.secondaryForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "reaction.background" : {
+          "description" : "Reaction pill.\n\nDefault: mix(chat.background, chat.foreground, 6%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "reaction.border" : {
+          "description" : "Reaction pill border.\n\nDefault: mix(chat.background, chat.foreground, 12%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "reaction.foreground" : {
+          "description" : "Reaction count.\n\nDefault: chat.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "reaction.selfBackground" : {
+          "description" : "Reaction pill you've added.\n\nDefault: mix(chat.background, accent, 18%) (dark), mix(chat.background, accent, 14.0%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "reaction.selfBorder" : {
+          "description" : "Border of a reaction pill you've added.\n\nDefault: mix(chat.background, accent, 60%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "reply.background" : {
+          "description" : "Background of the quoted message in a reply.\n\nDefault: transparent(chat.background, 0%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "reply.foreground" : {
+          "description" : "Quoted message text in a reply.\n\nDefault: chat.secondaryForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "reply.quoteBar" : {
+          "description" : "Bar beside the quoted message a reply refers to.\n\nDefault: mix(chat.background, chat.foreground, 25%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "scrollbar.thumb" : {
+          "description" : "Scrollbar thumb.\n\nDefault: transparent(window.foreground, 20%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "scrollbar.thumbHover" : {
+          "description" : "Scrollbar thumb under the pointer.\n\nDefault: transparent(window.foreground, 35%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "settings.background" : {
+          "description" : "Settings window content background.\n\nDefault: window.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "settings.border" : {
+          "description" : "Settings section separators.\n\nDefault: pane.divider",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "settings.controlBackground" : {
+          "description" : "Text fields and grouped rows in Settings.\n\nDefault: input.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "settings.foreground" : {
+          "description" : "Settings labels and text.\n\nDefault: window.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "settings.secondaryForeground" : {
+          "description" : "Settings help text and captions.\n\nDefault: mix(settings.foreground, settings.background, 40%) (dark), mix(settings.foreground, settings.background, 33%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "settings.sidebarBackground" : {
+          "description" : "Settings window sidebar.\n\nDefault: sidebar.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.activeBackground" : {
+          "description" : "The selected channel or query.\n\nDefault: mix(sidebar.background, accent, 22%) (dark), mix(sidebar.background, accent, 18%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.activeForeground" : {
+          "description" : "Text of the selected channel or query.\n\nDefault: sidebar.unreadForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.background" : {
+          "description" : "Sidebar background. Usually a slight tint of window.background.\n\nDefault: mix(window.background, #000000, 16%) (dark), mix(window.background, window.foreground, 4.5%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.badgeBackground" : {
+          "description" : "Unread-count badge.\n\nDefault: mix(sidebar.background, sidebar.foreground, 20%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.badgeForeground" : {
+          "description" : "Text of the unread-count badge.\n\nDefault: sidebar.unreadForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.border" : {
+          "description" : "Edge between the sidebar and the conversation.\n\nDefault: pane.divider",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.disconnectedForeground" : {
+          "description" : "Networks and channels while disconnected.\n\nDefault: mix(sidebar.foreground, sidebar.background, 50%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.foreground" : {
+          "description" : "Names of channels and queries with no unread activity, and general sidebar text.\n\nDefault: mix(window.foreground, sidebar.background, 20%) (dark), mix(window.foreground, sidebar.background, 15%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.headerForeground" : {
+          "description" : "Section and network headers.\n\nDefault: mix(sidebar.foreground, sidebar.background, 30%) (dark), mix(sidebar.foreground, sidebar.background, 22%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.highlightBadgeBackground" : {
+          "description" : "Badge counting unread mentions of you.\n\nDefault: accent",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.highlightBadgeForeground" : {
+          "description" : "Text of the mention badge.\n\nDefault: accentForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.highlightForeground" : {
+          "description" : "Names of channels and queries with unread mentions of you.\n\nDefault: accentText",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.hoverBackground" : {
+          "description" : "Row under the pointer.\n\nDefault: transparent(sidebar.foreground, 7.0%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.secondaryForeground" : {
+          "description" : "Secondary sidebar text: server names, counts, parted channels.\n\nDefault: mix(sidebar.foreground, sidebar.background, 40%) (dark), mix(sidebar.foreground, sidebar.background, 20%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "sidebar.unreadForeground" : {
+          "description" : "Names of channels and queries with unread messages.\n\nDefault: window.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "status.error" : {
+          "description" : "Disconnected state and errors.\n\nDefault: #FF6B81 (dark), #D32F2F (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "status.success" : {
+          "description" : "Connected state and success messages.\n\nDefault: #C3E88D (dark), #3D7D1E (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "status.warning" : {
+          "description" : "Connecting/away state and warnings.\n\nDefault: #FFCB6B (dark), #A86400 (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "titleBar.background" : {
+          "description" : "Background of the title bar / toolbar above the conversation.\n\nDefault: chat.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "titleBar.border" : {
+          "description" : "Line under the title bar.\n\nDefault: pane.divider",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "titleBar.foreground" : {
+          "description" : "Channel name and toolbar icons.\n\nDefault: chat.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "titleBar.secondaryForeground" : {
+          "description" : "Topic and other secondary title bar text.\n\nDefault: mix(titleBar.foreground, titleBar.background, 40%) (dark), mix(titleBar.foreground, titleBar.background, 33%) (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "typing.foreground" : {
+          "description" : "“… is typing” indicator.\n\nDefault: chat.secondaryForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "window.background" : {
+          "description" : "Base background of the window. Most surfaces derive from it.\n\nDefault: #292D3E (dark), #FAFAFA (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "window.border" : {
+          "description" : "Outer window border and the edges of floating panels.\n\nDefault: pane.divider",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "window.foreground" : {
+          "description" : "Base text color. Most text colors derive from it.\n\nDefault: #BFC7D5 (dark), #3E525C (light)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        }
+      },
+      "type" : "object"
+    },
+    "description" : {
+      "description" : "A short description shown in the theme picker.",
+      "type" : "string"
+    },
+    "include" : {
+      "description" : "Name or id of a theme to start from. This theme's values are layered on top of it.",
+      "type" : "string"
+    },
+    "ircColors" : {
+      "additionalProperties" : false,
+      "description" : "mIRC formatting colors by index (0–98). Only listed indexes change; 16–98 rarely need it.",
+      "patternProperties" : {
+        "^([0-9]|[1-8][0-9]|9[0-8])$" : {
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        }
+      },
+      "properties" : {
+        "0" : {
+          "description" : "mIRC color 0: White. Default #FFFFFF.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "1" : {
+          "description" : "mIRC color 1: Black. Default #000000.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "10" : {
+          "description" : "mIRC color 10: Cyan. Default #009393.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "11" : {
+          "description" : "mIRC color 11: Light Cyan. Default #00FFFF.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "12" : {
+          "description" : "mIRC color 12: Light Blue. Default #0000FC.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "13" : {
+          "description" : "mIRC color 13: Pink. Default #FF00FF.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "14" : {
+          "description" : "mIRC color 14: Grey. Default #7F7F7F.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "15" : {
+          "description" : "mIRC color 15: Light Grey. Default #D2D2D2.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "2" : {
+          "description" : "mIRC color 2: Blue. Default #00007F.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "3" : {
+          "description" : "mIRC color 3: Green. Default #009300.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "4" : {
+          "description" : "mIRC color 4: Red. Default #FF0000.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "5" : {
+          "description" : "mIRC color 5: Brown. Default #7F0000.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "6" : {
+          "description" : "mIRC color 6: Magenta. Default #9C009C.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "7" : {
+          "description" : "mIRC color 7: Orange. Default #FC7F00.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "8" : {
+          "description" : "mIRC color 8: Yellow. Default #FFFF00.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "9" : {
+          "description" : "mIRC color 9: Light Green. Default #00FC00.",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        }
+      },
+      "type" : "object"
+    },
+    "name" : {
+      "description" : "Display name. Settings refer to themes by this name (case-insensitive) or by file name.",
+      "minLength" : 1,
+      "type" : "string"
+    },
+    "nickColors" : {
+      "description" : "Palette for nickname colors; each nick always gets the same entry. Replaces the default palette.",
+      "items" : {
+        "format" : "color-hex",
+        "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+        "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+        "type" : "string"
+      },
+      "minItems" : 1,
+      "type" : "array"
+    },
+    "type" : {
+      "description" : "Whether the theme is dark or light. Picks token defaults and the appearance of system menus and alerts.",
+      "enum" : [
+        "dark",
+        "light"
+      ]
+    },
+    "vibrancy" : {
+      "description" : "Use the system's translucent materials: none (opaque colors), sidebar (sidebar and rail) or window.",
+      "enum" : [
+        "none",
+        "sidebar",
+        "window"
+      ]
+    }
+  },
+  "required" : [
+    "name",
+    "type"
+  ],
+  "title" : "Vela theme",
+  "type" : "object"
+}

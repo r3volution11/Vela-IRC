@@ -1,0 +1,164 @@
+{
+  "$schema": "https://raw.githubusercontent.com/r3volution11/Vela-IRC/main/schemas/vela-theme.schema.json",
+  "name": "Rosé Pine",
+  "type": "dark",
+  "author": "Rosé Pine contributors (ported to Vela)",
+  "description": "A port of the Rosé Pine VS Code theme: muted violet night tones with a soft rose accent.",
+  "colors": {
+    // Window
+    "window.background": "#191724",
+    "window.foreground": "#E0DEF4",
+    "window.border": "#26233A",
+    "pane.divider": "#26233A",
+
+    // Title bar
+    "titleBar.background": "#191724",
+    "titleBar.foreground": "#E0DEF4",
+    "titleBar.secondaryForeground": "#908CAA",
+    "titleBar.border": "#26233A",
+
+    // Sidebar
+    "sidebar.background": "#191724",
+    "sidebar.foreground": "#908CAA",
+    "sidebar.secondaryForeground": "#6E6A86",
+    "sidebar.headerForeground": "#6E6A86",
+    "sidebar.hoverBackground": "#6E6A861A",
+    "sidebar.activeBackground": "#6E6A8633",
+    "sidebar.activeForeground": "#E0DEF4",
+    "sidebar.unreadForeground": "#E0DEF4",
+    "sidebar.highlightForeground": "#EBBCBA",
+    "sidebar.badgeBackground": "#26233A",
+    "sidebar.badgeForeground": "#E0DEF4",
+    "sidebar.highlightBadgeBackground": "#EBBCBA",
+    "sidebar.highlightBadgeForeground": "#191724",
+    "sidebar.disconnectedForeground": "#524F67",
+    "sidebar.border": "#26233A",
+
+    // Rail
+    "rail.background": "#191724",
+    "rail.foreground": "#908CAA",
+    "rail.activeIndicator": "#EBBCBA",
+
+    // Chat
+    "chat.background": "#191724",
+    "chat.foreground": "#E0DEF4",
+    "chat.secondaryForeground": "#908CAA",
+    "chat.timestamp": "#6E6A86",
+    "chat.link": "#C4A7E7",
+    "chat.selfNick": "#EBBCBA",
+    "chat.highlightBackground": "#2E2733",
+    "chat.highlightBorder": "#EBBCBA",
+    "chat.mention": "#EBBCBA",
+    "chat.notice": "#F6C177",
+    "chat.action": "#9CCFD8",
+    "chat.event": "#908CAA",
+    "chat.event.join": "#98BBCA",
+    "chat.event.part": "#B47399",
+    "chat.event.quit": "#B47399",
+    "chat.error": "#EB6F92",
+    "chat.serverMessage": "#908CAA",
+    "chat.dayDivider": "#26233A",
+    "chat.dayDividerForeground": "#908CAA",
+    "chat.unreadMarker": "#EB6F92",
+    "chat.hoverBackground": "#6E6A861A",
+    "chat.selectionBackground": "#6E6A8640",
+    "chat.findMatchBackground": "#F6C17740",
+    "chat.codeBackground": "#1F1D2E",
+    "chat.codeForeground": "#9CCFD8",
+
+    // Input
+    "input.containerBackground": "#191724",
+    "input.background": "#1F1D2E",
+    "input.foreground": "#E0DEF4",
+    "input.placeholder": "#6E6A86",
+    "input.border": "#6E6A8633",
+    "input.focusBorder": "#EBBCBA",
+    "input.iconForeground": "#908CAA",
+
+    // Member list
+    "memberList.background": "#191724",
+    "memberList.foreground": "#908CAA",
+    "memberList.headerForeground": "#6E6A86",
+    "memberList.prefixForeground": "#EBBCBA",
+    "memberList.awayForeground": "#625E7A",
+
+    // Embeds
+    "embed.background": "#1F1D2E",
+    "embed.border": "#26233A",
+    "embed.accent": "#EBBCBA",
+    "embed.title": "#C4A7E7",
+    "embed.description": "#908CAA",
+    "embed.siteName": "#6E6A86",
+    "embed.placeholderBackground": "#26233A",
+
+    // Reactions, replies, typing
+    "reaction.background": "#1F1D2E",
+    "reaction.border": "#26233A",
+    "reaction.selfBackground": "#3A313C",
+    "reaction.selfBorder": "#EBBCBA",
+    "reply.quoteBar": "#524F67",
+    "reply.foreground": "#908CAA",
+    "typing.foreground": "#908CAA",
+
+    // Controls
+    "accent": "#EBBCBA",
+    "accentText": "#EBBCBA",
+    "accentForeground": "#191724",
+    "focusBorder": "#EBBCBA",
+    "button.background": "#EBBCBA",
+    "button.foreground": "#191724",
+    "button.hoverBackground": "#EEC6C4",
+    "button.secondaryBackground": "#26233A",
+    "button.secondaryForeground": "#E0DEF4",
+    "scrollbar.thumb": "#6E6A8633",
+    "scrollbar.thumbHover": "#6E6A8666",
+    "popover.background": "#1F1D2E",
+    "popover.foreground": "#E0DEF4",
+    "popover.border": "#26233A",
+
+    // Status
+    "status.success": "#9CCFD8",
+    "status.warning": "#F6C177",
+    "status.error": "#EB6F92",
+
+    // Settings window
+    "settings.background": "#191724",
+    "settings.sidebarBackground": "#1F1D2E",
+    "settings.foreground": "#E0DEF4",
+    "settings.secondaryForeground": "#908CAA",
+    "settings.border": "#26233A",
+    "settings.controlBackground": "#1F1D2E"
+  },
+  "nickColors": [
+    "#EB6F92",
+    "#F6C177",
+    "#EBBCBA",
+    "#31748F",
+    "#9CCFD8",
+    "#C4A7E7",
+    "#3E8FB0",
+    "#D7827E",
+    "#907AA9",
+    "#56949F",
+    "#EA9D34",
+    "#B4637A"
+  ],
+  "ircColors": {
+    "0": "#E0DEF4",
+    "1": "#26233A",
+    "2": "#56949F",
+    "3": "#31748F",
+    "4": "#EB6F92",
+    "5": "#B4637A",
+    "6": "#907AA9",
+    "7": "#EA9D34",
+    "8": "#F6C177",
+    "9": "#3E8FB0",
+    "10": "#D7827E",
+    "11": "#EBBCBA",
+    "12": "#9CCFD8",
+    "13": "#C4A7E7",
+    "14": "#6E6A86",
+    "15": "#908CAA"
+  }
+}
