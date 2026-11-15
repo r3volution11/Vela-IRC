@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & test
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: Packages/VelaKit/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('Packages/VelaKit/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Package tests
+        run: swift test --package-path Packages/VelaKit
+
+      - name: Build app
+        run: |
+          xcodebuild \
+            -project Vela.xcodeproj \
+            -scheme Vela \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build

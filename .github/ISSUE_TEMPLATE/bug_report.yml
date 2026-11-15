@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in Vela isn't working as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please **don't include passwords, SASL credentials, or private chat logs**.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Connect to …
+        2. Join …
+        3. …
+  - type: input
+    id: vela-version
+    attributes:
+      label: Vela version
+      placeholder: "0.1.0 (1) or commit SHA"
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: "macOS 26.4"
+    validations:
+      required: true
+  - type: input
+    id: network
+    attributes:
+      label: IRC network / server software / bouncer
+      placeholder: "Libera.Chat, Ergo, soju 0.9, ZNC 1.9 …"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant raw protocol lines or logs
+      description: Redact anything private.
+      render: text
