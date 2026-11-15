@@ -32,9 +32,10 @@ IRC clients on the Mac have stood still. Vela pairs the protocol's simplicity wi
   - `server-time`, `chathistory`, SASL and client certificates.
   - First-class **soju** and **ZNC** bouncer support.
 - **Your layout, your rules.**
+  - Navigate with a compact sidebar (it collapses to a thin rail) or with Vivaldi-style two-level **tab stacks**. Tabs can sit at the top, in the title bar or above the input, with corners from square to pill.
   - Three message layouts: Classic `[12:01] <nick> text`, Modern grouped (Slack/Discord-style) and Compact columns.
-  - A sidebar that collapses to a thin rail.
   - Adjustable fonts, spacing, timestamps and join/part display.
+- **One-click presets.** Classic IRC, Modern Chat, Tabbed and Focus set up navigation, layout, density and media in one step. Your theme is never touched, and you can keep tweaking afterward.
 - **Native and fast.** Swift 6, SwiftUI and Network.framework. No web views except for the video players themselves.
 
 ## Built-in themes
