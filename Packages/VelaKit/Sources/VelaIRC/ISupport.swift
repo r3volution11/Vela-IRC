@@ -75,8 +75,47 @@ public struct ISupport: Sendable, Hashable {
     public var nickLength: Int? { tokens["NICKLEN"].flatMap(Int.init) }
     public var utf8Only: Bool { tokens["UTF8ONLY"] != nil }
     public var monitorLimit: Int? { tokens["MONITOR"].flatMap(Int.init) }
+    /// True when the server supports MONITOR (with or without a limit).
+    public var supportsMonitor: Bool { tokens["MONITOR"] != nil }
+    /// True when the server supports WHOX (`WHO <mask> %fields`).
+    public var supportsWHOX: Bool { tokens["WHOX"] != nil }
+    public var channelLength: Int? { tokens["CHANNELLEN"].flatMap(Int.init) }
+    public var topicLength: Int? { tokens["TOPICLEN"].flatMap(Int.init) }
+    public var awayLength: Int? { tokens["AWAYLEN"].flatMap(Int.init) }
+    public var kickLength: Int? { tokens["KICKLEN"].flatMap(Int.init) }
+    /// Maximum mode changes with a parameter per MODE line (MODES=).
+    public var modesPerLine: Int? { tokens["MODES"].flatMap(Int.init) }
+    /// Prefix symbols usable for STATUSMSG (e.g. `@#chan`).
+    public var statusMessagePrefixes: Set<Character> { Set(tokens["STATUSMSG"] ?? "") }
+    /// The soju bouncer network ID of this connection (BOUNCER_NETID).
+    public var bouncerNetworkID: String? { tokens["BOUNCER_NETID"] }
+
+    /// Whether the server allows sending client-only tag `name` (e.g.
+    /// `+typing`) per CLIENTTAGDENY. Pass the name with or without `+`.
+    public func allowsClientTag(_ name: String) -> Bool {
+        guard let value = tokens["CLIENTTAGDENY"], !value.isEmpty else { return true }
+        let bare = name.hasPrefix("+") ? String(name.dropFirst()) : name
+        var allowedByDefault = true
+        var exceptions: Set<String> = []
+        for entry in value.split(separator: ",") {
+            if entry == "*" {
+                allowedByDefault = false
+            } else if entry.hasPrefix("-") {
+                exceptions.insert(String(entry.dropFirst()))
+            } else {
+                exceptions.insert(String(entry))
+            }
+        }
+        // With "*", listed "-tag" entries are the allowed exceptions; without
+        // it, listed entries are the denied ones.
+        return allowedByDefault ? !exceptions.contains(bare) : exceptions.contains(bare)
+    }
 
     public init() {}
+
+    public init(tokens params: some Sequence<String>) {
+        apply(params)
+    }
 
     /// Applies the token params of a 005 line (excluding the leading nick and
     /// the trailing human-readable text).
@@ -116,27 +155,37 @@ public struct ISupport: Sendable, Hashable {
         return index
     }
 
-    private static func unescape(_ value: String) -> String {
-        // ISUPPORT values escape special characters as \xHH.
+    /// ISUPPORT values escape special characters as `\xHH` (one byte each;
+    /// multi-byte UTF-8 sequences may be escaped byte by byte).
+    static func unescape(_ value: String) -> String {
         guard value.contains("\\x") else { return value }
-        var out = ""
-        var index = value.startIndex
-        while index < value.endIndex {
-            if value[index] == "\\",
-               value.index(index, offsetBy: 3, limitedBy: value.endIndex).map({ $0 <= value.endIndex }) == true,
-               value[value.index(after: index)] == "x"
+        let bytes = Array(value.utf8)
+        var out: [UInt8] = []
+        out.reserveCapacity(bytes.count)
+        var index = 0
+        while index < bytes.count {
+            if bytes[index] == UInt8(ascii: "\\"),
+               index + 3 < bytes.count,
+               bytes[index + 1] == UInt8(ascii: "x"),
+               let high = hexValue(bytes[index + 2]),
+               let low = hexValue(bytes[index + 3])
             {
-                let hexStart = value.index(index, offsetBy: 2)
-                let hexEnd = value.index(hexStart, offsetBy: 2)
-                if let code = UInt8(value[hexStart..<hexEnd], radix: 16) {
-                    out.append(Character(Unicode.Scalar(code)))
-                    index = hexEnd
-                    continue
-                }
+                out.append(high << 4 | low)
+                index += 4
+                continue
             }
-            out.append(value[index])
-            index = value.index(after: index)
+            out.append(bytes[index])
+            index += 1
         }
-        return out
+        return String(decoding: out, as: UTF8.self)
+    }
+
+    private static func hexValue(_ byte: UInt8) -> UInt8? {
+        switch byte {
+        case UInt8(ascii: "0")...UInt8(ascii: "9"): byte - UInt8(ascii: "0")
+        case UInt8(ascii: "a")...UInt8(ascii: "f"): byte - UInt8(ascii: "a") + 10
+        case UInt8(ascii: "A")...UInt8(ascii: "F"): byte - UInt8(ascii: "A") + 10
+        default: nil
+        }
     }
 }
