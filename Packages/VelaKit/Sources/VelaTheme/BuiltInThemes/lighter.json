@@ -3,7 +3,7 @@
   "name": "Lighter",
   "type": "light",
   "author": "Vela",
-  "description": "Crisp near-white surfaces, blue-grey type and a teal accent. Vela's default light theme, inspired by the classic Material Theme Lighter palette.",
+  "description": "Crisp near-white surfaces, blue-grey type and a teal accent. Vela's default light theme.",
   "colors": {
     // Window
     "window.background": "#FAFAFA",

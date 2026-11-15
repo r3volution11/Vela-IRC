@@ -3,7 +3,7 @@
   "name": "Sandy Beach",
   "type": "light",
   "author": "Vela",
-  "description": "Warm sand surfaces, driftwood type and a deep sea-blue accent. Inspired by the classic Material Theme Sandy Beach variant.",
+  "description": "Warm sand surfaces, driftwood type and a deep sea-blue accent.",
   "colors": {
     // Window
     "window.background": "#FFF8ED",

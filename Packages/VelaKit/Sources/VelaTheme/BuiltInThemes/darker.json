@@ -3,7 +3,7 @@
   "name": "Darker",
   "type": "dark",
   "author": "Vela",
-  "description": "Neutral near-black greys with a bright orange accent, inspired by the classic Material Theme Darker palette.",
+  "description": "Neutral near-black greys with a bright orange accent.",
   "colors": {
     // Window
     "window.background": "#212121",

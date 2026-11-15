@@ -3,7 +3,7 @@
   "name": "Ocean",
   "type": "dark",
   "author": "Vela",
-  "description": "Midnight navy, almost black, lit by an electric cyan accent. Inspired by the classic Material Theme Ocean palette.",
+  "description": "Midnight navy, almost black, lit by an electric cyan accent.",
   "colors": {
     // Window
     "window.background": "#0F111A",

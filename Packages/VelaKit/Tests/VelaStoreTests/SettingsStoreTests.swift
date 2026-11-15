@@ -212,7 +212,7 @@ import VelaFoundation
 @Suite struct SettingsCatalogTests {
     @Test func catalogIsCompleteAndUnique() {
         let keys = SettingKey.allKnownKeys.map(\.key)
-        #expect(keys.count == 45)
+        #expect(keys.count == 54)
         #expect(Set(keys).count == keys.count)
         #expect(keys.allSatisfy { $0.contains(".") })
         #expect(SettingKey.allKnownKeys.allSatisfy { !$0.summary.isEmpty })
@@ -251,5 +251,32 @@ import VelaFoundation
             #expect(object[descriptor.key] == descriptor.defaultValue)
         }
         #expect(document.contains("// chat"))
+    }
+}
+
+@MainActor
+@Suite struct SettingsPresetTests {
+    @Test func presetKeysAreKnownSettings() {
+        for preset in SettingsPreset.all {
+            for key in preset.values.keys {
+                #expect(SettingsCatalog.descriptor(forKey: key) != nil, "\(preset.id) sets unknown key \(key)")
+            }
+        }
+    }
+
+    @Test func applyingPresetIsDetectedAndCustomizationBreaksMatch() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let store = SettingsStore(fileURL: dir.appendingPathComponent("settings.json"), watchForChanges: false)
+        store.apply(.focus)
+        #expect(store.matchingPreset()?.id == "focus")
+        #expect(store[.navigationStyle] == .tabs)
+        #expect(store[.tabsPlacement] == .titleBar)
+        #expect(store[.tabsRoundness] == 1)
+        store[.chatFontSize] = 17
+        #expect(store.matchingPreset() == nil)
+        store.apply(.classic)
+        #expect(store.matchingPreset()?.id == "classic")
+        #expect(store[.chatMonospace])
     }
 }

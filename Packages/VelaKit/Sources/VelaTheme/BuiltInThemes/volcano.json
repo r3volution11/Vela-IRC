@@ -3,7 +3,7 @@
   "name": "Volcano",
   "type": "dark",
   "author": "Vela",
-  "description": "Basalt red-brown surfaces with a glowing lava-orange accent. Inspired by the classic Material Theme Volcano variant.",
+  "description": "Basalt red-brown surfaces with a glowing lava-orange accent.",
   "colors": {
     // Window
     "window.background": "#2B1A18",

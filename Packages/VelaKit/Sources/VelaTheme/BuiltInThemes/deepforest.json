@@ -3,7 +3,7 @@
   "name": "Deepforest",
   "type": "dark",
   "author": "Vela",
-  "description": "Mossy green-black surfaces, sage type and a fresh mint accent. Inspired by the classic Material Theme Deepforest variant.",
+  "description": "Mossy green-black surfaces, sage type and a fresh mint accent.",
   "colors": {
     // Window
     "window.background": "#141F1D",

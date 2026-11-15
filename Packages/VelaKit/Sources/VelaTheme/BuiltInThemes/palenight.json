@@ -3,7 +3,7 @@
   "name": "Palenight",
   "type": "dark",
   "author": "Vela",
-  "description": "Soft indigo surfaces with a lavender accent. Vela's default dark theme, inspired by the classic Material Theme Palenight palette.",
+  "description": "Soft indigo surfaces with a lavender accent. Vela's default dark theme.",
   "colors": {
     // Window
     "window.background": "#292D3E",

@@ -297,7 +297,7 @@ public enum SettingsCatalog {
             SettingKey.inputSpellCheck.descriptor,
             SettingKey.connectionAutoReconnect.descriptor,
             SettingKey.historyRetentionDays.descriptor,
-        ]
+        ] + NavigationSettingsCatalog.descriptors
     }
 
     public static func descriptor(forKey key: String) -> SettingDescriptor? {

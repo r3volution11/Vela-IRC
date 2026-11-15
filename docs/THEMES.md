@@ -180,7 +180,7 @@ Like VS Code's `workbench.colorCustomizations`, settings.json can override
 colors on top of whatever theme is active:
 
 ```jsonc
-"theme.colorCustomizations": {
+"appearance.colorCustomizations": {
   // Applies to every theme.
   "chat.timestamp": "#7A7A7A",
 
@@ -209,10 +209,10 @@ Vela can follow the macOS light/dark setting (including automatic switching)
 and use a different theme for each, or stay on one theme:
 
 ```jsonc
-"theme": "Palenight",                     // used when not following the system
-"theme.followSystemAppearance": true,
-"theme.preferredDark": "Palenight",
-"theme.preferredLight": "Lighter"
+"appearance.theme": "Palenight",                     // used when not following the system
+"appearance.followSystem": true,
+"appearance.preferredDarkTheme": "Palenight",
+"appearance.preferredLightTheme": "Lighter"
 ```
 
 The defaults are **Palenight** for dark and **Lighter** for light. If a named

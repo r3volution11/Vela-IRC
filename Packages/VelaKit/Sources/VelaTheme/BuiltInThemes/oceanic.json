@@ -3,7 +3,7 @@
   "name": "Oceanic",
   "type": "dark",
   "author": "Vela",
-  "description": "Deep blue-grey with a sea-glass teal accent, inspired by the classic Material Theme Oceanic palette.",
+  "description": "Deep blue-grey with a sea-glass teal accent.",
   "colors": {
     // Window
     "window.background": "#263238",
