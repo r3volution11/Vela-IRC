@@ -55,6 +55,24 @@ struct MainWindowView: View {
         .sheet(item: $uiState.networkEditor) { target in
             NetworkEditorView(target: target)
         }
+        .sheet(item: $uiState.joinChannelNetwork) { networkID in
+            JoinChannelSheet(networkID: networkID)
+        }
+        .confirmationDialog(
+            "Remove \(uiState.networkPendingRemoval.flatMap { app.session(for: $0)?.displayName } ?? "network")?",
+            isPresented: Binding(
+                get: { uiState.networkPendingRemoval != nil },
+                set: { if !$0 { uiState.networkPendingRemoval = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Remove Network", role: .destructive) {
+                if let id = uiState.networkPendingRemoval { app.removeNetwork(id: id) }
+                uiState.networkPendingRemoval = nil
+            }
+        } message: {
+            Text("Its settings, saved passwords and message history on this Mac will be deleted.")
+        }
     }
 }
 

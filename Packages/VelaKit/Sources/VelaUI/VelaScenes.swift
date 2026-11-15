@@ -12,13 +12,21 @@ import VelaTheme
 public struct VelaScenes: Scene {
     @State private var app: AppModel
     @State private var themeStore: ThemeStore
-    @State private var uiState = UIState()
+    @State private var uiState: UIState
 
     public init() {
         let arguments = ProcessInfo.processInfo.arguments
         let demo = UserDefaults.standard.bool(forKey: "VelaDemoMode") || arguments.contains("--demo")
-        _app = State(initialValue: demo ? AppModel.demo() : AppModel.live())
-        _themeStore = State(initialValue: ThemeStore(userThemesDirectory: AppPaths.themesDirectory))
+        let app = demo ? AppModel.demo() : AppModel.live()
+        if demo { DemoArguments.apply(arguments, to: app.settings) }
+        let themeStore = ThemeStore(userThemesDirectory: AppPaths.themesDirectory)
+        let uiState = UIState()
+        if SnapshotSupport.isActive {
+            SnapshotSupport.scheduleOffscreenCapture(app: app, themeStore: themeStore, uiState: uiState)
+        }
+        _app = State(initialValue: app)
+        _themeStore = State(initialValue: themeStore)
+        _uiState = State(initialValue: uiState)
     }
 
     public var body: some Scene {
@@ -29,6 +37,7 @@ public struct VelaScenes: Scene {
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified(showsTitle: false))
         .defaultSize(width: 1180, height: 760)
+        .defaultLaunchBehavior(.presented)
         .commands {
             VelaCommands(app: app, themeStore: themeStore, uiState: uiState)
         }
@@ -44,6 +53,8 @@ public struct VelaScenes: Scene {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 760, height: 680)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
     }
 }
 

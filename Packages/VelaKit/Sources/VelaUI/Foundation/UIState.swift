@@ -16,6 +16,10 @@ public final class UIState {
     public var drafts: [BufferID: String] = [:]
     /// Network editor sheet: `.new` or an existing network's id.
     public var networkEditor: NetworkEditorTarget?
+    /// Network whose "Join Channel…" sheet is showing.
+    public var joinChannelNetwork: UUID?
+    /// Network awaiting removal confirmation.
+    public var networkPendingRemoval: UUID?
     /// The sidebar rail temporarily expanded by hover.
     public var isRailHoverExpanded = false
     /// Requests the input bar to take focus (incremented to trigger).
@@ -38,4 +42,8 @@ public enum NetworkEditorTarget: Identifiable, Hashable {
         case .existing(let id): id.uuidString
         }
     }
+}
+
+extension UUID: @retroactive Identifiable {
+    public var id: UUID { self }
 }

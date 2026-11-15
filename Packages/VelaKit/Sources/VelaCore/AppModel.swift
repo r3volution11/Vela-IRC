@@ -490,7 +490,7 @@ public final class AppModel: SessionHost {
     func installDemoSessions(_ demoSessions: [NetworkSession]) {
         for session in demoSessions { session.host = self }
         sessions = demoSessions
-        if let buffer = demoSessions.first?.channels.first { select(buffer) }
+        if let buffer = demoSessions.first?.buffer(named: "#vela") ?? demoSessions.first?.channels.first { select(buffer) }
     }
 }
 
