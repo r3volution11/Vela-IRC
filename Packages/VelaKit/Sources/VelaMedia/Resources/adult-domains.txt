@@ -9,7 +9,7 @@
 # Source:  https://github.com/Sinfonietta/hostfiles (pornography-hosts)
 # Commit:  46f3097d7bcfc9eea323fe365074dfd771d0d17c
 # Date:    2026-11-16
-# Domains: 41857
+# Domains: 41841
 #
 # The list is derived from Sinfonietta/hostfiles, used under its license:
 #
@@ -96,8 +96,6 @@
 12jav.net
 12milf.com
 12stepvideos.com
-1337x.to
-1337xx.to
 1366xnxx.com
 1377x.to
 13porno.com
@@ -1511,7 +1509,6 @@ albumsvideo.onlc.be
 alcuda.com
 alesbiansporn.com
 alesbianxxx.com
-aletorrenty.pl
 alexa-xxx.com
 alexandre-legland.com
 alexaporn.net
@@ -4240,7 +4237,6 @@ best-pornvideos.com
 best-sex-clips.com
 best-sex-games.com
 best-sex-movies.com
-best-torrents.net
 best-video-porn.com
 best-virgins.com
 best-webcam-offers.com
@@ -4779,7 +4775,6 @@ bitchyourfamous.com
 bitchyx.it
 bitporno.sx
 bittictic.com
-bittorrent.am
 bitviewporn.mom
 biuropodatkowemm.pl
 bizarr.date
@@ -17729,7 +17724,6 @@ jzzo.com
 k1nk.co
 k2s-porn.net
 k2s-tv.shitporn.net
-k2s.cc
 k2s.tube
 k2sccporno.com
 k2sporn.net
@@ -17870,9 +17864,6 @@ kibuh.org
 kichduc.cc
 kichduc.com
 kichduc.me
-kickasstorrent.cr
-kickasstorrents.pw
-kickasstorrents.to
 kickin.info
 kidzilla.info
 kievescortangels.com
@@ -18737,7 +18728,6 @@ lilqties.net
 lilumania.pw
 lilushandjobs.com
 limeporn.com
-limetorrents.lol
 limozoomgivexxx.com
 limporno.com
 lina777.com
@@ -21308,7 +21298,6 @@ mxseries.net
 mxtube.net
 mxxxvideos.com
 my-angel-funs.com
-my-cima.net
 my-gay.cepchile.org
 my-junior-sister.net
 my-ladies.ch
@@ -28607,7 +28596,6 @@ rarecord.io
 rarepornsex.com
 rarescandals.xyz
 rareteenporn.com
-rargb.to
 rasazrak.info
 rashatemraa.com
 rasporn.com
@@ -29438,8 +29426,6 @@ rusvideos.porn
 rusvideos.pro
 rusxporno.com
 rusxporno.net
-rutor.info
-rutracker.net
 rutubet.info
 ruvideos.net
 rxxx.av.tr
@@ -32329,7 +32315,6 @@ streamray.com
 streamruby.com
 streamsex.com
 streamsextv.com
-streamtape.com
 streamvid.net
 strepchat.com
 stretchedoutsnatch.com
@@ -33842,7 +33827,6 @@ theotherside.adult.directnic.com
 theothertentacle.com
 thepervs.com
 thephotographerscompany.com
-thepiratebay0.org
 thepiratebay10.org
 theplace.ru
 theporn.house

@@ -148,3 +148,31 @@ startpagina.nl
 articulo.mercadolibre.com.co
 chomikuj.pl
 booth.pm
+
+# General torrent and piracy sites: not adult content, listed upstream for
+# other reasons (sites for adult torrents stay listed).
+1337x.to
+1337xx.to
+aletorrenty.pl
+best-torrents.net
+bittorrent.am
+k2s.cc
+kickasstorrent.cr
+kickasstorrents.pw
+kickasstorrents.to
+limetorrents.lol
+my-cima.net
+rargb.to
+rutor.info
+rutracker.net
+streamtape.com
+thepiratebay0.org
+# Their tracker and mirror hosts, listed upstream on their own.
+bt.rutor.info
+tracker.aletorrenty.pl
+tracker.best-torrents.net
+tracker.bittorrent.am
+v5.my-cima.net
+v21.my-cima.net
+v23.my-cima.net
+w26.my-cima.net
