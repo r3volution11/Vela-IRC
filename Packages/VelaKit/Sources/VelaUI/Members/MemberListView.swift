@@ -248,7 +248,7 @@ private struct MemberRow: View {
 
     private var nickColor: Color {
         if member.isAway { return theme[ThemeKey.memberListAwayForeground] }
-        if style.colorNicks { return theme.nickColor(for: member.nick).color }
+        if style.colorNicks { return theme.nickColor(for: member.nick, in: buffer).color }
         return theme[ThemeKey.memberListForeground]
     }
 

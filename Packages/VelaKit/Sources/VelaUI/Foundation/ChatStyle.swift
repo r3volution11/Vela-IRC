@@ -16,7 +16,12 @@ public struct ChatStyle: Equatable {
     public var lineSpacing: Double = 2
     public var messageSpacing: Double = 6
     public var showTimestamps = true
-    public var timestampFormat = "HH:mm"
+    /// The Unicode date pattern timestamps are drawn with: the custom
+    /// `chat.timestampFormat`, or one derived from `chat.clock` and
+    /// `chat.timestampSeconds` (see ``TimestampFormat``).
+    public var timestampPattern = TimestampFormat.pattern(clock: .system, seconds: false, locale: .autoupdatingCurrent)
+    /// Language and region timestamps are written in (AM/PM symbols).
+    public var timestampLocaleIdentifier = Locale.autoupdatingCurrent.identifier
     public var joinPart: JoinPartDisplay = .collapse
     public var colorNicks = true
     public var showAvatars = false
@@ -48,8 +53,10 @@ public struct ChatStyle: Equatable {
         max(0, min(1, tabRoundness)) * height / 2
     }
 
+    /// `locale` resolves the System clock; with the default, a new style
+    /// picks up changes to the Mac's 24-hour time setting.
     @MainActor
-    public init(settings: SettingsStore) {
+    public init(settings: SettingsStore, locale: Locale = .autoupdatingCurrent) {
         layout = settings[.chatLayout]
         fontFamily = settings[.chatFontFamily]
         fontSize = settings[.chatFontSize]
@@ -57,7 +64,13 @@ public struct ChatStyle: Equatable {
         lineSpacing = settings[.chatLineSpacing]
         messageSpacing = settings[.chatMessageSpacing]
         showTimestamps = settings[.chatShowTimestamps]
-        timestampFormat = settings[.chatTimestampFormat]
+        timestampPattern = TimestampFormat.pattern(
+            clock: settings[.chatClock],
+            seconds: settings[.chatTimestampSeconds],
+            custom: settings[.chatTimestampFormat],
+            locale: locale
+        )
+        timestampLocaleIdentifier = locale.identifier
         joinPart = settings[.chatShowJoinPart]
         colorNicks = settings[.chatColorNicks]
         showAvatars = settings[.chatShowAvatars]
@@ -123,17 +136,21 @@ public struct ChatStyle: Equatable {
     // MARK: Timestamps
 
     public func timestamp(_ date: Date) -> String {
-        Self.formatter(for: timestampFormat).string(from: date)
+        Self.formatter(pattern: timestampPattern, localeIdentifier: timestampLocaleIdentifier).string(from: date)
     }
 
+    /// Keyed by locale and pattern, so a changed clock or 24-hour setting
+    /// gets a fresh formatter instead of reusing the old one.
     @MainActor private static var formatters: [String: DateFormatter] = [:]
 
     @MainActor
-    private static func formatter(for format: String) -> DateFormatter {
-        if let cached = formatters[format] { return cached }
-        let formatter = DateFormatter()
-        formatter.dateFormat = format
-        formatters[format] = formatter
+    private static func formatter(pattern: String, localeIdentifier: String) -> DateFormatter {
+        let key = "\(localeIdentifier)|\(pattern)"
+        if let cached = formatters[key] { return cached }
+        // Typing a custom pattern creates one per keystroke; don't keep them all.
+        if formatters.count >= 16 { formatters.removeAll() }
+        let formatter = TimestampFormat.formatter(pattern: pattern, locale: Locale(identifier: localeIdentifier))
+        formatters[key] = formatter
         return formatter
     }
 }

@@ -90,14 +90,25 @@ private struct VelaEnvironmentModifier: ViewModifier {
     let uiState: UIState
     let isPrimary: Bool
 
+    /// Bumped when macOS's locale changes (such as the 24-hour time switch
+    /// in System Settings), so the chat style re-resolves a System clock.
+    @State private var localeRevision = 0
+
     func body(content: Content) -> some View {
         let theme = themeStore.current
+        let _ = localeRevision  // Re-run body (and rebuild ChatStyle) when it changes.
         content
             .environment(app)
             .environment(themeStore)
             .environment(uiState)
             .environment(\.theme, theme)
             .environment(\.chatStyle, ChatStyle(settings: app.settings))
+            .onReceive(
+                NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)
+                    .receive(on: DispatchQueue.main)
+            ) { _ in
+                localeRevision &+= 1
+            }
             .tint(theme[ThemeKey.accent])
             .preferredColorScheme(theme.kind == .dark ? .dark : .light)
             .onChange(of: ThemeSettings(settings: app.settings), initial: true) { _, newValue in

@@ -154,7 +154,7 @@ private struct SchematicPainter {
 
     private func nickColor(_ index: Int) -> Color {
         guard config.colorNicks else { return color(ThemeKey.chatForeground) }
-        let palette = theme.nickColors
+        let palette = theme.nickPalette
         return palette[(index * 5 + 2) % palette.count].color
     }
 

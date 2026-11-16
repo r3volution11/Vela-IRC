@@ -70,6 +70,8 @@ struct BuiltInThemeTests {
         }
 
         let theme = try ThemeResolver.resolve(definition, id: id, includeLoader: { _ in nil }, overrides: [:])
+        // At most one near-text color is skipped from a designed palette.
+        #expect(theme.nickPalette.count >= theme.nickColors.count - 1, "\(id) skips \(theme.nickColors.count - theme.nickPalette.count) nick colors")
         #expect(theme.kind == expected.kind)
         for token in ThemeRegistry.tokens {
             #expect(theme.colors[token.key] != nil, "\(id): \(token.key) unresolved")

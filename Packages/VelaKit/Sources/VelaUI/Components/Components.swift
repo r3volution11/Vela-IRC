@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import SwiftUI
+import VelaCore
 import VelaTheme
 
 /// A round initials avatar tinted with the nick's theme color.
@@ -10,9 +11,11 @@ struct AvatarView: View {
     @Environment(\.theme) private var theme
     let nick: String
     var size: CGFloat = 32
+    /// The conversation the avatar is shown in, whose nick colors it uses.
+    var buffer: BufferModel? = nil
 
     var body: some View {
-        let color = theme.nickColor(for: nick)
+        let color = theme.nickColor(for: nick, in: buffer)
         ZStack {
             Circle().fill(color.color.opacity(theme.kind == .dark ? 0.28 : 0.2))
             Circle().strokeBorder(color.color.opacity(0.45), lineWidth: 1)

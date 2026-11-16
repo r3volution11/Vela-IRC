@@ -158,11 +158,15 @@ folder.
 
 ## Nick colors and IRC colors
 
-**`nickColors`** is the palette nicknames are drawn from. Each nick is hashed
-(case-insensitively, using IRC's RFC 1459 case mapping, so `Nick[a]` and
-`nick{a}` match) to one entry, and keeps that color across launches. Aim for
-8–12 clearly different hues with at least 3:1 contrast — ideally 4.5:1 —
-against `chat.background`.
+**`nickColors`** is the palette nicknames are drawn from. Each nick starts
+from the entry its name hashes to (case-insensitively, using IRC's RFC 1459
+case mapping, so `Nick[a]` and `nick{a}` match), so it usually keeps its color
+across channels and launches. Within a conversation, people who talk get
+different entries while the palette has room, so two nicks that hash alike
+don't look alike. Aim for 8–12 clearly different hues with at least 3:1
+contrast — ideally 4.5:1 — against `chat.background`. Entries that would read
+as plain text (a grey close to `chat.foreground`) or fall under 3:1 aren't
+used.
 
 **`ircColors`** are the colors behind mIRC formatting codes. 0–15 are the
 classic colors (white, black, blue, green, red, brown, magenta, orange, yellow,
@@ -557,7 +561,7 @@ The Settings window.
 
 ### Nick colors
 
-`nickColors` is an array of colors. Each nickname is hashed (case-insensitively, RFC 1459 case mapping) to one entry, so a nick keeps its color across launches.
+`nickColors` is an array of colors. Each nickname starts from the entry its name hashes to (case-insensitively, RFC 1459 case mapping), so a nick usually keeps its color across channels and launches. In a conversation, people who talk get different entries while the palette has room: someone whose usual color is held by a recent speaker gets the free entry most unlike the colors in use. Entries that would read as plain text (close to `chat.foreground`) or fall under 3:1 against `chat.background` aren't used.
 
 - Dark default: `#F07178` `#F78C6C` `#FFCB6B` `#C3E88D` `#7FDBCA` `#89DDFF` `#82AAFF` `#B4A5FF` `#C792EA` `#FF9CAC` `#E6B07E` `#A8D8A0`
 - Light default: `#C62828` `#BF4A12` `#8C6200` `#4E7A12` `#1B7D4F` `#00727C` `#1565C0` `#3949AB` `#6A3FB5` `#9C27B0` `#AD1457` `#7D5A3C`

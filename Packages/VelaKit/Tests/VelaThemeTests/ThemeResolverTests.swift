@@ -334,7 +334,43 @@ struct NickColorTests {
         let theme = try resolve(ThemeDefinition(name: "A", type: .dark))
         let nicks = (0..<200).map { "user\($0)" }
         let used = Set(nicks.map { theme.nickColor(for: $0) })
-        #expect(used.count == theme.nickColors.count)
+        #expect(used.count == theme.nickPalette.count)
+    }
+
+    /// Palenight's palette and text colors, where #B2CCD6 sat beside
+    /// #BFC7D5 text and two nicks given it looked uncolored.
+    private let palenight = ThemeDefinition(
+        name: "P",
+        type: .dark,
+        colors: ["chat.background": "#292D3E", "chat.foreground": "#BFC7D5"],
+        nickColors: [
+            "#F07178", "#F78C6C", "#FFCB6B", "#C3E88D", "#80CBC4", "#89DDFF",
+            "#82AAFF", "#A9B4FF", "#C792EA", "#FF9CAC", "#DDB585", "#B2CCD6",
+        ]
+    )
+
+    @Test func skipsNickColorsThatReadAsText() throws {
+        let theme = try resolve(palenight)
+        #expect(theme.nickColors.count == 12)
+        #expect(theme.nickPalette.count == 11)
+        #expect(!theme.nickPalette.map(\.hex).contains("#B2CCD6"))
+        #expect(theme.nickPaletteGeometry.count == 11)
+        // Every nick lands on a usable color.
+        for nick in ["jeebz", "tomf", "xmn"] { #expect(theme.nickColor(for: nick).hex != "#B2CCD6") }
+    }
+
+    @Test func skipsNickColorsUnreadableOnTheBackground() throws {
+        var definition = palenight
+        definition.nickColors = (definition.nickColors ?? []) + ["#30344A"]   // barely off the background
+        let theme = try resolve(definition)
+        #expect(!theme.nickPalette.map(\.hex).contains("#30344A"))
+    }
+
+    @Test func keepsThePaletteWhenTooFewColorsWouldRemain() throws {
+        var definition = palenight
+        definition.nickColors = ["#BFC7D5", "#B8C2D2", "#C4CAD6", "#F07178", "#82AAFF"]
+        let theme = try resolve(definition)
+        #expect(theme.nickPalette == theme.nickColors)
     }
 
     @Test func ircPalette() throws {

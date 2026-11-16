@@ -1063,7 +1063,7 @@
       "type" : "string"
     },
     "nickColors" : {
-      "description" : "Palette for nickname colors; each nick always gets the same entry. Replaces the default palette.",
+      "description" : "Palette for nickname colors. Each nick starts from a stable entry; people talking in the same conversation get different entries while the palette has room. Entries too close to chat.foreground, or under 3:1 against chat.background, aren't used. Replaces the default palette.",
       "items" : {
         "format" : "color-hex",
         "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",

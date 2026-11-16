@@ -23,6 +23,15 @@ public enum JoinPartDisplay: String, Codable, Sendable, CaseIterable, SettingVal
     case hide
 }
 
+/// Which clock timestamps use, unless `chat.timestampFormat` sets a
+/// custom pattern.
+public enum TimestampClock: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// Follow the Mac's 24-hour time setting (and the region's convention).
+    case system
+    case twelveHour = "12h"
+    case twentyFourHour = "24h"
+}
+
 // MARK: Appearance
 
 extension SettingKey where Value == String {
@@ -70,6 +79,13 @@ extension SettingKey where Value == JoinPartDisplay {
     }
 }
 
+extension SettingKey where Value == TimestampClock {
+    public static var chatClock: SettingKey<TimestampClock> {
+        .init("chat.clock", default: .system,
+              summary: "Timestamp clock: system (follow the Mac's 24-hour time setting), 12h or 24h. Ignored when chat.timestampFormat is set.")
+    }
+}
+
 extension SettingKey where Value == String {
     public static var chatFontFamily: SettingKey<String> {
         .init("chat.fontFamily", default: "",
@@ -80,8 +96,8 @@ extension SettingKey where Value == String {
               summary: "Font for code spans and the columns layout's fixed-width parts.")
     }
     public static var chatTimestampFormat: SettingKey<String> {
-        .init("chat.timestampFormat", default: "HH:mm",
-              summary: "Timestamp format (Unicode date pattern, e.g. \"HH:mm:ss\").")
+        .init("chat.timestampFormat", default: "",
+              summary: "Custom timestamp format (Unicode date pattern, e.g. \"HH:mm:ss\"). Empty uses chat.clock and chat.timestampSeconds.")
     }
 }
 
@@ -108,8 +124,12 @@ extension SettingKey where Value == Bool {
     public static var chatShowTimestamps: SettingKey<Bool> {
         .init("chat.showTimestamps", default: true, summary: "Show message timestamps.")
     }
+    public static var chatTimestampSeconds: SettingKey<Bool> {
+        .init("chat.timestampSeconds", default: false,
+              summary: "Include seconds in timestamps. Ignored when chat.timestampFormat is set.")
+    }
     public static var chatColorNicks: SettingKey<Bool> {
-        .init("chat.colorNicks", default: true, summary: "Give each nick a stable color.")
+        .init("chat.colorNicks", default: true, summary: "Color nicks from the theme's nick palette; people talking in the same channel get different colors.")
     }
     public static var chatShowAvatars: SettingKey<Bool> {
         .init("chat.showAvatars", default: false, summary: "Show initials avatars next to message groups in the grouped layout and member list.")
@@ -261,6 +281,8 @@ public enum SettingsCatalog {
             SettingKey.chatLineSpacing.descriptor,
             SettingKey.chatMessageSpacing.descriptor,
             SettingKey.chatShowTimestamps.descriptor,
+            SettingKey.chatClock.descriptor,
+            SettingKey.chatTimestampSeconds.descriptor,
             SettingKey.chatTimestampFormat.descriptor,
             SettingKey.chatShowJoinPart.descriptor,
             SettingKey.chatColorNicks.descriptor,

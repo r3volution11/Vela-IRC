@@ -290,6 +290,6 @@ struct ThemeSwatchStrip: View {
             theme[ThemeKey.sidebarBackground],
             theme[ThemeKey.chatBackground],
             theme[ThemeKey.accent],
-        ] + theme.nickColors.prefix(3).map(\.color)
+        ] + theme.nickPalette.prefix(3).map(\.color)
     }
 }

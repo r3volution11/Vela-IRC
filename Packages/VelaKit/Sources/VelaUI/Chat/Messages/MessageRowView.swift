@@ -169,7 +169,7 @@ struct ClassicMessageContent: View {
         let nick = line.nick ?? ""
         var nickRun = AttributedString(nick)
         nickRun.font = style.nickFont
-        nickRun.foregroundColor = theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks)
+        nickRun.foregroundColor = theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks, in: controller.buffer)
 
         func punctuation(_ text: String, _ key: String) -> AttributedString {
             var run = AttributedString(text)
@@ -254,7 +254,7 @@ struct GroupedMessageContent: View {
             Color.clear
                 .frame(width: width, height: 1)
                 .overlay(alignment: .top) {
-                    AvatarView(nick: line.nick ?? "?", size: width)
+                    AvatarView(nick: line.nick ?? "?", size: width, buffer: controller.buffer)
                         .padding(.top, 1)
                 }
         } else {
@@ -266,7 +266,7 @@ struct GroupedMessageContent: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text(line.nick ?? "")
                 .font(style.nickFont)
-                .foregroundStyle(theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks))
+                .foregroundStyle(theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks, in: controller.buffer))
                 .lineLimit(1)
             if line.kind == .notice {
                 Text("notice")
@@ -345,7 +345,7 @@ struct ColumnsMessageContent: View {
         default:
             Text(nick)
                 .font(style.nickFont)
-                .foregroundStyle(theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks))
+                .foregroundStyle(theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks, in: controller.buffer))
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
@@ -356,7 +356,7 @@ struct ColumnsMessageContent: View {
         guard line.kind == .action, let nick = line.nick else { return nil }
         var run = AttributedString(nick + " ")
         run.font = style.nickFont
-        run.foregroundColor = theme.nickDisplayColor(nick, isSelf: line.isSelf, colorNicks: style.colorNicks)
+        run.foregroundColor = theme.nickDisplayColor(nick, isSelf: line.isSelf, colorNicks: style.colorNicks, in: controller.buffer)
         return run
     }
 }

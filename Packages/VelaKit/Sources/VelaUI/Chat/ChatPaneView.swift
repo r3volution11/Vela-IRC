@@ -38,6 +38,7 @@ struct ChatColumnView: View {
                 MessageListView(buffer: buffer, session: session)
                     .id(buffer.id)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .environment(\.nickColorBuffer, buffer)
                 TypingIndicatorView(buffer: buffer)
                     .id(buffer.id)
                 if usesTabs && style.tabPlacement == .bottom {
@@ -45,6 +46,7 @@ struct ChatColumnView: View {
                 }
                 InputBar(buffer: buffer, session: session)
                     .id(buffer.id)
+                    .environment(\.nickColorBuffer, buffer)
             } else {
                 EmptyStateView()
                 if usesTabs && style.tabPlacement == .bottom {

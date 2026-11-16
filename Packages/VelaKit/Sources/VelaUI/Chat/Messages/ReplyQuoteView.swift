@@ -12,6 +12,7 @@ struct ReplyQuoteView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     @Environment(UIState.self) private var uiState
+    @Environment(\.nickColorBuffer) private var nickColorBuffer
     let reply: ReplyTarget
     /// Draw a leading reply arrow (classic and columns layouts; the grouped
     /// layout draws a connector from the avatar instead).
@@ -26,7 +27,7 @@ struct ReplyQuoteView: View {
                 quote {
                     Text(parent.nick ?? "")
                         .font(style.font(size: smallSize, weight: .semibold))
-                        .foregroundStyle(theme.nickDisplayColor(parent.nick, isSelf: parent.isSelf, colorNicks: style.colorNicks))
+                        .foregroundStyle(theme.nickDisplayColor(parent.nick, isSelf: parent.isSelf, colorNicks: style.colorNicks, in: nickColorBuffer))
                         .lineLimit(1)
                         .layoutPriority(1)
                     Text(Self.snippet(for: parent))

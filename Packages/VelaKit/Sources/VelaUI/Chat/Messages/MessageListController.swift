@@ -232,7 +232,7 @@ enum TimestampMetrics {
     /// The widest time at `size` (default: `style.timestampFont`'s size).
     static func columnWidth(style: ChatStyle, bracketed: Bool, size: Double? = nil) -> CGFloat {
         let size = size ?? max(9, style.fontSize - 2)
-        let key = "\(style.timestampFormat)|\(size)|\(bracketed)"
+        let key = "\(style.timestampLocaleIdentifier)|\(style.timestampPattern)|\(size)|\(bracketed)"
         if let cached = cache[key] { return cached }
         let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .regular)
         var calendar = Calendar(identifier: .gregorian)
@@ -302,11 +302,24 @@ struct GroupedMetrics: Equatable {
 }
 
 extension ResolvedTheme {
+    /// `nick`'s color in `buffer`'s conversation, where the people talking
+    /// get different colors; its usual color without a conversation.
+    func nickColor(for nick: String, in buffer: BufferModel?) -> ThemeColor {
+        guard let buffer else { return nickColor(for: nick) }
+        return nickColor(at: buffer.nickColorIndex(for: nick, palette: nickPaletteGeometry))
+    }
+
     /// The color for `nick` in message headers, honoring `chat.colorNicks`
     /// and `chat.selfNick`.
-    func nickDisplayColor(_ nick: String?, isSelf: Bool, colorNicks: Bool) -> Color {
+    func nickDisplayColor(_ nick: String?, isSelf: Bool, colorNicks: Bool, in buffer: BufferModel?) -> Color {
         if isSelf { return self[ThemeKey.chatSelfNick] }
         guard let nick, colorNicks else { return self[ThemeKey.chatForeground] }
-        return nickColor(for: nick).color
+        return nickColor(for: nick, in: buffer).color
     }
+}
+
+extension EnvironmentValues {
+    /// The conversation nick colors come from (see
+    /// `ResolvedTheme.nickColor(for:in:)`); set by the chat pane.
+    @Entry var nickColorBuffer: BufferModel?
 }

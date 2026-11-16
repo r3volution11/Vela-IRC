@@ -97,7 +97,7 @@ Includes can chain up to 8 levels. To customize a built-in in place, name your f
 
 ## Nick colors and mIRC colors
 
-- **`nickColors`** is the palette nicknames are drawn from. Each nick always gets the same entry. Aim for 8–12 clearly different hues with at least 3:1 contrast (ideally 4.5:1) against `chat.background`.
+- **`nickColors`** is the palette nicknames are drawn from. Each nick starts from a stable entry, and people talking in the same conversation get different entries while the palette has room. Aim for 8–12 clearly different hues with at least 3:1 contrast (ideally 4.5:1) against `chat.background`; entries that would read as plain text (a grey close to `chat.foreground`) or fall under 3:1 aren't used.
 - **`ircColors`** are the colors behind mIRC formatting codes. Colors 0–15 (white, black, blue, green, red, brown, magenta, orange, yellow, light green, cyan, light cyan, light blue, pink, grey, light grey) are worth tuning for your background; list only the ones you change:
 
   ```jsonc

@@ -104,7 +104,7 @@ public enum ThemeSchema {
     private static func nickColorsSchema() -> JSONValue {
         .object([
             "type": "array",
-            "description": "Palette for nickname colors; each nick always gets the same entry. Replaces the default palette.",
+            "description": "Palette for nickname colors. Each nick starts from a stable entry; people talking in the same conversation get different entries while the palette has room. Entries too close to chat.foreground, or under 3:1 against chat.background, aren't used. Replaces the default palette.",
             "items": colorSchema(),
             "minItems": 1,
         ])
@@ -165,7 +165,7 @@ public enum ThemeSchema {
         }
         output.append("### Nick colors")
         output.append("")
-        output.append("`nickColors` is an array of colors. Each nickname is hashed (case-insensitively, RFC 1459 case mapping) to one entry, so a nick keeps its color across launches.")
+        output.append("`nickColors` is an array of colors. Each nickname starts from the entry its name hashes to (case-insensitively, RFC 1459 case mapping), so a nick usually keeps its color across channels and launches. In a conversation, people who talk get different entries while the palette has room: someone whose usual color is held by a recent speaker gets the free entry most unlike the colors in use. Entries that would read as plain text (close to `chat.foreground`) or fall under 3:1 against `chat.background` aren't used.")
         output.append("")
         output.append("- Dark default: " + NickPalette.darkHex.map { "`\($0)`" }.joined(separator: " "))
         output.append("- Light default: " + NickPalette.lightHex.map { "`\($0)`" }.joined(separator: " "))

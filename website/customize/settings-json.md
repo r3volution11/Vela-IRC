@@ -49,7 +49,8 @@ When Vela writes the file (after you change something in Settings), it rewrites 
   // Compact, quiet conversations
   "chat.layout": "columns",
   "chat.showJoinPart": "hide",
-  "chat.timestampFormat": "HH:mm:ss",
+  "chat.clock": "24h",
+  "chat.timestampSeconds": true,
 
   // No media from this site
   "media.blockedDomains": ["example.com"]

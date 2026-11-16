@@ -5,6 +5,7 @@
 import AppKit
 import Foundation
 import SwiftUI
+import VelaFoundation
 
 /// A theme with every registry token resolved to a concrete color. This is
 /// what views read from; it's immutable and cheap to pass around.
@@ -15,8 +16,14 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
     public let vibrancy: ThemeVibrancy
     /// Every registry token, plus any extra keys the theme defined.
     public let colors: [String: ThemeColor]
-    /// Palette for nickname colors (never empty).
+    /// Palette for nickname colors, as the theme defines it (never empty).
     public let nickColors: [ThemeColor]
+    /// The nick colors handed out: `nickColors` minus any that would read
+    /// as plain text (see `isDistinctNickColor`). Never empty.
+    public let nickPalette: [ThemeColor]
+    /// How different each pair of `nickPalette` colors looks, for keeping
+    /// people in one conversation apart (`NickColorAssigner`).
+    public let nickPaletteGeometry: NickPaletteGeometry
     /// mIRC colors 0–98 (always 99 entries).
     public let ircColors: [ThemeColor]
 
@@ -35,6 +42,9 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
         self.vibrancy = vibrancy
         self.colors = colors
         self.nickColors = nickColors.isEmpty ? NickPalette.defaultPalette(for: kind) : nickColors
+        let palette = Self.usableNickPalette(self.nickColors, colors: colors)
+        self.nickPalette = palette
+        self.nickPaletteGeometry = NickPaletteGeometry(distances: palette.map { a in palette.map { a.distance(to: $0) } })
         var irc = Array(ircColors.prefix(IRCPalette.count))
         if irc.count < IRCPalette.count {
             irc += IRCPalette.standard[irc.count...]
@@ -52,11 +62,17 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
         color(key).color
     }
 
-    /// A stable color for a nickname: FNV-1a over the RFC 1459 case-folded
-    /// nick, so `Alice`, `alice` and `ALICE` match, as do `nick[away]` and
-    /// `nick{away}`, and the color doesn't change between launches.
+    /// A stable color for a nickname, the same everywhere: see
+    /// `NickColorAssigner.preferredIndex(for:paletteSize:)`. Within a
+    /// conversation, prefer the conversation's assignment, which keeps the
+    /// people talking there apart.
     public func nickColor(for nick: String) -> ThemeColor {
-        nickColors[Self.nickColorIndex(for: nick, paletteSize: nickColors.count)]
+        nickPalette[Self.nickColorIndex(for: nick, paletteSize: nickPalette.count)]
+    }
+
+    /// The `nickPalette` color at `index` (wrapping, so any index is safe).
+    public func nickColor(at index: Int) -> ThemeColor {
+        nickPalette[((index % nickPalette.count) + nickPalette.count) % nickPalette.count]
     }
 
     /// mIRC color `index` (0–98), or `nil` for 99 ("default") and anything
@@ -73,26 +89,32 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
     public var appearanceName: NSAppearance.Name { kind == .dark ? .darkAqua : .aqua }
 
     static func nickColorIndex(for nick: String, paletteSize: Int) -> Int {
-        guard paletteSize > 0 else { return 0 }
-        var hash: UInt32 = 2_166_136_261
-        for byte in casefold(nick).utf8 {
-            hash ^= UInt32(byte)
-            hash = hash &* 16_777_619
-        }
-        return Int(hash % UInt32(paletteSize))
+        NickColorAssigner.preferredIndex(for: nick, paletteSize: paletteSize)
     }
 
-    /// RFC 1459 case mapping: ASCII lowercase plus `[]\~` → `{}|^`.
-    static func casefold(_ nick: String) -> String {
-        String(nick.lowercased().map { character -> Character in
-            switch character {
-            case "[": "{"
-            case "]": "}"
-            case "\\": "|"
-            case "~": "^"
-            default: character
-            }
-        })
+    // MARK: Nick palette
+
+    /// Whether `color` can be a nick color on this theme: it must stand out
+    /// from the message text, or a colored nick reads as an uncolored one
+    /// (a pale grey-blue beside pale grey-blue text), and it must be
+    /// readable on the chat background (the audit's 3:1).
+    static func isDistinctNickColor(_ color: ThemeColor, text: ThemeColor?, background: ThemeColor?) -> Bool {
+        if let background, color.contrastRatio(against: background) < ThemeAudit.nickMinimum { return false }
+        if let text {
+            let distance = color.distance(to: text)
+            // Nearly the text color, or a greyish color close to it.
+            if distance < 0.04 || (color.chroma < 0.045 && distance < 0.12) { return false }
+        }
+        return true
+    }
+
+    /// `palette` minus the colors that aren't distinct. Keeps the theme's
+    /// palette when too few would be left to tell people apart.
+    static func usableNickPalette(_ palette: [ThemeColor], colors: [String: ThemeColor]) -> [ThemeColor] {
+        let text = colors[ThemeKey.chatForeground]
+        let background = colors[ThemeKey.chatBackground]
+        let usable = palette.filter { isDistinctNickColor($0, text: text, background: background) }
+        return usable.count >= min(4, palette.count) ? usable : palette
     }
 
     // MARK: Fallbacks

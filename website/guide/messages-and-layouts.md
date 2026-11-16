@@ -40,7 +40,13 @@ In **Settings → Messages**:
 
 ## Timestamps
 
-Turn timestamps on or off, and pick a format: 24-hour (`HH:mm`, the default), with seconds (`HH:mm:ss`), 12-hour (`h:mm a`), or **Custom…** with any [Unicode date pattern](https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table).
+Turn timestamps on or off, and choose how they read:
+
+- **Clock**: **System** (the default) follows your Mac's **24-hour time** setting in System Settings → General → Date & Time, and updates as soon as you change it. **12-hour** (`2:47 PM`) and **24-hour** (`14:47`) override it for Vela.
+- **Show seconds** adds seconds (`2:47:09 PM`, `14:47:09`).
+- **Custom format** lets you write any [Unicode date pattern](https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table), such as `HH.mm` or `EEE HH:mm`. It starts from the format you had; turn it off to go back to the clock settings.
+
+Below the settings, a sample shows what your timestamps look like.
 
 ## Joins, parts and other noise
 
@@ -54,7 +60,7 @@ The same choices are in **View → Message Layout**.
 
 ## Colors and formatting
 
-- **Colored nicknames** gives everyone a stable color from your theme's nick palette. The same nick always gets the same color.
+- **Colored nicknames** gives everyone a color from your theme's nick palette. People talking in the same channel get different colors while the palette has room, so two nicks never look alike just because their names hash alike. Each nick keeps its color once given, and usually has the same one in every channel. Palette colors that would read as plain text are skipped.
 - **mIRC formatting** shows bold, italic, underline, strikethrough, monospace, colors (including hex colors) and reverse text sent by other clients. Turn it off to see plain text.
 - **Large emoji** shows messages that are only emoji at a bigger size.
 - Messages that **mention you** get a tinted background and an accent bar. See [Notifications & highlights](/guide/notifications).

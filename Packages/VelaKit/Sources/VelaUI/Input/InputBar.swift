@@ -327,6 +327,7 @@ struct InputBar: View {
 private struct ReplyBar: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
+    @Environment(\.nickColorBuffer) private var buffer
     let line: ChatLine
     let supportsReplies: Bool
     let onCancel: () -> Void
@@ -382,7 +383,7 @@ private struct ReplyBar: View {
     }
 
     private func nickColor(_ nick: String) -> Color {
-        style.colorNicks ? theme.nickColor(for: nick).color : theme[ThemeKey.replyForeground]
+        style.colorNicks ? theme.nickColor(for: nick, in: buffer).color : theme[ThemeKey.replyForeground]
     }
 }
 

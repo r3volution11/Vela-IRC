@@ -12,11 +12,10 @@ import VelaTheme
 struct MessagesPane: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
 
+    /// Keeps the custom pattern field open while it's empty.
     @State private var editsCustomTimestamp = false
-
-    private static let timestampPresets = ["HH:mm", "h:mm a", "HH:mm:ss"]
-    private static let customTag = "\u{0}custom"
 
     var body: some View {
         @Bindable var settings = app.settings
@@ -80,22 +79,24 @@ struct MessagesPane: View {
                 )
             }
 
-            SettingsSection("Timestamps") {
+            SettingsSection("Timestamps", footer: "Timestamps show as “\(timestampSample)”.") {
                 SettingsToggle("Show timestamps", isOn: $settings[.chatShowTimestamps])
-                SettingsRow("Format", detail: "Uses Unicode date patterns, e.g. HH:mm:ss or h:mm a.", labelsControl: true) {
-                    Picker("Timestamp format", selection: timestampSelection) {
-                        ForEach(Self.timestampPresets, id: \.self) { format in
-                            Text(Self.sample(format)).tag(format)
-                        }
-                        Divider()
-                        Text("Custom…").tag(Self.customTag)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .fixedSize()
-                }
-                if isCustomTimestamp {
-                    SettingsRow("Custom format", detail: "Shows as “\(Self.sample(settings[.chatTimestampFormat]))”.", labelsControl: true) {
+                SettingsSegmentedRow(
+                    title: "Clock",
+                    detail: "System follows your Mac's 24-hour time setting.",
+                    selection: $settings[.chatClock],
+                    options: [(.system, "System"), (.twelveHour, "12-hour"), (.twentyFourHour, "24-hour")]
+                )
+                .themedDisabled(usesCustomTimestamp)
+                SettingsToggle("Show seconds", isOn: $settings[.chatTimestampSeconds])
+                    .themedDisabled(usesCustomTimestamp)
+                SettingsToggle(
+                    "Custom format",
+                    detail: "Use your own Unicode date pattern, like HH:mm:ss or h:mm a.",
+                    isOn: customTimestamp
+                )
+                if usesCustomTimestamp {
+                    SettingsRow("Pattern", labelsControl: true) {
                         ThemedTextField("HH:mm", text: $settings[.chatTimestampFormat], monospaced: true, accessibilityName: "Custom timestamp format")
                             .frame(width: 140)
                     }
@@ -110,7 +111,7 @@ struct MessagesPane: View {
                     selection: $settings[.chatShowJoinPart],
                     options: [(.show, "Show"), (.collapse, "Collapse"), (.hide, "Hide")]
                 )
-                SettingsToggle("Colored nicknames", detail: "Give everyone a stable color from the theme's nick palette.", isOn: $settings[.chatColorNicks])
+                SettingsToggle("Colored nicknames", detail: "Give everyone a color from the theme's nick palette. People talking in the same channel get different colors.", isOn: $settings[.chatColorNicks])
                 SettingsToggle("Avatars", detail: "Show initials avatars next to message groups in the Modern layout.", isOn: $settings[.chatShowAvatars])
                 SettingsMenuRow(
                     title: "Group messages within",
@@ -209,19 +210,22 @@ struct MessagesPane: View {
 
     // MARK: Timestamps
 
-    private var isCustomTimestamp: Bool {
-        editsCustomTimestamp || !Self.timestampPresets.contains(app.settings[.chatTimestampFormat])
+    /// On while `chat.timestampFormat` holds a pattern (or its field is open).
+    private var usesCustomTimestamp: Bool {
+        editsCustomTimestamp || !app.settings[.chatTimestampFormat].allSatisfy(\.isWhitespace)
     }
 
-    private var timestampSelection: Binding<String> {
+    /// Turning it on starts from the pattern in effect; off removes the
+    /// custom pattern so the clock settings apply again.
+    private var customTimestamp: Binding<Bool> {
         Binding(
-            get: { isCustomTimestamp ? Self.customTag : app.settings[.chatTimestampFormat] },
-            set: { tag in
-                if tag == Self.customTag {
-                    editsCustomTimestamp = true
+            get: { usesCustomTimestamp },
+            set: { isOn in
+                editsCustomTimestamp = isOn
+                if isOn {
+                    app.settings[.chatTimestampFormat] = style.timestampPattern
                 } else {
-                    editsCustomTimestamp = false
-                    app.settings[.chatTimestampFormat] = tag
+                    app.settings.reset(.chatTimestampFormat)
                 }
             }
         )
@@ -231,10 +235,9 @@ struct MessagesPane: View {
         Calendar.current.date(bySettingHour: 14, minute: 5, second: 9, of: Date()) ?? Date()
     }()
 
-    static func sample(_ format: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = format
-        let text = formatter.string(from: sampleDate)
+    /// The sample time in the pattern chat uses right now.
+    private var timestampSample: String {
+        let text = style.timestamp(Self.sampleDate)
         return text.isEmpty ? "(empty)" : text
     }
 

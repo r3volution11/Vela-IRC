@@ -4,6 +4,7 @@
 
 import Foundation
 import Observation
+import VelaFoundation
 import VelaIRC
 import VelaStore
 
@@ -279,6 +280,7 @@ public final class BufferModel: Identifiable, Hashable {
         } else {
             lines.append(line)
         }
+        if let nick = Self.speaker(of: line) { nickColors?.noteSpeaker(nick) }
         if lines.count > limit + 200 {
             lines.removeFirst(lines.count - limit)
             hasMoreHistory = true
@@ -306,6 +308,31 @@ public final class BufferModel: Identifiable, Hashable {
         }
         guard !fresh.isEmpty else { return }
         lines = (lines + fresh).sorted { $0.time < $1.time }
+        for nick in fresh.compactMap(Self.speaker(of:)) { nickColors?.noteEarlierSpeaker(nick) }
+    }
+
+    // MARK: Nick colors
+
+    /// Who has which nick color here; built on first use for a palette.
+    @ObservationIgnored private var nickColors: NickColorAssigner?
+
+    /// `nick`'s color in this conversation, as an index into the palette
+    /// `palette` describes. People talking here get different colors (see
+    /// `NickColorAssigner`); a nick that hasn't spoken gets its usual one.
+    public func nickColorIndex(for nick: String, palette: NickPaletteGeometry) -> Int {
+        if nickColors?.palette.signature != palette.signature || nickColors?.palette.count != palette.count {
+            // First use, or the theme changed: replay the conversation.
+            var assigner = NickColorAssigner(palette: palette)
+            for nick in lines.compactMap(Self.speaker(of:)) { assigner.noteSpeaker(nick) }
+            nickColors = assigner
+        }
+        return nickColors?.index(for: nick) ?? 0
+    }
+
+    /// The nick that said `line`, if it's something someone else said
+    /// (your own nick has its own color).
+    private nonisolated static func speaker(of line: ChatLine) -> String? {
+        line.kind.isConversation && !line.isSelf ? line.nick : nil
     }
 
     // MARK: Copies
