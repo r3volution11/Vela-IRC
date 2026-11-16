@@ -41,7 +41,7 @@
   - [x] Link cards
   - [x] YouTube/Vimeo/Twitch/Streamable players
   - [x] Media policy: per network/channel, domain lists, size limits
-- [ ] **IRCv3 chat**
+- [x] **IRCv3 chat**
   - [x] Reactions, replies, typing indicators, redaction
   - [x] `chathistory` paging
 - [ ] **Bouncers:** soju (`bouncer-networks`) and ZNC (`playback`, `self-message`)
