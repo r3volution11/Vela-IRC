@@ -114,43 +114,40 @@ struct TabPalette {
                 border: ThemeKey.titleBarBorder,
                 text: ThemeKey.titleBarSecondaryForeground,
                 unreadText: ThemeKey.titleBarForeground,
-                highlightText: ThemeKey.sidebarHighlightForeground,
-                dimText: ThemeKey.sidebarDisconnectedForeground,
-                hoverFill: ThemeKey.sidebarHoverBackground,
-                selectedFill: ThemeKey.sidebarActiveBackground,
-                selectedText: ThemeKey.sidebarActiveForeground,
+                highlightText: ThemeKey.tabHighlightForeground,
+                dimText: ThemeKey.tabInactiveForeground,
+                hoverFill: ThemeKey.tabHoverBackground,
+                selectedFill: ThemeKey.tabPillBackground,
+                selectedText: ThemeKey.tabPillForeground,
                 selectedBorder: ThemeKey.titleBarBorder,
-                indicator: ThemeKey.accent,
-                separator: ThemeKey.paneDivider,
-                groupFill: ThemeKey.sidebarHoverBackground
+                indicator: ThemeKey.tabActiveIndicator,
+                separator: ThemeKey.tabSeparator,
+                groupFill: ThemeKey.tabGroupBackground
             )
         case .strip:
             TabPalette(
-                background: ThemeKey.sidebarBackground,
-                border: ThemeKey.titleBarBorder,
-                text: ThemeKey.sidebarForeground,
-                unreadText: ThemeKey.sidebarUnreadForeground,
-                highlightText: ThemeKey.sidebarHighlightForeground,
-                dimText: ThemeKey.sidebarDisconnectedForeground,
-                hoverFill: ThemeKey.sidebarHoverBackground,
-                selectedFill: appearance == .floating ? ThemeKey.sidebarActiveBackground : ThemeKey.chatBackground,
-                selectedText: appearance == .floating ? ThemeKey.sidebarActiveForeground : ThemeKey.chatForeground,
-                selectedBorder: ThemeKey.titleBarBorder,
-                indicator: ThemeKey.accent,
-                separator: ThemeKey.paneDivider,
-                groupFill: ThemeKey.sidebarHoverBackground
+                background: ThemeKey.tabBarBackground,
+                border: ThemeKey.tabBorder,
+                text: ThemeKey.tabForeground,
+                unreadText: ThemeKey.tabUnreadForeground,
+                highlightText: ThemeKey.tabHighlightForeground,
+                dimText: ThemeKey.tabInactiveForeground,
+                hoverFill: ThemeKey.tabHoverBackground,
+                selectedFill: appearance == .floating ? ThemeKey.tabPillBackground : ThemeKey.tabActiveBackground,
+                selectedText: appearance == .floating ? ThemeKey.tabPillForeground : ThemeKey.tabActiveForeground,
+                selectedBorder: ThemeKey.tabBorder,
+                indicator: ThemeKey.tabActiveIndicator,
+                separator: ThemeKey.tabSeparator,
+                groupFill: ThemeKey.tabGroupBackground
             )
         }
     }
 
     static func servers(on surface: TabSurface) -> TabPalette {
         var palette = channels(on: surface, appearance: .floating)
-        palette.selectedFill = ThemeKey.railActiveBackground
-        palette.indicator = ThemeKey.railActiveIndicator
+        palette.selectedFill = ThemeKey.tabServerActiveBackground
         if surface == .strip {
-            palette.background = ThemeKey.railBackground
-            palette.text = ThemeKey.railForeground
-            palette.dimText = ThemeKey.railInactiveForeground
+            palette.background = ThemeKey.tabServerBackground
         }
         return palette
     }

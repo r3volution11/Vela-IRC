@@ -40,7 +40,7 @@ struct BufferContextMenuItems: View {
                 Button("Whois \(buffer.name)") { session.submit("/whois \(buffer.name)", in: buffer) }
                     .disabled(!session.isConnected)
             }
-            Button(buffer.kind == .channel ? "Close Channel" : "Close Conversation") { session.close(buffer) }
+            Button(buffer.kind == .channel ? "Close Channel" : "Close Conversation") { app.close(buffer) }
         }
     }
 }

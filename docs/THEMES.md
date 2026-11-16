@@ -394,6 +394,29 @@ The collapsed, icon-only sidebar.
 | `rail.badgeForeground` | Text of the activity badge. | `sidebar.highlightBadgeForeground` | `sidebar.highlightBadgeForeground` |
 | `rail.border` | Edge of the collapsed sidebar. | `sidebar.border` | `sidebar.border` |
 
+### Tabs
+
+Vivaldi-style tab stacks used when navigation is set to tabs.
+
+| Token | Description | Dark default | Light default |
+| --- | --- | --- | --- |
+| `tab.barBackground` | Strip behind the tabs. | `sidebar.background` | `sidebar.background` |
+| `tab.border` | Strip border and the outline of an attached tab. | `titleBar.border` | `titleBar.border` |
+| `tab.foreground` | Text of read tabs. | `sidebar.foreground` | `sidebar.foreground` |
+| `tab.unreadForeground` | Text of tabs with unread messages. | `sidebar.unreadForeground` | `sidebar.unreadForeground` |
+| `tab.highlightForeground` | Text of tabs with mentions. | `sidebar.highlightForeground` | `sidebar.highlightForeground` |
+| `tab.inactiveForeground` | Muted, parted or offline tabs. | `sidebar.disconnectedForeground` | `sidebar.disconnectedForeground` |
+| `tab.hoverBackground` | Hovered tab. | `sidebar.hoverBackground` | `sidebar.hoverBackground` |
+| `tab.activeBackground` | Selected tab that opens into the conversation. | `chat.background` | `chat.background` |
+| `tab.activeForeground` | Text of the selected attached tab. | `chat.foreground` | `chat.foreground` |
+| `tab.activeIndicator` | Accent line on the selected tab. | `accent` | `accent` |
+| `tab.pillBackground` | Selected floating tab (title bar and pill shapes). | `sidebar.activeBackground` | `sidebar.activeBackground` |
+| `tab.pillForeground` | Text of a selected floating tab. | `sidebar.activeForeground` | `sidebar.activeForeground` |
+| `tab.separator` | Rule between tabs. | `pane.divider` | `pane.divider` |
+| `tab.serverBackground` | Background of the server (network) row. | `rail.background` | `rail.background` |
+| `tab.serverActiveBackground` | Selected network in the server row. | `rail.activeBackground` | `rail.activeBackground` |
+| `tab.groupBackground` | Segmented network group in the title bar. | `transparent(sidebar.foreground, 7.0%)` | `transparent(sidebar.foreground, 7.0%)` |
+
 ### Chat
 
 The conversation view.

@@ -18,7 +18,10 @@ public struct VelaScenes: Scene {
         let arguments = ProcessInfo.processInfo.arguments
         let demo = UserDefaults.standard.bool(forKey: "VelaDemoMode") || arguments.contains("--demo")
         let app = demo ? AppModel.demo() : AppModel.live()
-        if demo { DemoArguments.apply(arguments, to: app.settings) }
+        if demo {
+            DemoArguments.apply(arguments, to: app.settings)
+            DemoArguments.selectBuffer(from: arguments, in: app)
+        }
         let themeStore = ThemeStore(userThemesDirectory: AppPaths.themesDirectory)
         let uiState = UIState()
         if SnapshotSupport.isActive {
@@ -46,12 +49,15 @@ public struct VelaScenes: Scene {
             SettingsRootView()
                 .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, isPrimary: false)
         }
+        .defaultSize(width: 820, height: 600)
+        .windowResizability(.contentMinSize)
 
         Window("Theme Editor", id: WindowID.themeEditor) {
             ThemeEditorView()
                 .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, isPrimary: false)
         }
         .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .defaultSize(width: 760, height: 680)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)

@@ -16,6 +16,7 @@ public enum ThemeRegistry {
         .init(id: "titleBar", title: "Title bar", description: "The toolbar area above the conversation."),
         .init(id: "sidebar", title: "Sidebar", description: "The network and channel list."),
         .init(id: "rail", title: "Rail", description: "The collapsed, icon-only sidebar."),
+        .init(id: "tabs", title: "Tabs", description: "Vivaldi-style tab stacks used when navigation is set to tabs."),
         .init(id: "chat", title: "Chat", description: "The conversation view."),
         .init(id: "input", title: "Input", description: "The message composer."),
         .init(id: "memberList", title: "Member list", description: "The channel member list."),
@@ -26,7 +27,7 @@ public enum ThemeRegistry {
         .init(id: "settings", title: "Settings window", description: "The Settings window."),
     ]
 
-    public static let tokens: [ThemeToken] = window + titleBar + sidebar + rail + chat + input + memberList
+    public static let tokens: [ThemeToken] = window + titleBar + sidebar + rail + tabs + chat + input + memberList
         + embed + reactions + controls + status + settings
 
     public static func token(_ key: String) -> ThemeToken? {
@@ -166,6 +167,25 @@ public enum ThemeRegistry {
         t(ThemeKey.railBorder, "rail",
           "Edge of the collapsed sidebar.",
           .ref(ThemeKey.sidebarBorder)),
+    ]
+
+    private static let tabs: [ThemeToken] = [
+        t(ThemeKey.tabBarBackground, "tabs", "Strip behind the tabs.", .ref(ThemeKey.sidebarBackground)),
+        t(ThemeKey.tabBorder, "tabs", "Strip border and the outline of an attached tab.", .ref(ThemeKey.titleBarBorder)),
+        t(ThemeKey.tabForeground, "tabs", "Text of read tabs.", .ref(ThemeKey.sidebarForeground)),
+        t(ThemeKey.tabUnreadForeground, "tabs", "Text of tabs with unread messages.", .ref(ThemeKey.sidebarUnreadForeground)),
+        t(ThemeKey.tabHighlightForeground, "tabs", "Text of tabs with mentions.", .ref(ThemeKey.sidebarHighlightForeground)),
+        t(ThemeKey.tabInactiveForeground, "tabs", "Muted, parted or offline tabs.", .ref(ThemeKey.sidebarDisconnectedForeground)),
+        t(ThemeKey.tabHoverBackground, "tabs", "Hovered tab.", .ref(ThemeKey.sidebarHoverBackground)),
+        t(ThemeKey.tabActiveBackground, "tabs", "Selected tab that opens into the conversation.", .ref(ThemeKey.chatBackground)),
+        t(ThemeKey.tabActiveForeground, "tabs", "Text of the selected attached tab.", .ref(ThemeKey.chatForeground)),
+        t(ThemeKey.tabActiveIndicator, "tabs", "Accent line on the selected tab.", .ref(ThemeKey.accent)),
+        t(ThemeKey.tabPillBackground, "tabs", "Selected floating tab (title bar and pill shapes).", .ref(ThemeKey.sidebarActiveBackground)),
+        t(ThemeKey.tabPillForeground, "tabs", "Text of a selected floating tab.", .ref(ThemeKey.sidebarActiveForeground)),
+        t(ThemeKey.tabSeparator, "tabs", "Rule between tabs.", .ref(ThemeKey.paneDivider)),
+        t(ThemeKey.tabServerBackground, "tabs", "Background of the server (network) row.", .ref(ThemeKey.railBackground)),
+        t(ThemeKey.tabServerActiveBackground, "tabs", "Selected network in the server row.", .ref(ThemeKey.railActiveBackground)),
+        t(ThemeKey.tabGroupBackground, "tabs", "Segmented network group in the title bar.", .transparent(ThemeKey.sidebarForeground, 0.07)),
     ]
 
     private static let chat: [ThemeToken] = [

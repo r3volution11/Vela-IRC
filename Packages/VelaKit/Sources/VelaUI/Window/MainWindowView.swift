@@ -36,7 +36,8 @@ struct MainWindowView: View {
                 PaneDivider(
                     width: settings[.memberListWidth],
                     range: 120...320,
-                    edge: .trailing
+                    edge: .trailing,
+                    colorKey: ThemeKey.memberListBorder
                 ) { settings[.memberListWidth] = $0 }
                 MemberListView(buffer: buffer, session: session)
                     .frame(width: settings[.memberListWidth])
@@ -110,13 +111,14 @@ struct PaneDivider: View {
     let range: ClosedRange<Double>
     /// The side of the divider the resized pane is on.
     let edge: HorizontalEdge
+    var colorKey: String = ThemeKey.paneDivider
     let onChange: (Double) -> Void
 
     @State private var dragStartWidth: Double?
 
     var body: some View {
         Rectangle()
-            .fill(theme[ThemeKey.paneDivider])
+            .fill(theme[colorKey])
             .frame(width: 1)
             .overlay {
                 Color.clear

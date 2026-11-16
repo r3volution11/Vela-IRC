@@ -751,6 +751,118 @@
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
           "type" : "string"
         },
+        "tab.activeBackground" : {
+          "description" : "Selected tab that opens into the conversation.\n\nDefault: chat.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.activeForeground" : {
+          "description" : "Text of the selected attached tab.\n\nDefault: chat.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.activeIndicator" : {
+          "description" : "Accent line on the selected tab.\n\nDefault: accent",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.barBackground" : {
+          "description" : "Strip behind the tabs.\n\nDefault: sidebar.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.border" : {
+          "description" : "Strip border and the outline of an attached tab.\n\nDefault: titleBar.border",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.foreground" : {
+          "description" : "Text of read tabs.\n\nDefault: sidebar.foreground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.groupBackground" : {
+          "description" : "Segmented network group in the title bar.\n\nDefault: transparent(sidebar.foreground, 7.0%)",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.highlightForeground" : {
+          "description" : "Text of tabs with mentions.\n\nDefault: sidebar.highlightForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.hoverBackground" : {
+          "description" : "Hovered tab.\n\nDefault: sidebar.hoverBackground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.inactiveForeground" : {
+          "description" : "Muted, parted or offline tabs.\n\nDefault: sidebar.disconnectedForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.pillBackground" : {
+          "description" : "Selected floating tab (title bar and pill shapes).\n\nDefault: sidebar.activeBackground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.pillForeground" : {
+          "description" : "Text of a selected floating tab.\n\nDefault: sidebar.activeForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.separator" : {
+          "description" : "Rule between tabs.\n\nDefault: pane.divider",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.serverActiveBackground" : {
+          "description" : "Selected network in the server row.\n\nDefault: rail.activeBackground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.serverBackground" : {
+          "description" : "Background of the server (network) row.\n\nDefault: rail.background",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
+        "tab.unreadForeground" : {
+          "description" : "Text of tabs with unread messages.\n\nDefault: sidebar.unreadForeground",
+          "format" : "color-hex",
+          "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+          "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
+          "type" : "string"
+        },
         "titleBar.background" : {
           "description" : "Background of the title bar / toolbar above the conversation.\n\nDefault: chat.background",
           "format" : "color-hex",

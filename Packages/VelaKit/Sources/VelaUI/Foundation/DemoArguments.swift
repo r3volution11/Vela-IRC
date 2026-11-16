@@ -4,6 +4,7 @@
 
 import Foundation
 import VelaFoundation
+import VelaCore
 import VelaStore
 
 /// Launch arguments for demo mode, handy for screenshots and UI work:
@@ -25,6 +26,9 @@ enum DemoArguments {
             case "--preset":
                 guard let id = iterator.next(), let preset = SettingsPreset.all.first(where: { $0.id == id }) else { continue }
                 settings.apply(preset)
+            case "--select":
+                // Handled by `selectBuffer(from:in:)` once sessions exist.
+                _ = iterator.next()
             case "--set":
                 guard let pair = iterator.next(), let eq = pair.firstIndex(of: "=") else { continue }
                 let key = String(pair[..<eq])
@@ -33,6 +37,21 @@ enum DemoArguments {
                 settings.setValue(value, forKey: key)
             default:
                 continue
+            }
+        }
+    }
+
+    /// `--select "#ergo"` or `--select "OFTC/#debian"` picks the initial buffer.
+    @MainActor
+    static func selectBuffer(from arguments: [String], in app: AppModel) {
+        guard let index = arguments.firstIndex(of: "--select"), arguments.indices.contains(index + 1) else { return }
+        let spec = arguments[index + 1]
+        let parts = spec.split(separator: "/", maxSplits: 1).map(String.init)
+        let (networkName, bufferName) = parts.count == 2 ? (parts[0], parts[1]) : (nil, parts[0])
+        for session in app.sessions where networkName.map({ session.displayName.caseInsensitiveCompare($0) == .orderedSame }) ?? true {
+            if let buffer = session.buffer(named: bufferName) ?? (bufferName == "*" ? session.serverBuffer : nil) {
+                app.select(buffer)
+                return
             }
         }
     }

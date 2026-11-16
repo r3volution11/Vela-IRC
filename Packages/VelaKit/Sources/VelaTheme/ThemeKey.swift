@@ -44,6 +44,24 @@ public enum ThemeKey {
     public static let railBadgeForeground = "rail.badgeForeground"
     public static let railBorder = "rail.border"
 
+    // Tabs
+    public static let tabBarBackground = "tab.barBackground"
+    public static let tabBorder = "tab.border"
+    public static let tabForeground = "tab.foreground"
+    public static let tabUnreadForeground = "tab.unreadForeground"
+    public static let tabHighlightForeground = "tab.highlightForeground"
+    public static let tabInactiveForeground = "tab.inactiveForeground"
+    public static let tabHoverBackground = "tab.hoverBackground"
+    public static let tabActiveBackground = "tab.activeBackground"
+    public static let tabActiveForeground = "tab.activeForeground"
+    public static let tabActiveIndicator = "tab.activeIndicator"
+    public static let tabPillBackground = "tab.pillBackground"
+    public static let tabPillForeground = "tab.pillForeground"
+    public static let tabSeparator = "tab.separator"
+    public static let tabServerBackground = "tab.serverBackground"
+    public static let tabServerActiveBackground = "tab.serverActiveBackground"
+    public static let tabGroupBackground = "tab.groupBackground"
+
     // Chat
     public static let chatBackground = "chat.background"
     public static let chatForeground = "chat.foreground"

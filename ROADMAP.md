@@ -24,32 +24,32 @@
   - [x] VS Code theme import (`.json` / `.vsix`)
   - [x] Generated JSON Schema
   - [x] ~21 built-in themes
-- [ ] **Window**
+- [x] **Window**
   - [x] Fully themed custom 3-pane window shell
-  - [ ] Compact sidebar that collapses to a rail
-  - [ ] Vivaldi-style two-level tab stacks (top / title bar / bottom, square-to-pill corners)
-  - [ ] Member list
-- [x] **Presets:** Classic IRC, Modern Chat, Tabbed, Focus (settings layer)
-- [ ] **Message layouts:** Classic, Modern grouped, Compact columns
-- [ ] **Chat rendering**
-  - [ ] mIRC formatting and colors
-  - [ ] Nick colors
-  - [ ] Collapsed join/part
-  - [ ] Unread markers and day separators
-- [ ] **Inline media**
-  - [ ] Images and animated GIF/WebP
-  - [ ] Link cards
-  - [ ] YouTube/Vimeo/Twitch/Streamable players
-  - [ ] Media policy: per network/channel, domain lists, size limits
+  - [x] Compact sidebar that collapses to a rail
+  - [x] Vivaldi-style two-level tab stacks (top / title bar / bottom, square-to-pill corners)
+  - [x] Member list
+- [x] **Presets:** Classic IRC, Modern Chat, Tabbed, Focus
+- [x] **Message layouts:** Classic, Modern grouped, Compact columns
+- [x] **Chat rendering**
+  - [x] mIRC formatting and colors
+  - [x] Nick colors
+  - [x] Collapsed join/part
+  - [x] Unread markers and day separators
+- [x] **Inline media**
+  - [x] Images and animated GIF/WebP
+  - [x] Link cards
+  - [x] YouTube/Vimeo/Twitch/Streamable players
+  - [x] Media policy: per network/channel, domain lists, size limits
 - [ ] **IRCv3 chat**
-  - [ ] Reactions, replies, typing indicators, redaction
-  - [ ] `chathistory` paging
+  - [x] Reactions, replies, typing indicators, redaction
+  - [x] `chathistory` paging
 - [ ] **Bouncers:** soju (`bouncer-networks`) and ZNC (`playback`, `self-message`)
-- [ ] **Settings window**
-  - [ ] Theme gallery
-  - [ ] Network editor with SASL and certificates
-  - [ ] Notifications
-- [ ] **Basic in-app theme editor** with live preview
+- [x] **Settings window**
+  - [x] Theme gallery
+  - [x] Network editor with SASL and certificates
+  - [x] Notifications
+- [x] **Basic in-app theme editor** with live preview
 
 ## Later
 

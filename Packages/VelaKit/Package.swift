@@ -86,5 +86,10 @@ let package = Package(
             resources: [.copy("Fixtures")]
         ),
         .testTarget(name: "VelaCoreTests", dependencies: ["VelaCore", "VelaIRC"]),
+        .testTarget(
+            name: "VelaUITests",
+            dependencies: ["VelaUI", "VelaCore", "VelaStore", "VelaTheme", "VelaIRC"],
+            swiftSettings: mainActorByDefault
+        ),
     ]
 )

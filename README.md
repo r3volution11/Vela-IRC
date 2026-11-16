@@ -13,6 +13,23 @@
 
 > **Status: early development.** Vela is being built in the open. Expect rough edges and breaking changes until the first tagged release. See [ROADMAP.md](ROADMAP.md).
 
+<p align="center">
+  <img src="docs/screenshots/modern-palenight.png" alt="Vela with the Modern Chat preset in Palenight: grouped messages, an inline GIF, reactions and a link card" width="100%">
+</p>
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/focus-tabs-palenight.png" alt="Focus preset: pill tabs in the title bar and compact columns"></td>
+    <td><img src="docs/screenshots/classic-graphite.png" alt="Classic IRC preset in Vela Graphite: monospace one-line messages"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Focus preset · pill tab stacks in the title bar</sub></td>
+    <td align="center"><sub>Classic IRC preset · Vela Graphite</sub></td>
+  </tr>
+</table>
+
+<sub>Screenshots are from demo mode (<code>Vela --demo</code>) and generated with <code>scripts/demo-screenshot.sh</code>.</sub>
+
 ## Why Vela?
 
 IRC clients on the Mac have stood still. Vela pairs the protocol's simplicity with what people now expect from chat:

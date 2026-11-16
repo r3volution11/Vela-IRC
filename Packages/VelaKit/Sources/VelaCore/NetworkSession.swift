@@ -873,7 +873,7 @@ public final class NetworkSession: Identifiable {
                 return
             }
         }
-        if supportsChatHistory, isConnected, buffer.kind != .server {
+        if supportsChatHistory, isConnected, client != nil, buffer.kind != .server {
             let since = buffer.lines.first?.time ?? oldest
             pendingBeforeRequests.insert(buffer.id)
             sendRaw("CHATHISTORY BEFORE \(buffer.name) timestamp=\(IRCTime.format(since)) \(historyLimit)")

@@ -264,6 +264,21 @@ public final class AppModel: SessionHost {
         UserDefaults.standard.set(buffer.id.description, forKey: "Vela.lastSelectedBuffer")
     }
 
+    /// Closes a channel or query and, if it was selected, selects its
+    /// neighbor (or the server buffer) so the view never shows a closed buffer.
+    public func close(_ buffer: BufferModel) {
+        guard let session = session(for: buffer.id.networkID), buffer.kind != .server else { return }
+        if selectedBufferID == buffer.id {
+            let siblings = session.allBuffers
+            let index = siblings.firstIndex { $0.id == buffer.id } ?? 0
+            let neighbor = siblings.indices.contains(index + 1) ? siblings[index + 1] : siblings[max(0, index - 1)]
+            session.close(buffer)
+            select(neighbor.id == buffer.id ? session.serverBuffer : neighbor)
+        } else {
+            session.close(buffer)
+        }
+    }
+
     public func select(bufferID: BufferID) {
         guard let buffer = session(for: bufferID.networkID)?.buffer(id: bufferID) else { return }
         select(buffer)

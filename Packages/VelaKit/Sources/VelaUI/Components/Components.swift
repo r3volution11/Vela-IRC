@@ -53,10 +53,20 @@ struct UnreadBadge: View {
 
 /// Button style drawn entirely from theme tokens.
 struct ThemedButtonStyle: ButtonStyle {
-    @Environment(\.theme) private var theme
     var prominent = false
 
     func makeBody(configuration: Configuration) -> some View {
+        ThemedButtonBody(configuration: configuration, prominent: prominent)
+    }
+}
+
+private struct ThemedButtonBody: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.isEnabled) private var isEnabled
+    let configuration: ButtonStyleConfiguration
+    let prominent: Bool
+
+    var body: some View {
         configuration.label
             .font(.system(size: 13, weight: .medium))
             .padding(.horizontal, 14)
@@ -67,6 +77,7 @@ struct ThemedButtonStyle: ButtonStyle {
                     .fill(theme[prominent ? ThemeKey.buttonBackground : ThemeKey.buttonSecondaryBackground])
                     .opacity(configuration.isPressed ? 0.8 : 1)
             )
+            .opacity(isEnabled ? 1 : 0.45)
             .contentShape(Rectangle())
     }
 }
