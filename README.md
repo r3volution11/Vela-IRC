@@ -166,7 +166,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 |---|---|
 | Command palette | ⇧⌘P |
 | Go to channel or conversation | ⌘P or ⌘K |
-| Select theme | ⌥⌘T |
+| Select theme | ⌃⌘T |
 | Show/hide member list | ⇧⌘M |
 | Collapse/expand sidebar | ⌃⌘S |
 | Previous / next conversation | ⌥⌘↑ / ⌥⌘↓ |
