@@ -20,6 +20,7 @@ struct VideoEmbedView: View {
     @Environment(\.chatStyle) private var style
     let linkURL: URL
     let embed: EmbedInfo
+    /// The link's policy; the thumbnail goes through it.
     let policy: MediaPolicy
     let compact: Bool
     var animateAppearance = false

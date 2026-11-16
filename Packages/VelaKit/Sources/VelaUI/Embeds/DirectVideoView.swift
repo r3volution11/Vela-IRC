@@ -18,6 +18,9 @@ struct DirectVideoView: View {
     let linkURL: URL
     /// The file after policy-checked redirects.
     let videoURL: URL
+    /// The link's policy: no poster is made (and nothing played) unless it
+    /// lets the file load like an image.
+    let policy: MediaPolicy
     let compact: Bool
     var animateAppearance = false
     let onHide: () -> Void
@@ -30,14 +33,24 @@ struct DirectVideoView: View {
     /// Compact mode: the player is showing under the title row.
     @State private var expanded = false
 
-    init(linkURL: URL, videoURL: URL, compact: Bool, animateAppearance: Bool = false, onHide: @escaping () -> Void) {
+    init(
+        linkURL: URL,
+        videoURL: URL,
+        policy: MediaPolicy,
+        compact: Bool,
+        animateAppearance: Bool = false,
+        onHide: @escaping () -> Void
+    ) {
         self.linkURL = linkURL
         self.videoURL = videoURL
+        self.policy = policy
         self.compact = compact
         self.animateAppearance = animateAppearance
         self.onHide = onHide
-        _poster = State(initialValue: EmbedImagePipeline.memoizedStill(videoURL, maxPixelSize: Self.posterPixelSize))
+        _poster = State(initialValue: EmbedImagePipeline.memoizedStill(videoURL, maxPixelSize: Self.posterPixelSize, policy: policy))
     }
+
+    private var isAllowed: Bool { policy.allowsImage(videoURL) }
 
     private var aspectRatio: CGFloat {
         guard let poster, poster.height > 0 else { return 16.0 / 9.0 }
@@ -51,13 +64,9 @@ struct DirectVideoView: View {
         .embedFadeIn(animateAppearance)
         .task(id: videoURL) {
             // Compact rows start playing as soon as they expand, so they need no poster.
-            guard poster == nil, !compact else { return }
+            guard poster == nil, !compact, isAllowed else { return }
             guard let image = try? await Self.makePoster(videoURL, maxPixelSize: Self.posterPixelSize) else { return }
-            EmbedMemory.shared.stills.insert(
-                image,
-                for: StillImageKey(url: videoURL, maxPixelSize: Self.posterPixelSize),
-                cost: image.bytesPerRow * image.height
-            )
+            EmbedMemory.shared.remember(still: image, for: StillImageKey(url: videoURL, maxPixelSize: Self.posterPixelSize))
             poster = image
         }
         .onDisappear { player?.pause() }
@@ -178,6 +187,7 @@ struct DirectVideoView: View {
     }
 
     private func play() {
+        guard isAllowed else { return }
         let player = AVPlayer(url: videoURL)
         player.preventsDisplaySleepDuringVideoPlayback = true
         self.player = player

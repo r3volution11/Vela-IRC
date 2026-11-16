@@ -246,18 +246,26 @@ struct VelaCommandCatalog {
         ]
     }
 
-    var mediaCommands: [VelaCommand] {
-        let settings = settings
+    var mediaCommands: [VelaCommand] { Self.mediaCommands(settings) }
+
+    /// Static so tests can build them from a bare settings store.
+    static func mediaCommands(_ settings: SettingsStore) -> [VelaCommand] {
         let presentation = settings[.mediaPresentation]
         return [
+            // The id predates the title: this switches every automatic
+            // preview, not just images.
             VelaCommand(
-                id: "media.toggleAutoLoad", category: .media, title: "Toggle Inline Images",
-                keywords: ["pictures", "load"], isChecked: settings[.mediaAutoLoad]
+                id: "media.toggleAutoLoad", category: .media, title: "Load Previews Automatically",
+                keywords: ["toggle", "inline images", "pictures", "auto"], isChecked: settings[.mediaAutoLoad]
             ) { settings[.mediaAutoLoad].toggle() },
             VelaCommand(
                 id: "media.toggleLinkCards", category: .media, title: "Toggle Link Previews",
                 keywords: ["cards", "embeds"], isChecked: settings[.mediaShowLinkCards]
             ) { settings[.mediaShowLinkCards].toggle() },
+            VelaCommand(
+                id: "media.toggleAdultFilter", category: .media, title: "Hide Adult Site Previews",
+                keywords: ["nsfw", "adult", "porn", "filter", "safe"], isChecked: settings[.mediaFilterAdultSites]
+            ) { settings[.mediaFilterAdultSites].toggle() },
             VelaCommand(
                 id: "media.full", category: .media, title: "Use Full Previews",
                 keywords: ["large", "cards"], isChecked: presentation == .full

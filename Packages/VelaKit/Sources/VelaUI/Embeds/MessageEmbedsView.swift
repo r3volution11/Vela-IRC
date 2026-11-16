@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-import Observation
 import SwiftUI
 import VelaCore
 import VelaIRC
@@ -13,10 +12,10 @@ import VelaTheme
 /// facades and players. Renders nothing when the line has no links or inline
 /// media is disabled for the buffer.
 ///
-/// Up to `maxPreviews` distinct links get a preview. Links the media policy
-/// won't fetch automatically (`media.autoLoad` off) get a "Load preview" chip
-/// instead; links it won't fetch at all are skipped. Hovering shows a chevron
-/// that hides this line's previews.
+/// Up to `maxPreviews` distinct links get a preview. What each one shows is
+/// `PreviewDecider`'s call: the preview, a "Load preview" chip (auto-load
+/// off), a chip saying why its site is blocked, or nothing. Hovering shows a
+/// chevron that hides this line's previews.
 struct MessageEmbedsView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
@@ -31,25 +30,27 @@ struct MessageEmbedsView: View {
     var body: some View {
         let links = EmbedLinkExtractor.links(for: line)
         if !links.isEmpty, bufferID.foldedName != BufferID.serverBufferName, app.isMediaEnabled(for: bufferID) {
-            let policy = app.mediaPolicy(for: bufferID)
-            let items = links.compactMap { link -> EmbedItem? in
-                let mode = EmbedDisplayMode(for: link, policy: policy)
-                return mode == .hidden ? nil : EmbedItem(link: link, mode: mode)
+            let context = app.previewContext(for: bufferID)
+            let store = EmbedLineStore.shared
+            // Links that would show nothing (a private-network host, link
+            // cards turned off) take no room and don't count as hidden.
+            let shown = links.filter {
+                store.rememberedDecision(for: $0, in: line.id, context: context).plan != .none
             }
-            if !items.isEmpty {
-                if EmbedCollapseStore.shared.isCollapsed(line.id) {
-                    collapsedRow(count: items.count)
+            if !shown.isEmpty {
+                if store.isCollapsed(line.id) {
+                    collapsedRow(count: shown.count)
                 } else {
-                    embeds(items, policy: policy)
+                    embeds(shown, context: context)
                 }
             }
         }
     }
 
-    private func embeds(_ items: [EmbedItem], policy: MediaPolicy) -> some View {
+    private func embeds(_ links: [EmbedLink], context: VelaMedia.PreviewContext) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(items) { item in
-                LinkEmbedView(link: item.link, mode: item.mode, policy: policy, onHide: hide)
+            ForEach(links) { link in
+                LinkEmbedView(link: link, lineID: line.id, context: context, onHide: hide)
             }
         }
         // Room for the hover chevron, so moving onto it keeps the hover.
@@ -62,13 +63,13 @@ struct MessageEmbedsView: View {
         }
         .onHover { hovering = $0 }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(items.count == 1 ? "Link preview" : "\(items.count) link previews")
+        .accessibilityLabel(links.count == 1 ? "Link preview" : "\(links.count) link previews")
         .accessibilityAction(named: "Hide previews", hide)
     }
 
     private func collapsedRow(count: Int) -> some View {
         Button {
-            EmbedCollapseStore.shared.setCollapsed(false, for: line.id)
+            EmbedLineStore.shared.setCollapsed(false, for: line.id)
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "chevron.right")
@@ -87,7 +88,7 @@ struct MessageEmbedsView: View {
     }
 
     private func hide() {
-        EmbedCollapseStore.shared.setCollapsed(true, for: line.id)
+        EmbedLineStore.shared.setCollapsed(true, for: line.id)
     }
 }
 
@@ -162,70 +163,77 @@ enum EmbedLinkExtractor {
     }
 }
 
-/// How a link is previewed under the current media policy.
-enum EmbedDisplayMode: Hashable {
-    /// Fetch and show without a click.
-    case automatic
-    /// Show a "Load preview" chip; fetch on click.
-    case clickToLoad
-    /// Not previewed at all (blocked domain, or that kind of preview is off).
-    case hidden
-
-    init(for link: EmbedLink, policy: MediaPolicy) {
-        if policy.permitsAutomaticPreview(of: link.url) {
-            self = .automatic
-            return
-        }
-        guard policy.allows(link.url) else {
-            self = .hidden
-            return
-        }
-        switch link.classification {
-        case .embed where !policy.loadVideoEmbeds:
-            // Videos fall back to an ordinary link card when embeds are off.
-            if policy.showLinkCards {
-                self = policy.autoLoad ? .automatic : .clickToLoad
-            } else {
-                self = .hidden
-            }
-        case .page where !policy.showLinkCards:
-            self = .hidden
-        default:
-            self = .clickToLoad
-        }
-    }
-}
-
-private struct EmbedItem: Identifiable {
-    var id: String { link.id }
-    let link: EmbedLink
-    let mode: EmbedDisplayMode
-}
-
-/// Lines whose previews the user hid. Kept outside the row views so the
-/// choice survives rows being re-created while scrolling.
-@Observable
-final class EmbedCollapseStore {
-    static let shared = EmbedCollapseStore()
-
-    private var collapsed: Set<UUID> = []
-
-    func isCollapsed(_ lineID: UUID) -> Bool { collapsed.contains(lineID) }
-
-    func setCollapsed(_ value: Bool, for lineID: UUID) {
-        if value { collapsed.insert(lineID) } else { collapsed.remove(lineID) }
-    }
-}
-
 // MARK: - One link
 
-/// Fetches the preview for one link and picks the view that shows it.
+private extension MediaClassification {
+    var isEmbed: Bool {
+        if case .embed = self { return true }
+        return false
+    }
+}
+
+/// The view a link's `PreviewDecision` calls for, with what it draws.
+/// Kept apart from the views so the mapping is testable.
+///
+/// Until the Standard card arrives, `card(.standard)` draws the full card
+/// (`LinkCardView` decides), like `card(.large)`.
+enum EmbedPresentation: Hashable {
+    /// Nothing, taking no space: not previewed, still fetching, or the fetch failed.
+    case nothing
+    case loadChip(LoadChipKind)
+    case blocked(SiteBlock)
+    case image(URL, PreviewImageSize)
+    case directVideo(URL, PreviewVideoStyle)
+    case videoEmbed(EmbedInfo, PreviewVideoStyle)
+    case card(LinkPreview, PreviewLinkSize)
+
+    init(plan: PreviewPlan, link: EmbedLink, preview: LinkPreview?) {
+        switch plan {
+        case .none, .pending:
+            self = .nothing
+        case .loadChip(let kind):
+            self = .loadChip(kind)
+        case .blocked(let block):
+            self = .blocked(block)
+        case .image(let size):
+            // The URL as classified (it may be rewritten, e.g. GitHub blob →
+            // raw), else the image a page-looking link turned out to be.
+            if case .image(let imageURL) = link.classification {
+                self = .image(imageURL, size)
+            } else if let preview, preview.kind == .image {
+                self = .image(preview.mediaURL ?? preview.finalURL, size)
+            } else {
+                self = .nothing
+            }
+        case .directVideo(let style):
+            self = preview.map { .directVideo($0.finalURL, style) } ?? .nothing
+        case .videoEmbed(let style):
+            let classified: EmbedInfo? = if case .embed(let info) = link.classification { info } else { nil }
+            self = (preview?.embed ?? classified).map { .videoEmbed($0, style) } ?? .nothing
+        case .card(let size):
+            self = preview.map { .card($0, size) } ?? .nothing
+        }
+    }
+
+    /// The "Load …" chip's icon and title.
+    static func loadChipLabel(_ kind: LoadChipKind) -> (systemImage: String, title: String) {
+        switch kind {
+        case .image: ("photo", "Load image")
+        case .video: ("film", "Load video")
+        case .videoEmbed(let provider): ("play.rectangle", "Load \(provider.displayName) video")
+        case .page: ("link", "Load preview")
+        }
+    }
+}
+
+/// Fetches the preview for one link when its decision calls for it and
+/// draws what the decision says.
 private struct LinkEmbedView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.chatStyle) private var style
     let link: EmbedLink
-    let mode: EmbedDisplayMode
-    let policy: MediaPolicy
+    let lineID: UUID
+    let context: VelaMedia.PreviewContext
     let onHide: () -> Void
 
     private enum Phase {
@@ -235,27 +243,27 @@ private struct LinkEmbedView: View {
         case failed
     }
 
-    private struct TaskKey: Equatable {
-        var mode: EmbedDisplayMode
-        var requested: Bool
-        var treatAsPage: Bool
+    /// The fetch restarts when the link's policy changes ("Show once", a new
+    /// site rule) or the decision starts wanting a preview ("Load preview").
+    private struct FetchKey: Equatable {
+        var shouldFetch: Bool
+        var policy: MediaPolicy
     }
 
     @State private var phase: Phase
-    @State private var loadRequested = false
-    /// An "image" URL that served HTML: preview it as a page instead.
-    @State private var treatAsPage = false
+    /// The site block the last fetch failed with (a redirect into a blocked site).
+    @State private var fetchBlock: SiteBlock?
     @State private var arrivedAsync = false
 
-    init(link: EmbedLink, mode: EmbedDisplayMode, policy: MediaPolicy, onHide: @escaping () -> Void) {
+    init(link: EmbedLink, lineID: UUID, context: VelaMedia.PreviewContext, onHide: @escaping () -> Void) {
         self.link = link
-        self.mode = mode
-        self.policy = policy
+        self.lineID = lineID
+        self.context = context
         self.onHide = onHide
-        _phase = State(initialValue: EmbedMemory.shared.previews.value(for: link.url).map(Phase.loaded) ?? .idle)
+        let preview = EmbedLineStore.shared.rememberedPreview(for: link, in: lineID, context: context)
+        _phase = State(initialValue: preview.map(Phase.loaded) ?? .idle)
+        _fetchBlock = State(initialValue: EmbedMemory.shared.fetchBlocks.peek(link.url))
     }
-
-    private var compact: Bool { style.mediaPresentation == .compact }
 
     private var preview: LinkPreview? {
         if case .loaded(let preview) = phase { return preview }
@@ -263,107 +271,105 @@ private struct LinkEmbedView: View {
     }
 
     var body: some View {
-        content
-            .task(id: TaskKey(mode: mode, requested: loadRequested, treatAsPage: treatAsPage)) {
-                await loadPreview()
+        let decision = EmbedLineStore.shared.decision(
+            for: link, in: lineID, preview: preview, fetchBlock: fetchBlock, context: context
+        )
+        content(EmbedPresentation(plan: decision.plan, link: link, preview: preview), decision: decision)
+            .task(id: FetchKey(shouldFetch: decision.shouldFetch, policy: decision.policy)) {
+                await loadPreview(decision)
             }
     }
 
     @ViewBuilder
-    private var content: some View {
-        if mode == .clickToLoad && !loadRequested && preview == nil {
-            loadChip.padding(.top, 6)
-        } else if case .image(let imageURL) = link.classification, !treatAsPage {
+    private func content(_ presentation: EmbedPresentation, decision: PreviewDecision) -> some View {
+        switch presentation {
+        case .nothing:
+            Color.clear.frame(width: 0, height: 0)
+        case .loadChip(let kind):
+            loadChip(kind).padding(.top, 6)
+        case .blocked(let block):
+            BlockedPreviewChip(
+                block: block,
+                url: link.url,
+                onShowOnce: { EmbedLineStore.shared.allowOnce(block.domain, in: lineID) },
+                onHide: onHide
+            )
+            .padding(.top, 6)
+        case .image(let imageURL, let size):
             InlineImageView(
                 linkURL: link.url,
                 imageURL: imageURL,
-                policy: policy,
-                compact: compact,
+                policy: decision.policy,
+                compact: size == .thumbnail,
                 maxImageHeight: style.maxImageHeight,
-                onUnsupported: { treatAsPage = true },
+                onUnsupported: onUnsupportedImage,
+                onBlocked: { block in
+                    fetchBlock = block
+                    EmbedMemory.shared.fetchBlocks.insert(block, for: link.url)
+                },
                 onHide: onHide
             )
             .padding(.top, 6)
-        } else if case .embed(let info) = link.classification, policy.loadVideoEmbeds {
-            VideoEmbedView(
-                linkURL: link.url,
-                embed: preview?.embed ?? info,
-                policy: policy,
-                compact: compact,
-                onHide: onHide
-            )
-            .padding(.top, 6)
-        } else if let preview {
-            loaded(preview).padding(.top, 6)
-        } else {
-            // Nothing to show yet (or the fetch failed): take no space.
-            Color.clear.frame(width: 0, height: 0)
-        }
-    }
-
-    @ViewBuilder
-    private func loaded(_ preview: LinkPreview) -> some View {
-        switch preview.kind {
-        case .image:
-            InlineImageView(
-                linkURL: preview.url,
-                imageURL: preview.mediaURL ?? preview.finalURL,
-                policy: policy,
-                compact: compact,
-                maxImageHeight: style.maxImageHeight,
-                onHide: onHide
-            )
-        case .video:
+        case .directVideo(let videoURL, let videoStyle):
             DirectVideoView(
-                linkURL: preview.url,
-                videoURL: preview.finalURL,
-                compact: compact,
+                linkURL: link.url,
+                videoURL: videoURL,
+                policy: decision.policy,
+                compact: videoStyle == .compact,
                 animateAppearance: arrivedAsync,
                 onHide: onHide
             )
-        case .embed:
-            if policy.loadVideoEmbeds, let embed = preview.embed {
-                VideoEmbedView(linkURL: preview.url, embed: embed, policy: policy, compact: compact, animateAppearance: arrivedAsync, onHide: onHide)
-            } else if preview.hasCardContent {
-                LinkCardView(preview: preview, policy: policy, compact: compact, animateAppearance: arrivedAsync, onHide: onHide)
-            }
-        case .page:
-            if preview.hasCardContent {
-                LinkCardView(preview: preview, policy: policy, compact: compact, animateAppearance: arrivedAsync, onHide: onHide)
-            }
+            .padding(.top, 6)
+        case .videoEmbed(let embed, let videoStyle):
+            VideoEmbedView(
+                linkURL: link.url,
+                embed: embed,
+                policy: decision.policy,
+                compact: videoStyle == .compact,
+                // A recognized video link shows its facade at once; only one
+                // found by fetching a page fades in.
+                animateAppearance: arrivedAsync && !link.classification.isEmbed,
+                onHide: onHide
+            )
+            .padding(.top, 6)
+        case .card(let preview, let size):
+            LinkCardView(
+                preview: preview,
+                policy: decision.policy,
+                size: size,
+                showsImages: decision.showsImages,
+                animateAppearance: arrivedAsync,
+                onHide: onHide
+            )
+            .padding(.top, 6)
         }
     }
 
-    private var loadChip: some View {
-        let (icon, title): (String, String) = switch link.classification {
-        case .image: ("photo", "Load image")
-        case .video: ("film", "Load video")
-        case .embed(let info) where policy.loadVideoEmbeds: ("play.rectangle", "Load \(info.provider.displayName) video")
-        case .embed, .page: ("link", "Load preview")
-        }
+    /// A link classified as an image that isn't one is previewed as a page.
+    private var onUnsupportedImage: (() -> Void)? {
+        guard case .image = link.classification else { return nil }
+        return { [lineID, linkID = link.id] in EmbedLineStore.shared.treatAsPage(lineID: lineID, linkID: linkID) }
+    }
+
+    private func loadChip(_ kind: LoadChipKind) -> some View {
+        let label = EmbedPresentation.loadChipLabel(kind)
         return EmbedChip(
-            systemImage: icon,
-            title: title,
+            systemImage: label.systemImage,
+            title: label.title,
             detail: EmbedActions.displayHost(link.url),
             help: "Fetch a preview of \(link.url.absoluteString)"
         ) {
-            loadRequested = true
+            EmbedLineStore.shared.requestLoad(lineID: lineID, linkID: link.id)
         }
         .contextMenu { EmbedLinkMenuItems(url: link.url, onHide: onHide) }
     }
 
-    /// Whether this link's rendering depends on a fetched `LinkPreview`.
-    private var needsPreview: Bool {
-        if mode == .clickToLoad && !loadRequested { return false }
-        if case .image = link.classification, !treatAsPage { return false }
-        return true
-    }
-
-    private func loadPreview() async {
-        guard needsPreview, preview == nil else { return }
+    private func loadPreview(_ decision: PreviewDecision) async {
+        guard decision.shouldFetch, preview == nil else { return }
         let service = app.previewService
         let url = link.url
-        if let cached = await service.cachedPreview(for: url) {
+        let policy = decision.policy
+        if let cached = await service.cachedPreview(for: url, policy: policy) {
             finish(cached, async: false)
             return
         }
@@ -376,13 +382,20 @@ private struct LinkEmbedView: View {
                 // Leaving the screen cancels the fetch; retry when it comes back.
                 phase = .idle
             } else {
+                if let block = (error as? MediaError)?.siteBlock {
+                    fetchBlock = block
+                    EmbedMemory.shared.fetchBlocks.insert(block, for: url)
+                }
                 phase = .failed
             }
         }
     }
 
     private func finish(_ preview: LinkPreview, async: Bool) {
-        EmbedMemory.shared.previews.insert(preview, for: link.url)
+        let memory = EmbedMemory.shared
+        memory.remember(preview, for: link.url)
+        memory.fetchBlocks.removeValue(for: link.url)
+        fetchBlock = nil
         arrivedAsync = async
         phase = .loaded(preview)
     }

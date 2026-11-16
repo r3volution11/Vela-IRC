@@ -183,7 +183,8 @@ extension SettingKey where Value == Double {
 
 extension SettingKey where Value == Bool {
     public static var mediaAutoLoad: SettingKey<Bool> {
-        .init("media.autoLoad", default: true, summary: "Load inline images automatically.")
+        .init("media.autoLoad", default: true,
+              summary: "Fetch previews (link cards, images, video thumbnails) automatically. Off shows a button to load each one.")
     }
     public static var mediaShowLinkCards: SettingKey<Bool> {
         .init("media.showLinkCards", default: true, summary: "Show preview cards for links.")
@@ -209,13 +210,6 @@ extension SettingKey where Value == [String: JSONValue] {
 }
 
 extension SettingKey where Value == [String] {
-    public static var mediaBlockedDomains: SettingKey<[String]> {
-        .init("media.blockedDomains", default: [], summary: "Never load media from these domains (and subdomains).")
-    }
-    public static var mediaAllowedDomains: SettingKey<[String]> {
-        .init("media.allowedDomains", default: [],
-              summary: "Domains media may load from when media.restrictToAllowed is on.")
-    }
     public static var mediaDisabledBuffers: SettingKey<[String]> {
         .init("media.disabledBuffers", default: [],
               summary: "Buffers without inline media: \"<networkUUID>/<foldedName>\" or \"<networkUUID>/*\".")
@@ -315,8 +309,6 @@ public enum SettingsCatalog {
             SettingKey.mediaAutoLoad.descriptor,
             SettingKey.mediaShowLinkCards.descriptor,
             SettingKey.mediaLoadVideoEmbeds.descriptor,
-            SettingKey.mediaBlockedDomains.descriptor,
-            SettingKey.mediaAllowedDomains.descriptor,
             SettingKey.mediaRestrictToAllowed.descriptor,
             SettingKey.mediaFilterAdultSites.descriptor,
             SettingKey.mediaSiteRules.descriptor,

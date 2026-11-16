@@ -22,7 +22,7 @@ import VelaFoundation
         #expect(store[.chatFontSize] == 13)
         #expect(store[.chatShowJoinPart] == .collapse)
         #expect(store[.chatScrollbackInMemory] == 1000)
-        #expect(store[.mediaBlockedDomains].isEmpty)
+        #expect(store[.highlightWords].isEmpty)
         #expect(store[.appearanceColorCustomizations].isEmpty)
         #expect(!store.isSet(.chatFontSize))
     }
@@ -40,7 +40,7 @@ import VelaFoundation
               "chat.showJoinPart": "nonsense",
               "chat.scrollbackInMemory": 2500,
               "history.retentionDays": 1.5,
-              "media.blockedDomains": ["example.com", 42, "tracker.io",],
+              "highlight.words": ["vela", 42, "release",],
               "appearance.colorCustomizations": {"chat.background": "#000000"},
               "chat.showTimestamps": "false",
               "url.withSlashes": "https://example.com/a//b",
@@ -54,7 +54,7 @@ import VelaFoundation
         #expect(store[.chatShowJoinPart] == .collapse)  // invalid enum value -> default
         #expect(store[.chatScrollbackInMemory] == 2500)
         #expect(store[.historyRetentionDays] == 0)  // non-integer -> default
-        #expect(store[.mediaBlockedDomains] == ["example.com", "tracker.io"])
+        #expect(store[.highlightWords] == ["vela", "release"])
         #expect(store[.appearanceColorCustomizations]["chat.background"] == .string("#000000"))
         #expect(store[.chatShowTimestamps])  // wrong type -> default
         #expect(store.value(forKey: "url.withSlashes") == .string("https://example.com/a//b"))
@@ -70,13 +70,13 @@ import VelaFoundation
         let store = SettingsStore(fileURL: url, watchForChanges: false)
         store[.chatLayout] = .classic
         store[.sidebarWidth] = 240
-        store[.mediaAllowedDomains] = ["imgur.com"]
+        store[.highlightWords] = ["vela"]
         store.setValue(nil, forKey: "chat.fontSize")
         #expect(store[.chatFontSize] == 13)
         store.flush()
 
         let saved = try JSONC.value(from: Data(contentsOf: url))
-        #expect(saved.objectValue?.keys.sorted() == ["chat.layout", "future.setting", "media.allowedDomains", "sidebar.width"])
+        #expect(saved.objectValue?.keys.sorted() == ["chat.layout", "future.setting", "highlight.words", "sidebar.width"])
         #expect(saved["future.setting"] == .object(["nested": .array([.number(1), .number(2)])]))
         #expect(saved["chat.layout"] == .string("classic"))
         #expect(saved["sidebar.width"] == .number(240))
@@ -100,7 +100,7 @@ import VelaFoundation
 
         let reopened = SettingsStore(fileURL: url, watchForChanges: false)
         #expect(reopened[.sidebarWidth] == 240)
-        #expect(reopened[.mediaAllowedDomains] == ["imgur.com"])
+        #expect(reopened[.highlightWords] == ["vela"])
     }
 
     @Test func writesAreDebounced() async throws {
@@ -212,7 +212,7 @@ import VelaFoundation
 @Suite struct SettingsCatalogTests {
     @Test func catalogIsCompleteAndUnique() {
         let keys = SettingKey.allKnownKeys.map(\.key)
-        #expect(keys.count == 58)
+        #expect(keys.count == 56)
         #expect(Set(keys).count == keys.count)
         #expect(keys.allSatisfy { $0.contains(".") })
         #expect(SettingKey.allKnownKeys.allSatisfy { !$0.summary.isEmpty })
@@ -224,7 +224,10 @@ import VelaFoundation
         #expect(SettingsCatalog.descriptor(forKey: "chat.layout")?.schema["enum"]
             == .array([.string("classic"), .string("grouped"), .string("columns")]))
         #expect(SettingsCatalog.descriptor(forKey: "history.retentionDays")?.schema["type"] == .string("integer"))
-        #expect(SettingsCatalog.descriptor(forKey: "media.blockedDomains")?.schema["items"]?["type"] == .string("string"))
+        #expect(SettingsCatalog.descriptor(forKey: "highlight.words")?.schema["items"]?["type"] == .string("string"))
+        // Migrated keys are no longer documented.
+        #expect(SettingsCatalog.descriptor(forKey: "media.blockedDomains") == nil)
+        #expect(SettingsCatalog.descriptor(forKey: "media.allowedDomains") == nil)
     }
 
     @Test func jsonSchemaDescribesEveryKey() throws {

@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+import VelaCore
 import VelaMedia
 import VelaTheme
 
@@ -68,21 +69,59 @@ nonisolated struct StillImageKey: Hashable, Sendable {
 }
 
 /// What the embed views remember on the main actor between re-creations.
+///
+/// Previews, decoded images and image sizes are only handed out under a
+/// policy that allows them, so a site that became text-only or blocked never
+/// draws (or lays out for) an image remembered from before.
 final class EmbedMemory {
     static let shared = EmbedMemory()
 
-    var previews = MemoCache<URL, LinkPreview>(countLimit: 500)
+    private var previews = MemoCache<URL, LinkPreview>(countLimit: 500)
     /// Decoded, downsampled images ready to draw (≈96 MB budget).
-    var stills = MemoCache<StillImageKey, CGImage>(countLimit: 400, costLimit: 96 * 1024 * 1024)
+    private var stills = MemoCache<StillImageKey, CGImage>(countLimit: 400, costLimit: 96 * 1024 * 1024)
     /// Pixel sizes of images seen so far, to reserve their space up front.
-    var pixelSizes = MemoCache<URL, CGSize>(countLimit: 2_000)
+    private var pixelSizes = MemoCache<URL, CGSize>(countLimit: 2_000)
     /// Images that failed to load, so a re-created row shows its error chip
     /// immediately instead of flashing a placeholder.
     var failedImages = MemoCache<URL, Bool>(countLimit: 500)
+    /// The site block a link's last fetch failed with (a redirect into a
+    /// blocked site), so a re-created row shows its chip on the first frame.
+    /// `PreviewDecider` ignores it once the block is lifted.
+    var fetchBlocks = MemoCache<URL, SiteBlock>(countLimit: 500)
     /// Links detected per chat line.
     var links = MemoCache<UUID, (text: String, links: [EmbedLink])>(countLimit: 2_000)
 
-    private init() {}
+    init() {}
+
+    /// The remembered preview for the link `url`, unless `policy` refuses the link.
+    func preview(for url: URL, policy: MediaPolicy) -> LinkPreview? {
+        guard policy.allows(url) else { return nil }
+        return previews.value(for: url)
+    }
+
+    func remember(_ preview: LinkPreview, for url: URL) {
+        previews.insert(preview, for: url)
+    }
+
+    /// A decoded image, if `policy` lets `key.url` load as an image.
+    func still(_ key: StillImageKey, policy: MediaPolicy) -> CGImage? {
+        guard policy.allowsImage(key.url) else { return nil }
+        return stills.value(for: key)
+    }
+
+    func remember(still image: CGImage, for key: StillImageKey) {
+        stills.insert(image, for: key, cost: image.bytesPerRow * image.height)
+    }
+
+    /// An image's pixel size, if `policy` lets `url` load as an image.
+    func pixelSize(for url: URL, policy: MediaPolicy) -> CGSize? {
+        guard policy.allowsImage(url) else { return nil }
+        return pixelSizes.value(for: url)
+    }
+
+    func remember(pixelSize: CGSize, for url: URL) {
+        pixelSizes.insert(pixelSize, for: url)
+    }
 }
 
 // MARK: - Image pipeline
@@ -92,20 +131,23 @@ enum EmbedImagePipeline {
     /// on its longest side. Records the image's pixel size in `EmbedMemory`.
     static func still(_ url: URL, maxPixelSize: Int, policy: MediaPolicy) async throws -> (image: CGImage, info: LoadedImage) {
         let loaded = try await ImageLoader.shared.load(url, policy: policy)
-        EmbedMemory.shared.pixelSizes.insert(loaded.pixelSize, for: url)
+        let memory = EmbedMemory.shared
+        memory.remember(pixelSize: loaded.pixelSize, for: url)
         let key = StillImageKey(url: url, maxPixelSize: maxPixelSize)
-        if let memo = EmbedMemory.shared.stills.value(for: key) { return (memo, loaded) }
+        if let memo = memory.still(key, policy: policy) { return (memo, loaded) }
         let longest = Int(max(loaded.pixelSize.width, loaded.pixelSize.height).rounded(.up))
         let target = max(1, min(maxPixelSize, longest))
         // `load(_:policy:)` above put the bytes in the loader's cache, so this
         // decodes without a second download.
-        let image = try await ImageLoader.shared.downsampledImage(url, maxPixelSize: target, maxBytes: policy.maxImageBytes)
-        EmbedMemory.shared.stills.insert(image, for: key, cost: image.bytesPerRow * image.height)
+        let image = try await ImageLoader.shared.downsampledImage(url, maxPixelSize: target, policy: policy)
+        memory.remember(still: image, for: key)
         return (image, loaded)
     }
 
-    static func memoizedStill(_ url: URL, maxPixelSize: Int) -> CGImage? {
-        EmbedMemory.shared.stills.value(for: StillImageKey(url: url, maxPixelSize: maxPixelSize))
+    /// The decoded image from an earlier `still(_:maxPixelSize:policy:)`,
+    /// if `policy` still allows it.
+    static func memoizedStill(_ url: URL, maxPixelSize: Int, policy: MediaPolicy) -> CGImage? {
+        EmbedMemory.shared.still(StillImageKey(url: url, maxPixelSize: maxPixelSize), policy: policy)
     }
 
     /// Pixel budget for an image drawn at most `points` wide/high on a Retina display.
@@ -140,7 +182,12 @@ struct RemoteImageView<Placeholder: View>: View {
         self.contentMode = contentMode
         self.onLoad = onLoad
         self.placeholder = placeholder
-        _image = State(initialValue: EmbedImagePipeline.memoizedStill(url, maxPixelSize: maxPixelSize))
+        _image = State(initialValue: EmbedImagePipeline.memoizedStill(url, maxPixelSize: maxPixelSize, policy: policy))
+    }
+
+    private struct LoadKey: Equatable {
+        var still: StillImageKey
+        var policy: MediaPolicy
     }
 
     var body: some View {
@@ -158,7 +205,12 @@ struct RemoteImageView<Placeholder: View>: View {
                 }
             }
             .clipped()
-            .task(id: StillImageKey(url: url, maxPixelSize: maxPixelSize)) {
+            .task(id: LoadKey(still: StillImageKey(url: url, maxPixelSize: maxPixelSize), policy: policy)) {
+            // A site that turned text-only or blocked drops what it showed.
+            guard policy.allowsImage(url) else {
+                image = nil
+                return
+            }
             if let image {
                 onLoad?(CGSize(width: image.width, height: image.height))
                 return
@@ -325,7 +377,13 @@ private struct EmbedFadeIn: ViewModifier {
         content
             .opacity(!enabled || reduceMotion || visible ? 1 : 0)
             .onAppear {
-                guard enabled, !reduceMotion, !visible else { return }
+                guard !visible else { return }
+                // Shown without a fade: stay shown if `enabled` turns on later
+                // (a video facade whose oEmbed details arrive after it appeared).
+                guard enabled, !reduceMotion else {
+                    visible = true
+                    return
+                }
                 withAnimation(.easeOut(duration: 0.22)) { visible = true }
             }
     }
@@ -533,15 +591,80 @@ enum EmbedActions {
     }
 }
 
-/// Context-menu items shared by every embed.
+/// Context-menu items shared by every embed: open/copy, the link's site
+/// rule, and hiding the line's previews.
 struct EmbedLinkMenuItems: View {
+    @Environment(AppModel.self) private var app
     let url: URL
     let onHide: () -> Void
 
     var body: some View {
         Button("Open Link") { EmbedActions.open(url) }
         Button("Copy Link") { EmbedActions.copy(url) }
+        if let site = EmbedSiteTarget.resolve(for: url, rule: app.siteRule(for:)) {
+            Divider()
+            EmbedSiteMenuItems(site: site)
+        }
         Divider()
         Button("Hide Previews") { onHide() }
+    }
+}
+
+/// "Block Previews from ‹domain›" and the "Previews from ‹domain›" rule
+/// picker. Rules are settings, so every visible preview from the site
+/// updates as soon as one is chosen.
+struct EmbedSiteMenuItems: View {
+    @Environment(AppModel.self) private var app
+    let site: EmbedSiteTarget
+
+    var body: some View {
+        if site.access != .block {
+            Button("Block Previews from \(site.domain)") { app.setSiteRule(.block, forDomain: site.domain) }
+        }
+        Menu("Previews from \(site.domain)") {
+            Picker("Previews from \(site.domain)", selection: Binding(
+                get: { site.access },
+                set: { app.setSiteRule($0, forDomain: site.domain) }
+            )) {
+                ForEach(EmbedSiteTarget.choices, id: \.self) { choice in
+                    Text(choice.title).tag(choice.access)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        }
+    }
+}
+
+/// The site a link's rule items act on, and the rule it has now.
+struct EmbedSiteTarget: Hashable {
+    /// The domain a rule is written for.
+    var domain: String
+    /// The rule that applies to the link today; nil is "Default".
+    var access: SiteAccess?
+
+    struct Choice: Hashable {
+        var title: String
+        var access: SiteAccess?
+    }
+
+    /// The picker's choices, in menu order.
+    static let choices: [Choice] = [
+        Choice(title: "Default", access: nil),
+        Choice(title: "Everything", access: .allow),
+        Choice(title: "Text Only", access: .textOnly),
+        Choice(title: "Nothing", access: .block),
+    ]
+
+    /// The rule matching `url` (`AppModel.siteRule(for:)`) acts on its own
+    /// domain, so a rule for `example.com` is edited from `news.example.com`.
+    /// Without one, the suggested domain: no `www.`, and a video provider's
+    /// main domain, whose rule also covers its short links (`youtu.be`).
+    /// Nil for links that can't have a rule (not `http(s)`).
+    static func resolve(for url: URL, rule: (URL) -> (domain: String, access: SiteAccess)?) -> EmbedSiteTarget? {
+        guard let suggested = SiteRules.suggestedRuleDomain(for: url) else { return nil }
+        let match = rule(url) ?? URL(string: "https://\(suggested)/").flatMap(rule)
+        if let match { return EmbedSiteTarget(domain: match.domain, access: match.access) }
+        return EmbedSiteTarget(domain: suggested, access: nil)
     }
 }

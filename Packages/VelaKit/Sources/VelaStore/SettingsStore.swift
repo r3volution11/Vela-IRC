@@ -95,6 +95,22 @@ public final class SettingsStore {
         scheduleSave()
     }
 
+    // MARK: Migration
+
+    /// Upgrades keys written by older versions of Vela (see
+    /// ``SettingsMigration``) and, if anything changed, saves right away.
+    /// Idempotent, so it is safe to call on every launch. Returns the changes made.
+    @discardableResult
+    public func applyMigrations(_ rules: [SettingsMigration.Rule] = SettingsMigration.rules) -> [SettingsChange] {
+        let changes = SettingsMigration.changes(for: values, rules: rules)
+        guard !changes.isEmpty else { return [] }
+        for change in changes {
+            setValue(change.value, forKey: change.key)
+        }
+        flush()
+        return changes
+    }
+
     // MARK: Persistence
 
     /// Writes pending changes immediately. Call on app termination.

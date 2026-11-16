@@ -54,6 +54,8 @@ public final class AppModel: SessionHost {
     @ObservationIgnored private var workspaceObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var sessionsConnectedBeforeSleep: Set<UUID> = []
     @ObservationIgnored private var started = false
+    /// `siteRules` parsed from the settings value it was parsed from.
+    @ObservationIgnored private var siteRulesCache: (source: [String: JSONValue], rules: SiteRules)?
 
     public init(
         settings: SettingsStore,
@@ -85,8 +87,10 @@ public final class AppModel: SessionHost {
         }
         let networkStore = NetworkConfigStore(fileURL: AppPaths.networksURL)
         do { try networkStore.load() } catch { startupError = "Couldn't read networks.json: \(error.localizedDescription)" }
+        let settings = SettingsStore(fileURL: AppPaths.settingsURL)
+        settings.applyMigrations()
         let model = AppModel(
-            settings: SettingsStore(fileURL: AppPaths.settingsURL),
+            settings: settings,
             networkStore: networkStore,
             database: database
         )
@@ -112,6 +116,12 @@ public final class AppModel: SessionHost {
     public func start() {
         guard !started else { return }
         started = true
+        // Parse the bundled adult-site list now, off the main actor, so the
+        // first preview doesn't pay for it (only if the filter is on; it
+        // loads on first use otherwise).
+        if settings[.mediaFilterAdultSites] {
+            Task.detached(priority: .utility) { AdultSiteList.warmUp() }
+        }
         guard !isDemo else { return }
 
         for config in networkStore.networks {
@@ -127,6 +137,7 @@ public final class AppModel: SessionHost {
         }
         observeSystem()
         pruneHistoryIfNeeded()
+        prunePreviewCache()
     }
 
     // MARK: SessionHost
@@ -505,16 +516,17 @@ public final class AppModel: SessionHost {
         )
     }
 
-    /// Per-site preview rules (`media.siteRules`), plus the older blocked and
-    /// allowed domain lists until they're migrated into it.
+    /// Per-site preview rules (`media.siteRules`), plus any older blocked and
+    /// allowed domain lists that the next launch will migrate into it
+    /// (merged the way `SettingsMigration` merges them). Parsed once per
+    /// settings value: `previewContext(for:)` runs in every embed view's body.
     public var siteRules: SiteRules {
-        var raw: [String: String] = [:]
-        for (domain, value) in settings[.mediaSiteRules] {
-            if let access = value.stringValue { raw[domain] = access }
-        }
-        var rules = SiteRules(raw)
-        for domain in settings[.mediaAllowedDomains] where rules[domain] == nil { rules[domain] = .allow }
-        for domain in settings[.mediaBlockedDomains] { rules[domain] = .block }
+        let source = SettingsMigration.migrated(settings.values, rules: [.mergeDomainListsIntoSiteRules])[
+            SettingKey<[String: JSONValue]>.mediaSiteRules.key
+        ]?.objectValue ?? [:]
+        if let cache = siteRulesCache, cache.source == source { return cache.rules }
+        let rules = SiteRules(source.compactMapValues(\.stringValue))
+        siteRulesCache = (source, rules)
         return rules
     }
 
@@ -526,13 +538,15 @@ public final class AppModel: SessionHost {
     /// Sets (or, with nil, removes) the rule for `domain` and its subdomains.
     public func setSiteRule(_ access: SiteAccess?, forDomain domain: String) {
         guard let normalized = SiteRules.normalizedDomain(domain) else { return }
+        // Fold older blocked/allowed lists (written since launch) into
+        // media.siteRules first; they would otherwise put the rule back.
+        for change in SettingsMigration.changes(for: settings.values, rules: [.mergeDomainListsIntoSiteRules]) {
+            settings.setValue(change.value, forKey: change.key)
+        }
         var raw = settings[.mediaSiteRules]
         for key in raw.keys where SiteRules.normalizedDomain(key) == normalized { raw[key] = nil }
         if let access { raw[normalized] = .string(access.rawValue) }
         settings[.mediaSiteRules] = raw
-        // The older lists would otherwise put the rule back.
-        settings[.mediaBlockedDomains].removeAll { SiteRules.normalizedDomain($0) == normalized }
-        settings[.mediaAllowedDomains].removeAll { SiteRules.normalizedDomain($0) == normalized }
     }
 
     /// "Always allow" on a blocked preview: an allow rule for its site.
@@ -545,43 +559,33 @@ public final class AppModel: SessionHost {
         setSiteRule(nil, forDomain: block.domain)
     }
 
-    @available(*, deprecated, message: "Use previewContext(for:)")
-    public func mediaPolicy(for bufferID: BufferID?) -> MediaPolicy {
-        var policy = MediaPolicy()
-        policy.autoLoad = settings[.mediaAutoLoad]
-        policy.showLinkCards = settings[.mediaShowLinkCards]
-        policy.loadVideoEmbeds = settings[.mediaLoadVideoEmbeds]
-        policy.blockedDomains = settings[.mediaBlockedDomains]
-        policy.allowedDomains = settings[.mediaAllowedDomains]
-        policy.restrictToAllowedDomains = settings[.mediaRestrictToAllowed]
-        policy.maxImageBytes = Int(settings[.mediaMaxImageSizeMB] * 1024 * 1024)
-        if let bufferID, !isMediaEnabled(for: bufferID) { policy.autoLoad = false }
-        return policy
-    }
+    // MARK: Media per buffer
 
+    /// Whether inline media is on in `bufferID`: neither it nor its network
+    /// is in `media.disabledBuffers`.
     public func isMediaEnabled(for bufferID: BufferID) -> Bool {
-        let disabled = Set(settings[.mediaDisabledBuffers])
-        return !disabled.contains(bufferID.description) && !disabled.contains("\(bufferID.networkID.uuidString)/*")
+        !BufferScopeList(settings[.mediaDisabledBuffers]).contains(bufferID)
     }
 
     /// Inline media for every buffer of a network (`"<network>/*"` in `media.disabledBuffers`).
     public func isMediaEnabled(forNetwork networkID: UUID) -> Bool {
-        !settings[.mediaDisabledBuffers].contains("\(networkID.uuidString)/*")
+        !BufferScopeList(settings[.mediaDisabledBuffers]).containsNetwork(networkID)
     }
 
     public func setMediaEnabled(_ enabled: Bool, forNetwork networkID: UUID) {
-        let key = "\(networkID.uuidString)/*"
-        var disabled = settings[.mediaDisabledBuffers]
-        disabled.removeAll { $0 == key }
-        if !enabled { disabled.append(key) }
-        settings[.mediaDisabledBuffers] = disabled
+        updateBufferScopeList(.mediaDisabledBuffers) { $0.set(!enabled, forNetwork: networkID) }
     }
 
+    /// Turns media on or off for one buffer. A buffer stays off while its
+    /// whole network is off.
     public func setMediaEnabled(_ enabled: Bool, for bufferID: BufferID) {
-        var disabled = settings[.mediaDisabledBuffers]
-        disabled.removeAll { $0 == bufferID.description }
-        if !enabled { disabled.append(bufferID.description) }
-        settings[.mediaDisabledBuffers] = disabled
+        updateBufferScopeList(.mediaDisabledBuffers) { $0.set(!enabled, for: bufferID) }
+    }
+
+    private func updateBufferScopeList(_ key: SettingKey<[String]>, _ update: (inout BufferScopeList) -> Void) {
+        var list = BufferScopeList(settings[key])
+        update(&list)
+        settings[key] = list.entries
     }
 
     // MARK: System integration
@@ -640,6 +644,16 @@ public final class AppModel: SessionHost {
         settings.flush()
         for session in sessions { session.shutdown() }
     }
+
+    /// Drops cached link previews fetched more than `previewCacheMaxAge` ago.
+    private func prunePreviewCache() {
+        guard let database else { return }
+        let cutoff = Date().addingTimeInterval(-Self.previewCacheMaxAge)
+        Task { try? await database.prunePreviews(olderThan: cutoff) }
+    }
+
+    /// How long cached link previews are kept: 30 days.
+    static let previewCacheMaxAge: TimeInterval = 30 * 86_400
 
     private func pruneHistoryIfNeeded() {
         let days = settings[.historyRetentionDays]

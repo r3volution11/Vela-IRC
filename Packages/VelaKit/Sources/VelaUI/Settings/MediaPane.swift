@@ -4,10 +4,11 @@
 
 import SwiftUI
 import VelaCore
+import VelaMedia
 import VelaStore
 import VelaTheme
 
-/// Inline images, link previews, video players and the domains they may
+/// Inline images, link previews, video players and the sites they may
 /// come from.
 struct MediaPane: View {
     @Environment(AppModel.self) private var app
@@ -28,7 +29,7 @@ struct MediaPane: View {
                         .font(.system(size: 13))
                         .foregroundStyle(theme[ThemeKey.statusWarning])
                         .accessibilityHidden(true)
-                    Text("Loading previews contacts the linked site and reveals your IP address to it. Turn this off, or restrict loading to domains you trust, if that matters to you.")
+                    Text("Loading previews contacts the linked site and reveals your IP address to it. Turn this off, or use Site rules below to limit previews to sites you trust, if that matters to you.")
                         .font(.system(size: 11.5))
                         .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
                         .fixedSize(horizontal: false, vertical: true)
@@ -78,39 +79,17 @@ struct MediaPane: View {
             }
 
             SettingsSection(
-                "Blocked domains",
-                footer: "Media from these domains and their subdomains never loads."
+                "Restrictions",
+                footer: "For exceptions, click “Show once” or “Always allow” on a blocked preview, or add a site rule below."
             ) {
-                StringListEditor(
-                    items: $settings[.mediaBlockedDomains],
-                    placeholder: "example.com",
-                    itemName: "blocked domain",
-                    emptyMessage: "No blocked domains.",
-                    normalize: StringListEditor.domain
+                SettingsToggle(
+                    "Hide previews of adult sites",
+                    detail: "Blocks previews from sites on a list bundled with Vela (checked on your Mac, never online) and from pages that label themselves adult. Links stay clickable.",
+                    isOn: $settings[.mediaFilterAdultSites]
                 )
             }
 
-            SettingsSection(
-                "Allowed domains",
-                footer: settings[.mediaRestrictToAllowed]
-                    ? "Only these domains (and their subdomains) may load media. Everything else shows a plain link."
-                    : "Turn on the restriction to load media only from these domains."
-            ) {
-                SettingsToggle(
-                    "Only load media from allowed domains",
-                    detail: "A strict allow list, for maximum privacy.",
-                    isOn: $settings[.mediaRestrictToAllowed]
-                )
-                StringListEditor(
-                    items: $settings[.mediaAllowedDomains],
-                    placeholder: "i.imgur.com",
-                    itemName: "allowed domain",
-                    emptyMessage: settings[.mediaRestrictToAllowed]
-                        ? "No allowed domains yet, so no media will load."
-                        : "No allowed domains.",
-                    normalize: StringListEditor.domain
-                )
-            }
+            siteRulesSection(restrictToListed: $settings[.mediaRestrictToAllowed])
 
             if settings[.mediaDisabledBuffers].count > 0 {
                 SettingsSection(footer: "Turn inline media back on from a channel's context menu.") {
@@ -123,6 +102,31 @@ struct MediaPane: View {
                     }
                 }
             }
+        }
+    }
+
+    /// The rules editor, then the switch that turns the rules into an allow
+    /// list. `app.siteRules` still folds in the older blocked and allowed
+    /// domain lists until they're migrated, so those show up here too.
+    private func siteRulesSection(restrictToListed: Binding<Bool>) -> some View {
+        let rules = app.siteRules.entries
+        let listedCount = rules.values.count(where: { $0 != .block })
+        return SettingsSection(
+            "Site rules",
+            footer: "Everything shows previews, images and players. Text only shows titles and descriptions, without images or players. Nothing never contacts the site. Most specific rule wins: a rule for i.example.com beats one for example.com."
+        ) {
+            SiteRulesEditor(
+                rules: rules,
+                emptyMessage: "No site rules. Add a site to always show, limit or block its previews.",
+                setRule: { access, domain in app.setSiteRule(access, forDomain: domain) }
+            )
+            SettingsToggle(
+                "Only load previews from sites listed here",
+                detail: restrictToListed.wrappedValue && listedCount == 0
+                    ? "No site is set to Everything or Text only yet, so no previews load."
+                    : "Sites set to Everything or Text only count as listed. Previews from other sites are blocked.",
+                isOn: restrictToListed
+            )
         }
     }
 

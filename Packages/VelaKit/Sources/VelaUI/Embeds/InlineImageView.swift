@@ -20,12 +20,16 @@ struct InlineImageView: View {
     let linkURL: URL
     /// The image itself (may be rewritten, e.g. GitHub blob → raw).
     let imageURL: URL
+    /// The link's policy; the image, its size and its memo go through it.
     let policy: MediaPolicy
     let compact: Bool
     let maxImageHeight: CGFloat
     /// Called instead of showing an error when the URL turns out not to be an
     /// image (e.g. an image host's HTML viewer page).
     var onUnsupported: (() -> Void)?
+    /// Called instead of showing an error when the image redirects into a
+    /// blocked site, so the link can show why (and offer "Show once").
+    var onBlocked: ((SiteBlock) -> Void)?
     let onHide: () -> Void
 
     /// Widest an inline image gets in full mode, even in a very wide window.
@@ -50,6 +54,7 @@ struct InlineImageView: View {
         compact: Bool,
         maxImageHeight: CGFloat,
         onUnsupported: (() -> Void)? = nil,
+        onBlocked: ((SiteBlock) -> Void)? = nil,
         onHide: @escaping () -> Void
     ) {
         self.linkURL = linkURL
@@ -58,13 +63,21 @@ struct InlineImageView: View {
         self.compact = compact
         self.maxImageHeight = maxImageHeight
         self.onUnsupported = onUnsupported
+        self.onBlocked = onBlocked
         self.onHide = onHide
         let memory = EmbedMemory.shared
-        _pixelSize = State(initialValue: memory.pixelSizes.value(for: imageURL))
+        _pixelSize = State(initialValue: memory.pixelSize(for: imageURL, policy: policy))
         _failed = State(initialValue: memory.failedImages.value(for: imageURL) ?? false)
         _still = State(initialValue: EmbedImagePipeline.memoizedStill(
-            imageURL, maxPixelSize: Self.pixelBudget(compact: compact, maxImageHeight: maxImageHeight)
+            imageURL, maxPixelSize: Self.pixelBudget(compact: compact, maxImageHeight: maxImageHeight), policy: policy
         ))
+    }
+
+    /// Reloads when the image, its size or the policy changes.
+    private struct LoadKey: Equatable {
+        var imageURL: URL
+        var pixelBudget: Int
+        var policy: MediaPolicy
     }
 
     private static func pixelBudget(compact: Bool, maxImageHeight: CGFloat) -> Int {
@@ -110,7 +123,11 @@ struct InlineImageView: View {
                     .frame(width: compact ? Self.compactHeight : 240, height: compact ? Self.compactHeight : min(160, maxHeight))
             }
         }
-        .task(id: imageURL) { await load() }
+        .task(id: LoadKey(
+            imageURL: imageURL,
+            pixelBudget: Self.pixelBudget(compact: compact, maxImageHeight: maxImageHeight),
+            policy: policy
+        )) { await load() }
         .onChange(of: shouldAnimate) { _, animate in
             animate ? player.play() : player.pause()
         }
@@ -223,6 +240,8 @@ struct InlineImageView: View {
             }
         } catch MediaError.unsupportedContent where onUnsupported != nil {
             onUnsupported?()
+        } catch MediaError.siteBlocked(let block) where onBlocked != nil {
+            onBlocked?(block)
         } catch {
             guard !Task.isCancelled, !(error is CancellationError) else { return }
             EmbedMemory.shared.failedImages.insert(true, for: imageURL)

@@ -6,18 +6,23 @@ import SwiftUI
 import VelaMedia
 import VelaTheme
 
-/// A link preview card for an ordinary page (or a video when embeds are off).
+/// A link preview card for an ordinary page (or a video when videos are off).
 ///
-/// Full: accent bar, favicon + site name, linked title, a 2–3 line
+/// Large: accent bar, favicon + site name, linked title, a 2–3 line
 /// description and the page image, large underneath when it's wide or small
-/// on the right otherwise. Compact: a single row with favicon, site, title
-/// and a tiny thumbnail.
+/// on the right otherwise. Minimal: a single row with favicon, site, title
+/// and a tiny thumbnail. Standard draws the large card for now.
+///
+/// Without `showsImages` (a text-only site) the card has no image, thumbnail
+/// or favicon; a neutral glyph stands in for the favicon.
 struct LinkCardView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     let preview: LinkPreview
+    /// The link's policy; every image goes through it.
     let policy: MediaPolicy
-    let compact: Bool
+    let size: PreviewLinkSize
+    let showsImages: Bool
     var animateAppearance = false
     let onHide: () -> Void
 
@@ -27,14 +32,42 @@ struct LinkCardView: View {
     @State private var imagePixelSize: CGSize?
     @State private var titleHovering = false
 
-    init(preview: LinkPreview, policy: MediaPolicy, compact: Bool, animateAppearance: Bool = false, onHide: @escaping () -> Void) {
+    init(
+        preview: LinkPreview,
+        policy: MediaPolicy,
+        size: PreviewLinkSize,
+        showsImages: Bool,
+        animateAppearance: Bool = false,
+        onHide: @escaping () -> Void
+    ) {
         self.preview = preview
         self.policy = policy
-        self.compact = compact
+        self.size = size
+        self.showsImages = showsImages
         self.animateAppearance = animateAppearance
         self.onHide = onHide
-        let known = preview.imageSize ?? preview.imageURL.flatMap { EmbedMemory.shared.pixelSizes.value(for: $0) }
+        let imageURL = Self.imageURL(of: preview, policy: policy, showsImages: showsImages)
+        let known = imageURL.flatMap { preview.imageSize ?? EmbedMemory.shared.pixelSize(for: $0, policy: policy) }
         _imagePixelSize = State(initialValue: known)
+    }
+
+    private var compact: Bool { size == .minimal }
+
+    /// The page image, unless images are off for this link or its host
+    /// (a CDN with its own rule, say) may not serve one.
+    private var imageURL: URL? {
+        Self.imageURL(of: preview, policy: policy, showsImages: showsImages)
+    }
+
+    static func imageURL(of preview: LinkPreview, policy: MediaPolicy, showsImages: Bool) -> URL? {
+        guard showsImages, let url = preview.imageURL, policy.allowsImage(url) else { return nil }
+        return url
+    }
+
+    private struct ShapeKey: Equatable {
+        var imageURL: URL?
+        var compact: Bool
+        var policy: MediaPolicy
     }
 
     private var accent: Color {
@@ -55,11 +88,16 @@ struct LinkCardView: View {
         .contextMenu {
             EmbedLinkMenuItems(url: preview.url, onHide: onHide)
         }
-        .task(id: preview.imageURL) {
-            // Learn the image's shape when the page didn't declare it.
-            guard imagePixelSize == nil, !compact, let url = preview.imageURL,
-                  let loaded = try? await ImageLoader.shared.load(url, policy: policy) else { return }
-            EmbedMemory.shared.pixelSizes.insert(loaded.pixelSize, for: url)
+        .task(id: ShapeKey(imageURL: imageURL, compact: compact, policy: policy)) {
+            // Learn the image's shape when the page didn't declare it (or
+            // images just became allowed for a card that had none).
+            guard imagePixelSize == nil, !compact, let url = imageURL else { return }
+            if let declared = preview.imageSize {
+                imagePixelSize = declared
+                return
+            }
+            guard let loaded = try? await ImageLoader.shared.load(url, policy: policy) else { return }
+            EmbedMemory.shared.remember(pixelSize: loaded.pixelSize, for: url)
             imagePixelSize = loaded.pixelSize
         }
     }
@@ -82,12 +120,12 @@ struct LinkCardView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
                 }
-                if imageIsWide, let imageURL = preview.imageURL, let size = imagePixelSize {
+                if imageIsWide, let imageURL, let size = imagePixelSize {
                     largeImage(imageURL, pixelSize: size)
                         .padding(.top, 4)
                 }
             }
-            if !imageIsWide, imagePixelSize != nil, let imageURL = preview.imageURL {
+            if !imageIsWide, imagePixelSize != nil, let imageURL {
                 RemoteImageView(
                     url: imageURL,
                     maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: Self.thumbnailSide),
@@ -113,13 +151,13 @@ struct LinkCardView: View {
     private var textColumnMaxWidth: CGFloat {
         // Card width minus accent bar, padding and (if shown) the side thumbnail.
         let base = Self.maxWidth - 4 - 24
-        let hasSideThumbnail = !imageIsWide && imagePixelSize != nil && preview.imageURL != nil
+        let hasSideThumbnail = !imageIsWide && imagePixelSize != nil && imageURL != nil
         return hasSideThumbnail ? base - Self.thumbnailSide - 12 : base
     }
 
     private var siteRow: some View {
         HStack(spacing: 6) {
-            Favicon(url: preview.faviconURL, policy: policy, size: 14)
+            Favicon(url: preview.faviconURL, policy: policy, showsImages: showsImages, size: 14)
             Text(preview.displaySiteName)
                 .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
                 .foregroundStyle(theme[ThemeKey.embedSiteName])
@@ -170,7 +208,7 @@ struct LinkCardView: View {
 
     private var compactRow: some View {
         HStack(spacing: 7) {
-            Favicon(url: preview.faviconURL, policy: policy, size: 13)
+            Favicon(url: preview.faviconURL, policy: policy, showsImages: showsImages, size: 13)
             Text(preview.displaySiteName)
                 .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
                 .foregroundStyle(theme[ThemeKey.embedSiteName])
@@ -182,7 +220,7 @@ struct LinkCardView: View {
                     .foregroundStyle(theme[ThemeKey.embedSiteName])
                 titleLink(title, size: max(10, style.fontSize - 1), lineLimit: 1)
             }
-            if let imageURL = preview.imageURL {
+            if let imageURL {
                 RemoteImageView(url: imageURL, maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: 40), policy: policy) {
                     theme[ThemeKey.embedPlaceholderBackground]
                 }
@@ -192,7 +230,7 @@ struct LinkCardView: View {
             }
         }
         .padding(.leading, 9)
-        .padding(.trailing, preview.imageURL == nil ? 10 : 4)
+        .padding(.trailing, imageURL == nil ? 10 : 4)
         .padding(.vertical, 4)
         .frame(minHeight: 28)
         .embedCard(accent: accent, cornerRadius: 6, accentWidth: 3)
@@ -213,15 +251,22 @@ struct LinkCardView: View {
 }
 
 /// A site's favicon, or a globe while it loads (or when there is none).
+/// Text-only links get a page glyph instead: no favicon is requested.
 struct Favicon: View {
     @Environment(\.theme) private var theme
     let url: URL?
     let policy: MediaPolicy
+    var showsImages = true
     var size: CGFloat = 14
 
     var body: some View {
         Group {
-            if let url {
+            if !showsImages {
+                Image(systemName: "doc.text")
+                    .font(.system(size: size * 0.8))
+                    .foregroundStyle(theme[ThemeKey.embedSiteName])
+                    .help("Text only: no images from this site")
+            } else if let url {
                 RemoteImageView(url: url, maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: size), policy: policy, contentMode: .fit) {
                     globe
                 }
