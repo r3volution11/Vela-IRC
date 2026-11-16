@@ -9,11 +9,15 @@ import SwiftUI
 /// has to), fades the edges that have more tabs beyond them, and reports
 /// whether the row overflows (to show the » menu) and how wide its content
 /// is (so a row can size to its tabs). Mark each tab with `tabScrollID(_:)`.
+///
+/// With the row's `reorder` controller, a tab dragged against either edge
+/// scrolls the row, and the selection doesn't scroll it mid-drag.
 struct TabScroller<ID: Hashable, Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let target: ID?
     let dragsWindow: Bool
+    let reorder: ReorderController<ID>?
     @Binding var isOverflowing: Bool
     let onContentWidthChange: ((CGFloat) -> Void)?
     let content: Content
@@ -25,18 +29,24 @@ struct TabScroller<ID: Hashable, Content: View>: View {
     init(
         target: ID?,
         dragsWindow: Bool = false,
+        reorder: ReorderController<ID>? = nil,
         isOverflowing: Binding<Bool>,
         onContentWidthChange: ((CGFloat) -> Void)? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.target = target
         self.dragsWindow = dragsWindow
+        self.reorder = reorder
         _isOverflowing = isOverflowing
         self.onContentWidthChange = onContentWidthChange
         self.content = content()
     }
 
     private let fadeLength: CGFloat = 18
+    /// How close a dragged tab gets to an edge before the row scrolls.
+    private let autoScrollZone: CGFloat = 32
+    /// Points per second with a dragged tab at (or past) the edge.
+    private let autoScrollSpeed: CGFloat = 600
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -78,6 +88,11 @@ struct TabScroller<ID: Hashable, Content: View>: View {
         .onChange(of: target) {
             revealTarget(animated: !reduceMotion)
         }
+        .task(id: reorder?.dragged) {
+            if let reorder, let dragged = reorder.dragged {
+                await autoScroll(reorder, dragging: dragged)
+            }
+        }
         .task {
             // Once the first layout has recorded the tab frames.
             await Task.yield()
@@ -92,8 +107,10 @@ struct TabScroller<ID: Hashable, Content: View>: View {
     }
 
     /// Scrolls the least distance that brings the target clear of the fades.
+    /// Not mid-drag: the dragged tab decides where the row scrolls.
     private func revealTarget(animated: Bool) {
-        guard scroll.overflows, let target, let frame = frames.frames[AnyHashable(target)] else { return }
+        guard reorder?.isDragging != true,
+              scroll.overflows, let target, let frame = frames.frames[AnyHashable(target)] else { return }
         let visible = fadeLength...(scroll.containerWidth - fadeLength)
         var delta: CGFloat = 0
         if frame.minX < visible.lowerBound {
@@ -106,6 +123,55 @@ struct TabScroller<ID: Hashable, Content: View>: View {
         let x = min(max(0, scroll.offset + delta), scroll.contentWidth - scroll.containerWidth)
         withAnimation(animated ? .snappy(duration: 0.25) : nil) {
             position.scrollTo(x: x)
+        }
+    }
+
+    /// While tab `id` is dragged toward an edge it's near, scrolls that way,
+    /// faster the further in it is, and carries the tab along so it stays
+    /// under the pointer (the drag only reports pointer moves). Runs on its
+    /// own clock, never from a geometry callback.
+    private func autoScroll(_ reorder: ReorderController<ID>, dragging id: ID) async {
+        guard let frame = frames.frames[AnyHashable(id)] else { return }
+        // Frames are in visible coordinates; where the tab rests in the
+        // content holds still while the row scrolls.
+        let restingX = frame.minX + scroll.offset
+        var offset = scroll.offset
+        let clock = ContinuousClock()
+        var last = clock.now
+        var lastScrolled = last
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(16))
+            guard !Task.isCancelled, reorder.isDragging(id) else { return }
+            let now = clock.now
+            let elapsed = CGFloat(min((now - last) / .seconds(1), 0.05))
+            last = now
+
+            let limit = scroll.contentWidth - scroll.containerWidth
+            let translation = reorder.translation
+            let minX = restingX + translation - offset
+            let maxX = minX + frame.width
+            var speed: CGFloat = 0
+            // Only toward the way it's being dragged, so picking up a tab
+            // that rests near an edge doesn't scroll the row by itself.
+            if translation < 0, minX < autoScrollZone {
+                speed = -min(1, (autoScrollZone - minX) / autoScrollZone)
+            } else if translation > 0, maxX > scroll.containerWidth - autoScrollZone {
+                speed = min(1, (maxX - scroll.containerWidth + autoScrollZone) / autoScrollZone)
+            }
+            guard limit > 0.5, speed != 0 else {
+                // Follow the row should something else scroll it, once our
+                // own scrolling has shown up in its geometry.
+                if now - lastScrolled > .milliseconds(150) { offset = scroll.offset }
+                continue
+            }
+            let step = min(max(0, offset + speed * autoScrollSpeed * elapsed), limit) - offset
+            guard abs(step) > 0.1 else { continue }
+            // The tab stops at its group's ends; so does the scrolling.
+            guard let moved = reorder.nudge(by: step), abs(moved) > 0.1 else { continue }
+            let next = offset + moved
+            offset = next
+            lastScrolled = now
+            position.scrollTo(x: next)
         }
     }
 

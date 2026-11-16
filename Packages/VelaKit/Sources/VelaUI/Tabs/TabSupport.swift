@@ -12,6 +12,14 @@ import VelaIRC
 enum TabKey: Hashable {
     case buffer(BufferID)
     case network(UUID)
+
+    var bufferID: BufferID? {
+        if case .buffer(let id) = self { id } else { nil }
+    }
+
+    var networkID: UUID? {
+        if case .network(let id) = self { id } else { nil }
+    }
 }
 
 /// Remembers the buffer last selected on each network, so a server tab
@@ -122,6 +130,126 @@ enum TabDescriptions {
         case .channel: "Channel"
         case .query: "Conversation"
         }
+    }
+}
+
+// MARK: Reordering
+
+/// A tab's part in drag-to-reorder (see `Reordering.swift`).
+///
+/// A tab is dragged by its label, not by everything drawn over it: the
+/// label carries `tabDragHandle(_:)`, so a drag can't start on the close
+/// button, while the row moves the whole tab with `tabReorderItem(_:)`.
+struct TabReorder<ID: Hashable> {
+    let controller: ReorderController<ID>
+    let id: ID
+    /// The items it moves among, in order.
+    let siblings: [ID]
+    /// The item it also moves with: a bouncer's networks move with their bouncer.
+    var group: ID?
+    var isEnabled = true
+    /// The item dragged last, which stays above its neighbors after it's
+    /// let go, so it settles into its slot over them rather than under.
+    var lastDragged: ID?
+    /// Moves it to an index among `siblings`.
+    let move: (Int) -> Void
+
+    var index: Int { siblings.firstIndex(of: id) ?? 0 }
+
+    /// Whether it's being dragged, by itself or with its group.
+    var isLifted: Bool {
+        controller.isDragging(id) || group.map { controller.isDragging($0) } == true
+    }
+
+    fileprivate var isRaised: Bool {
+        isLifted || (lastDragged != nil && (lastDragged == id || lastDragged == group))
+    }
+}
+
+extension View {
+    /// Starts drags of `reorder`'s tab from this view. Nil: not draggable.
+    @ViewBuilder
+    func tabDragHandle<ID: Hashable>(_ reorder: TabReorder<ID>?) -> some View {
+        if let reorder {
+            reorderHandle(reorder.id, siblings: reorder.siblings, in: reorder.controller, isEnabled: reorder.isEnabled) { _, index in
+                reorder.move(index)
+            }
+        } else {
+            self
+        }
+    }
+
+    /// Moves this whole tab with its item (and its group's), above the other
+    /// tabs while lifted. Nil: the tab stays put.
+    @ViewBuilder
+    func tabReorderItem<ID: Hashable>(_ reorder: TabReorder<ID>?) -> some View {
+        if let reorder {
+            // Each part sets its own z-index and only one would reach the
+            // row, so they're kept in a stack of their own and this decides.
+            ZStack {
+                let item = reorderPart(of: reorder.id, in: reorder.controller, part: "tab")
+                if let group = reorder.group {
+                    item.reorderPart(of: group, in: reorder.controller, part: "member-\(reorder.id)")
+                } else {
+                    item
+                }
+            }
+            .zIndex(reorder.isRaised ? 1 : 0)
+        } else {
+            self
+        }
+    }
+
+    /// Move Left / Move Right, drag and drop for VoiceOver and Full Keyboard
+    /// Access. Nil: none.
+    @ViewBuilder
+    func tabMoveActions<ID: Hashable>(_ reorder: TabReorder<ID>?) -> some View {
+        if let reorder, reorder.isEnabled {
+            accessibilityMoveActions(axis: .horizontal, index: reorder.index, count: reorder.siblings.count) { offset in
+                reorder.move(reorder.index + offset)
+            }
+        } else {
+            self
+        }
+    }
+}
+
+/// Tab order as drawn mid-drag, for the separators between tabs.
+enum TabDrawOrder {
+    /// `ids` as drawn while `dragged` is shown at `target` among `siblings`.
+    /// `owner` maps each tab to the sibling it moves with (itself, or the
+    /// bouncer of a bouncer's network), nil for tabs the drag leaves alone.
+    /// The tabs a drag moves are contiguous: one kind of buffer, one level
+    /// of networks.
+    static func order<ID: Hashable>(
+        _ ids: [ID],
+        siblings: [ID],
+        dragged: ID,
+        target: Int,
+        owner: (ID) -> ID?
+    ) -> [ID] {
+        guard let from = siblings.firstIndex(of: dragged),
+              let start = ids.firstIndex(where: { owner($0) != nil }) else { return ids }
+        var items = siblings
+        items.remove(at: from)
+        items.insert(dragged, at: min(max(0, target), items.count))
+        var blocks: [ID: [ID]] = [:]
+        for id in ids {
+            if let item = owner(id) { blocks[item, default: []].append(id) }
+        }
+        var result = ids.filter { owner($0) == nil }
+        result.insert(contentsOf: items.flatMap { blocks[$0] ?? [] }, at: min(start, result.count))
+        return result
+    }
+
+    /// The tabs drawn with a separator after them: each one followed by
+    /// another, both plain (not selected, hovered or dragged).
+    static func separated<ID: Hashable>(_ order: [ID], isPlain: (ID) -> Bool) -> Set<ID> {
+        var result: Set<ID> = []
+        for (tab, next) in zip(order, order.dropFirst()) where isPlain(tab) && isPlain(next) {
+            result.insert(tab)
+        }
+        return result
     }
 }
 

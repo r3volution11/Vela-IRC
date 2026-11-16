@@ -17,6 +17,8 @@ struct TabContext {
     var isHovered: Bool
     var isFocused: Bool
     var showsSeparator: Bool
+    /// Being dragged: drawn picked up, over the tabs it passes.
+    var isLifted = false
 }
 
 // MARK: Channel row
@@ -33,6 +35,8 @@ struct ChannelTab: View {
     /// 1-based ⌘-number, for the tooltip.
     let shortcutNumber: Int?
     let focus: FocusState<TabKey?>.Binding
+    /// Drag-to-reorder; nil for the server console, which stays first.
+    let reorder: TabReorder<BufferID>?
     let onSelect: () -> Void
     let onClose: () -> Void
     let onHover: (Bool) -> Void
@@ -86,6 +90,9 @@ struct ChannelTab: View {
                     Button(buffer.kind == .channel ? "Close Channel" : "Close Conversation", action: onClose)
                 }
             }
+            .tabMoveActions(reorder)
+            // The label starts drags; the close button over it doesn't.
+            .tabDragHandle(reorder)
             .background { chrome }
             .overlay(alignment: .trailing) {
                 if showsClose {
@@ -102,6 +109,7 @@ struct ChannelTab: View {
             .overlay { focusRing }
             .onHover(perform: onHover)
             .animation(.easeOut(duration: 0.12), value: context.isHovered)
+            .animation(.easeOut(duration: 0.12), value: context.isLifted)
             .contextMenu { BufferContextMenuItems(buffer: buffer, session: session) }
             .help(helpText)
     }
@@ -176,23 +184,27 @@ struct ChannelTab: View {
     private var chrome: some View {
         switch context.appearance {
         case .attached(let edge):
+            // A selected attached tab stays joined to the conversation
+            // while dragged along it, so it isn't lifted off it.
             if context.isSelected {
                 AttachedSelectionChrome(edge: edge, metrics: metrics, palette: palette)
                     .matchedGeometryEffect(id: "selected-tab", in: context.selection)
-            } else if context.isHovered {
-                FloatingTabFill(key: palette.hoverFill, radius: style.tabCornerRadius(forHeight: metrics.height - 6))
+            } else if context.isHovered || context.isLifted {
+                FloatingTabFill(key: palette.hoverFill, radius: style.tabCornerRadius(forHeight: metrics.height - 6), liftBacking: liftBacking)
                     .padding(.vertical, 3)
                     .padding(.horizontal, 2)
             }
         case .floating:
             if context.isSelected {
-                FloatingTabFill(key: palette.selectedFill, radius: metrics.radius)
+                FloatingTabFill(key: palette.selectedFill, radius: metrics.radius, liftBacking: liftBacking)
                     .matchedGeometryEffect(id: "selected-tab", in: context.selection)
-            } else if context.isHovered {
-                FloatingTabFill(key: palette.hoverFill, radius: metrics.radius)
+            } else if context.isHovered || context.isLifted {
+                FloatingTabFill(key: palette.hoverFill, radius: metrics.radius, liftBacking: liftBacking)
             }
         }
     }
+
+    private var liftBacking: [String]? { context.isLifted ? palette.liftBacking : nil }
 
     @ViewBuilder
     private var focusRing: some View {
@@ -221,6 +233,7 @@ struct ServerTab: View {
     let session: NetworkSession
     let context: TabContext
     let focus: FocusState<TabKey?>.Binding
+    let reorder: TabReorder<UUID>?
     let onSelect: () -> Void
     let onHover: (Bool) -> Void
 
@@ -247,6 +260,8 @@ struct ServerTab: View {
             .accessibilityValue(accessibilityValue)
             .accessibilityHint("Network. Shows its channels.")
             .accessibilityAddTraits(context.isSelected ? .isSelected : [])
+            .tabMoveActions(reorder)
+            .tabDragHandle(reorder)
             .background { chrome }
             .overlay(alignment: .trailing) {
                 TabSeparator(key: palette.separator, height: (metrics.height * 0.45).rounded())
@@ -262,6 +277,7 @@ struct ServerTab: View {
             }
             .onHover(perform: onHover)
             .animation(.easeOut(duration: 0.12), value: context.isHovered)
+            .animation(.easeOut(duration: 0.12), value: context.isLifted)
             .contextMenu { ServerContextMenuItems(session: session) }
             .help(helpText)
     }
@@ -292,11 +308,12 @@ struct ServerTab: View {
 
     @ViewBuilder
     private var chrome: some View {
+        let liftBacking = context.isLifted ? palette.liftBacking : nil
         if context.isSelected {
-            FloatingTabFill(key: palette.selectedFill, radius: metrics.radius)
+            FloatingTabFill(key: palette.selectedFill, radius: metrics.radius, liftBacking: liftBacking)
                 .matchedGeometryEffect(id: "selected-network", in: context.selection)
-        } else if context.isHovered {
-            FloatingTabFill(key: palette.hoverFill, radius: metrics.radius)
+        } else if context.isHovered || context.isLifted {
+            FloatingTabFill(key: palette.hoverFill, radius: metrics.radius, liftBacking: liftBacking)
         }
     }
 

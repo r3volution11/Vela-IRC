@@ -235,7 +235,15 @@ public final class AppModel: SessionHost {
     }
 
     public func sessionDidChangeConfig(_ session: NetworkSession) {
-        networkStore.upsert(session.config)
+        networkStore.upsert(keepingPosition(session.config))
+    }
+
+    /// `config` with the position it has in the store, which only the
+    /// network order methods change.
+    private func keepingPosition(_ config: NetworkConfig) -> NetworkConfig {
+        var config = config
+        if let stored = networkStore.network(id: config.id) { config.sortOrder = stored.sortOrder }
+        return config
     }
 
     public func sessionDidChangeUnreadCounts(_ session: NetworkSession) {
@@ -339,7 +347,7 @@ public final class AppModel: SessionHost {
     }
 
     public func updateNetwork(_ config: NetworkConfig, secrets: NetworkSecrets?) {
-        var config = config
+        var config = keepingPosition(config)
         if let secrets { storeSecrets(secrets, for: &config) }
         networkStore.upsert(config)
         session(for: config.id)?.updateConfig(config)
@@ -402,7 +410,65 @@ public final class AppModel: SessionHost {
             let r = rhs.config.parentNetworkID.flatMap { order[$0] } ?? order[rhs.id] ?? 0
             if l != r { return l < r }
             if (lhs.config.parentNetworkID == nil) != (rhs.config.parentNetworkID == nil) { return lhs.config.parentNetworkID == nil }
+            let lo = order[lhs.id] ?? .max
+            let ro = order[rhs.id] ?? .max
+            if lo != ro { return lo < ro }
             return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+        }
+    }
+
+    // MARK: Network order
+
+    /// The networks `id` can be moved among, in display order: the
+    /// top-level networks (standalone and bouncers), or the networks of the
+    /// same bouncer.
+    public func networkSiblings(of id: UUID) -> [NetworkSession] {
+        guard let session = session(for: id) else { return [] }
+        let parent = session.config.parentNetworkID
+        return sessions.filter { $0.config.parentNetworkID == parent }
+    }
+
+    /// Moves network `id` to `index` among its siblings (see
+    /// `networkSiblings(of:)`). A bouncer takes its networks with it.
+    public func moveNetwork(_ id: UUID, toIndex index: Int) {
+        guard let moving = session(for: id) else { return }
+        var siblings = networkSiblings(of: id).map(\.id)
+        guard let from = siblings.firstIndex(of: id) else { return }
+        let to = min(max(0, index), siblings.count - 1)
+        guard from != to else { return }
+        siblings.remove(at: from)
+        siblings.insert(id, at: to)
+
+        // Rebuild the whole order: each top-level network, then its children.
+        var topLevel = sessions.filter { $0.config.parentNetworkID == nil }.map(\.id)
+        var children: [UUID: [UUID]] = [:]
+        for session in sessions {
+            if let parent = session.config.parentNetworkID { children[parent, default: []].append(session.id) }
+        }
+        if let parent = moving.config.parentNetworkID { children[parent] = siblings } else { topLevel = siblings }
+        var order: [UUID] = []
+        for parent in topLevel {
+            order.append(parent)
+            order += children[parent] ?? []
+        }
+        order += sessions.map(\.id).filter { !order.contains($0) }
+        applyNetworkOrder(order)
+    }
+
+    /// Moves network `id` `offset` places among its siblings (negative is up/left).
+    public func moveNetwork(_ id: UUID, by offset: Int) {
+        guard let index = networkSiblings(of: id).firstIndex(where: { $0.id == id }) else { return }
+        moveNetwork(id, toIndex: index + offset)
+    }
+
+    private func applyNetworkOrder(_ order: [UUID]) {
+        let position = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        sessions.sort { (position[$0.id] ?? .max) < (position[$1.id] ?? .max) }
+        networkStore.reorder(order)
+        // Sessions save their own config (auto-join changes, nick); keep
+        // their copies in step so they don't write an old position back.
+        for session in sessions {
+            if let stored = networkStore.network(id: session.id) { session.config.sortOrder = stored.sortOrder }
         }
     }
 

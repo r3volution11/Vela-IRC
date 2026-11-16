@@ -485,6 +485,23 @@ struct VelaCommandCatalog {
         }
     }
 
+    /// Puts the selected network's channels and private conversations back
+    /// in alphabetical order after they've been dragged around.
+    var sortChannels: VelaCommand {
+        let session = app.selectedSession
+        return VelaCommand(
+            id: "network.sortChannels", category: .network, title: "Sort Channels A–Z",
+            keywords: ["sort", "alphabetical", "order", "reorder", "abc", "conversations", "queries"]
+                + (session.map { [$0.displayName] } ?? []),
+            isEnabled: session.map { !$0.isBufferOrderAlphabetical } ?? false
+        ) {
+            guard let session else { return }
+            withAnimation(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .snappy(duration: 0.25)) {
+                session.sortBuffersAlphabetically()
+            }
+        }
+    }
+
     /// Connect / Disconnect / Reconnect / Edit / Remove for one network.
     /// Menu titles are short ("Disconnect") since the Network menu acts on
     /// the selected network; palette titles name it.
@@ -543,7 +560,7 @@ struct VelaCommandCatalog {
         commands += [previousBuffer, nextBuffer, previousUnread, nextUnread, focusInput]
         commands.append(markAllAsRead)
         commands += selectedBufferCommands
-        commands += [addNetwork, joinChannel]
+        commands += [addNetwork, joinChannel, sortChannels]
         for session in app.sessions {
             commands += networkCommands(for: session)
         }

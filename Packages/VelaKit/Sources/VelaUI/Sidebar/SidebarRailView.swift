@@ -9,43 +9,46 @@ import VelaStore
 import VelaTheme
 
 /// The collapsed sidebar: a narrow rail of network glyphs and channel tiles.
+///
+/// Reorders like the tree: network glyphs drag their tiles (and a bouncer
+/// its networks) along, channel and conversation tiles move within their
+/// own group. The line between networks belongs to the network below it.
 struct SidebarRailView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(SidebarMetrics.collapsedNetworksKey) private var collapsedNetworks = NetworkIDSet()
 
+    /// Told when a drag to reorder starts and ends, so the tree doesn't
+    /// float open over the rail mid-drag.
+    var onReorderingChange: ((Bool) -> Void)?
+
+    @State private var networkReorder = ReorderController<UUID>(axis: .vertical, coordinateSpace: "sidebar.rail")
+    @State private var bufferReorder = ReorderController<BufferID>(axis: .vertical, coordinateSpace: "sidebar.rail")
+
     var body: some View {
-        let selectedID = app.selectedBufferID
+        let groups = app.sidebarGroups
+        let topLevel = groups.filter { !$0.isOrphan }.map(\.id)
+        let isReordering = networkReorder.isDragging || bufferReorder.isDragging
 
         VStack(spacing: 0) {
             // Tall enough for the traffic lights, which stack vertically here.
             SidebarTitleStrip(height: TrafficLightLayout.verticalStackHeight) { EmptyView() }
 
-            ScrollView(.vertical) {
-                LazyVStack(spacing: 6) {
-                    ForEach(Array(app.sessions.enumerated()), id: \.element.id) { index, session in
-                        let isCollapsed = collapsedNetworks.contains(session.id)
-                        if index > 0 {
-                            Capsule()
-                                .fill(theme.color(ThemeKey.railForeground).withAlpha(0.14).color)
-                                .frame(width: 24, height: 1)
-                                .padding(.vertical, 4)
-                                .accessibilityHidden(true)
-                        }
-                        RailNetworkItem(
-                            session: session,
-                            isSelected: selectedID == session.serverBuffer.id,
-                            isCollapsed: isCollapsed
-                        )
-                        if !isCollapsed {
-                            ForEach(session.sidebarBuffers) { buffer in
-                                RailBufferItem(buffer: buffer, session: session, isSelected: selectedID == buffer.id)
-                            }
-                        }
+            SidebarReorderScrollView(
+                coordinateSpace: networkReorder.coordinateSpace,
+                isDragging: isReordering,
+                nudge: { networkReorder.nudge(by: $0) ?? bufferReorder.nudge(by: $0) }
+            ) {
+                VStack(spacing: 6) {
+                    ForEach(groups) { group in
+                        groupView(group, isFirst: group.id == groups.first?.id, siblings: group.isOrphan ? [] : topLevel)
+                            .zIndex(holdsDrag(group) ? 1 : 0)
                     }
                 }
                 .padding(.top, 2)
                 .padding(.bottom, 8)
+                .environment(\.isSidebarReordering, isReordering)
             }
             .scrollIndicators(.never)
             .scrollContentBackground(.hidden)
@@ -68,6 +71,140 @@ struct SidebarRailView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sidebar")
+        .onChange(of: isReordering) { _, dragging in
+            onReorderingChange?(dragging)
+        }
+        .onDisappear {
+            networkReorder.end { _, _ in }
+            bufferReorder.end { _, _ in }
+            onReorderingChange?(false)
+        }
+    }
+
+    /// A top-level network with its bouncer networks, if any, after the
+    /// line that sets it apart from the one above.
+    private func groupView(_ group: SidebarNetworkGroup, isFirst: Bool, siblings: [UUID]) -> some View {
+        VStack(spacing: 6) {
+            if !isFirst {
+                RailSeparator()
+                    .reorderPart(of: group.id, in: networkReorder, part: "separator")
+            }
+            VStack(spacing: 6) {
+                section(group.network, siblings: siblings)
+                    .zIndex(holdsDraggedBuffer(group.network) ? 1 : 0)
+                if !group.children.isEmpty {
+                    let childIDs = group.children.map(\.id)
+                    VStack(spacing: 6) {
+                        ForEach(group.children) { child in
+                            VStack(spacing: 6) {
+                                RailSeparator()
+                                    .reorderPart(of: child.id, in: networkReorder, part: "separator")
+                                section(child, siblings: childIDs)
+                                    .background { networkLift(child.id) }
+                            }
+                            .zIndex(networkReorder.isDragging(child.id) || holdsDraggedBuffer(child) ? 1 : 0)
+                        }
+                    }
+                    .reorderPart(of: group.id, in: networkReorder, part: "children")
+                }
+            }
+            .background { networkLift(group.id) }
+        }
+    }
+
+    /// A network glyph and, unless folded, its channel and conversation tiles.
+    @ViewBuilder
+    private func section(_ session: NetworkSession, siblings: [UUID]) -> some View {
+        let isCollapsed = collapsedNetworks.contains(session.id)
+        let buffers = session.sidebarBuffers
+        let selectedID = app.selectedBufferID
+
+        VStack(spacing: 6) {
+            RailNetworkItem(
+                session: session,
+                isSelected: selectedID == session.serverBuffer.id,
+                isCollapsed: isCollapsed
+            )
+            .accessibilityMoveActions(axis: .vertical, index: siblings.firstIndex(of: session.id) ?? 0, count: siblings.count) { offset in
+                withAnimation(moveAnimation) { app.moveNetwork(session.id, by: offset) }
+            }
+            .reorderable(session.id, siblings: siblings, in: networkReorder) { id, index in
+                app.moveNetwork(id, toIndex: index)
+            }
+
+            if !isCollapsed && !buffers.isEmpty {
+                let channels = buffers.filter { $0.kind == .channel }
+                let queries = buffers.filter { $0.kind == .query }
+                let channelIDs = channels.map(\.id)
+                let queryIDs = queries.map(\.id)
+                VStack(spacing: 6) {
+                    ForEach(Array(channels.enumerated()), id: \.element.id) { index, buffer in
+                        bufferTile(buffer, in: session, isSelected: selectedID == buffer.id, index: index, siblings: channelIDs)
+                    }
+                    ForEach(Array(queries.enumerated()), id: \.element.id) { index, buffer in
+                        bufferTile(buffer, in: session, isSelected: selectedID == buffer.id, index: index, siblings: queryIDs)
+                    }
+                }
+                .reorderPart(of: session.id, in: networkReorder, part: "buffers")
+            }
+        }
+    }
+
+    private func bufferTile(_ buffer: BufferModel, in session: NetworkSession, isSelected: Bool, index: Int, siblings: [BufferID]) -> some View {
+        let isLifted = bufferReorder.isDragging(buffer.id)
+        return RailBufferItem(buffer: buffer, session: session, isSelected: isSelected)
+            .background {
+                // Under the tile itself, which draws its own fill on top
+                // (translucent at rest, so this also hides what it passes over).
+                if isLifted {
+                    SidebarLiftBackground(surface: ThemeKey.railBackground, cornerRadius: 9)
+                        .frame(width: SidebarMetrics.railTileSize, height: SidebarMetrics.railTileSize)
+                }
+            }
+            .accessibilityMoveActions(axis: .vertical, index: index, count: siblings.count) { offset in
+                withAnimation(moveAnimation) { session.moveBuffer(buffer, by: offset) }
+            }
+            .reorderable(buffer.id, siblings: siblings, in: bufferReorder) { id, index in
+                guard let moving = session.buffers.first(where: { $0.id == id }) else { return }
+                session.moveBuffer(moving, toIndex: index)
+            }
+    }
+
+    /// A column a little wider than the tiles, behind a dragged network.
+    private func networkLift(_ id: UUID) -> some View {
+        SidebarNetworkLift(id: id, controller: networkReorder, surface: ThemeKey.railBackground, cornerRadius: 12)
+            .padding(.vertical, -4)
+            .frame(width: SidebarMetrics.railTileSize + 8)
+    }
+
+    /// Whether the item being dragged is in this block, which then draws
+    /// over its neighbours (the dragged item and its shadow overlap them).
+    private func holdsDrag(_ group: SidebarNetworkGroup) -> Bool {
+        let networks = [group.network] + group.children
+        if let dragged = networkReorder.dragged, networks.contains(where: { $0.id == dragged }) { return true }
+        return networks.contains(where: holdsDraggedBuffer)
+    }
+
+    private func holdsDraggedBuffer(_ session: NetworkSession) -> Bool {
+        bufferReorder.dragged?.networkID == session.id
+    }
+
+    /// Move Up/Down from VoiceOver or Full Keyboard Access.
+    private var moveAnimation: Animation? {
+        reduceMotion ? nil : .snappy(duration: 0.22)
+    }
+}
+
+/// The line between networks in the rail.
+private struct RailSeparator: View {
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Capsule()
+            .fill(theme.color(ThemeKey.railForeground).withAlpha(0.14).color)
+            .frame(width: 24, height: 1)
+            .padding(.vertical, 4)
+            .accessibilityHidden(true)
     }
 }
 
@@ -77,6 +214,7 @@ struct SidebarRailView: View {
 private struct RailItem<Tile: View>: View {
     @Environment(\.theme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isSidebarReordering) private var isReordering
     let isSelected: Bool
     let activity: BufferActivity
     let help: String
@@ -85,11 +223,12 @@ private struct RailItem<Tile: View>: View {
 
     @State private var hovering = false
 
-    static var tileSize: CGFloat { 32 }
+    /// Hover feedback, held back while something is dragged.
+    private var showsHover: Bool { hovering && !isReordering }
 
     var body: some View {
-        tile(hovering)
-            .frame(width: Self.tileSize, height: Self.tileSize)
+        tile(showsHover)
+            .frame(width: SidebarMetrics.railTileSize, height: SidebarMetrics.railTileSize)
             .overlay(alignment: .topTrailing) {
                 RailBadge(activity: activity)
                     .offset(x: 5, y: -4)
@@ -115,7 +254,7 @@ private struct RailItem<Tile: View>: View {
 
     private var indicatorHeight: CGFloat {
         if isSelected { return 20 }
-        if activity.isEmphasized { return hovering ? 12 : 8 }
+        if activity.isEmphasized { return showsHover ? 12 : 8 }
         return 0
     }
 }

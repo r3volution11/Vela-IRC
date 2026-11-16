@@ -8,35 +8,29 @@ import VelaIRC
 import VelaStore
 import VelaTheme
 
-/// Configured networks with live status; add, edit and remove them.
+/// Configured networks with live status; add, edit, remove and reorder them.
 struct NetworksPane: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var selection: UUID?
     @State private var editorTarget: NetworkEditorTarget?
     @State private var pendingRemoval: UUID?
+    @State private var reorder = ReorderController<UUID>(axis: .vertical, coordinateSpace: "settings.networks")
 
     var body: some View {
-        let entries = orderedNetworks
+        let groups = networkGroups
+        let entries = groups.flatMap { [$0.network] + $0.children }
         SettingsPage(
             "Networks",
             subtitle: "The IRC networks and bouncers Vela connects to. Passwords, channel keys and certificates are kept in your Keychain."
         ) {
-            SettingsSection(footer: "Double-click a network to edit it. Networks provided by a soju bouncer appear under their bouncer and follow its connection settings.") {
-                if entries.isEmpty {
+            SettingsSection(footer: "Double-click a network to edit it, or drag it to change the order. Networks provided by a soju bouncer appear under their bouncer, follow its connection settings and move with it.") {
+                if groups.isEmpty {
                     emptyState
                 } else {
-                    ForEach(entries, id: \.id) { config in
-                        NetworkRow(
-                            config: config,
-                            session: app.session(for: config.id),
-                            isSelected: selection == config.id,
-                            select: { selection = config.id },
-                            edit: { editorTarget = .existing(config.id) },
-                            remove: { pendingRemoval = config.id }
-                        )
-                    }
+                    networkList(groups)
                 }
                 toolbar(entries: entries)
             }
@@ -64,31 +58,105 @@ struct NetworksPane: View {
         }
     }
 
-    /// Saved networks, each followed by its bouncer children. Sessions
-    /// without a saved config (demo mode) are included too.
-    private var orderedNetworks: [NetworkConfig] {
+    /// Top-level networks in the order the sidebar and tabs show them, each
+    /// with its bouncer networks. Saved networks without a session (before
+    /// Vela has started them) follow in their saved order; sessions without
+    /// a saved config (demo mode) are included too. Bouncer networks whose
+    /// bouncer is gone come last, on their own.
+    private var networkGroups: [NetworkGroup] {
         var configs = app.networkStore.networks
         let saved = Set(configs.map(\.id))
         configs += app.sessions.map(\.config).filter { !saved.contains($0.id) }
-        let parents = configs.filter { $0.parentNetworkID == nil }
+        let running = app.sessions.count
+        let position = Dictionary(app.sessions.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let ordered = configs.enumerated()
+            .sorted { (position[$0.element.id] ?? running + $0.offset) < (position[$1.element.id] ?? running + $1.offset) }
+            .map(\.element)
+        let parents = ordered.filter { $0.parentNetworkID == nil }
         let parentIDs = Set(parents.map(\.id))
-        var ordered: [NetworkConfig] = []
-        for parent in parents {
-            ordered.append(parent)
-            ordered += configs
-                .filter { $0.parentNetworkID == parent.id }
-                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        }
-        ordered += configs.filter { config in
+        let orphans = ordered.filter { config in
             guard let parent = config.parentNetworkID else { return false }
             return !parentIDs.contains(parent)
         }
-        return ordered
+        return parents.map { parent in
+            NetworkGroup(network: parent, children: ordered.filter { $0.parentNetworkID == parent.id })
+        } + orphans.map { NetworkGroup(network: $0) }
     }
 
     private var removalName: String {
         guard let id = pendingRemoval else { return "network" }
-        return orderedNetworks.first { $0.id == id }?.name ?? "network"
+        let config = networkGroups.lazy.flatMap { [$0.network] + $0.children }.first { $0.id == id }
+        return config?.name ?? "network"
+    }
+
+    // MARK: List
+
+    /// One block per top-level network, so a bouncer drags with its
+    /// networks. The card's hairlines would stay put while rows slide, so
+    /// each row draws the line above it instead.
+    private func networkList(_ groups: [NetworkGroup]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(groups) { group in
+                groupView(group, isFirst: group.id == groups.first?.id)
+            }
+        }
+        .coordinateSpace(.named(reorder.coordinateSpace))
+    }
+
+    private func groupView(_ group: NetworkGroup, isFirst: Bool) -> some View {
+        // Orphaned bouncer networks have no place among the top level.
+        let siblings = group.isOrphan ? [] : app.networkSiblings(of: group.id).map(\.id)
+        let lifted = reorder.isDragging(group.id)
+        return VStack(spacing: 0) {
+            row(for: group.network)
+                .accessibilityMoveActions(axis: .vertical, index: siblings.firstIndex(of: group.id) ?? 0, count: siblings.count) {
+                    move(group.id, by: $0)
+                }
+                // Dragged by its own row; its bouncer networks' rows are
+                // their own handles (handles can't nest).
+                .reorderHandle(group.id, siblings: siblings, in: reorder, isEnabled: !group.isOrphan) { id, index in
+                    app.moveNetwork(id, toIndex: index)
+                }
+            ForEach(group.children) { child in
+                childRow(child)
+            }
+        }
+        .overlay(alignment: .top) { RowHairline(isHidden: isFirst || lifted) }
+        .modifier(DragLift(isActive: lifted))
+        // The whole block moves, so the bouncer's networks come along.
+        .reorderPart(of: group.id, in: reorder, part: "block")
+    }
+
+    private func childRow(_ config: NetworkConfig) -> some View {
+        let siblings = app.networkSiblings(of: config.id).map(\.id)
+        let lifted = reorder.isDragging(config.id)
+        return row(for: config)
+            .accessibilityMoveActions(axis: .vertical, index: siblings.firstIndex(of: config.id) ?? 0, count: siblings.count) {
+                move(config.id, by: $0)
+            }
+            .overlay(alignment: .top) { RowHairline(isHidden: lifted) }
+            .modifier(DragLift(isActive: lifted))
+            .reorderable(config.id, siblings: siblings, in: reorder) { id, index in
+                app.moveNetwork(id, toIndex: index)
+            }
+    }
+
+    private func row(for config: NetworkConfig) -> some View {
+        NetworkRow(
+            config: config,
+            session: app.session(for: config.id),
+            isSelected: selection == config.id,
+            select: { selection = config.id },
+            edit: { editorTarget = .existing(config.id) },
+            remove: { pendingRemoval = config.id }
+        )
+    }
+
+    /// Move Up/Down for VoiceOver and Full Keyboard Access.
+    private func move(_ id: UUID, by offset: Int) {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+            app.moveNetwork(id, by: offset)
+        }
     }
 
     private var emptyState: some View {
@@ -142,6 +210,54 @@ struct NetworksPane: View {
             }
         }
         .padding(10)
+    }
+}
+
+/// A top-level network and the bouncer networks listed under it.
+private struct NetworkGroup: Identifiable {
+    let network: NetworkConfig
+    var children: [NetworkConfig] = []
+
+    var id: UUID { network.id }
+    /// A bouncer network whose bouncer is gone, listed on its own.
+    var isOrphan: Bool { network.parentNetworkID != nil }
+}
+
+/// The hairline above a row. Hidden rather than removed, so rows keep
+/// their identity (and a drag in progress) when it comes and goes.
+private struct RowHairline: View {
+    let isHidden: Bool
+
+    var body: some View {
+        SettingsHairline()
+            .padding(.leading, 14)
+            .opacity(isHidden ? 0 : 1)
+            .allowsHitTesting(false)
+    }
+}
+
+/// Lifts a dragged row (or a bouncer with its networks) off the card, so
+/// it reads clearly above the rows sliding beneath it.
+private struct DragLift: ViewModifier {
+    @Environment(\.theme) private var theme
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content.background {
+            if isActive {
+                let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+                shape
+                    .fill(theme[ThemeKey.settingsControlBackground])
+                    .overlay(shape.strokeBorder(theme[ThemeKey.settingsBorder]))
+                    .shadow(color: shadowColor, radius: 8, y: 3)
+            }
+        }
+    }
+
+    private var shadowColor: Color {
+        theme.kind == .dark
+            ? theme[ThemeKey.settingsBackground].opacity(0.6)
+            : theme[ThemeKey.settingsBorder]
     }
 }
 

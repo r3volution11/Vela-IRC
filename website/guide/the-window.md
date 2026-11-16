@@ -1,6 +1,6 @@
 ---
 title: The window
-description: A tour of Vela's main window, the sidebar and its collapsible rail, tab stacks, the conversation header, the member list and unread badges.
+description: A tour of Vela's main window, the sidebar and its collapsible rail, tab stacks, arranging networks and channels, the conversation header, the member list and unread badges.
 ---
 
 # The window
@@ -27,7 +27,7 @@ Under each network are its channels (`#`) and private conversations. A channel's
 - A **bell with a slash** means the channel is muted.
 - **Dimmed** names are channels you've left or networks that are offline.
 
-Drag the sidebar's edge to resize it. The **+** at the bottom adds a network or joins a channel. Right-click anything for more: mark as read, mute, inline media, leave, close and network actions.
+Drag the sidebar's edge to resize it, and drag networks and channels to [rearrange them](#arranging-networks-and-channels). The **+** at the bottom adds a network or joins a channel. Right-click anything for more: mark as read, mute, inline media, leave, close and network actions.
 
 ## The rail
 
@@ -42,6 +42,19 @@ Collapse the sidebar with <kbd>⌃⌘S</kbd>, **View → Collapse Sidebar** or t
 **Hover the rail** for a moment and the full sidebar floats over the conversation without changing the layout. Move away and it tucks back in. Click the sidebar button at the bottom of the rail to expand it for good.
 
 The red, yellow and green window buttons stack vertically when the rail is showing and sit side by side otherwise. Double-clicking an empty part of the title strip zooms or minimizes the window, following your setting in **System Settings → Desktop & Dock**.
+
+## Arranging networks and channels
+
+Drag a network, channel or conversation to put it where you want it. This works in the sidebar, the rail, the [tab bars](/guide/tab-stacks) and **Settings → Networks**, and the order is the same everywhere. The others slide aside to show where it will land; let go to drop it, or press <kbd>Esc</kbd> to put it back.
+
+- **Networks** move among each other. Networks provided by a [soju bouncer](/guide/bouncers#soju) stay under their bouncer and move among themselves there; moving the bouncer takes them along.
+- **Channels** always come before **private conversations**. A channel moves among its network's channels, and a conversation among its conversations.
+- **New channels and conversations** go at the end of their group, like a new browser tab.
+- **Auto-join follows.** Reordering a network's channels reorders its **Channels** list (the ones Vela joins when it connects) to match.
+
+To put a network's channels and conversations back in alphabetical order, right-click the network and choose **Sort Channels A–Z** (it's also in the **Network** menu), or run **Network: Sort Channels A–Z** from the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>) for the network you're in.
+
+With VoiceOver or Full Keyboard Access, use the **Move Up** and **Move Down** actions (**Move Left** and **Move Right** on tabs) instead of dragging.
 
 ## The conversation
 

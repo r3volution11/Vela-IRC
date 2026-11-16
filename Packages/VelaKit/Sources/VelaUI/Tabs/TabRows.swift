@@ -26,21 +26,35 @@ struct ChannelTabRow: View {
     @Namespace private var selectionNamespace
     @FocusState private var focusedTab: TabKey?
     @State private var isOverflowing = false
+    @State private var reorder = ReorderController<BufferID>(axis: .horizontal, coordinateSpace: "channel-tabs")
+    @State private var lastDragged: BufferID?
 
     var body: some View {
         let metrics = TabMetrics(style: style, height: TabMetrics.channelHeight(style), appearance: appearance)
         let palette = TabPalette.channels(on: surface, appearance: appearance)
         let buffers = tabs
         let ids = buffers.map(\.id)
+        // Channels move among channels, queries among queries.
+        let groups = Dictionary(grouping: buffers.filter { $0.kind != .server }, by: \.kind).mapValues { $0.map(\.id) }
         let selectedID = app.selectedBufferID
-        let selectedIndex = ids.firstIndex { $0 == selectedID }
-        let hoveredIndex = ids.firstIndex { interaction.hovered == .buffer($0) }
+        // Mid-drag, the tabs sliding under the pointer aren't being pointed at.
+        let hoveredID = reorder.isDragging ? nil : interaction.hovered?.bufferID
+        let separated = TabDrawOrder.separated(drawnOrder(ids, groups: groups)) { id in
+            id != selectedID && id != hoveredID && !reorder.isDragging(id)
+        }
         let shortcutTargets = TabActions.shortcutTargets(in: session).map(\.id)
 
         HStack(spacing: 2) {
-            TabScroller(target: selectedID, dragsWindow: dragsWindow, isOverflowing: $isOverflowing) {
+            TabScroller(target: selectedID, dragsWindow: dragsWindow, reorder: reorder, isOverflowing: $isOverflowing) {
                 HStack(spacing: metrics.gap) {
-                    ForEach(Array(buffers.enumerated()), id: \.element.id) { index, buffer in
+                    ForEach(buffers) { buffer in
+                        let role = buffer.kind == .server ? nil : TabReorder(
+                            controller: reorder,
+                            id: buffer.id,
+                            siblings: groups[buffer.kind] ?? [],
+                            lastDragged: lastDragged,
+                            move: { session.moveBuffer(buffer, toIndex: $0) }
+                        )
                         ChannelTab(
                             buffer: buffer,
                             session: session,
@@ -49,14 +63,16 @@ struct ChannelTabRow: View {
                                 palette: palette,
                                 appearance: appearance,
                                 selection: selectionNamespace,
-                                isSelected: index == selectedIndex,
-                                isHovered: index == hoveredIndex,
+                                isSelected: buffer.id == selectedID,
+                                isHovered: buffer.id == hoveredID,
                                 isFocused: focusedTab == .buffer(buffer.id),
-                                showsSeparator: showsSeparator(after: index, count: buffers.count, selected: selectedIndex, hovered: hoveredIndex)
+                                showsSeparator: separated.contains(buffer.id),
+                                isLifted: role?.isLifted ?? false
                             ),
                             showsNetworkName: showsNetworkName,
                             shortcutNumber: shortcutTargets.firstIndex(of: buffer.id).flatMap { $0 < 9 ? $0 + 1 : nil },
                             focus: $focusedTab,
+                            reorder: role,
                             onSelect: { select(buffer) },
                             onClose: {
                                 interaction.setHovering(false, .buffer(buffer.id))
@@ -64,6 +80,7 @@ struct ChannelTabRow: View {
                             },
                             onHover: { interaction.setHovering($0, .buffer(buffer.id)) }
                         )
+                        .tabReorderItem(role)
                         .tabScrollID(buffer.id)
                         .transition(tabTransition)
                     }
@@ -75,6 +92,7 @@ struct ChannelTabRow: View {
                 .frame(height: rowHeight, alignment: rowAlignment)
                 .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: selectedID)
                 .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: ids)
+                .coordinateSpace(.named(reorder.coordinateSpace))
             }
 
             if isOverflowing {
@@ -90,10 +108,25 @@ struct ChannelTabRow: View {
             moveFocus(press.key, in: buffers)
         }
         .onChange(of: ids) { oldValue, newValue in
+            reorder.abandon()
             repairSelection(old: oldValue, new: newValue)
         }
+        .onChange(of: reorder.dragged) { _, dragged in
+            if let dragged { lastDragged = dragged }
+        }
+        .onDisappear { reorder.abandon() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Channels on \(session.displayName)")
+    }
+
+    /// The tabs as drawn: mid-drag, the dragged one in the slot it would
+    /// land in.
+    private func drawnOrder(_ ids: [BufferID], groups: [BufferKind: [BufferID]]) -> [BufferID] {
+        guard let dragged = reorder.dragged, let target = reorder.target,
+              let siblings = groups.values.first(where: { $0.contains(dragged) }) else { return ids }
+        return TabDrawOrder.order(ids, siblings: siblings, dragged: dragged, target: target) { id in
+            siblings.contains(id) ? id : nil
+        }
     }
 
     /// Server console, then channels, then queries (bouncer control
@@ -187,6 +220,8 @@ struct ServerTabRow: View {
     @State private var isOverflowing = false
     /// Natural width of the segmented group, so it hugs its tabs.
     @State private var contentWidth: CGFloat?
+    @State private var reorder = ReorderController<UUID>(axis: .horizontal, coordinateSpace: "server-tabs")
+    @State private var lastDragged: UUID?
 
     private let segmentInset: CGFloat = 2
 
@@ -196,20 +231,26 @@ struct ServerTabRow: View {
         let metrics = TabMetrics(style: style, height: height, appearance: .floating)
         let palette = TabPalette.servers(on: surface)
         let ids = sessions.map(\.id)
+        let roles = reorderRoles(sessions)
         let selectedID = app.selectedBufferID?.networkID
-        let selectedIndex = ids.firstIndex { $0 == selectedID }
-        let hoveredIndex = ids.firstIndex { interaction.hovered == .network($0) }
+        // Mid-drag, the tabs sliding under the pointer aren't being pointed at.
+        let hoveredID = reorder.isDragging ? nil : interaction.hovered?.networkID
+        let separated: Set<UUID> = isSegmented ? [] : TabDrawOrder.separated(drawnOrder(ids, roles: roles)) { id in
+            id != selectedID && id != hoveredID && roles[id]?.isLifted != true
+        }
 
         HStack(spacing: 2) {
             TabScroller(
                 target: selectedID,
+                reorder: reorder,
                 isOverflowing: $isOverflowing,
                 onContentWidthChange: isSegmented ? { width in
                     if contentWidth != width { contentWidth = width }
                 } : nil
             ) {
                 HStack(spacing: isSegmented ? 1 : metrics.gap) {
-                    ForEach(Array(sessions.enumerated()), id: \.element.id) { index, session in
+                    ForEach(sessions) { session in
+                        let role = roles[session.id]
                         ServerTab(
                             session: session,
                             context: TabContext(
@@ -217,18 +258,21 @@ struct ServerTabRow: View {
                                 palette: palette,
                                 appearance: .floating,
                                 selection: selectionNamespace,
-                                isSelected: index == selectedIndex,
-                                isHovered: index == hoveredIndex,
+                                isSelected: session.id == selectedID,
+                                isHovered: session.id == hoveredID,
                                 isFocused: focusedTab == .network(session.id),
-                                showsSeparator: !isSegmented && showsSeparator(after: index, count: sessions.count, selected: selectedIndex, hovered: hoveredIndex)
+                                showsSeparator: separated.contains(session.id),
+                                isLifted: role?.isLifted ?? false
                             ),
                             focus: $focusedTab,
+                            reorder: role,
                             onSelect: {
                                 TabActions.select(session, app: app)
                                 uiState.focusInput()
                             },
                             onHover: { interaction.setHovering($0, .network(session.id)) }
                         )
+                        .tabReorderItem(role)
                         .tabScrollID(session.id)
                         .transition(reduceMotion ? .opacity : .scale(scale: 0.7).combined(with: .opacity))
                     }
@@ -241,6 +285,7 @@ struct ServerTabRow: View {
                 .frame(height: isSegmented ? tabHeight : rowHeight)
                 .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: selectedID)
                 .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: ids)
+                .coordinateSpace(.named(reorder.coordinateSpace))
             }
             .frame(height: isSegmented ? tabHeight : rowHeight)
             .frame(maxWidth: isSegmented ? min(contentWidth ?? 320, 380) : .infinity)
@@ -271,8 +316,49 @@ struct ServerTabRow: View {
         .onKeyPress(keys: [.leftArrow, .rightArrow, .home, .end]) { press in
             moveFocus(press.key, in: sessions)
         }
+        .onChange(of: ids) { reorder.abandon() }
+        .onChange(of: reorder.dragged) { _, dragged in
+            if let dragged { lastDragged = dragged }
+        }
+        .onDisappear { reorder.abandon() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Networks")
+    }
+
+    /// How each network moves: top-level networks among themselves (a
+    /// bouncer taking its networks along), a bouncer's networks among each
+    /// other (`AppModel.networkSiblings(of:)`).
+    private func reorderRoles(_ sessions: [NetworkSession]) -> [UUID: TabReorder<UUID>] {
+        let present = Set(sessions.map(\.id))
+        let siblings = Dictionary(grouping: sessions, by: \.config.parentNetworkID).mapValues { $0.map(\.id) }
+        var roles: [UUID: TabReorder<UUID>] = [:]
+        for session in sessions {
+            let parent = session.config.parentNetworkID
+            // A network whose bouncer is gone has nowhere to move.
+            let isOrphan = parent.map { !present.contains($0) } ?? false
+            roles[session.id] = TabReorder(
+                controller: reorder,
+                id: session.id,
+                siblings: siblings[parent] ?? [],
+                group: isOrphan ? nil : parent,
+                isEnabled: !isOrphan,
+                lastDragged: lastDragged,
+                move: { [app] index in app.moveNetwork(session.id, toIndex: index) }
+            )
+        }
+        return roles
+    }
+
+    /// The networks as drawn: mid-drag, the dragged one (with a bouncer's
+    /// networks) in the slot it would land in.
+    private func drawnOrder(_ ids: [UUID], roles: [UUID: TabReorder<UUID>]) -> [UUID] {
+        guard let dragged = reorder.dragged, let target = reorder.target,
+              let siblings = roles[dragged]?.siblings else { return ids }
+        return TabDrawOrder.order(ids, siblings: siblings, dragged: dragged, target: target) { id in
+            if siblings.contains(id) { return id }
+            guard let group = roles[id]?.group, siblings.contains(group) else { return nil }
+            return group
+        }
     }
 
     private func moveFocus(_ key: KeyEquivalent, in sessions: [NetworkSession]) -> KeyPress.Result {
@@ -289,13 +375,4 @@ struct ServerTabRow: View {
         focusedTab = .network(sessions[target].id)
         return .handled
     }
-}
-
-/// Separators sit between two unselected, unhovered tabs.
-private func showsSeparator(after index: Int, count: Int, selected: Int?, hovered: Int?) -> Bool {
-    guard index < count - 1 else { return false }
-    let neighbors = [index, index + 1]
-    if let selected, neighbors.contains(selected) { return false }
-    if let hovered, neighbors.contains(hovered) { return false }
-    return true
 }

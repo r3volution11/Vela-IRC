@@ -125,6 +125,22 @@ public final class NetworkConfigStore {
     public func move(fromOffsets source: IndexSet, toOffset destination: Int) {
         var reordered = networks
         reordered.velaMove(fromOffsets: source, toOffset: destination)
+        apply(reordered)
+    }
+
+    /// Puts the networks in the order of `ids`, renumbering `sortOrder` to
+    /// 0..<n and bumping `modifiedAt` on every network whose position
+    /// changed. Networks missing from `ids` follow, in their current order.
+    public func reorder(_ ids: [UUID]) {
+        let position = Dictionary(ids.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        let reordered = networks.enumerated()
+            .sorted { (position[$0.element.id] ?? ids.count + $0.offset) < (position[$1.element.id] ?? ids.count + $1.offset) }
+            .map(\.element)
+        apply(reordered)
+    }
+
+    private func apply(_ order: [NetworkConfig]) {
+        var reordered = order
         let now = Date()
         for index in reordered.indices where reordered[index].sortOrder != index {
             reordered[index].sortOrder = index

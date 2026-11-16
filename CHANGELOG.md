@@ -2,6 +2,21 @@
 
 All notable changes to Vela are listed here. Vela follows [Semantic Versioning](https://semver.org/). While it's below 1.0, minor versions may include breaking changes to settings or theme files, and those are always called out here.
 
+## Unreleased
+
+### Added
+
+- **Drag to reorder networks and channels** in the sidebar, the rail, the tab bars and Settings → Networks. The order is the same everywhere and is remembered.
+  - Channels stay above private conversations, and each moves within its own group.
+  - Networks provided by a soju bouncer stay under their bouncer; moving the bouncer takes them along.
+  - Reordering channels also reorders the network's auto-join list.
+  - New channels and conversations now go at the end of their group instead of in alphabetical order. **Sort Channels A–Z** (right-click a network, the Network menu, or the command palette) puts them back in order.
+  - Esc cancels a drag, and VoiceOver offers Move Up/Down (Move Left/Right on tabs) actions.
+
+### Fixed
+
+- The **New** unread marker now appears while the window is in the background, and messages you've already seen no longer appear below it.
+
 ## 0.1.0 - 2026-11-16
 
 The first public release of Vela, a native, deeply themable IRC client for macOS.

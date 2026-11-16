@@ -10,17 +10,32 @@ import VelaTheme
 
 /// The expanded sidebar: a compact tree of networks, channels and queries.
 /// Also used, floating, when the rail is hover-expanded.
+///
+/// Network headers drag to reorder networks (a section takes its rows, and
+/// a bouncer its networks, along); channel and query rows drag within their
+/// own group.
 struct SidebarTreeView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(SidebarMetrics.collapsedNetworksKey) private var collapsedNetworks = NetworkIDSet()
 
     /// Shown over the chat while the rail is hover-expanded.
     var isFloating = false
+    /// Told when a drag to reorder starts and ends, so the floating tree
+    /// stays open while the pointer strays off it mid-drag.
+    var onReorderingChange: ((Bool) -> Void)?
+
+    @State private var networkReorder = ReorderController<UUID>(axis: .vertical, coordinateSpace: "sidebar.tree")
+    @State private var bufferReorder = ReorderController<BufferID>(axis: .vertical, coordinateSpace: "sidebar.tree")
 
     var body: some View {
+        let groups = app.sidebarGroups
+        let topLevel = groups.filter { !$0.isOrphan }.map(\.id)
+        let isReordering = networkReorder.isDragging || bufferReorder.isDragging
+
         VStack(spacing: 0) {
             SidebarTitleStrip {
                 SidebarIconButton(
@@ -31,14 +46,21 @@ struct SidebarTreeView: View {
                 }
             }
 
-            ScrollView(.vertical) {
-                LazyVStack(alignment: .leading, spacing: 1) {
-                    ForEach(Array(app.sessions.enumerated()), id: \.element.id) { index, session in
-                        networkSection(session, isFirst: index == 0)
+            SidebarReorderScrollView(
+                coordinateSpace: networkReorder.coordinateSpace,
+                isDragging: isReordering,
+                nudge: { networkReorder.nudge(by: $0) ?? bufferReorder.nudge(by: $0) }
+            ) {
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(groups) { group in
+                        groupView(group, siblings: group.isOrphan ? [] : topLevel)
+                            .padding(.top, group.id == groups.first?.id ? 2 : 10)
+                            .zIndex(holdsDrag(group) ? 1 : 0)
                     }
                 }
                 .padding(.horizontal, SidebarMetrics.outerInset)
                 .padding(.bottom, 12)
+                .environment(\.isSidebarReordering, isReordering)
             }
             .scrollIndicators(.automatic)
             .scrollContentBackground(.hidden)
@@ -49,34 +71,134 @@ struct SidebarTreeView: View {
         .background(theme[ThemeKey.sidebarBackground])
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sidebar")
+        .onChange(of: isReordering) { _, dragging in
+            onReorderingChange?(dragging)
+        }
+        .onDisappear {
+            networkReorder.end { _, _ in }
+            bufferReorder.end { _, _ in }
+            onReorderingChange?(false)
+        }
     }
 
-    @ViewBuilder
-    private func networkSection(_ session: NetworkSession, isFirst: Bool) -> some View {
-        let isCollapsed = collapsedNetworks.contains(session.id)
-        let buffers = session.sidebarBuffers
-        let selectedID = app.selectedBufferID
-
-        SidebarNetworkHeader(
-            session: session,
-            isSelected: selectedID == session.serverBuffer.id,
-            isCollapsed: isCollapsed,
-            canCollapse: !buffers.isEmpty
-        ) {
-            withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
-                collapsedNetworks.toggle(session.id)
+    /// A top-level network with its bouncer networks, if any. The block
+    /// draws the lifted backdrop for a top-level drag; each bouncer network
+    /// draws its own for a drag among its bouncer's networks.
+    private func groupView(_ group: SidebarNetworkGroup, siblings: [UUID]) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            section(group.network, siblings: siblings)
+                .zIndex(holdsDraggedBuffer(group.network) ? 1 : 0)
+            if !group.children.isEmpty {
+                let childIDs = group.children.map(\.id)
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(group.children) { child in
+                        section(child, siblings: childIDs)
+                            .background { networkLift(child.id) }
+                            .padding(.top, 10)
+                            .zIndex(networkReorder.isDragging(child.id) || holdsDraggedBuffer(child) ? 1 : 0)
+                    }
+                }
+                .reorderPart(of: group.id, in: networkReorder, part: "children")
             }
         }
-        .padding(.top, isFirst ? 2 : 10)
+        .background { networkLift(group.id) }
+    }
 
-        if !isCollapsed {
-            let firstQueryID = buffers.first { $0.kind == .query }?.id
-            ForEach(buffers) { buffer in
-                SidebarBufferRow(buffer: buffer, session: session, isSelected: selectedID == buffer.id)
-                    .padding(.top, buffer.id == firstQueryID && buffers.first?.id != firstQueryID ? 5 : 0)
+    /// A network's header and, unless folded, its channels and queries.
+    @ViewBuilder
+    private func section(_ session: NetworkSession, siblings: [UUID]) -> some View {
+        let isCollapsed = collapsedNetworks.contains(session.id)
+        let buffers = session.sidebarBuffers
+
+        VStack(alignment: .leading, spacing: 1) {
+            SidebarNetworkHeader(
+                session: session,
+                isSelected: app.selectedBufferID == session.serverBuffer.id,
+                isCollapsed: isCollapsed,
+                canCollapse: !buffers.isEmpty
+            ) {
+                withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
+                    collapsedNetworks.toggle(session.id)
+                }
+            }
+            .accessibilityMoveActions(axis: .vertical, index: siblings.firstIndex(of: session.id) ?? 0, count: siblings.count) { offset in
+                withAnimation(moveAnimation) { app.moveNetwork(session.id, by: offset) }
+            }
+            .reorderable(session.id, siblings: siblings, in: networkReorder) { id, index in
+                app.moveNetwork(id, toIndex: index)
+            }
+
+            if !isCollapsed && !buffers.isEmpty {
+                bufferRows(buffers, in: session)
+                    .reorderPart(of: session.id, in: networkReorder, part: "rows")
                     .transition(.opacity)
             }
         }
+    }
+
+    /// Channels, then queries; each kind only reorders among itself.
+    private func bufferRows(_ buffers: [BufferModel], in session: NetworkSession) -> some View {
+        let channels = buffers.filter { $0.kind == .channel }
+        let queries = buffers.filter { $0.kind == .query }
+        let channelIDs = channels.map(\.id)
+        let queryIDs = queries.map(\.id)
+
+        return VStack(alignment: .leading, spacing: 1) {
+            ForEach(Array(channels.enumerated()), id: \.element.id) { index, buffer in
+                bufferRow(buffer, in: session, index: index, siblings: channelIDs)
+            }
+            if !channels.isEmpty && !queries.isEmpty {
+                // Sets conversations a little apart from channels.
+                Color.clear.frame(height: 4)
+            }
+            ForEach(Array(queries.enumerated()), id: \.element.id) { index, buffer in
+                bufferRow(buffer, in: session, index: index, siblings: queryIDs)
+            }
+        }
+    }
+
+    private func bufferRow(_ buffer: BufferModel, in session: NetworkSession, index: Int, siblings: [BufferID]) -> some View {
+        let isLifted = bufferReorder.isDragging(buffer.id)
+        return SidebarBufferRow(buffer: buffer, session: session, isSelected: app.selectedBufferID == buffer.id)
+            .background {
+                if isLifted {
+                    SidebarLiftBackground(cornerRadius: SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight))
+                }
+            }
+            .accessibilityMoveActions(axis: .vertical, index: index, count: siblings.count) { offset in
+                withAnimation(moveAnimation) { session.moveBuffer(buffer, by: offset) }
+            }
+            .reorderable(buffer.id, siblings: siblings, in: bufferReorder) { id, index in
+                guard let moving = session.buffers.first(where: { $0.id == id }) else { return }
+                session.moveBuffer(moving, toIndex: index)
+            }
+    }
+
+    private func networkLift(_ id: UUID) -> some View {
+        SidebarNetworkLift(
+            id: id,
+            controller: networkReorder,
+            cornerRadius: SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight) + 3
+        )
+        .padding(.horizontal, -4)
+        .padding(.vertical, -3)
+    }
+
+    /// Whether the item being dragged is in this block, which then draws
+    /// over its neighbours (the dragged item and its shadow overlap them).
+    private func holdsDrag(_ group: SidebarNetworkGroup) -> Bool {
+        let networks = [group.network] + group.children
+        if let dragged = networkReorder.dragged, networks.contains(where: { $0.id == dragged }) { return true }
+        return networks.contains(where: holdsDraggedBuffer)
+    }
+
+    private func holdsDraggedBuffer(_ session: NetworkSession) -> Bool {
+        bufferReorder.dragged?.networkID == session.id
+    }
+
+    /// Move Up/Down from VoiceOver or Full Keyboard Access.
+    private var moveAnimation: Animation? {
+        reduceMotion ? nil : .snappy(duration: 0.22)
     }
 
     private var footer: some View {
@@ -104,6 +226,7 @@ struct SidebarNetworkHeader: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
+    @Environment(\.isSidebarReordering) private var isReordering
     let session: NetworkSession
     let isSelected: Bool
     let isCollapsed: Bool
@@ -113,6 +236,7 @@ struct SidebarNetworkHeader: View {
     @State private var hovering = false
 
     var body: some View {
+        let showsHover = hovering && !isReordering
         let isOffline = session.connectionState == .disconnected
         let fontSize = CGFloat(max(9, style.sidebarFontSize - 1.5))
         let activity = BufferActivity(headerOf: session, isCollapsed: isCollapsed)
@@ -136,13 +260,13 @@ struct SidebarNetworkHeader: View {
                 SidebarActivityIndicator(activity: activity, showsMutedGlyph: false)
             }
             if canCollapse {
-                chevron
+                chevron(showsHover: showsHover)
             }
         }
         .padding(.leading, SidebarMetrics.rowPadding)
         .padding(.trailing, canCollapse ? 2 : SidebarMetrics.rowPadding)
         .frame(height: CGFloat(style.sidebarRowHeight) + 2)
-        .background { SidebarRowBackground(isSelected: isSelected, isHovering: hovering) }
+        .background { SidebarRowBackground(isSelected: isSelected, isHovering: showsHover) }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture { app.select(session.serverBuffer) }
@@ -156,7 +280,7 @@ struct SidebarNetworkHeader: View {
         .accessibilityAction(named: isCollapsed ? "Expand" : "Collapse") { toggle() }
     }
 
-    private var chevron: some View {
+    private func chevron(showsHover: Bool) -> some View {
         Button(action: toggle) {
             Image(systemName: "chevron.right")
                 .font(.system(size: 9, weight: .bold))
@@ -166,7 +290,7 @@ struct SidebarNetworkHeader: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .opacity(hovering || isCollapsed ? 1 : 0)
+        .opacity(showsHover || isCollapsed ? 1 : 0)
         .help(isCollapsed ? "Show channels" : "Hide channels")
         .accessibilityHidden(true)
     }
@@ -177,6 +301,7 @@ struct SidebarBufferRow: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
+    @Environment(\.isSidebarReordering) private var isReordering
     let buffer: BufferModel
     let session: NetworkSession
     let isSelected: Bool
@@ -204,7 +329,7 @@ struct SidebarBufferRow: View {
         }
         .padding(.horizontal, SidebarMetrics.rowPadding)
         .frame(height: style.sidebarRowHeight)
-        .background { SidebarRowBackground(isSelected: isSelected, isHovering: hovering) }
+        .background { SidebarRowBackground(isSelected: isSelected, isHovering: hovering && !isReordering) }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture { app.select(buffer) }

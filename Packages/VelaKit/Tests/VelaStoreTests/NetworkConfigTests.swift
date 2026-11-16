@@ -175,6 +175,16 @@ import VelaFoundation
         store.move(fromOffsets: IndexSet(integer: 0), toOffset: 3)
         #expect(store.networks.map(\.name) == ["Libera", "OFTC", "Rizon"])
 
+        // An explicit order; unlisted networks follow in their current order.
+        let ids = Dictionary(uniqueKeysWithValues: store.networks.map { ($0.name, $0.id) })
+        store.reorder([ids["Rizon"]!])
+        #expect(store.networks.map(\.name) == ["Rizon", "Libera", "OFTC"])
+        #expect(store.networks.map(\.sortOrder) == [0, 1, 2])
+        try reloaded.load()
+        #expect(reloaded.networks.map(\.name) == ["Rizon", "Libera", "OFTC"])
+        store.reorder([ids["Libera"]!, ids["OFTC"]!, ids["Rizon"]!])
+        #expect(store.networks.map(\.name) == ["Libera", "OFTC", "Rizon"])
+
         // Updating keeps the position and bumps modifiedAt.
         var oftc = try #require(store.networks.first { $0.name == "OFTC" })
         let oldModified = oftc.modifiedAt

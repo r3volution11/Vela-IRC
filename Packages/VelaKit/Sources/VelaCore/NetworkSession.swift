@@ -52,7 +52,7 @@ public final class NetworkSession: Identifiable {
     public private(set) var isAway = false
     public private(set) var lastError: String?
     public let serverBuffer: BufferModel
-    /// Channels (sorted) followed by queries (sorted).
+    /// Channels, then queries, each in display order (see `sortOrder`).
     public private(set) var buffers: [BufferModel] = []
     public private(set) var bouncerNetworks: [BouncerNetwork] = []
 
@@ -167,8 +167,10 @@ public final class NetworkSession: Identifiable {
             let buffer = ensureBuffer(name: record.name, kind: kind, persist: false)
             buffer.isMuted = record.isMuted
             buffer.lastReadAt = record.lastReadAt
+            buffer.sortOrder = record.sortOrder
             autoRejoin[fold(record.name)] = record.autoRejoin
         }
+        sortBuffers()
     }
 
     @ObservationIgnored private var autoRejoin: [String: Bool] = [:]
@@ -1141,6 +1143,8 @@ public final class NetworkSession: Identifiable {
         let key = fold(name)
         if let existing = bufferIndex[key] { return existing }
         let buffer = BufferModel(id: BufferID(networkID: id, foldedName: key), name: name, kind: kind)
+        // New buffers go after the others of their kind, like a new tab.
+        buffer.sortOrder = (buffers.filter { $0.kind == kind }.map(\.sortOrder).max() ?? -1) + 1
         buffer.selfNick = { [unowned self] in self.nick }
         buffer.memberRank = { [isupport] in isupport.rank(ofSymbol: $0.topPrefix) }
         bufferIndex[key] = buffer
@@ -1187,8 +1191,77 @@ public final class NetworkSession: Identifiable {
     private func sortBuffers() {
         buffers.sort { lhs, rhs in
             if lhs.kind != rhs.kind { return lhs.kind == .channel }
+            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
             return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
+    }
+
+    // MARK: Buffer order
+
+    /// The buffers `buffer` can be moved among: the network's channels, or
+    /// its queries, in display order.
+    public func bufferSiblings(of buffer: BufferModel) -> [BufferModel] {
+        buffers.filter { $0.kind == buffer.kind }
+    }
+
+    /// Moves `buffer` to `index` among its siblings (see `bufferSiblings(of:)`).
+    /// Moving a channel also reorders the auto-join list to match.
+    public func moveBuffer(_ buffer: BufferModel, toIndex index: Int) {
+        var group = bufferSiblings(of: buffer)
+        guard let from = group.firstIndex(where: { $0.id == buffer.id }) else { return }
+        let to = min(max(0, index), group.count - 1)
+        guard from != to else { return }
+        group.remove(at: from)
+        group.insert(buffer, at: to)
+        applyOrder(group)
+    }
+
+    /// Moves `buffer` `offset` places among its siblings (negative is up/left).
+    public func moveBuffer(_ buffer: BufferModel, by offset: Int) {
+        guard let index = bufferSiblings(of: buffer).firstIndex(where: { $0.id == buffer.id }) else { return }
+        moveBuffer(buffer, toIndex: index + offset)
+    }
+
+    /// Whether channels and queries are each in alphabetical order.
+    public var isBufferOrderAlphabetical: Bool {
+        [channels, queries].allSatisfy { group in
+            zip(group, group.dropFirst()).allSatisfy { $0.name.localizedCaseInsensitiveCompare($1.name) != .orderedDescending }
+        }
+    }
+
+    /// Sorts channels and queries alphabetically again.
+    public func sortBuffersAlphabetically() {
+        for group in [channels, queries] {
+            applyOrder(group.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending })
+        }
+    }
+
+    /// Numbers `group` (buffers of one kind) in its order and saves it.
+    private func applyOrder(_ group: [BufferModel]) {
+        var changed = false
+        for (index, buffer) in group.enumerated() where buffer.sortOrder != index {
+            buffer.sortOrder = index
+            persistBuffer(buffer)
+            changed = true
+        }
+        guard changed else { return }
+        sortBuffers()
+        if group.first?.kind == .channel { syncAutoJoinOrder() }
+    }
+
+    /// Reorders the auto-join list to follow the channels' display order.
+    /// Entries for channels that aren't open keep their places.
+    private func syncAutoJoinOrder() {
+        let position = Dictionary(channels.enumerated().map { ($1.id.foldedName, $0) }, uniquingKeysWith: { first, _ in first })
+        let slots = config.autoJoin.indices.filter { position[fold(config.autoJoin[$0].name)] != nil }
+        guard slots.count > 1 else { return }
+        let ordered = slots.map { config.autoJoin[$0] }
+            .sorted { (position[fold($0.name)] ?? 0) < (position[fold($1.name)] ?? 0) }
+        var autoJoin = config.autoJoin
+        for (slot, entry) in zip(slots, ordered) { autoJoin[slot] = entry }
+        guard autoJoin != config.autoJoin else { return }
+        config.autoJoin = autoJoin
+        host?.sessionDidChangeConfig(self)
     }
 
     private func persistBuffer(_ buffer: BufferModel) {
@@ -1201,7 +1274,7 @@ public final class NetworkSession: Identifiable {
             lastReadAt: buffer.lastReadAt,
             isPinned: false,
             isMuted: buffer.isMuted,
-            sortOrder: 0,
+            sortOrder: buffer.sortOrder,
             autoRejoin: autoRejoin[buffer.id.foldedName] ?? true
         )
         Task { try? await database.upsertBuffer(record) }

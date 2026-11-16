@@ -14,6 +14,8 @@ enum SidebarMetrics {
     static let titleStripHeight: CGFloat = 52
     /// Width of the collapsed rail.
     static let railWidth: CGFloat = 56
+    /// Side of a network glyph or channel tile in the rail.
+    static let railTileSize: CGFloat = 32
     /// Allowed tree widths (settings `sidebar.width`).
     static let widthRange: ClosedRange<Double> = 110...360
     /// Inset of row backgrounds from the sidebar edges.
@@ -358,5 +360,219 @@ struct SidebarTitleStrip<Accessory: View>: View {
         .contentShape(Rectangle())
         .windowTitleBarArea()
         .allowsWindowActivationEvents(true)
+    }
+}
+
+// MARK: - Reordering
+
+/// A top-level network and, for a soju bouncer, the networks it provides:
+/// the block that moves when a top-level network is dragged.
+struct SidebarNetworkGroup: Identifiable {
+    var network: NetworkSession
+    var children: [NetworkSession] = []
+
+    var id: UUID { network.id }
+
+    /// A bouncer network whose bouncer is gone. Shown on its own and not
+    /// draggable: it has no place among the top-level networks.
+    var isOrphan: Bool { network.config.parentNetworkID != nil }
+}
+
+extension AppModel {
+    /// `sessions` grouped under their bouncers, in display order (bouncer
+    /// networks already follow their bouncer there).
+    var sidebarGroups: [SidebarNetworkGroup] {
+        var groups: [SidebarNetworkGroup] = []
+        var groupIndex: [UUID: Int] = [:]
+        for session in sessions {
+            if let parent = session.config.parentNetworkID, let index = groupIndex[parent] {
+                groups[index].children.append(session)
+            } else {
+                groupIndex[session.id] = groups.count
+                groups.append(SidebarNetworkGroup(network: session))
+            }
+        }
+        return groups
+    }
+}
+
+extension EnvironmentValues {
+    /// Whether an item in this sidebar (or rail) is being dragged. Rows hold
+    /// back their hover highlight meanwhile, so it doesn't flicker across
+    /// the rows the drag passes over.
+    @Entry var isSidebarReordering = false
+}
+
+/// The raised look of an item being dragged: an opaque tile with the hover
+/// tint, so it hides the rows it passes over, and a soft shadow.
+struct SidebarLiftBackground: View {
+    @Environment(\.theme) private var theme
+    /// The surface the tile stands on (`sidebar.background` or `rail.background`).
+    var surface: String = ThemeKey.sidebarBackground
+    var cornerRadius: CGFloat
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(theme.color(ThemeKey.sidebarHoverBackground).composited(over: theme.color(surface)).color)
+            .shadow(color: .black.opacity(theme.kind == .dark ? 0.4 : 0.16), radius: 6, y: 2)
+    }
+}
+
+/// The lifted backdrop of a network while it's dragged. A section is
+/// several views (header, rows, bouncer networks) that move separately, so
+/// the container that holds them draws one backdrop behind them all; as
+/// the container itself stays put, the backdrop follows the drag offset.
+/// It fades rather than vanishes on drop, gliding into place with the rows.
+struct SidebarNetworkLift: View {
+    let id: UUID
+    let controller: ReorderController<UUID>
+    var surface: String = ThemeKey.sidebarBackground
+    var cornerRadius: CGFloat
+
+    var body: some View {
+        SidebarLiftBackground(surface: surface, cornerRadius: cornerRadius)
+            .offset(controller.offset(for: id))
+            .opacity(controller.isDragging(id) ? 1 : 0)
+            .allowsHitTesting(false)
+    }
+}
+
+/// The vertical scroll view of the sidebar tree or rail, set up for
+/// drag-to-reorder: its content carries the reorder coordinate space, and
+/// dragging an item toward the top or bottom edge scrolls to reveal more.
+struct SidebarReorderScrollView<Content: View>: View {
+    let coordinateSpace: String
+    /// Whether an item is being dragged.
+    let isDragging: Bool
+    /// Moves the dragged item; see `ReorderController.nudge(by:)`.
+    let nudge: (CGFloat) -> CGFloat?
+    let content: Content
+
+    @State private var position = ScrollPosition()
+    @State private var autoScroll = SidebarAutoScroll()
+
+    init(
+        coordinateSpace: String,
+        isDragging: Bool,
+        nudge: @escaping (CGFloat) -> CGFloat?,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.coordinateSpace = coordinateSpace
+        self.isDragging = isDragging
+        self.nudge = nudge
+        self.content = content()
+    }
+
+    var body: some View {
+        ScrollView(.vertical) {
+            content
+                .coordinateSpace(.named(coordinateSpace))
+                // Only watches where the pointer is in the visible area; the
+                // rows' own gestures do the dragging.
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 4, coordinateSpace: .scrollView)
+                        .onChanged { value in
+                            autoScroll.pointer = value.location.y
+                            autoScroll.start = value.startLocation.y
+                        }
+                        .onEnded { _ in
+                            autoScroll.pointer = nil
+                            autoScroll.start = nil
+                        }
+                )
+        }
+        .scrollPosition($position)
+        // Kept off the view's state: it changes on every scroll and is only
+        // read while auto-scrolling.
+        .onScrollGeometryChange(for: SidebarAutoScroll.Geometry.self, of: SidebarAutoScroll.Geometry.init) { _, geometry in
+            autoScroll.geometry = geometry
+        }
+        .onChange(of: isDragging) { _, dragging in
+            if dragging { startAutoScroll() } else { autoScroll.stop() }
+        }
+        .onDisappear { autoScroll.stop() }
+    }
+
+    private func startAutoScroll() {
+        autoScroll.stop()
+        autoScroll.task = Task {
+            var last = ContinuousClock.now
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(16))
+                let now = ContinuousClock.now
+                let elapsed = min(0.05, (now - last) / .seconds(1))
+                last = now
+                if Task.isCancelled || !autoScrollStep(elapsed: elapsed) { break }
+            }
+        }
+    }
+
+    /// Scrolls one step if the pointer is near an edge, moving the dragged
+    /// item along so it stays under the pointer. Returns false once nothing
+    /// is being dragged.
+    private func autoScrollStep(elapsed: Double) -> Bool {
+        guard let geometry = autoScroll.geometry, let pointer = autoScroll.pointer, let start = autoScroll.start else { return true }
+        let speed = SidebarAutoScroll.speed(pointer: pointer, start: start, height: geometry.height)
+        guard speed != 0 else { return true }
+        let offset = min(max(geometry.offset + speed * elapsed, geometry.offsets.lowerBound), geometry.offsets.upperBound)
+        guard abs(offset - geometry.offset) >= 0.5 else { return true }
+        // The item can't go past its siblings, and there's no point
+        // scrolling further than it can follow.
+        guard let moved = nudge(offset - geometry.offset) else { return false }
+        guard moved != 0 else { return true }
+        autoScroll.geometry?.offset += moved
+        position.scrollTo(y: geometry.offset + moved)
+        return true
+    }
+}
+
+/// Auto-scroll state of a `SidebarReorderScrollView`. Not observable: it
+/// changes with every scroll and pointer move and never needs a redraw.
+final class SidebarAutoScroll {
+    /// The pointer's height in the visible area, and where it went down,
+    /// while it's dragging.
+    var pointer: CGFloat?
+    var start: CGFloat?
+    var geometry: Geometry?
+    var task: Task<Void, Never>?
+
+    func stop() {
+        task?.cancel()
+        task = nil
+    }
+
+    nonisolated struct Geometry: Equatable {
+        var offset: CGFloat
+        /// Height of the visible area.
+        var height: CGFloat
+        /// The offsets the content can scroll to.
+        var offsets: ClosedRange<CGFloat>
+
+        init(_ geometry: ScrollGeometry) {
+            offset = geometry.contentOffset.y
+            height = geometry.containerSize.height
+            let top = -geometry.contentInsets.top
+            offsets = top...max(top, geometry.contentSize.height + geometry.contentInsets.bottom - height)
+        }
+    }
+
+    /// Height of the band along each edge that scrolls.
+    nonisolated static let edgeBand: CGFloat = 36
+    nonisolated static let speeds: ClosedRange<CGFloat> = 80...720
+
+    /// Points per second to scroll by (negative is up) for a pointer
+    /// `pointer` points down a visible area `height` tall, having gone down
+    /// at `start`: nothing until it's in the band along an edge it has
+    /// moved toward, so grabbing a row near an edge doesn't scroll at once;
+    /// then faster the deeper it goes, at full speed past the edge.
+    nonisolated static func speed(pointer: CGFloat, start: CGFloat, height: CGFloat) -> CGFloat {
+        guard height > 0 else { return 0 }
+        let band = min(edgeBand, height / 4)
+        func ramp(_ depth: CGFloat) -> CGFloat {
+            speeds.lowerBound + (speeds.upperBound - speeds.lowerBound) * min(1, depth / band)
+        }
+        if pointer < band, pointer < start { return -ramp(band - pointer) }
+        if pointer > height - band, pointer > start { return ramp(pointer - (height - band)) }
+        return 0
     }
 }

@@ -199,6 +199,9 @@ public final class BufferModel: Identifiable, Hashable {
     /// When the buffer was opened with unread lines, the read position to draw
     /// the "new messages" marker after. Nil when there's nothing new.
     public internal(set) var unreadMarkerAfter: Date?
+    /// Position among the network's buffers of the same kind (channels and
+    /// queries are ordered separately). Ties sort by name.
+    public internal(set) var sortOrder = 0
     public internal(set) var hasMoreHistory = true
     public internal(set) var isLoadingHistory = false
     public internal(set) var typingNicks: [String] = []

@@ -46,6 +46,7 @@ The row of network tabs shows each network's connection status and a badge when 
 ## Using tabs
 
 - **Click** a tab to switch to it; **right-click** it for the same actions as in the sidebar (mark as read, mute, inline media, leave, close).
+- **Drag** a tab along its row to move it: networks among networks, channels among the network's channels, and private conversations among its conversations. <kbd>Esc</kbd> cancels. The sidebar uses the same order. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).
 - <kbd>⌘1</kbd> to <kbd>⌘9</kbd> jump to the selected network's first nine channels and conversations.
 - When a row has more tabs than fit, it scrolls, fading at the edges, and a **»** menu lists them all.
 - The **+** at the end of a row joins a channel or adds a network.

@@ -20,6 +20,9 @@ struct SidebarContainer: View {
     @State private var railHovering = false
     @State private var overlayHovering = false
     @State private var hoverTask: Task<Void, Never>?
+    /// Something in the rail, or in the floating tree, is being dragged.
+    @State private var railReordering = false
+    @State private var overlayReordering = false
 
     var body: some View {
         let settings = app.settings
@@ -28,7 +31,7 @@ struct SidebarContainer: View {
 
         ZStack(alignment: .topLeading) {
             if collapsed {
-                SidebarRailView()
+                SidebarRailView(onReorderingChange: { railReordering = $0 })
                     .onHover { inside in
                         railHovering = inside
                         updateHoverExpansion()
@@ -65,7 +68,23 @@ struct SidebarContainer: View {
             hoverTask?.cancel()
             railHovering = false
             overlayHovering = false
+            railReordering = false
+            overlayReordering = false
             uiState.isRailHoverExpanded = false
+        }
+        .onChange(of: railReordering) { _, dragging in
+            // A rail drag that began just before the tree floated open
+            // would carry on out of sight beneath it.
+            if dragging && uiState.isRailHoverExpanded {
+                overlayHovering = false
+                withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.22)) {
+                    uiState.isRailHoverExpanded = false
+                }
+            }
+            updateHoverExpansion()
+        }
+        .onChange(of: overlayReordering) {
+            updateHoverExpansion()
         }
         .onDisappear {
             hoverTask?.cancel()
@@ -74,7 +93,7 @@ struct SidebarContainer: View {
     }
 
     private func floatingTree(width: CGFloat) -> some View {
-        SidebarTreeView(isFloating: true)
+        SidebarTreeView(isFloating: true, onReorderingChange: { overlayReordering = $0 })
             .frame(width: max(width, 180))
             .frame(maxHeight: .infinity)
             .overlay(alignment: .trailing) {
@@ -95,9 +114,12 @@ struct SidebarContainer: View {
     }
 
     /// Expands after the pointer rests on the rail; collapses shortly after it
-    /// leaves both the rail and the floating tree.
+    /// leaves both the rail and the floating tree. Holds still while an item
+    /// is dragged in either (the pointer may wander off the floating tree
+    /// mid-drag), then catches up when the drag ends.
     private func updateHoverExpansion() {
         hoverTask?.cancel()
+        guard !railReordering, !overlayReordering else { return }
         let expanded = uiState.isRailHoverExpanded
         let pointerInside = railHovering || overlayHovering
         guard expanded != pointerInside else { return }

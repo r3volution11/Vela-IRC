@@ -49,6 +49,7 @@ struct BufferContextMenuItems: View {
 struct ServerContextMenuItems: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let session: NetworkSession
 
     var body: some View {
@@ -60,6 +61,13 @@ struct ServerContextMenuItems: View {
         }
         Button("Join Channel…") { uiState.joinChannelNetwork = session.id }
             .disabled(!session.isConnected || session.isBouncerControl)
+        // Channels and conversations you've dragged around, back in order.
+        Button("Sort Channels A–Z") {
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) {
+                session.sortBuffersAlphabetically()
+            }
+        }
+        .disabled(session.isBufferOrderAlphabetical)
         let mediaOn = app.isMediaEnabled(forNetwork: session.id)
         Button(mediaOn ? "Disable Inline Media on This Network" : "Enable Inline Media on This Network") {
             app.setMediaEnabled(!mediaOn, forNetwork: session.id)

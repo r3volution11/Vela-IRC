@@ -44,6 +44,7 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | --- | --- |
 | Add Network… | <kbd>⇧⌘N</kbd> |
 | Join Channel… | <kbd>⌘J</kbd> |
+| Cancel dragging a network, channel or tab (it goes back where it was) | <kbd>Esc</kbd> |
 
 ## The message field
 

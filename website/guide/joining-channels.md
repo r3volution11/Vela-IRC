@@ -30,6 +30,10 @@ To message someone privately:
 
 Conversations appear under the network in the sidebar, after its channels.
 
+## Arrange channels and conversations
+
+New channels and conversations go at the end of their network's list. Drag them into any order in the sidebar, rail or tabs: channels stay above conversations, and each moves within its own group. Moving channels also reorders the network's auto-join list. To go back to alphabetical order, right-click the network and choose **Sort Channels A–Z**. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).
+
 ## Leave or close
 
 Right-click a channel in the sidebar or tabs:

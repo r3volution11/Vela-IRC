@@ -40,9 +40,9 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Go** | Go to Conversation…, Previous / Next Conversation, Previous / Next Unread, Focus Input |
 | **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Close |
 | **Channel** | Join…, Leave _#channel_ |
-| **Network** | Add Network…, and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |
+| **Network** | Add Network…, Sort Channels A–Z (for the network you're in), and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |
 
-Commands also match words that aren't in their names: "nick list" finds Toggle Member List, and "zoom in" finds Bigger.
+Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, and "alphabetical" finds Sort Channels A–Z.
 
 ## Select a theme
 

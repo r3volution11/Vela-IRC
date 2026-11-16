@@ -53,6 +53,8 @@ Set **Type** to **soju** or **ZNC** if this entry is a bouncer rather than an IR
 
 Channels to join after connecting, each with an optional key (password). Vela adds the `#` if you leave it out. When you connect through a bouncer, the bouncer rejoins channels itself, so this list only matters for direct connections.
 
+When you [drag the network's channels](/guide/the-window#arranging-networks-and-channels) into a new order, or sort them A–Z, this list follows.
+
 Channels you join later are remembered too: Vela rejoins the channels you had open unless you left them with `/part`.
 
 ## Perform on connect
@@ -79,7 +81,7 @@ Perform commands are saved in `networks.json` as plain text. Don't put passwords
 
 ## Editing and removing networks
 
-Right-click a network in the sidebar, or use the **Network** menu, to **Connect**, **Disconnect**, **Reconnect**, **Edit Network…** or **Remove Network…**. **Settings → Networks** lists them all; double-click one to edit it.
+Right-click a network in the sidebar, or use the **Network** menu, to **Connect**, **Disconnect**, **Reconnect**, **Edit Network…** or **Remove Network…**. **Settings → Networks** lists them all; double-click one to edit it, or drag it to change the order your networks appear in. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).
 
 If you change the address, port, TLS, nickname or SASL login while connected, Vela reconnects for you. For other changes, such as a new password, choose **Network → Reconnect**.
 

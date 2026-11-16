@@ -58,6 +58,8 @@ soju uses **one connection for all your networks**. Add it once:
 
 Vela connects, asks soju for your networks, and adds each one under the bouncer in the sidebar, with its own channels and history. Networks you add or remove on soju (for example with `/msg BouncerServ network create`) appear and disappear in Vela automatically. The bouncer entry itself only shows its server console.
 
+The bouncer's networks always stay under it. Drag them to change their order there, or drag the bouncer to move it and its networks together. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).
+
 Each network provided by soju uses the bouncer's server, identity and login. You can still rename it and give it its own perform commands, highlight words, ignore list and auto-connect setting; edit the bouncer to change everything else.
 
 ### History

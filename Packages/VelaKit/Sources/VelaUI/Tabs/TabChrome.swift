@@ -105,6 +105,9 @@ struct TabPalette {
     var separator: String
     /// Fill behind the segmented server group in the title bar.
     var groupFill: String
+    /// What the row's tabs sit on, bottom layer first. A dragged tab is
+    /// backed with it, so the tabs it passes over don't show through.
+    var liftBacking: [String]
 
     static func channels(on surface: TabSurface, appearance: TabAppearance) -> TabPalette {
         switch surface {
@@ -122,7 +125,8 @@ struct TabPalette {
                 selectedBorder: ThemeKey.titleBarBorder,
                 indicator: ThemeKey.tabActiveIndicator,
                 separator: ThemeKey.tabSeparator,
-                groupFill: ThemeKey.tabGroupBackground
+                groupFill: ThemeKey.tabGroupBackground,
+                liftBacking: [ThemeKey.titleBarBackground]
             )
         case .strip:
             TabPalette(
@@ -138,7 +142,8 @@ struct TabPalette {
                 selectedBorder: ThemeKey.tabBorder,
                 indicator: ThemeKey.tabActiveIndicator,
                 separator: ThemeKey.tabSeparator,
-                groupFill: ThemeKey.tabGroupBackground
+                groupFill: ThemeKey.tabGroupBackground,
+                liftBacking: [ThemeKey.tabBarBackground]
             )
         }
     }
@@ -146,8 +151,12 @@ struct TabPalette {
     static func servers(on surface: TabSurface) -> TabPalette {
         var palette = channels(on: surface, appearance: .floating)
         palette.selectedFill = ThemeKey.tabServerActiveBackground
-        if surface == .strip {
+        switch surface {
+        case .strip:
             palette.background = ThemeKey.tabServerBackground
+        case .titleBar:
+            // Title-bar networks sit in the segmented group.
+            palette.liftBacking.append(palette.groupFill)
         }
         return palette
     }
@@ -233,15 +242,37 @@ struct AttachedSelectionChrome: View {
     }
 }
 
-/// Fill of a floating tab (selected or hovered).
+/// Fill of a floating tab (selected, hovered or dragged).
 struct FloatingTabFill: View {
     @Environment(\.theme) private var theme
     let key: String
     let radius: CGFloat
+    /// While the tab is dragged: the row's surface to back the fill with
+    /// (`TabPalette.liftBacking`), under a soft shadow.
+    var liftBacking: [String]? = nil
 
     var body: some View {
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        shape
             .fill(theme[key])
+            .background {
+                if let liftBacking {
+                    ZStack {
+                        ForEach(liftBacking, id: \.self) { key in
+                            shape.fill(theme[key])
+                        }
+                    }
+                    .compositingGroup()
+                    .shadow(color: liftShadow, radius: 3, y: 1)
+                    .transition(.opacity)
+                }
+            }
+    }
+
+    private var liftShadow: Color {
+        theme.kind == .dark
+            ? theme[ThemeKey.windowBackground].opacity(0.6)
+            : theme[ThemeKey.popoverForeground].opacity(0.2)
     }
 }
 

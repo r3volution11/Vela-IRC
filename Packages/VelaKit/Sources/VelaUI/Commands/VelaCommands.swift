@@ -161,11 +161,15 @@ private struct NetworkMenuItems: View {
             ForEach(items.prefix(3)) { CommandMenuButton($0) }
             Divider()
             ForEach(items.dropFirst(3)) { CommandMenuButton($0) }
+            Divider()
+            CommandMenuButton(commands.sortChannels)
         } else {
             let titles = VelaCommandCatalog.placeholderNetworkTitles
             ForEach(titles.prefix(3), id: \.self) { Button($0) {}.disabled(true) }
             Divider()
             ForEach(titles.dropFirst(3), id: \.self) { Button($0) {}.disabled(true) }
+            Divider()
+            Button(commands.sortChannels.title) {}.disabled(true)
         }
     }
 }

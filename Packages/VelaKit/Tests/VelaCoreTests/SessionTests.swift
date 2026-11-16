@@ -243,7 +243,8 @@ struct SessionTests {
     @Test func sortsChannelsBeforeQueries() {
         let (session, _) = makeSession()
         feed(session, ":zed!z@h PRIVMSG doug :hi", ":doug!d@host JOIN #beta", ":doug!d@host JOIN #alpha")
-        #expect(session.buffers.map(\.name) == ["#alpha", "#beta", "zed"])
+        // Channels first; each group in the order buffers were opened.
+        #expect(session.buffers.map(\.name) == ["#beta", "#alpha", "zed"])
     }
 }
 
