@@ -21,6 +21,10 @@ public struct HTMLMetadata: Sendable, Hashable {
     public var videoURL: URL?
     public var imageWidth: Int?
     public var imageHeight: Int?
+    /// The page labels itself adult: `<meta name="rating">` with `adult`,
+    /// `mature` or the RTA label, an `http-equiv` rating / PICS label carrying
+    /// the RTA label, or `og:restrictions:age` of 18 or more.
+    public var declaresAdult: Bool
 
     public init(
         title: String? = nil,
@@ -33,7 +37,8 @@ public struct HTMLMetadata: Sendable, Hashable {
         oEmbedURL: URL? = nil,
         videoURL: URL? = nil,
         imageWidth: Int? = nil,
-        imageHeight: Int? = nil
+        imageHeight: Int? = nil,
+        declaresAdult: Bool = false
     ) {
         self.title = title
         self.summary = summary
@@ -46,6 +51,7 @@ public struct HTMLMetadata: Sendable, Hashable {
         self.videoURL = videoURL
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
+        self.declaresAdult = declaresAdult
     }
 }
 
@@ -60,8 +66,20 @@ public struct HTMLMetadata: Sendable, Hashable {
 /// - favicon: `<link rel=icon|shortcut icon|apple-touch-icon>`, preferring
 ///   raster icons of at least 32 px
 ///
+/// - adult labels: see `HTMLMetadata.declaresAdult`
+///
 /// Scanning stops at `</head>` when present; `<base href>` is honored.
 public enum HTMLMetadataParser {
+    /// The Restricted To Adults label (rtalabel.org), compared lowercased.
+    static let rtaLabel = "rta-5042-1996-1400-1577-rta"
+
+    /// Whether a `rating` value (meta content or `Rating` response header)
+    /// declares adult content: `adult`, `mature`, or containing the RTA label.
+    public static func isAdultRating(_ value: String) -> Bool {
+        let folded = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return folded == "adult" || folded == "mature" || folded.contains(rtaLabel)
+    }
+
     public static func parse(html: String, baseURL: URL) -> HTMLMetadata {
         parse(bytes: Array(html.utf8), baseURL: baseURL)
     }
@@ -119,9 +137,13 @@ public enum HTMLMetadataParser {
         var icons: [IconCandidate] = []
         var imageSrc: String?
         var oEmbed: String?
+        var declaresAdult = false
 
         mutating func addMeta(_ attributes: [String: String]) {
             guard let content = attributes["content"] else { return }
+            if let equiv = attributes["http-equiv"]?.trimmingCharacters(in: .whitespaces).lowercased() {
+                noteHTTPEquiv(equiv, content: content)
+            }
             var keys: [String] = []
             for attribute in ["property", "name", "itemprop"] {
                 if let key = attributes[attribute]?.trimmingCharacters(in: .whitespaces).lowercased(),
@@ -132,8 +154,26 @@ public enum HTMLMetadataParser {
             for key in keys { add(key: key, content: content, attributes: attributes) }
         }
 
+        /// `<meta http-equiv="rating">` and PICS labels (`pics-label`, often
+        /// pointing at rtalabel.org).
+        private mutating func noteHTTPEquiv(_ equiv: String, content: String) {
+            let folded = content.lowercased()
+            switch equiv {
+            case "rating":
+                if HTMLMetadataParser.isAdultRating(content) || folded.contains("rtalabel.org") { declaresAdult = true }
+            case "pics-label":
+                if folded.contains(HTMLMetadataParser.rtaLabel) || folded.contains("rtalabel.org") { declaresAdult = true }
+            default:
+                break
+            }
+        }
+
         private mutating func add(key: String, content: String, attributes: [String: String]) {
             switch key {
+            case "rating":
+                if HTMLMetadataParser.isAdultRating(content) { declaresAdult = true }
+            case "og:restrictions:age":
+                if let age = Self.positiveInt(content), age >= 18 { declaresAdult = true }
             case "og:image", "og:image:url":
                 // Width/height/secure_url describe the most recent og:image;
                 // only the first image is used.
@@ -232,6 +272,7 @@ public enum HTMLMetadataParser {
                 lhs.score != rhs.score ? lhs.score < rhs.score : lhs.order > rhs.order
             }
             meta.faviconURL = url(bestIcon?.href)
+            meta.declaresAdult = declaresAdult
             return meta
         }
 

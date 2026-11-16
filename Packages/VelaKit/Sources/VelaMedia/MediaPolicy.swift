@@ -4,22 +4,78 @@
 
 import Foundation
 
-/// The user's inline media settings.
+/// Why a site's previews are blocked.
+public enum BlockReason: String, Sendable, Hashable, Codable {
+    /// The host is on the bundled adult-site list (or an adult-only TLD).
+    case adultSite
+    /// The page labels itself adult (RTA label, `rating` meta, `Rating` header).
+    case adultPage
+    /// The user has a "Nothing" rule for the site.
+    case userBlocked
+    /// Previews are restricted to listed sites and this one isn't listed.
+    case notAllowed
+}
+
+/// A blocked site and why. `domain` is what a "Show once" / "Always allow" /
+/// "Unblock" action should act on: the rule's own domain for `userBlocked`,
+/// the listed domain for `adultSite`, the suggested rule domain otherwise.
+public struct SiteBlock: Sendable, Hashable, Codable {
+    public var reason: BlockReason
+    public var domain: String
+
+    public init(reason: BlockReason, domain: String) {
+        self.reason = reason
+        self.domain = domain
+    }
+}
+
+/// What a `MediaPolicy` lets a URL do.
+public enum SiteVerdict: Sendable, Hashable {
+    /// Previews, images, thumbnails and players.
+    case everything
+    /// Pages and oEmbed may be fetched for a text card; no images of any kind.
+    case textOnly
+    /// Nothing may be fetched; the UI shows a chip saying why.
+    case blocked(SiteBlock)
+    /// Never contacted and never offered: not `http(s)`, or a private-network host.
+    case forbidden
+
+    public var block: SiteBlock? {
+        if case .blocked(let block) = self { return block }
+        return nil
+    }
+}
+
+/// The user's inline media settings, as they apply to one buffer (or, from
+/// `PreviewDecider`, to one link).
 ///
-/// `LinkPreviewService` enforces `allows(_:)` (including on redirects) and
-/// `maxImageBytes`. The boolean switches are for callers deciding what to
-/// fetch and render automatically; `permitsAutomaticPreview(of:)` combines them.
-public struct MediaPolicy: Sendable, Codable, Hashable {
+/// `verdict(for:)` decides per URL, in this order:
+/// 1. forbidden: a non-`http(s)` scheme or a private-network host;
+/// 2. allowed once (`allowedOnce`, from "Show once"): everything;
+/// 3. the most specific site rule (always beats the adult list);
+/// 4. the adult-site list (bundled plus `extraAdultDomains`), when `filterAdultSites`;
+/// 5. `restrictToAllowedDomains`: blocked unless an allow/textOnly rule matched;
+/// 6. everything.
+///
+/// `imagesAllowed == false` turns "everything" into "text only".
+/// `allows(_:)` gates page, oEmbed and redirect requests; `allowsImage(_:)`
+/// gates every image, thumbnail, favicon, poster and direct-media load.
+public struct MediaPolicy: Sendable, Hashable {
     /// Fetch previews without the user clicking first.
     public var autoLoad: Bool = true
     /// Show link cards for ordinary pages.
     public var showLinkCards: Bool = true
-    /// Show YouTube/Vimeo/Twitch/Streamable facades.
-    public var loadVideoEmbeds: Bool = true
-    /// Never fetch from these domains (and their subdomains).
-    public var blockedDomains: [String] = []
-    /// Domains used when `restrictToAllowedDomains` is on.
-    public var allowedDomains: [String] = []
+    public var siteRules = SiteRules()
+    /// Block sites on the bundled adult list and pages that label themselves adult.
+    public var filterAdultSites: Bool = true
+    /// Extra adult-list domains (tests and demo mode), matched like the bundled list.
+    public var extraAdultDomains: Set<String> = []
+    /// False makes every site text-only (e.g. a per-link decision that images are off).
+    public var imagesAllowed: Bool = true
+    /// Domains the user chose "Show once" for; they get everything,
+    /// bypassing rules, the adult list and the allowed-sites restriction.
+    public var allowedOnce: Set<String> = []
+    /// Only sites with an allow or textOnly rule get previews.
     public var restrictToAllowedDomains: Bool = false
     public var maxImageBytes: Int = 10 * 1024 * 1024
     /// Allow fetching from `localhost`, private/link-local IP literals and
@@ -27,112 +83,184 @@ public struct MediaPolicy: Sendable, Codable, Hashable {
     /// channel cannot make Vela send requests into the user's LAN.
     public var allowPrivateNetworkHosts: Bool = false
 
+    /// Only read by the deprecated `permitsAutomaticPreview(of:)`.
+    private var legacyLoadVideoEmbeds = true
+
     public init(
         autoLoad: Bool = true,
         showLinkCards: Bool = true,
-        loadVideoEmbeds: Bool = true,
-        blockedDomains: [String] = [],
-        allowedDomains: [String] = [],
+        siteRules: SiteRules = SiteRules(),
+        filterAdultSites: Bool = true,
+        extraAdultDomains: Set<String> = [],
+        imagesAllowed: Bool = true,
+        allowedOnce: Set<String> = [],
         restrictToAllowedDomains: Bool = false,
         maxImageBytes: Int = 10 * 1024 * 1024,
         allowPrivateNetworkHosts: Bool = false
     ) {
         self.autoLoad = autoLoad
         self.showLinkCards = showLinkCards
-        self.loadVideoEmbeds = loadVideoEmbeds
-        self.blockedDomains = blockedDomains
-        self.allowedDomains = allowedDomains
+        self.siteRules = siteRules
+        self.filterAdultSites = filterAdultSites
+        self.extraAdultDomains = extraAdultDomains
+        self.imagesAllowed = imagesAllowed
+        self.allowedOnce = allowedOnce
         self.restrictToAllowedDomains = restrictToAllowedDomains
         self.maxImageBytes = maxImageBytes
         self.allowPrivateNetworkHosts = allowPrivateNetworkHosts
     }
 
-    /// Whether Vela may contact `url` at all.
-    ///
-    /// Only `http`/`https`. Domain entries match the host itself and its
-    /// subdomains on label boundaries: `example.com` covers `img.example.com`
-    /// but not `badexample.com`. Entries may be written as `*.example.com`,
-    /// `.example.com` or even `https://example.com/`. Blocking wins over allowing.
-    public func allows(_ url: URL) -> Bool {
-        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
-              let host = Self.normalizedHost(url)
-        else { return false }
+    // MARK: - Verdicts
 
-        if !allowPrivateNetworkHosts, Self.isPrivateNetworkHost(host) { return false }
-        if blockedDomains.contains(where: { Self.host(host, matches: $0) }) { return false }
-        if restrictToAllowedDomains {
-            return allowedDomains.contains { Self.host(host, matches: $0) }
+    public func verdict(for url: URL) -> SiteVerdict {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+              let host = SiteRules.normalizedHost(url)
+        else { return .forbidden }
+        return verdict(forHost: host)
+    }
+
+    /// The verdict for any `http(s)` URL on `host`.
+    public func verdict(forHost rawHost: String) -> SiteVerdict {
+        guard let host = SiteRules.normalizedDomain(rawHost) else { return .forbidden }
+        if !allowPrivateNetworkHosts, Self.isPrivateNetworkHost(host) { return .forbidden }
+        let open: SiteVerdict = imagesAllowed ? .everything : .textOnly
+
+        if isAllowedOnce(host: host) { return open }
+        if let rule = rule(forHost: host) {
+            switch rule.access {
+            case .allow: return open
+            case .textOnly: return .textOnly
+            case .block: return .blocked(SiteBlock(reason: .userBlocked, domain: rule.domain))
+            }
         }
-        return true
+        if filterAdultSites, let domain = adultDomain(forHost: host) {
+            return .blocked(SiteBlock(reason: .adultSite, domain: domain))
+        }
+        if restrictToAllowedDomains {
+            let domain = SiteRules.suggestedRuleDomain(forHost: host) ?? host
+            return .blocked(SiteBlock(reason: .notAllowed, domain: domain))
+        }
+        return open
+    }
+
+    /// Whether Vela may request `url` at all (pages, oEmbed, redirect hops).
+    public func allows(_ url: URL) -> Bool {
+        switch verdict(for: url) {
+        case .everything, .textOnly: true
+        case .blocked, .forbidden: false
+        }
+    }
+
+    /// Whether Vela may load `url` as an image, thumbnail, favicon, poster or
+    /// direct video. Only "everything" sites qualify.
+    public func allowsImage(_ url: URL) -> Bool {
+        verdict(for: url) == .everything
+    }
+
+    /// The most specific site rule for `host`. Hosts of a video provider's
+    /// asset domains (`youtu.be`, `i.ytimg.com`) without a rule of their own
+    /// follow the provider's main-domain rule.
+    public func rule(forHost host: String) -> (domain: String, access: SiteAccess)? {
+        guard !siteRules.isEmpty else { return nil }
+        if let match = siteRules.access(forHost: host) { return match }
+        if let provider = EmbedProvider.provider(forHost: host) {
+            return siteRules.access(forHost: provider.mainDomain)
+        }
+        return nil
+    }
+
+    /// Whether `host` is covered by an `allowedOnce` domain.
+    public func isAllowedOnce(host: String) -> Bool {
+        guard !allowedOnce.isEmpty, let host = SiteRules.normalizedDomain(host) else { return false }
+        return allowedOnce.contains { entry in
+            SiteRules.normalizedDomain(entry).map { SiteRules.host(host, isWithin: $0) } ?? false
+        }
+    }
+
+    /// The adult-list domain covering `host` (bundled list, then `extraAdultDomains`),
+    /// regardless of `filterAdultSites`.
+    public func adultDomain(forHost host: String) -> String? {
+        if let match = AdultSiteList.bundled.matchingDomain(forHost: host) { return match }
+        guard !extraAdultDomains.isEmpty, let host = SiteRules.normalizedDomain(host) else { return nil }
+        for suffix in SiteRules.domainSuffixes(of: host) {
+            if extraAdultDomains.contains(where: { SiteRules.normalizedDomain($0) == suffix }) { return suffix }
+        }
+        return nil
+    }
+
+    // MARK: - Errors
+
+    /// Nil when `url` may be requested; otherwise the error to fail with.
+    func requestError(for url: URL) -> MediaError? {
+        switch verdict(for: url) {
+        case .everything, .textOnly: nil
+        case .blocked(let block): .siteBlocked(block)
+        case .forbidden: .blockedByPolicy
+        }
+    }
+
+    /// Nil when `url` may be loaded as an image or video; otherwise the error to fail with.
+    func imageError(for url: URL) -> MediaError? {
+        switch verdict(for: url) {
+        case .everything: nil
+        case .blocked(let block): .siteBlocked(block)
+        case .textOnly, .forbidden: .blockedByPolicy
+        }
+    }
+
+    /// The policy with the switches that don't change what a fetch returns
+    /// reset, so previews and remembered failures are shared across them.
+    var fetchKey: MediaPolicy {
+        var key = self
+        key.autoLoad = true
+        key.showLinkCards = true
+        key.imagesAllowed = true
+        key.legacyLoadVideoEmbeds = true
+        return key
+    }
+
+    // MARK: - Deprecated (removed once VelaCore/VelaUI use PreviewDecider)
+
+    /// Show YouTube/Vimeo/Twitch/Streamable facades.
+    @available(*, deprecated, message: "Use PreviewLayout.videoStyle")
+    public var loadVideoEmbeds: Bool {
+        get { legacyLoadVideoEmbeds }
+        set { legacyLoadVideoEmbeds = newValue }
+    }
+
+    /// The domains with a "block" rule. Setting replaces those rules.
+    @available(*, deprecated, message: "Use siteRules")
+    public var blockedDomains: [String] {
+        get { siteRules.domains(with: .block) }
+        set {
+            for domain in siteRules.domains(with: .block) { siteRules[domain] = nil }
+            for domain in newValue { siteRules[domain] = .block }
+        }
+    }
+
+    /// The domains with an "allow" rule. Setting replaces those rules; a
+    /// domain that also has a block rule stays blocked.
+    @available(*, deprecated, message: "Use siteRules")
+    public var allowedDomains: [String] {
+        get { siteRules.domains(with: .allow) }
+        set {
+            for domain in siteRules.domains(with: .allow) { siteRules[domain] = nil }
+            for domain in newValue where siteRules[domain] != .block { siteRules[domain] = .allow }
+        }
     }
 
     /// Whether a preview for `url` should be fetched and shown without a click.
+    @available(*, deprecated, message: "Use PreviewDecider.decide")
     public func permitsAutomaticPreview(of url: URL) -> Bool {
         guard autoLoad, allows(url) else { return false }
         switch MediaClassifier.classify(url) {
-        case .image, .video: return true
-        case .embed: return loadVideoEmbeds
+        case .image(let media), .video(let media): return allowsImage(media)
+        case .embed: return legacyLoadVideoEmbeds
         case .page: return showLinkCards
         }
     }
 
-    // MARK: - Codable
-
-    private enum CodingKeys: String, CodingKey {
-        case autoLoad, showLinkCards, loadVideoEmbeds, blockedDomains, allowedDomains
-        case restrictToAllowedDomains, maxImageBytes, allowPrivateNetworkHosts
-    }
-
-    /// Missing keys fall back to defaults so older settings files keep loading.
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let defaults = MediaPolicy()
-        autoLoad = try container.decodeIfPresent(Bool.self, forKey: .autoLoad) ?? defaults.autoLoad
-        showLinkCards = try container.decodeIfPresent(Bool.self, forKey: .showLinkCards) ?? defaults.showLinkCards
-        loadVideoEmbeds = try container.decodeIfPresent(Bool.self, forKey: .loadVideoEmbeds)
-            ?? defaults.loadVideoEmbeds
-        blockedDomains = try container.decodeIfPresent([String].self, forKey: .blockedDomains)
-            ?? defaults.blockedDomains
-        allowedDomains = try container.decodeIfPresent([String].self, forKey: .allowedDomains)
-            ?? defaults.allowedDomains
-        restrictToAllowedDomains = try container.decodeIfPresent(Bool.self, forKey: .restrictToAllowedDomains)
-            ?? defaults.restrictToAllowedDomains
-        maxImageBytes = try container.decodeIfPresent(Int.self, forKey: .maxImageBytes) ?? defaults.maxImageBytes
-        allowPrivateNetworkHosts = try container.decodeIfPresent(Bool.self, forKey: .allowPrivateNetworkHosts)
-            ?? defaults.allowPrivateNetworkHosts
-    }
-
-    // MARK: - Matching
-
-    static func normalizedHost(_ url: URL) -> String? {
-        guard var host = url.host(percentEncoded: false)?.lowercased(), !host.isEmpty else { return nil }
-        if host.hasPrefix("["), host.hasSuffix("]") { host = String(host.dropFirst().dropLast()) }
-        while host.hasSuffix(".") { host.removeLast() }
-        return host.isEmpty ? nil : host
-    }
-
-    /// Reduces a user-entered domain to a bare lowercase host name.
-    static func normalizedDomain(_ entry: String) -> String? {
-        var domain = entry.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if let schemeEnd = domain.range(of: "://") { domain = String(domain[schemeEnd.upperBound...]) }
-        if let slash = domain.firstIndex(where: { $0 == "/" || $0 == "?" || $0 == "#" }) {
-            domain = String(domain[..<slash])
-        }
-        if let at = domain.lastIndex(of: "@") { domain = String(domain[domain.index(after: at)...]) }
-        if domain.hasPrefix("[") {
-            domain = String(domain.dropFirst().prefix { $0 != "]" })
-        } else if let colon = domain.lastIndex(of: ":"), domain.filter({ $0 == ":" }).count == 1 {
-            domain = String(domain[..<colon])
-        }
-        while domain.hasPrefix("*") || domain.hasPrefix(".") { domain.removeFirst() }
-        while domain.hasSuffix(".") { domain.removeLast() }
-        return domain.isEmpty ? nil : domain
-    }
-
-    static func host(_ host: String, matches entry: String) -> Bool {
-        guard let domain = normalizedDomain(entry) else { return false }
-        return host == domain || host.hasSuffix("." + domain)
-    }
+    // MARK: - Private networks
 
     /// Loopback, private, link-local and CGNAT IP literals, plus names that
     /// only resolve on a local network. Hostnames that *resolve* to private

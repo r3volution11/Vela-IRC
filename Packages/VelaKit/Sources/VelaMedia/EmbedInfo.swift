@@ -27,6 +27,37 @@ public enum EmbedProvider: String, Sendable, Codable, Hashable, CaseIterable {
         case .streamable: "#0F90FA"
         }
     }
+
+    /// The domain a site rule for this provider is written for. Rules for it
+    /// also cover `assetDomains` (short links, players, thumbnails) unless
+    /// those have rules of their own.
+    public var mainDomain: String {
+        switch self {
+        case .youtube: "youtube.com"
+        case .vimeo: "vimeo.com"
+        case .twitch: "twitch.tv"
+        case .streamable: "streamable.com"
+        }
+    }
+
+    /// Other domains the provider serves its links, players and thumbnails from.
+    public var assetDomains: [String] {
+        switch self {
+        case .youtube: ["youtu.be", "youtube-nocookie.com", "ytimg.com"]
+        case .vimeo: ["vimeocdn.com"]
+        case .twitch: ["jtvnw.net"]
+        case .streamable: []
+        }
+    }
+
+    /// The provider whose main or asset domains cover `host`, if any.
+    public static func provider(forHost host: String) -> EmbedProvider? {
+        guard let host = SiteRules.normalizedDomain(host) else { return nil }
+        return allCases.first { provider in
+            SiteRules.host(host, isWithin: provider.mainDomain)
+                || provider.assetDomains.contains { SiteRules.host(host, isWithin: $0) }
+        }
+    }
 }
 
 /// Everything needed to show a video facade and, on click, its player.

@@ -42,6 +42,22 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
     /// MIME type of the main response, without parameters (e.g. `text/html`).
     public var contentType: String?
     public var fetchedAt: Date
+    /// Whether the page labels itself adult (RTA label, `rating` meta,
+    /// `og:restrictions:age`, `Rating` header). Nil when no page or header
+    /// was inspected.
+    public var declaresAdult: Bool?
+    /// The format this preview was built with; persisted previews with an
+    /// older (or missing) version are refetched.
+    public var formatVersion: Int?
+
+    /// Bumped whenever previews start carrying something old ones lack.
+    /// 2: every image URL is kept (policy applies at load time) and `declaresAdult`.
+    public static let currentFormatVersion = 2
+
+    /// Whether this preview was built in the current format.
+    public var isCurrentFormat: Bool {
+        (formatVersion ?? 0) >= Self.currentFormatVersion
+    }
 
     public init(
         url: URL,
@@ -57,7 +73,9 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
         mediaURL: URL? = nil,
         embed: EmbedInfo? = nil,
         contentType: String? = nil,
-        fetchedAt: Date = Date()
+        fetchedAt: Date = Date(),
+        declaresAdult: Bool? = nil,
+        formatVersion: Int? = LinkPreview.currentFormatVersion
     ) {
         self.url = url
         self.finalURL = finalURL ?? url
@@ -73,5 +91,58 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
         self.embed = embed
         self.contentType = contentType
         self.fetchedAt = fetchedAt
+        self.declaresAdult = declaresAdult
+        self.formatVersion = formatVersion
+    }
+}
+
+// MARK: - Display
+
+extension LinkPreview {
+    /// Whether there is anything worth a card (a bare page with no metadata isn't).
+    public var hasCardContent: Bool {
+        hasCardContent(showingImages: true)
+    }
+
+    /// `hasCardContent` for a card that may or may not draw its image
+    /// (text-only sites get no image).
+    public func hasCardContent(showingImages: Bool) -> Bool {
+        displayTitle != nil || displaySummary != nil || (showingImages && imageURL != nil)
+    }
+
+    /// The title, whitespace-collapsed; for direct images and videos without
+    /// one, the file name.
+    public var displayTitle: String? {
+        if let title = (title ?? embed?.title).map(Self.cleaned), !title.isEmpty { return title }
+        if kind == .video || kind == .image { return Self.fileName(mediaURL ?? finalURL) }
+        return nil
+    }
+
+    public var displaySummary: String? {
+        summary.map(Self.cleaned).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// The site name, or the host without a leading `www.`.
+    public var displaySiteName: String {
+        if let siteName = siteName.map(Self.cleaned), !siteName.isEmpty { return siteName }
+        return Self.displayHost(finalURL)
+    }
+
+    /// "example.com" for display, without a leading "www.".
+    public static func displayHost(_ url: URL) -> String {
+        var host = url.host(percentEncoded: false) ?? url.absoluteString
+        if host.lowercased().hasPrefix("www.") { host.removeFirst(4) }
+        return host
+    }
+
+    private static func fileName(_ url: URL) -> String? {
+        let last = url.lastPathComponent
+        guard !last.isEmpty, last != "/" else { return nil }
+        let name = cleaned(last.removingPercentEncoding ?? last)
+        return name.isEmpty ? nil : name
+    }
+
+    private static func cleaned(_ text: String) -> String {
+        text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 }

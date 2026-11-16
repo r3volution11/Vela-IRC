@@ -12,16 +12,20 @@ public protocol LinkPreviewCache: Sendable {
 
 /// Builds `LinkPreview`s for URLs seen in chat.
 ///
-/// - Concurrent requests for the same URL share one fetch; it is cancelled
-///   when every caller waiting on it has been cancelled.
+/// - Concurrent requests for the same URL under the same policy share one
+///   fetch; it is cancelled when every caller waiting on it has been cancelled.
 /// - Results are kept in a ~500-entry in-memory LRU and, when given, in a
 ///   persistent `LinkPreviewCache`. Persistent entries older than
-///   `maxCacheAge` are refetched.
-/// - Failures are remembered briefly so re-rendering scrollback does not
-///   hammer a broken site.
+///   `maxCacheAge`, or built in an older `LinkPreview.formatVersion`, are refetched.
+/// - A preview the policy partly refused (e.g. its oEmbed endpoint is on a
+///   blocked site) is kept in memory only, for that policy.
+/// - Failures are remembered briefly, per policy, so re-rendering scrollback
+///   does not hammer a broken site while unblocking a site or "Show once"
+///   takes effect at once.
 /// - All requests send the honest `defaultUserAgent`, no cookies, and
-///   every URL (including redirect targets, oEmbed endpoints, card images
-///   and favicons) is checked against the `MediaPolicy`.
+///   every request (including redirect hops and oEmbed endpoints) is checked
+///   with `MediaPolicy.allows(_:)`. Image, thumbnail and favicon URLs are
+///   recorded as found; `ImageLoader` checks `allowsImage(_:)` when loading them.
 public actor LinkPreviewService {
     public static let defaultUserAgent = "Vela/0.1 (Macintosh; link preview; +https://github.com/r3volution11/Vela-IRC)"
 
@@ -45,12 +49,28 @@ public actor LinkPreviewService {
         var expires: Date
     }
 
+    private struct MemoryEntry {
+        var preview: LinkPreview
+        /// Set for degraded previews: the (fetch-relevant) policy they were built under.
+        var degradedUnder: MediaPolicy?
+
+        func isUsable(under policy: MediaPolicy) -> Bool {
+            degradedUnder.map { $0 == policy.fetchKey } ?? true
+        }
+    }
+
+    /// A URL under a fetch-relevant policy.
+    private struct RequestKey: Hashable {
+        var url: String
+        var policy: MediaPolicy
+    }
+
     private let fetcher: PreviewFetcher
     private let cache: (any LinkPreviewCache)?
     private let maxCacheAge: TimeInterval
-    private var memory = LRUCache<String, LinkPreview>(countLimit: 500)
-    private var failures = LRUCache<String, FailureRecord>(countLimit: 500)
-    private var inFlight = InFlightTasks<String, LinkPreview>()
+    private var memory = LRUCache<String, MemoryEntry>(countLimit: 500)
+    private var failures = LRUCache<RequestKey, FailureRecord>(countLimit: 500)
+    private var inFlight = InFlightTasks<RequestKey, LinkPreview>()
 
     /// How long a failed fetch is remembered before it is retried.
     static let policyFailureTTL: TimeInterval = 15 * 60
@@ -69,15 +89,18 @@ public actor LinkPreviewService {
 
     /// Returns a preview for `url`, fetching it if needed.
     ///
-    /// Throws `MediaError.blockedByPolicy` without touching the network when
-    /// the policy disallows the URL. Callers decide separately (see
-    /// `MediaPolicy.permitsAutomaticPreview(of:)`) whether to call this
-    /// automatically or only after a click.
+    /// Throws `MediaError.siteBlocked` (or `.blockedByPolicy` for a forbidden
+    /// URL) without touching the network when the policy refuses the URL, and
+    /// the same errors when a redirect leads somewhere refused. Whether to
+    /// call this automatically or only after a click is `PreviewDecider`'s call.
+    /// A returned preview may still point at a site the policy now blocks
+    /// (e.g. from the cache); `PreviewDecider` checks that too.
     public func preview(for url: URL, policy: MediaPolicy) async throws -> LinkPreview {
-        guard policy.allows(url) else { throw MediaError.blockedByPolicy }
-        let key = url.absoluteString
+        if let refusal = policy.requestError(for: url) { throw refusal }
+        let urlKey = url.absoluteString
+        let key = RequestKey(url: urlKey, policy: policy.fetchKey)
 
-        if let hit = memory.value(for: key) { return hit }
+        if let hit = memory.value(for: urlKey), hit.isUsable(under: policy) { return hit.preview }
         if let failure = failures.peek(key) {
             if failure.expires > Date() { throw failure.error }
             failures.removeValue(for: key)
@@ -93,36 +116,44 @@ public actor LinkPreviewService {
         }
     }
 
-    private func leave(_ key: String, id: UInt64) {
+    private func leave(_ key: RequestKey, id: UInt64) {
         inFlight.leave(key, id: id)
     }
 
     /// The in-memory preview for `url`, if any, without fetching.
     /// Lets the UI render a known card synchronously on the service's actor.
     public func cachedPreview(for url: URL) -> LinkPreview? {
-        memory.value(for: url.absoluteString)
+        memory.value(for: url.absoluteString)?.preview
     }
 
-    /// Forgets in-memory previews and remembered failures (not the persistent
-    /// cache). Call it when the `MediaPolicy` changes: cached cards were
-    /// built under the old policy (e.g. a card image on a now-blocked host).
+    /// The in-memory preview for `url` that `preview(for:policy:)` would
+    /// return under `policy`, without fetching.
+    public func cachedPreview(for url: URL, policy: MediaPolicy) -> LinkPreview? {
+        guard policy.requestError(for: url) == nil,
+              let entry = memory.value(for: url.absoluteString), entry.isUsable(under: policy)
+        else { return nil }
+        return entry.preview
+    }
+
+    /// Forgets in-memory previews and remembered failures (not the persistent cache).
     public func removeAllCachedPreviews() {
         memory.removeAll()
         failures.removeAll()
     }
 
-    private func load(_ url: URL, key: String, id: UInt64, policy: MediaPolicy) async throws -> LinkPreview {
+    private func load(_ url: URL, key: RequestKey, id: UInt64, policy: MediaPolicy) async throws -> LinkPreview {
         defer { inFlight.finish(key, id: id) }
         do {
-            if let cache, let stored = await cache.cachedPreview(for: url),
+            if let cache, let stored = await cache.cachedPreview(for: url), stored.isCurrentFormat,
                Date().timeIntervalSince(stored.fetchedAt) < maxCacheAge {
-                memory.insert(stored, for: key)
+                memory.insert(MemoryEntry(preview: stored), for: key.url)
                 return stored
             }
-            let preview = try await fetcher.preview(for: url, policy: policy)
-            memory.insert(preview, for: key)
+            let result = try await fetcher.preview(for: url, policy: policy)
+            let preview = result.preview
+            memory.insert(MemoryEntry(preview: preview, degradedUnder: result.degraded ? key.policy : nil), for: key.url)
             failures.removeValue(for: key)
-            if let cache { await cache.storePreview(preview) }
+            if let cache, !result.degraded { await cache.storePreview(preview) }
             return preview
         } catch is CancellationError {
             throw CancellationError()

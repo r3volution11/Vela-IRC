@@ -37,6 +37,8 @@ import Testing
         #expect(preview.mediaURL == nil)
         #expect(preview.embed == nil)
         #expect(preview.id == "https://example.com/article")
+        #expect(preview.declaresAdult == false)
+        #expect(preview.formatVersion == LinkPreview.currentFormatVersion)
 
         let request = try #require(server.requests(to: "https://example.com/article").first)
         #expect(request.value(forHTTPHeaderField: "User-Agent") == LinkPreviewService.defaultUserAgent)
@@ -134,14 +136,32 @@ import Testing
         #expect(preview.faviconURL == url("https://example.com/favicon.ico"))
     }
 
-    @Test func redirectToBlockedDomainFails() async throws {
+    @Test func redirectToBlockedDomainFailsWithTheReason() async throws {
         server.route("https://short.example/evil", .redirect(to: "https://tracker.example.net/x"))
         server.route("https://tracker.example.net/x", .html("<title>Should not load</title>"))
-        let policy = MediaPolicy(blockedDomains: ["example.net"])
-        await #expect(throws: MediaError.blockedByPolicy) {
+        let policy = MediaPolicy(siteRules: SiteRules(["example.net": "block"]))
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .userBlocked, domain: "example.net"))) {
             try await makeService().preview(for: url("https://short.example/evil"), policy: policy)
         }
         #expect(server.requests(to: "https://tracker.example.net/x").isEmpty)
+    }
+
+    @Test func redirectToAdultDomainFailsWithTheReason() async throws {
+        server.route("https://short.example/nsfw", .redirect(to: "https://www.nsfw.example/video"))
+        server.route("https://www.nsfw.example/video", .html("<title>Should not load</title>"))
+        let policy = MediaPolicy(extraAdultDomains: ["nsfw.example"])
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .adultSite, domain: "nsfw.example"))) {
+            try await makeService().preview(for: url("https://short.example/nsfw"), policy: policy)
+        }
+        #expect(server.requests(to: "https://www.nsfw.example/video").isEmpty)
+    }
+
+    @Test func redirectOutsideAllowedSitesFailsWithTheReason() async throws {
+        server.route("https://allowed.example/go", .redirect(to: "https://www.elsewhere.example/x"))
+        let policy = MediaPolicy(siteRules: SiteRules(["allowed.example": "allow"]), restrictToAllowedDomains: true)
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .notAllowed, domain: "elsewhere.example"))) {
+            try await makeService().preview(for: url("https://allowed.example/go"), policy: policy)
+        }
     }
 
     @Test func redirectToPrivateNetworkFails() async throws {
@@ -168,9 +188,12 @@ import Testing
     // MARK: Policy
 
     @Test func blockedURLNeverHitsNetwork() async throws {
-        let policy = MediaPolicy(blockedDomains: ["example.com"])
-        await #expect(throws: MediaError.blockedByPolicy) {
+        let policy = MediaPolicy(siteRules: SiteRules(["example.com": "block"]), extraAdultDomains: ["nsfw.example"])
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .userBlocked, domain: "example.com"))) {
             try await makeService().preview(for: url("https://img.example.com/a.png"), policy: policy)
+        }
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .adultSite, domain: "nsfw.example"))) {
+            try await makeService().preview(for: url("https://nsfw.example/a"), policy: policy)
         }
         await #expect(throws: MediaError.blockedByPolicy) {
             try await makeService().preview(for: url("http://localhost:8080/"), policy: MediaPolicy())
@@ -178,13 +201,133 @@ import Testing
         #expect(server.requests.isEmpty)
     }
 
-    @Test func cardImageOnBlockedDomainIsDropped() async throws {
+    @Test func textOnlySitesAreFetched() async throws {
         server.route("https://example.com/article", .html(try Fixtures.string("og-article.html")))
-        let policy = MediaPolicy(blockedDomains: ["cdn.example.com"])
+        let policy = MediaPolicy(siteRules: SiteRules(["example.com": "textOnly"]))
         let preview = try await makeService().preview(for: url("https://example.com/article"), policy: policy)
-        #expect(preview.imageURL == nil)
-        #expect(preview.imageSize == nil)
         #expect(preview.title == "The Real OG Title")
+        // Recorded, but a text-only site's images are never loaded.
+        #expect(preview.imageURL == url("https://cdn.example.com/card.jpg"))
+        #expect(!policy.allowsImage(try #require(preview.imageURL)))
+        #expect(!policy.allowsImage(try #require(preview.faviconURL)))
+    }
+
+    @Test func cardImageURLsAreKeptButRefusedAsImages() async throws {
+        server.route("https://example.com/article", .html(try Fixtures.string("og-article.html")))
+        let policy = MediaPolicy(siteRules: SiteRules(["cdn.example.com": "block"]))
+        let preview = try await makeService().preview(for: url("https://example.com/article"), policy: policy)
+        #expect(preview.title == "The Real OG Title")
+        let image = try #require(preview.imageURL)
+        #expect(image == url("https://cdn.example.com/card.jpg"))
+        #expect(preview.imageSize == CGSize(width: 1200, height: 630))
+        #expect(!policy.allowsImage(image))
+        #expect(policy.allowsImage(try #require(preview.faviconURL)))
+        // Image URLs are never fetched while building the preview.
+        #expect(server.requests(to: "https://cdn.example.com/card.jpg").isEmpty)
+    }
+
+    // MARK: Failure memory
+
+    @Test func failureMemoryIsPerPolicy() async throws {
+        server.route("https://short.example/nsfw", .redirect(to: "https://nsfw.example/video"))
+        server.route("https://nsfw.example/video", .html("<head><title>Shown once</title></head>"))
+        let service = makeService()
+        let strict = MediaPolicy(extraAdultDomains: ["nsfw.example"])
+        let link = url("https://short.example/nsfw")
+
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .adultSite, domain: "nsfw.example"))) {
+            try await service.preview(for: link, policy: strict)
+        }
+        // Remembered for the same policy (even with display switches changed)…
+        var display = strict
+        display.autoLoad = false
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .adultSite, domain: "nsfw.example"))) {
+            try await service.preview(for: link, policy: display)
+        }
+        #expect(server.requests(to: "https://short.example/nsfw").count == 1)
+
+        // …but "Show once" applies at once.
+        var once = strict
+        once.allowedOnce = ["nsfw.example"]
+        let preview = try await service.preview(for: link, policy: once)
+        #expect(preview.title == "Shown once")
+        #expect(preview.finalURL == url("https://nsfw.example/video"))
+        #expect(server.requests(to: "https://short.example/nsfw").count == 2)
+    }
+
+    @Test func unblockingAppliesImmediately() async throws {
+        server.route("https://short.example/t", .redirect(to: "https://tracker.example.net/x"))
+        server.route("https://tracker.example.net/x", .html("<head><title>Unblocked</title></head>"))
+        let service = makeService()
+        let blocked = MediaPolicy(siteRules: SiteRules(["example.net": "block"]))
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .userBlocked, domain: "example.net"))) {
+            try await service.preview(for: url("https://short.example/t"), policy: blocked)
+        }
+        let preview = try await service.preview(for: url("https://short.example/t"), policy: MediaPolicy())
+        #expect(preview.title == "Unblocked")
+    }
+
+    @Test func previewRefusedPartlyIsKeptInMemoryOnly() async throws {
+        server.route("https://example.com/post", .html("""
+        <head><link rel="alternate" type="application/json+oembed" href="https://api.example.net/oembed?id=7"></head>
+        """))
+        server.route("https://api.example.net/oembed?id=7", .json(["title": "From oEmbed"]))
+        let cache = MemoryPreviewCache()
+        let service = makeService(cache: cache)
+        let blocked = MediaPolicy(siteRules: SiteRules(["example.net": "block"]))
+
+        let degraded = try await service.preview(for: url("https://example.com/post"), policy: blocked)
+        #expect(degraded.title == "example.com")
+        #expect(await cache.storeCount == 0)
+        #expect(server.requests(to: "https://api.example.net/oembed?id=7").isEmpty)
+        // Served from memory for the same policy…
+        _ = try await service.preview(for: url("https://example.com/post"), policy: blocked)
+        #expect(server.requests(to: "https://example.com/post").count == 1)
+        #expect(await service.cachedPreview(for: url("https://example.com/post"), policy: blocked)?.title == "example.com")
+        #expect(await service.cachedPreview(for: url("https://example.com/post"), policy: MediaPolicy()) == nil)
+
+        // …and rebuilt in full once the site is unblocked.
+        let full = try await service.preview(for: url("https://example.com/post"), policy: MediaPolicy())
+        #expect(full.title == "From oEmbed")
+        #expect(await cache.storeCount == 1)
+    }
+
+    // MARK: Adult labels
+
+    @Test func pageLabelledAdult() async throws {
+        server.route("https://example.com/rta", .html(try Fixtures.string("rta.html")))
+        let preview = try await makeService().preview(for: url("https://example.com/rta"), policy: policy)
+        #expect(preview.declaresAdult == true)
+        #expect(preview.title == "Adults only")
+    }
+
+    @Test func ratingHeaderMarksPageAdult() async throws {
+        server.route("https://example.com/rated", StubResponse(
+            headers: ["Content-Type": "text/html", "Rating": "RTA-5042-1996-1400-1577-RTA"],
+            body: Data("<head><title>Rated</title></head>".utf8)
+        ))
+        server.route("https://example.com/mature", StubResponse(
+            headers: ["Content-Type": "text/html", "rating": "Mature"],
+            body: Data("<head><title>Mature</title></head>".utf8)
+        ))
+        server.route("https://example.com/general", StubResponse(
+            headers: ["Content-Type": "text/html", "Rating": "general"],
+            body: Data("<head><title>General</title></head>".utf8)
+        ))
+        let service = makeService()
+        #expect(try await service.preview(for: url("https://example.com/rated"), policy: policy).declaresAdult == true)
+        #expect(try await service.preview(for: url("https://example.com/mature"), policy: policy).declaresAdult == true)
+        #expect(try await service.preview(for: url("https://example.com/general"), policy: policy).declaresAdult == false)
+    }
+
+    @Test func ratingHeaderOnDirectMedia() async throws {
+        server.route("https://example.com/x.jpg", method: "HEAD", StubResponse(
+            headers: ["Content-Type": "image/jpeg", "Rating": "adult"]
+        ))
+        server.route("https://example.com/y.jpg", method: "HEAD", StubResponse(headers: ["Content-Type": "image/jpeg"]))
+        let service = makeService()
+        #expect(try await service.preview(for: url("https://example.com/x.jpg"), policy: policy).declaresAdult == true)
+        #expect(try await service.preview(for: url("https://example.com/y.jpg"), policy: policy).declaresAdult == false)
     }
 
     // MARK: Direct media
@@ -292,13 +435,38 @@ import Testing
         #expect(preview.imageURL == url("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg"))
     }
 
-    @Test func blockedThumbnailHostIsDropped() async throws {
+    @Test func thumbnailOnBlockedHostIsKeptButRefused() async throws {
         server.route(youTubeOEmbed("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), .json(["title": "T"]))
-        let policy = MediaPolicy(blockedDomains: ["ytimg.com"])
+        let policy = MediaPolicy(siteRules: SiteRules(["ytimg.com": "block"]))
         let preview = try await makeService().preview(for: url("https://youtu.be/dQw4w9WgXcQ"), policy: policy)
         #expect(preview.title == "T")
-        #expect(preview.imageURL == nil)
-        #expect(preview.embed?.thumbnailURL == nil)
+        let thumbnail = try #require(preview.imageURL)
+        #expect(preview.embed?.thumbnailURL == thumbnail)
+        #expect(!policy.allowsImage(thumbnail))
+    }
+
+    @Test func blockedOEmbedEndpointDegradesThePreview() async throws {
+        // A rule for the provider covers the link itself, so nothing is fetched…
+        let blocked = MediaPolicy(siteRules: SiteRules(["youtube.com": "block"]))
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .userBlocked, domain: "youtube.com"))) {
+            try await makeService().preview(for: url("https://youtu.be/dQw4w9WgXcQ"), policy: blocked)
+        }
+        // …while a more specific allow rule for the short link still skips oEmbed.
+        let cache = MemoryPreviewCache()
+        let partly = MediaPolicy(siteRules: SiteRules(["youtube.com": "block", "youtu.be": "allow"]))
+        let preview = try await makeService(cache: cache).preview(for: url("https://youtu.be/dQw4w9WgXcQ"), policy: partly)
+        #expect(preview.kind == .embed)
+        #expect(preview.title == nil)
+        #expect(server.requests.isEmpty)
+        #expect(await cache.storeCount == 0)
+    }
+
+    @Test func nonWebThumbnailURLsAreIgnored() async throws {
+        server.route(youTubeOEmbed("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), .json([
+            "title": "T", "thumbnail_url": "javascript:alert(1)",
+        ]))
+        let preview = try await makeService().preview(for: url("https://youtu.be/dQw4w9WgXcQ"), policy: policy)
+        #expect(preview.imageURL == url("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg"))
     }
 
     @Test func vimeoOEmbedSetsAspectRatio() async throws {
@@ -460,10 +628,76 @@ import Testing
         #expect(preview.title == "Fresh")
     }
 
+    @Test func oldCacheFormatIsRefetched() async throws {
+        server.route("https://example.com/v1", .html("<title>Fresh</title>"))
+        server.route("https://example.com/v2", .html("<title>Fresh</title>"))
+        let cache = MemoryPreviewCache()
+        await cache.storePreview(LinkPreview(url: url("https://example.com/v1"), kind: .page, title: "Old", formatVersion: nil))
+        await cache.storePreview(LinkPreview(url: url("https://example.com/v2"), kind: .page, title: "Old", formatVersion: 1))
+        await cache.storePreview(LinkPreview(url: url("https://example.com/current"), kind: .page, title: "Current"))
+        let service = makeService(cache: cache)
+        #expect(try await service.preview(for: url("https://example.com/v1"), policy: policy).title == "Fresh")
+        #expect(try await service.preview(for: url("https://example.com/v2"), policy: policy).title == "Fresh")
+        #expect(try await service.preview(for: url("https://example.com/current"), policy: policy).title == "Current")
+        #expect(server.requests(to: "https://example.com/current").isEmpty)
+    }
+
+    @Test func oldPreviewJSONStillDecodes() throws {
+        let json = """
+        {"url":"https://example.com/a","finalURL":"https://example.com/a","kind":"page","title":"Old",
+         "imageURL":"https://example.com/i.png","imageSize":[640,360],"fetchedAt":700000000}
+        """
+        let preview = try JSONDecoder().decode(LinkPreview.self, from: Data(json.utf8))
+        #expect(preview.title == "Old")
+        #expect(preview.imageSize == CGSize(width: 640, height: 360))
+        #expect(preview.declaresAdult == nil)
+        #expect(preview.formatVersion == nil)
+        #expect(!preview.isCurrentFormat)
+        #expect(LinkPreview(url: url("https://example.com/a"), kind: .page).isCurrentFormat)
+    }
+
     @Test func previewIsCodable() async throws {
         server.route("https://example.com/article", .html(try Fixtures.string("og-article.html")))
         let preview = try await makeService().preview(for: url("https://example.com/article"), policy: policy)
         let data = try JSONEncoder().encode(preview)
         #expect(try JSONDecoder().decode(LinkPreview.self, from: data) == preview)
+
+        var labelled = preview
+        labelled.declaresAdult = true
+        let decoded = try JSONDecoder().decode(LinkPreview.self, from: try JSONEncoder().encode(labelled))
+        #expect(decoded.declaresAdult == true)
+        #expect(decoded.formatVersion == LinkPreview.currentFormatVersion)
+    }
+
+    // MARK: Display helpers
+
+    @Test func displayHelpers() {
+        let page = LinkPreview(
+            url: url("https://www.example.com/a"), kind: .page, title: "  Spaced \n title ", summary: " ",
+            siteName: nil
+        )
+        #expect(page.displayTitle == "Spaced title")
+        #expect(page.displaySummary == nil)
+        #expect(page.displaySiteName == "example.com")
+        #expect(page.hasCardContent)
+
+        let bare = LinkPreview(url: url("https://example.com/"), kind: .page, imageURL: url("https://example.com/i.png"))
+        #expect(bare.displayTitle == nil)
+        #expect(bare.hasCardContent)
+        #expect(!bare.hasCardContent(showingImages: false))
+
+        let video = LinkPreview(
+            url: url("https://i.imgur.com/AbCd123.gifv"), kind: .video, mediaURL: url("https://i.imgur.com/AbCd123.mp4")
+        )
+        #expect(video.displayTitle == "AbCd123.mp4")
+        #expect(video.hasCardContent(showingImages: false))
+        let file = LinkPreview(url: url("https://example.com/My%20Clip.mov"), kind: .video)
+        #expect(file.displayTitle == "My Clip.mov")
+        let embed = LinkPreview(
+            url: url("https://youtu.be/dQw4w9WgXcQ"), kind: .embed, siteName: "YouTube",
+            embed: EmbedInfo.youtube(id: "dQw4w9WgXcQ", start: nil, isShort: false)
+        )
+        #expect(embed.displayTitle == nil)
+        #expect(embed.displaySiteName == "YouTube")
     }
 }

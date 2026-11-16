@@ -6,30 +6,6 @@ import SwiftUI
 import VelaMedia
 import VelaTheme
 
-extension LinkPreview {
-    /// Whether there is anything worth a card (a bare page with no metadata isn't).
-    var hasCardContent: Bool {
-        !(displayTitle ?? "").isEmpty || !(displaySummary ?? "").isEmpty || imageURL != nil
-    }
-
-    var displayTitle: String? {
-        (title ?? embed?.title).map(Self.cleaned).flatMap { $0.isEmpty ? nil : $0 }
-    }
-
-    var displaySummary: String? {
-        summary.map(Self.cleaned).flatMap { $0.isEmpty ? nil : $0 }
-    }
-
-    var displaySiteName: String {
-        if let siteName = siteName.map(Self.cleaned), !siteName.isEmpty { return siteName }
-        return EmbedActions.displayHost(finalURL)
-    }
-
-    private static func cleaned(_ text: String) -> String {
-        text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-    }
-}
-
 /// A link preview card for an ordinary page (or a video when embeds are off).
 ///
 /// Full: accent bar, favicon + site name, linked title, a 2–3 line

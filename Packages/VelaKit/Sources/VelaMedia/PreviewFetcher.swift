@@ -5,7 +5,20 @@
 import CoreGraphics
 import Foundation
 
+/// A fetched preview plus whether the policy refused part of the work.
+struct PreviewFetchResult: Sendable {
+    var preview: LinkPreview
+    /// A request (oEmbed, a page for metadata) was refused by the policy, so
+    /// the preview lacks something a more permissive policy would add. Such
+    /// previews are cached in memory only, for the policy that built them.
+    var degraded = false
+}
+
 /// Does the network work behind `LinkPreviewService`, off the service's actor.
+///
+/// Every request and redirect hop is checked with `MediaPolicy.allows(_:)`;
+/// image, thumbnail and favicon URLs are recorded as found and checked with
+/// `allowsImage(_:)` only when they are loaded.
 struct PreviewFetcher: Sendable {
     let session: URLSession
     let userAgent: String
@@ -20,7 +33,7 @@ struct PreviewFetcher: Sendable {
     static let videoAccept = "video/*;q=0.9,*/*;q=0.5"
 
     @concurrent
-    func preview(for url: URL, policy: MediaPolicy) async throws -> LinkPreview {
+    func preview(for url: URL, policy: MediaPolicy) async throws -> PreviewFetchResult {
         switch MediaClassifier.classify(url) {
         case .image(let mediaURL):
             return try await directMediaPreview(url, mediaURL: mediaURL, kind: .image, policy: policy)
@@ -40,14 +53,14 @@ struct PreviewFetcher: Sendable {
     /// mishandle HEAD.
     private func directMediaPreview(
         _ url: URL, mediaURL: URL, kind: LinkPreview.Kind, policy: MediaPolicy
-    ) async throws -> LinkPreview {
-        guard policy.allows(mediaURL) else { throw MediaError.blockedByPolicy }
+    ) async throws -> PreviewFetchResult {
+        if let refusal = policy.requestError(for: mediaURL) { throw refusal }
         var request = makeRequest(mediaURL, accept: kind == .image ? Self.imageAccept : Self.videoAccept)
         request.httpMethod = "HEAD"
         let options = HTTPFetcher.Options(
             maxBytes: kind == .image ? policy.maxImageBytes : .max,
             overflow: .fail,
-            allowRedirect: { policy.allows($0) },
+            checkRedirect: { policy.requestError(for: $0) },
             inspectResponse: { _ in .skip }
         )
 
@@ -56,7 +69,7 @@ struct PreviewFetcher: Sendable {
             head = try await HTTPFetcher.fetch(request, session: session, options: options)
         } catch let error as MediaError {
             switch error {
-            case .tooLarge, .blockedByPolicy, .http(404), .http(410): throw error
+            case .tooLarge, .blockedByPolicy, .siteBlocked, .http(404), .http(410): throw error
             default: head = nil
             }
         } catch is CancellationError {
@@ -74,30 +87,45 @@ struct PreviewFetcher: Sendable {
             if mime.hasPrefix("video/") { resolvedKind = .video }
             if mime.hasPrefix("image/") { resolvedKind = .image }
         }
-        return LinkPreview(
+        return PreviewFetchResult(preview: LinkPreview(
             url: url,
             finalURL: head?.finalURL ?? mediaURL,
             kind: resolvedKind,
             mediaURL: mediaURL,
-            contentType: head?.mimeType
-        )
+            contentType: head?.mimeType,
+            declaresAdult: head.map { Self.ratingDeclaresAdult($0.response) }
+        ))
     }
 
     // MARK: - Embeds
 
     private func embedPreview(
         _ url: URL, finalURL: URL, info: EmbedInfo, policy: MediaPolicy, pageMetadata: HTMLMetadata?
-    ) async throws -> LinkPreview {
+    ) async throws -> PreviewFetchResult {
         var embed = info
         var summary: String?
         var siteName = info.provider.displayName
         var imageSize: CGSize?
+        var degraded = false
+        var declaresAdult = pageMetadata?.declaresAdult
 
-        if let endpoint = OEmbedEndpoint.url(for: info), policy.allows(endpoint),
-           let oEmbed = try await bestEffort({ try await fetchOEmbed(endpoint, policy: policy) }) {
+        var oEmbed: OEmbedResponse?
+        if let endpoint = OEmbedEndpoint.url(for: info) {
+            if policy.allows(endpoint) {
+                switch try await attempt({ try await fetchOEmbed(endpoint, policy: policy) }) {
+                case .success(let response): oEmbed = response
+                case .refused: degraded = true
+                case .failed: break
+                }
+            } else {
+                degraded = true
+            }
+        }
+
+        if let oEmbed {
             embed.title = oEmbed.title ?? embed.title
             embed.authorName = oEmbed.authorName ?? embed.authorName
-            if let thumbnail = oEmbed.thumbnailURL.flatMap(URL.init(string:)), policy.allows(thumbnail) {
+            if let thumbnail = Self.webURL(oEmbed.thumbnailURL) {
                 embed.thumbnailURL = thumbnail
                 if let width = oEmbed.thumbnailWidth, let height = oEmbed.thumbnailHeight, width > 0, height > 0 {
                     imageSize = CGSize(width: width, height: height)
@@ -112,26 +140,30 @@ struct PreviewFetcher: Sendable {
             // Twitch has no unauthenticated oEmbed; use the page's OpenGraph tags.
             var metadata = pageMetadata
             if metadata == nil {
-                metadata = try await bestEffort { try await fetchPage(url, policy: policy).metadata } ?? nil
+                if policy.allows(url) {
+                    switch try await attempt({ try await fetchPage(url, policy: policy).metadata }) {
+                    case .success(let fetched): metadata = fetched
+                    case .refused: degraded = true
+                    case .failed: break
+                    }
+                } else {
+                    degraded = true
+                }
             }
             if let metadata {
                 embed.title = embed.title ?? metadata.title
                 summary = metadata.summary
-                if let image = metadata.imageURL, policy.allows(image) {
+                if let image = metadata.imageURL {
                     embed.thumbnailURL = image
                     if let width = metadata.imageWidth, let height = metadata.imageHeight {
                         imageSize = CGSize(width: width, height: height)
                     }
                 }
+                declaresAdult = metadata.declaresAdult
             }
         }
-        // The classifier's fallback thumbnail (i.ytimg.com) may itself be blocked.
-        if let thumbnail = embed.thumbnailURL, !policy.allows(thumbnail) {
-            embed.thumbnailURL = nil
-            imageSize = nil
-        }
 
-        return LinkPreview(
+        let preview = LinkPreview(
             url: url,
             finalURL: finalURL,
             kind: .embed,
@@ -141,8 +173,10 @@ struct PreviewFetcher: Sendable {
             imageURL: embed.thumbnailURL,
             imageSize: imageSize,
             themeColor: info.provider.brandColor,
-            embed: embed
+            embed: embed,
+            declaresAdult: declaresAdult
         )
+        return PreviewFetchResult(preview: preview, degraded: degraded)
     }
 
     private func fetchOEmbed(_ endpoint: URL, policy: MediaPolicy) async throws -> OEmbedResponse {
@@ -150,7 +184,7 @@ struct PreviewFetcher: Sendable {
         let options = HTTPFetcher.Options(
             maxBytes: Self.maxJSONBytes,
             overflow: .fail,
-            allowRedirect: { policy.allows($0) }
+            checkRedirect: { policy.requestError(for: $0) }
         )
         let result = try await HTTPFetcher.fetch(request, session: session, options: options)
         return try JSONDecoder().decode(OEmbedResponse.self, from: result.body)
@@ -160,7 +194,7 @@ struct PreviewFetcher: Sendable {
 
     private enum PageFetch {
         case html(HTMLMetadata, finalURL: URL, contentType: String?)
-        case media(LinkPreview.Kind, finalURL: URL, contentType: String?)
+        case media(LinkPreview.Kind, finalURL: URL, contentType: String?, declaresAdult: Bool)
 
         var metadata: HTMLMetadata? {
             if case .html(let metadata, _, _) = self { return metadata }
@@ -168,10 +202,13 @@ struct PreviewFetcher: Sendable {
         }
     }
 
-    private func pagePreview(_ url: URL, policy: MediaPolicy) async throws -> LinkPreview {
+    private func pagePreview(_ url: URL, policy: MediaPolicy) async throws -> PreviewFetchResult {
         switch try await fetchPage(url, policy: policy) {
-        case .media(let kind, let finalURL, let contentType):
-            return LinkPreview(url: url, finalURL: finalURL, kind: kind, mediaURL: url, contentType: contentType)
+        case .media(let kind, let finalURL, let contentType, let declaresAdult):
+            return PreviewFetchResult(preview: LinkPreview(
+                url: url, finalURL: finalURL, kind: kind, mediaURL: url, contentType: contentType,
+                declaresAdult: declaresAdult
+            ))
 
         case .html(let metadata, let finalURL, let contentType):
             // A shortener or redirect may land on a known video site.
@@ -180,37 +217,49 @@ struct PreviewFetcher: Sendable {
             }
 
             var metadata = metadata
-            if metadata.title == nil || metadata.imageURL == nil,
-               let endpoint = metadata.oEmbedURL, policy.allows(endpoint),
-               let oEmbed = try await bestEffort({ try await fetchOEmbed(endpoint, policy: policy) }) {
-                metadata.title = metadata.title ?? oEmbed.title
-                metadata.siteName = metadata.siteName ?? oEmbed.providerName
-                if metadata.imageURL == nil, let thumbnail = oEmbed.thumbnailURL.flatMap(URL.init(string:)) {
-                    metadata.imageURL = thumbnail
-                    metadata.imageWidth = oEmbed.thumbnailWidth.map { Int($0) }
-                    metadata.imageHeight = oEmbed.thumbnailHeight.map { Int($0) }
+            var degraded = false
+            if metadata.title == nil || metadata.imageURL == nil, let endpoint = metadata.oEmbedURL {
+                var oEmbed: OEmbedResponse?
+                if policy.allows(endpoint) {
+                    switch try await attempt({ try await fetchOEmbed(endpoint, policy: policy) }) {
+                    case .success(let response): oEmbed = response
+                    case .refused: degraded = true
+                    case .failed: break
+                    }
+                } else {
+                    degraded = true
+                }
+                if let oEmbed {
+                    metadata.title = metadata.title ?? oEmbed.title
+                    metadata.siteName = metadata.siteName ?? oEmbed.providerName
+                    if metadata.imageURL == nil, let thumbnail = Self.webURL(oEmbed.thumbnailURL) {
+                        metadata.imageURL = thumbnail
+                        metadata.imageWidth = oEmbed.thumbnailWidth.map { Int($0) }
+                        metadata.imageHeight = oEmbed.thumbnailHeight.map { Int($0) }
+                    }
                 }
             }
 
-            let imageURL = metadata.imageURL.flatMap { policy.allows($0) ? $0 : nil }
             var imageSize: CGSize?
-            if imageURL != nil, let width = metadata.imageWidth, let height = metadata.imageHeight {
+            if metadata.imageURL != nil, let width = metadata.imageWidth, let height = metadata.imageHeight {
                 imageSize = CGSize(width: width, height: height)
             }
             let favicon = metadata.faviconURL ?? URL(string: "/favicon.ico", relativeTo: finalURL)?.absoluteURL
-            return LinkPreview(
+            let preview = LinkPreview(
                 url: url,
                 finalURL: finalURL,
                 kind: .page,
                 title: metadata.title ?? Self.displayHost(finalURL),
                 summary: metadata.summary,
                 siteName: metadata.siteName,
-                imageURL: imageURL,
+                imageURL: metadata.imageURL,
                 imageSize: imageSize,
-                faviconURL: favicon.flatMap { policy.allows($0) ? $0 : nil },
+                faviconURL: favicon,
                 themeColor: metadata.themeColor,
-                contentType: contentType
+                contentType: contentType,
+                declaresAdult: metadata.declaresAdult
             )
+            return PreviewFetchResult(preview: preview, degraded: degraded)
         }
     }
 
@@ -219,7 +268,7 @@ struct PreviewFetcher: Sendable {
         let options = HTTPFetcher.Options(
             maxBytes: Self.maxHTMLBytes,
             overflow: .truncate,
-            allowRedirect: { policy.allows($0) },
+            checkRedirect: { policy.requestError(for: $0) },
             inspectResponse: { response in
                 guard let mime = response.normalizedMIMEType else { return .read }
                 if Self.isHTML(mime) || mime == "application/octet-stream" { return .read }
@@ -239,12 +288,17 @@ struct PreviewFetcher: Sendable {
         )
         let finalURL = result.finalURL ?? url
         let mime = result.mimeType
+        let ratedAdult = Self.ratingDeclaresAdult(result.response)
 
-        if let mime, mime.hasPrefix("image/") { return .media(.image, finalURL: finalURL, contentType: mime) }
-        if let mime, mime.hasPrefix("video/") { return .media(.video, finalURL: finalURL, contentType: mime) }
+        if let mime, mime.hasPrefix("image/") {
+            return .media(.image, finalURL: finalURL, contentType: mime, declaresAdult: ratedAdult)
+        }
+        if let mime, mime.hasPrefix("video/") {
+            return .media(.video, finalURL: finalURL, contentType: mime, declaresAdult: ratedAdult)
+        }
         if let sniffed = Self.sniffImageType(result.body) {
             // Served without a useful Content-Type; ImageLoader applies the byte cap later.
-            return .media(.image, finalURL: finalURL, contentType: sniffed)
+            return .media(.image, finalURL: finalURL, contentType: sniffed, declaresAdult: ratedAdult)
         }
         if mime == "application/octet-stream" { throw MediaError.unsupportedContent }
 
@@ -253,7 +307,8 @@ struct PreviewFetcher: Sendable {
             contentType: result.response.value(forHTTPHeaderField: "Content-Type"),
             isTruncated: !result.isComplete
         )
-        let metadata = HTMLMetadataParser.parse(html: html, baseURL: finalURL)
+        var metadata = HTMLMetadataParser.parse(html: html, baseURL: finalURL)
+        if ratedAdult { metadata.declaresAdult = true }
         return .html(metadata, finalURL: finalURL, contentType: mime ?? "text/html")
     }
 
@@ -267,15 +322,38 @@ struct PreviewFetcher: Sendable {
         return request
     }
 
-    /// Runs `operation`, turning any failure except cancellation into nil.
-    private func bestEffort<T: Sendable>(_ operation: () async throws -> T) async throws -> T? {
+    private enum Attempt<T: Sendable>: Sendable {
+        case success(T)
+        /// The policy refused a request (directly or on a redirect).
+        case refused
+        case failed
+    }
+
+    /// Runs a best-effort `operation`; only cancellation is rethrown.
+    private func attempt<T: Sendable>(_ operation: () async throws -> T) async throws -> Attempt<T> {
         do {
-            return try await operation()
+            return .success(try await operation())
         } catch is CancellationError {
             throw CancellationError()
+        } catch let error as MediaError where error.isPolicyRefusal {
+            return .refused
         } catch {
-            return nil
+            return .failed
         }
+    }
+
+    /// A `Rating` response header declaring adult content.
+    static func ratingDeclaresAdult(_ response: HTTPURLResponse) -> Bool {
+        guard let rating = response.value(forHTTPHeaderField: "Rating") else { return false }
+        return HTMLMetadataParser.isAdultRating(rating) || rating.lowercased().contains("rtalabel.org")
+    }
+
+    /// An absolute `http(s)` URL from an oEmbed field.
+    static func webURL(_ raw: String?) -> URL? {
+        guard let raw, let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https", url.host() != nil
+        else { return nil }
+        return url
     }
 
     static let acceptLanguage: String = {

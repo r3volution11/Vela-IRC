@@ -15,13 +15,18 @@ import Foundation
 // - `ImageLoader` downloads and validates images with a size cap.
 // - `EmbedPlayerHTML` builds the page a web view loads to play an embed.
 //
-// `MediaPolicy` carries the user's privacy and size settings.
+// `MediaPolicy` carries the user's privacy and size settings (with
+// `SiteRules` and `AdultSiteList`), and `PreviewDecider` turns a link, its
+// preview and the settings into what to draw.
 // Nothing in this module draws UI; VelaUI renders the results.
 
 /// Errors thrown by `LinkPreviewService` and `ImageLoader`.
 public enum MediaError: Error, Sendable, Hashable {
-    /// The URL (or a redirect target) is not allowed by the `MediaPolicy`.
+    /// The URL (or a redirect target) is never fetched: not `http(s)`, a
+    /// private-network host, or (for images) a text-only site.
     case blockedByPolicy
+    /// The URL (or a redirect target) is on a site the `MediaPolicy` blocks.
+    case siteBlocked(SiteBlock)
     /// The response is larger than the allowed byte or pixel budget.
     case tooLarge
     /// The response is not something that can be previewed (e.g. a PDF,
@@ -31,4 +36,20 @@ public enum MediaError: Error, Sendable, Hashable {
     case http(Int)
     /// The response was not an HTTP response or was otherwise malformed.
     case invalidResponse
+}
+
+extension MediaError {
+    /// The blocked site, for `siteBlocked`.
+    public var siteBlock: SiteBlock? {
+        if case .siteBlocked(let block) = self { return block }
+        return nil
+    }
+
+    /// Whether the policy (rather than the network or the content) refused the request.
+    public var isPolicyRefusal: Bool {
+        switch self {
+        case .blockedByPolicy, .siteBlocked: true
+        default: false
+        }
+    }
 }

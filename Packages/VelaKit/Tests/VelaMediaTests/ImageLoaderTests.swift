@@ -165,8 +165,9 @@ import UniformTypeIdentifiers
         let image = try await loader.load(url("https://img.example.com/ok.png"), policy: MediaPolicy())
         #expect(image.pixelSize == CGSize(width: 2, height: 2))
 
-        await #expect(throws: MediaError.blockedByPolicy) {
-            try await loader.load(url("https://img.example.com/ok.png"), policy: MediaPolicy(blockedDomains: ["example.com"]))
+        let blocked = MediaPolicy(siteRules: SiteRules(["example.com": "block"]))
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .userBlocked, domain: "example.com"))) {
+            try await loader.load(url("https://img.example.com/ok.png"), policy: blocked)
         }
         await #expect(throws: MediaError.blockedByPolicy) {
             try await loader.load(url("https://img.example.com/hop.png"), policy: MediaPolicy())
@@ -174,6 +175,63 @@ import UniformTypeIdentifiers
         #expect(server.requests(to: "http://10.0.0.5/internal.png").isEmpty)
         await #expect(throws: MediaError.tooLarge) {
             try await loader.load(url("https://img.example.com/ok.png"), policy: MediaPolicy(maxImageBytes: 8))
+        }
+    }
+
+    @Test func textOnlySitesNeverLoadImagesEvenFromMemory() async throws {
+        let png = try TestImages.png(width: 2, height: 2)
+        server.route("https://img.example.com/ok.png", .data(png, contentType: "image/png"))
+        let loader = makeLoader()
+        let target = url("https://img.example.com/ok.png")
+        _ = try await loader.load(target, policy: MediaPolicy())
+        #expect(await loader.cachedImage(for: target, policy: MediaPolicy()) != nil)
+
+        let textOnly = MediaPolicy(siteRules: SiteRules(["example.com": "textOnly"]))
+        await #expect(throws: MediaError.blockedByPolicy) { try await loader.load(target, policy: textOnly) }
+        await #expect(throws: MediaError.blockedByPolicy) {
+            try await loader.downsampledImage(target, maxPixelSize: 1, policy: textOnly)
+        }
+        #expect(await loader.cachedImage(for: target, policy: textOnly) == nil)
+        let imagesOff = MediaPolicy(imagesAllowed: false)
+        await #expect(throws: MediaError.blockedByPolicy) { try await loader.load(target, policy: imagesOff) }
+        let adult = MediaPolicy(extraAdultDomains: ["img.example.com"])
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .adultSite, domain: "img.example.com"))) {
+            try await loader.load(target, policy: adult)
+        }
+        #expect(server.requests.count == 1)
+    }
+
+    @Test func redirectIntoRefusedSiteIsReasoned() async throws {
+        let png = try TestImages.png(width: 2, height: 2)
+        server.route("https://img.example.com/hop.png", .redirect(to: "https://cdn.nsfw.example/a.png"))
+        server.route("https://cdn.nsfw.example/a.png", .data(png, contentType: "image/png"))
+        let loader = makeLoader()
+        let target = url("https://img.example.com/hop.png")
+
+        let adult = MediaPolicy(extraAdultDomains: ["nsfw.example"])
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .adultSite, domain: "nsfw.example"))) {
+            try await loader.load(target, policy: adult)
+        }
+        #expect(server.requests(to: "https://cdn.nsfw.example/a.png").isEmpty)
+
+        // Allowed once it loads, and the cached copy still remembers where it came from.
+        _ = try await loader.load(target, policy: MediaPolicy(extraAdultDomains: ["nsfw.example"], allowedOnce: ["nsfw.example"]))
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .adultSite, domain: "nsfw.example"))) {
+            try await loader.load(target, policy: adult)
+        }
+        #expect(await loader.cachedImage(for: target, policy: adult) == nil)
+        #expect(await loader.cachedImage(for: target) != nil)
+    }
+
+    @Test func policyThumbnails() async throws {
+        let png = try TestImages.png(width: 200, height: 100)
+        server.route("https://img.example.com/wide.png", .data(png, contentType: "image/png"))
+        let loader = makeLoader()
+        let thumbnail = try await loader.downsampledImage(url("https://img.example.com/wide.png"), maxPixelSize: 50, policy: MediaPolicy())
+        #expect(thumbnail.width == 50)
+        let blocked = MediaPolicy(siteRules: SiteRules(["img.example.com": "block"]))
+        await #expect(throws: MediaError.siteBlocked(SiteBlock(reason: .userBlocked, domain: "img.example.com"))) {
+            try await loader.downsampledImage(url("https://img.example.com/wide.png"), maxPixelSize: 50, policy: blocked)
         }
     }
 

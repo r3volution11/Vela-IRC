@@ -47,9 +47,9 @@ enum HTTPFetcher {
     struct Options: Sendable {
         var maxBytes: Int
         var overflow: Overflow = .fail
-        /// Called for each redirect target; returning false fails the fetch
-        /// with `MediaError.blockedByPolicy`.
-        var allowRedirect: @Sendable (URL) -> Bool = { _ in true }
+        /// Called for each redirect target; returning an error fails the
+        /// fetch with it (e.g. `MediaError.siteBlocked` naming the reason).
+        var checkRedirect: @Sendable (URL) -> MediaError? = { _ in nil }
         /// Decide what to do once headers arrive; throwing fails the fetch.
         var inspectResponse: @Sendable (HTTPURLResponse) throws -> BodyDisposition = { _ in .read }
         /// Called after each chunk with the body so far and where the new
@@ -124,12 +124,18 @@ private final class StreamingDelegate: NSObject, URLSessionDataDelegate, @unchec
         newRequest request: URLRequest,
         completionHandler: @escaping @Sendable (URLRequest?) -> Void
     ) {
-        if let url = request.url, options.allowRedirect(url) {
-            completionHandler(request)
+        let refusal: MediaError?
+        if let url = request.url {
+            refusal = options.checkRedirect(url)
         } else {
-            finish(.failure(MediaError.blockedByPolicy))
+            refusal = .blockedByPolicy
+        }
+        if let refusal {
+            finish(.failure(refusal))
             completionHandler(nil)
             task.cancel()
+        } else {
+            completionHandler(request)
         }
     }
 

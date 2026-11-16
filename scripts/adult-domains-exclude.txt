@@ -1,0 +1,150 @@
+# Domains that scripts/update-adult-domains.sh never writes to the bundled
+# adult-domain list, even when upstream lists them. These are general-purpose
+# platforms: blocking one would block previews from the whole site, and Vela
+# matches subdomains too.
+#
+# One host per line, lowercase, written as it looks after normalization (no
+# leading www., www2., m. or mobile.). Matching is exact: excluding
+# tumblr.com keeps upstream entries such as someblog.tumblr.com, which block
+# only that blog. To unblock a specific subdomain (an image CDN, say), list it
+# here too. The script prints every entry it drops.
+
+# Social networks and communities
+reddit.com
+redd.it
+x.com
+twitter.com
+twimg.com
+t.co
+facebook.com
+fbcdn.net
+instagram.com
+threads.net
+tiktok.com
+bsky.app
+mastodon.social
+discord.com
+discordapp.com
+discordapp.net
+discord.gg
+tumblr.com
+pinterest.com
+quora.com
+vk.com
+ok.ru
+mail.ru
+my.mail.ru
+telegram.org
+t.me
+telegra.ph
+weibo.com
+bilibili.com
+nicovideo.jp
+naver.com
+
+# Creative and creator platforms
+deviantart.com
+pixiv.net
+flickr.com
+patreon.com
+ko-fi.com
+substack.com
+medium.com
+linktr.ee
+itch.io
+
+# Search, mail and big tech
+google.com
+googleusercontent.com
+googleapis.com
+gstatic.com
+apple.com
+icloud.com
+microsoft.com
+live.com
+bing.com
+yahoo.com
+yandex.ru
+duckduckgo.com
+amazon.com
+
+# Video and audio
+youtube.com
+youtu.be
+ytimg.com
+vimeo.com
+dailymotion.com
+twitch.tv
+soundcloud.com
+spotify.com
+streamable.com
+
+# Image, GIF and file hosts
+imgur.com
+giphy.com
+tenor.com
+gyazo.com
+imgbox.com
+ibb.co
+postimg.cc
+catbox.moe
+0x0.st
+dropbox.com
+dropboxusercontent.com
+mega.nz
+mediafire.com
+pastebin.com
+
+# Code, blog and site hosting
+github.com
+github.io
+githubusercontent.com
+gitlab.com
+wordpress.com
+blogspot.com
+blogger.com
+livejournal.com
+weebly.com
+wixsite.com
+neocities.org
+netlify.app
+vercel.app
+pages.dev
+web.app
+firebaseapp.com
+herokuapp.com
+appspot.com
+fc2.com
+
+# Infrastructure and CDNs
+cloudflare.com
+amazonaws.com
+cloudfront.net
+akamaihd.net
+fastly.net
+azurewebsites.net
+
+# Reference and archives
+wikipedia.org
+wikimedia.org
+archive.org
+fandom.com
+
+# Link shorteners
+bit.ly
+tinyurl.com
+
+# Mainstream sites that upstream has listed by mistake: a search engine,
+# a film database and its rating widgets, a newspaper, a web directory (its
+# adult section, xxx.startpagina.nl, stays listed), product pages of a
+# store, a general file host and a general creator marketplace.
+yandex.by
+yandex.com
+kinopoisk.ru
+rating.kinopoisk.ru
+ekstrabladet.dk
+mafab.hu
+startpagina.nl
+articulo.mercadolibre.com.co
+chomikuj.pl
+booth.pm

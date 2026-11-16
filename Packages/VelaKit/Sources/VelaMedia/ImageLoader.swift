@@ -62,12 +62,20 @@ public actor ImageLoader {
     private struct LoadKey: Hashable {
         var url: URL
         var maxBytes: Int
-        var checksRedirects: Bool
+        /// Nil for unchecked loads; policy-checked loads only share a
+        /// download made under the same policy.
+        var policy: MediaPolicy?
+    }
+
+    private struct CachedImage {
+        var image: LoadedImage
+        /// Where the bytes came from after redirects.
+        var finalURL: URL?
     }
 
     private let session: URLSession
     private let userAgent: String
-    private var images: LRUCache<URL, LoadedImage>
+    private var images: LRUCache<URL, CachedImage>
     private var thumbnails: LRUCache<ThumbnailKey, CGImage>
     private var inFlight = InFlightTasks<LoadKey, LoadedImage>()
 
@@ -90,25 +98,41 @@ public actor ImageLoader {
     /// Throws `MediaError.tooLarge` if the body exceeds `maxBytes` (checked
     /// against Content-Length up front and while streaming) or the pixel
     /// budget, `MediaError.unsupportedContent` if ImageIO cannot read it.
-    /// The caller is responsible for checking `MediaPolicy.allows(_:)`, or can
-    /// use `load(_:policy:)`.
+    /// The caller is responsible for checking `MediaPolicy.allowsImage(_:)`,
+    /// or can use `load(_:policy:)`.
     public func load(_ url: URL, maxBytes: Int) async throws -> LoadedImage {
-        try await load(url, maxBytes: maxBytes, allowRedirect: nil)
+        try await load(url, maxBytes: maxBytes, policy: nil)
     }
 
-    /// Like `load(_:maxBytes:)`, enforcing `policy` on the URL and on every
-    /// redirect, with `policy.maxImageBytes` as the cap.
+    /// Like `load(_:maxBytes:)`, requiring `policy.allowsImage(_:)` for the
+    /// URL and every redirect hop (text-only and blocked sites are refused,
+    /// even from memory), with `policy.maxImageBytes` as the cap.
     public func load(_ url: URL, policy: MediaPolicy) async throws -> LoadedImage {
-        guard policy.allows(url) else { throw MediaError.blockedByPolicy }
-        return try await load(url, maxBytes: policy.maxImageBytes, allowRedirect: { policy.allows($0) })
+        if let refusal = policy.imageError(for: url) { throw refusal }
+        return try await load(url, maxBytes: policy.maxImageBytes, policy: policy)
     }
 
     /// A decoded thumbnail no larger than `maxPixelSize` on its longest side,
     /// with EXIF orientation applied. For animated images this is the first frame.
     public func downsampledImage(_ url: URL, maxPixelSize: Int, maxBytes: Int) async throws -> CGImage {
+        try await downsampledImage(url, maxPixelSize: maxPixelSize, maxBytes: maxBytes, policy: nil)
+    }
+
+    /// `downsampledImage(_:maxPixelSize:maxBytes:)` with the checks of `load(_:policy:)`.
+    public func downsampledImage(_ url: URL, maxPixelSize: Int, policy: MediaPolicy) async throws -> CGImage {
+        if let refusal = policy.imageError(for: url) { throw refusal }
+        return try await downsampledImage(url, maxPixelSize: maxPixelSize, maxBytes: policy.maxImageBytes, policy: policy)
+    }
+
+    private func downsampledImage(
+        _ url: URL, maxPixelSize: Int, maxBytes: Int, policy: MediaPolicy?
+    ) async throws -> CGImage {
         let key = ThumbnailKey(url: url, maxPixelSize: maxPixelSize)
-        if let cached = thumbnails.value(for: key) { return cached }
-        let loaded = try await load(url, maxBytes: maxBytes)
+        if let cached = thumbnails.value(for: key) {
+            if let policy, let refusal = redirectRefusal(for: url, policy: policy) { throw refusal }
+            return cached
+        }
+        let loaded = try await load(url, maxBytes: maxBytes, policy: policy)
         let image = try await Self.makeThumbnail(from: loaded.data, maxPixelSize: maxPixelSize)
         thumbnails.insert(image, for: key, cost: image.bytesPerRow * image.height)
         return image
@@ -116,7 +140,13 @@ public actor ImageLoader {
 
     /// The cached image for `url`, without fetching.
     public func cachedImage(for url: URL) -> LoadedImage? {
-        images.value(for: url)
+        images.value(for: url)?.image
+    }
+
+    /// The cached image for `url` if `policy` allows loading it.
+    public func cachedImage(for url: URL, policy: MediaPolicy) -> LoadedImage? {
+        guard policy.imageError(for: url) == nil, redirectRefusal(for: url, policy: policy) == nil else { return nil }
+        return images.value(for: url)?.image
     }
 
     public func removeAllCachedImages() {
@@ -126,24 +156,33 @@ public actor ImageLoader {
 
     // MARK: - Loading
 
-    private func load(
-        _ url: URL, maxBytes: Int, allowRedirect: (@Sendable (URL) -> Bool)?
-    ) async throws -> LoadedImage {
+    /// A cached image that arrived through a redirect the policy now refuses.
+    private func redirectRefusal(for url: URL, policy: MediaPolicy) -> MediaError? {
+        guard let finalURL = images.peek(url)?.finalURL, finalURL != url else { return nil }
+        return policy.imageError(for: finalURL)
+    }
+
+    private func load(_ url: URL, maxBytes: Int, policy: MediaPolicy?) async throws -> LoadedImage {
         if let cached = images.value(for: url) {
-            guard cached.data.count <= maxBytes else { throw MediaError.tooLarge }
-            return cached
+            if let policy, let refusal = redirectRefusal(for: url, policy: policy) { throw refusal }
+            guard cached.image.data.count <= maxBytes else { throw MediaError.tooLarge }
+            return cached.image
         }
         // Policy-checked loads never piggyback on an unchecked download.
-        let key = LoadKey(url: url, maxBytes: maxBytes, checksRedirects: allowRedirect != nil)
+        let key = LoadKey(url: url, maxBytes: maxBytes, policy: policy?.fetchKey)
         let session = self.session
         let userAgent = self.userAgent
+        var checkRedirect: (@Sendable (URL) -> MediaError?)?
+        if let policy {
+            checkRedirect = { policy.imageError(for: $0) }
+        }
         let (task, id) = inFlight.join(key) { id in
             Task {
                 defer { self.inFlight.finish(key, id: id) }
-                let image = try await Self.download(
-                    url, maxBytes: maxBytes, session: session, userAgent: userAgent, allowRedirect: allowRedirect
+                let (image, finalURL) = try await Self.download(
+                    url, maxBytes: maxBytes, session: session, userAgent: userAgent, checkRedirect: checkRedirect
                 )
-                self.images.insert(image, for: url, cost: image.data.count)
+                self.images.insert(CachedImage(image: image, finalURL: finalURL), for: url, cost: image.data.count)
                 return image
             }
         }
@@ -164,8 +203,8 @@ public actor ImageLoader {
         maxBytes: Int,
         session: URLSession,
         userAgent: String,
-        allowRedirect: (@Sendable (URL) -> Bool)?
-    ) async throws -> LoadedImage {
+        checkRedirect: (@Sendable (URL) -> MediaError?)?
+    ) async throws -> (LoadedImage, finalURL: URL?) {
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue(PreviewFetcher.imageAccept, forHTTPHeaderField: "Accept")
@@ -173,7 +212,7 @@ public actor ImageLoader {
         let options = HTTPFetcher.Options(
             maxBytes: maxBytes,
             overflow: .fail,
-            allowRedirect: allowRedirect ?? { _ in true },
+            checkRedirect: checkRedirect ?? { _ in nil },
             inspectResponse: { response in
                 // Don't download a 10 MB HTML page hoping it is a picture.
                 if let mime = response.normalizedMIMEType,
@@ -185,7 +224,7 @@ public actor ImageLoader {
             }
         )
         let result = try await HTTPFetcher.fetch(request, session: session, options: options)
-        return try inspect(result.body)
+        return (try inspect(result.body), result.finalURL)
     }
 
     // MARK: - ImageIO

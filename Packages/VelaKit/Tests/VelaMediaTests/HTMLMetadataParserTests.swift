@@ -150,6 +150,67 @@ import Testing
         #expect(meta.imageURL == URL(string: "https://example.com/thumb.jpg"))
     }
 
+    // MARK: Adult labels
+
+    @Test func rtaLabelInCapitals() throws {
+        let meta = try parse(fixture: "rta.html")
+        #expect(meta.declaresAdult)
+        #expect(meta.title == "Adults only")
+        #expect(meta.imageURL == URL(string: "https://cdn.adult.example/card.jpg"))
+    }
+
+    private func declaresAdult(_ head: String) -> Bool {
+        HTMLMetadataParser.parse(html: "<html><head>\(head)</head><body></body></html>", baseURL: URL(string: "https://e.com/")!)
+            .declaresAdult
+    }
+
+    @Test(arguments: [
+        #"<meta name="rating" content="adult">"#,
+        #"<meta name="Rating" content=" Mature ">"#,
+        #"<meta name="rating" content="RTA-5042-1996-1400-1577-RTA">"#,
+        #"<meta name="rating" content="rta-5042-1996-1400-1577-rta, adult">"#,
+        #"<meta property="rating" content="ADULT">"#,
+        #"<meta http-equiv="rating" content="RTA-5042-1996-1400-1577-RTA">"#,
+        #"<meta http-equiv="Rating" content="adult">"#,
+        #"<meta http-equiv="PICS-Label" content='(PICS-1.1 "http://www.rtalabel.org/" l gen true for "https://e.com" r (n 0 s 0 v 0 l 0))'>"#,
+        #"<meta http-equiv="pics-label" content="(pics-1.1 x l r (RTA-5042-1996-1400-1577-RTA))">"#,
+        #"<meta property="og:restrictions:age" content="18+">"#,
+        #"<meta property="og:restrictions:age" content="21">"#,
+    ])
+    func adultDeclarations(_ head: String) {
+        #expect(declaresAdult(head), "\(head)")
+    }
+
+    @Test(arguments: [
+        #"<meta name="rating" content="general">"#,
+        #"<meta name="rating" content="safe for kids">"#,
+        #"<meta name="rating" content="">"#,
+        #"<meta name="description" content="adult education courses">"#,
+        #"<meta http-equiv="pics-label" content="(PICS-1.1 &quot;http://www.icra.org/ratingsv02.html&quot; l gen true r (cz 1))">"#,
+        #"<meta property="og:restrictions:age" content="13+">"#,
+        #"<meta property="og:restrictions:age" content="adults">"#,
+        #"<meta itemprop="rating" content="adult">"#,
+        #"<title>Adult</title>"#,
+    ])
+    func notAdultDeclarations(_ head: String) {
+        #expect(!declaresAdult(head), "\(head)")
+    }
+
+    @Test func labelsAfterHeadAreIgnored() {
+        let html = #"<html><head><title>Fine</title></head><body><meta name="rating" content="adult"></body></html>"#
+        let meta = HTMLMetadataParser.parse(html: html, baseURL: URL(string: "https://e.com/")!)
+        #expect(!meta.declaresAdult)
+        #expect(meta.title == "Fine")
+    }
+
+    @Test func ratingValues() {
+        #expect(HTMLMetadataParser.isAdultRating("Adult"))
+        #expect(HTMLMetadataParser.isAdultRating(" mature\n"))
+        #expect(HTMLMetadataParser.isAdultRating("RTA-5042-1996-1400-1577-RTA"))
+        #expect(!HTMLMetadataParser.isAdultRating("general"))
+        #expect(!HTMLMetadataParser.isAdultRating("14 years"))
+    }
+
     // MARK: Entities and colors
 
     @Test(arguments: [

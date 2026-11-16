@@ -53,7 +53,10 @@ let package = Package(
         ),
 
         // Inline media: link detection, classification, previews, images.
-        .target(name: "VelaMedia"),
+        .target(
+            name: "VelaMedia",
+            resources: [.copy("Resources/adult-domains.txt")]
+        ),
 
         // App-level models that tie IRC, storage and media together.
         .target(
