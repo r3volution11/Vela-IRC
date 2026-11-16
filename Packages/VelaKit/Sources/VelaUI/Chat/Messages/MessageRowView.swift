@@ -52,7 +52,8 @@ struct MessageRow: View {
         let links = rendered?.links ?? []
 
         content(rendered)
-            .padding(.horizontal, style.rowHorizontalPadding)
+            .padding(.leading, leadingPadding)
+            .padding(.trailing, style.rowHorizontalPadding)
             .padding(.top, topPadding)
             .padding(.bottom, bottomPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,6 +93,10 @@ struct MessageRow: View {
         case .columns:
             ColumnsMessageContent(item: item, rendered: rendered, isHovered: isHovered)
         }
+    }
+
+    private var leadingPadding: CGFloat {
+        style.layout == .grouped ? GroupedMetrics(style: style).leading : style.rowHorizontalPadding
     }
 
     private var topPadding: CGFloat {
@@ -184,8 +189,9 @@ struct ClassicMessageContent: View {
     }
 }
 
-/// Slack/Discord style: avatar and header for the first message of a group,
-/// bare text for continuations with the time in the gutter on hover.
+/// Slack/Discord style: a header (name and time, plus the avatar when
+/// enabled) for the first message of a group, bare text for continuations
+/// with their time in the gutter on hover.
 struct GroupedMessageContent: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -196,24 +202,26 @@ struct GroupedMessageContent: View {
 
     var body: some View {
         let line = item.line
-        let gutter = gutterWidth
+        let metrics = GroupedMetrics(style: style)
         VStack(alignment: .leading, spacing: 4) {
             if let reply = item.reply {
-                ReplyQuoteView(reply: reply, showsArrow: gutter == 0)
-                    .padding(.leading, gutter > 0 ? gutter + 10 : 0)
-                    .background(alignment: .leading) {
-                        if gutter > 0 {
+                if style.showAvatars {
+                    // A connector curls from the avatar up to the quote.
+                    ReplyQuoteView(reply: reply, showsArrow: false)
+                        .padding(.leading, metrics.gutter + metrics.spacing)
+                        .background(alignment: .leading) {
                             ReplyConnector(overshoot: 7)
                                 .stroke(theme[ThemeKey.replyQuoteBar], style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                                .frame(width: gutter)
+                                .frame(width: metrics.gutter)
                                 .accessibilityHidden(true)
                         }
-                    }
-            }
-            HStack(alignment: item.isContinuation ? .firstTextBaseline : .top, spacing: 10) {
-                if gutter > 0 {
-                    gutterView(for: line, width: gutter)
+                } else {
+                    ReplyQuoteView(reply: reply)
+                        .padding(.leading, metrics.textX - metrics.leading)
                 }
+            }
+            HStack(alignment: item.isContinuation ? .firstTextBaseline : .top, spacing: metrics.spacing) {
+                gutterView(for: line, width: metrics.gutter)
                 VStack(alignment: .leading, spacing: 2) {
                     VStack(alignment: .leading, spacing: 1) {
                         if !item.isContinuation {
@@ -228,16 +236,12 @@ struct GroupedMessageContent: View {
         }
     }
 
-    private var gutterWidth: CGFloat {
-        if style.showAvatars { return style.avatarSize }
-        return style.showTimestamps ? TimestampMetrics.columnWidth(style: style, bracketed: false) : 0
-    }
-
     @ViewBuilder
     private func gutterView(for line: ChatLine, width: CGFloat) -> some View {
         if item.isContinuation {
+            // The time on hover, right-aligned against the text column.
             Text(style.timestamp(line.time))
-                .font(.system(size: max(9, style.fontSize - 3)).monospacedDigit())
+                .font(style.gutterTimestampFont)
                 .foregroundStyle(theme[ThemeKey.chatTimestamp])
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)

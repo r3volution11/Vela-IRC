@@ -14,9 +14,13 @@ import VelaTheme
 /// join/part runs, grouped messages) in `MessageDisplayCache`, which only
 /// processes new lines on append; message text is rendered once per line in
 /// `MessageTextCache`. Rows live in a `LazyVStack`, so only visible rows
-/// are built. The list starts at the bottom and stays pinned there while
-/// new lines arrive unless the user has scrolled up, in which case a
-/// "Jump to present" pill counts what's new.
+/// are built.
+///
+/// Scrolling follows `ScrollPinning`: the list opens at the bottom (or at
+/// the unread marker) and stays pinned there — through new lines, media that
+/// loads late, reactions, resizes and style changes — until the reader
+/// scrolls up. Then nothing moves them and a "Jump to present" pill counts
+/// what's new. Sending a message always returns to the bottom.
 struct MessageListView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -58,9 +62,15 @@ struct MessageListView: View {
                     DisplayItemRow(item: item)
                         .equatable()
                 }
+                // Room under the last row, and the target for scrolling to
+                // the bottom. Inside the stack, so scrolling here lays out
+                // the real last rows rather than estimated space.
+                Color.clear
+                    .frame(height: 12)
+                    .id(DisplayItemID.end)
+                    .accessibilityHidden(true)
             }
             .scrollTargetLayout()
-            .padding(.bottom, 12)
         }
         .scrollPosition($position)
         .defaultScrollAnchor(.bottom, for: .initialOffset)
@@ -76,20 +86,27 @@ struct MessageListView: View {
             scrollMetricsChanged(from: old, to: new)
         }
         .onScrollPhaseChange { _, phase in
-            controller.isUserScrolling = phase == .interacting || phase == .decelerating
+            switch phase {
+            case .tracking, .interacting, .decelerating: controller.scrollPhaseChanged(isUserScrolling: true)
+            default: controller.scrollPhaseChanged(isUserScrolling: false)
+            }
+            updatePill()
         }
         .onScrollTargetVisibilityChange(idType: DisplayItemID.self, threshold: 0.5) { visible in
             // Transient layouts can report nothing visible; keep the last row.
-            if let first = visible.first { controller.topVisibleID = first }
+            if let first = visible.first(where: { $0 != .end }) { controller.topVisibleID = first }
         }
-        .onChange(of: buffer.lines.last?.id) { _, _ in
-            linesAppended()
+        .onChange(of: LinesSignature(buffer.lines)) { _, _ in
+            linesChanged()
         }
         .onChange(of: buffer.isLoadingHistory) { _, loading in
             if !loading { releaseHistoryAnchor() }
         }
         .onChange(of: uiState.scrollTarget, initial: true) { _, target in
             if let target { scroll(toLine: target) }
+        }
+        .onAppear {
+            if items.contains(id: .unreadMarker), uiState.scrollTarget == nil { landAtUnreadMarker() }
         }
         .overlay(alignment: .bottom) {
             ZStack {
@@ -122,31 +139,13 @@ struct MessageListView: View {
     // MARK: Scrolling
 
     private func scrollMetricsChanged(from old: ScrollMetrics, to new: ScrollMetrics) {
-        // LazyVStack re-estimates row heights as rows appear, so the content
-        // height can briefly lag behind the visible rect. Ignore those frames.
-        guard new.isConsistent else { return }
-        controller.distanceFromBottom = new.distanceFromBottom
-        controller.containerHeight = new.containerHeight
-        let atBottom = new.isAtBottom
-        if Date() < controller.pinningSuspendedUntil {
-            // A programmatic scroll (reply jump, jump to present) is moving
-            // the list; its intermediate frames aren't user intent.
-        } else if atBottom {
-            controller.setPinned(true)
-        } else if new.visibleMinY < old.visibleMinY - 0.5 {
-            // Moving up is always the user (content growth never moves us up).
-            controller.setPinned(false)
-        } else if controller.isPinnedToBottom {
-            // Content or the viewport grew underneath a pinned list.
-            position.scrollTo(edge: .bottom)
+        if controller.scrollGeometryChanged(new) {
+            scrollToBottom()
         }
-
         if controller.isPinnedToBottom {
             markAllSeen()
         }
-        let showPill = !controller.isPinnedToBottom
-            && (new.distanceFromBottom > new.containerHeight * 0.5 || controller.unseenCount > 0)
-        if controller.showsJumpToPresent != showPill { controller.showsJumpToPresent = showPill }
+        updatePill()
 
         // Near the top and still scrolling up: fetch older history.
         if new.visibleMinY < 600, new.visibleMinY < old.visibleMinY, new.contentHeight > new.containerHeight,
@@ -155,52 +154,51 @@ struct MessageListView: View {
         }
     }
 
-    private func linesAppended() {
-        guard let last = buffer.lines.last else { return }
-        let fresh = linesSinceLastSeen()
-        if fresh.contains(where: { $0.isSelf && !$0.isHistory && $0.kind.isConversation }) {
+    private func updatePill() {
+        let farFromBottom = controller.metrics.map { $0.distanceFromBottom > $0.containerHeight * 0.5 } ?? false
+        let showPill = !controller.isPinnedToBottom && (farFromBottom || controller.unseenCount > 0)
+        if controller.showsJumpToPresent != showPill { controller.showsJumpToPresent = showPill }
+    }
+
+    private func linesChanged() {
+        let change = controller.lineTracker.update(buffer.lines)
+        if change.sentMessage {
             // Sending a message always returns to the present.
-            controller.setPinned(true)
-            position.scrollTo(edge: .bottom)
-        }
-        if controller.isPinnedToBottom {
-            controller.lastSeenLineID = last.id
-            controller.unseenCount = 0
-            position.scrollTo(edge: .bottom)
+            controller.pin()
+            markAllSeen()
+            updatePill()
+            scrollToBottom()
+        } else if controller.isPinnedToBottom {
+            markAllSeen()
+            // Don't fight a gesture that's still within the bottom tolerance.
+            if !controller.isUserScrolling { scrollToBottom() }
         } else {
-            controller.unseenCount += fresh.filter { $0.kind.isConversation && !$0.isSelf }.count
-            controller.lastSeenLineID = last.id
-            if controller.unseenCount > 0, !controller.showsJumpToPresent { controller.showsJumpToPresent = true }
-            // LazyVStack re-estimates the unrealized rows when its data
-            // changes, which can move what's on screen. Hold the reader's
-            // place by the row that was at the top before the update (unless
-            // they're scrolling right now; don't fight their gesture).
-            if !controller.isUserScrolling, let anchor = controller.topVisibleID {
-                hold(anchor)
-            }
+            controller.unseenCount += change.newFromOthers
+            updatePill()
         }
     }
 
-    private func hold(_ anchor: DisplayItemID) {
-        controller.suspendPinning(for: 0.3)
-        position.scrollTo(id: anchor, anchor: .top)
+    /// Scrolls to the very bottom, in two steps.
+    ///
+    /// The bottom *edge* alone is computed from the lazy stack's estimated
+    /// row heights: after a burst of new rows (or from far up) it can land
+    /// in space no row has been laid out for, and the list shows nothing.
+    /// Scrolling to the spacer after the last row by id makes the stack lay
+    /// out the real rows at the end first; a moment later the edge corrects
+    /// whatever the estimates above got wrong. Animated jumps skip the
+    /// second step (it would cut the animation short); their completion
+    /// settles instead.
+    private func scrollToBottom(animated: Bool = false) {
+        position.scrollTo(id: DisplayItemID.end, anchor: .bottom)
+        guard !animated else { return }
         Task {
-            try? await Task.sleep(for: .milliseconds(40))
-            position.scrollTo(id: anchor, anchor: UnitPoint(x: 0.5, y: 0.0001))
+            try? await Task.sleep(for: .milliseconds(20))
+            guard controller.isPinnedToBottom, !controller.isUserScrolling else { return }
+            position.scrollTo(edge: .bottom)
         }
-    }
-
-    /// Lines after the last one we accounted for (empty if it's gone).
-    private func linesSinceLastSeen() -> ArraySlice<ChatLine> {
-        let lines = buffer.lines
-        guard let seen = controller.lastSeenLineID else { return lines[...] }
-        // New lines arrive at the end, so search backwards.
-        guard let index = lines.lastIndex(where: { $0.id == seen }) else { return [] }
-        return lines[(index + 1)...]
     }
 
     private func markAllSeen() {
-        controller.lastSeenLineID = buffer.lines.last?.id
         if controller.unseenCount != 0 { controller.unseenCount = 0 }
     }
 
@@ -224,15 +222,39 @@ struct MessageListView: View {
     }
 
     private func jumpToPresent() {
-        controller.setPinned(true)
-        controller.suspendPinning()
+        controller.pin()
         markAllSeen()
         controller.showsJumpToPresent = false
         // Long animated scrolls through a lazy stack land unreliably (rows
         // are estimated); animate only short trips.
-        let near = controller.distanceFromBottom < controller.containerHeight * 3
-        withAnimation(reduceMotion || !near ? nil : .smooth(duration: 0.35)) {
-            position.scrollTo(edge: .bottom)
+        let near = controller.metrics.map { $0.distanceFromBottom < $0.containerHeight * 3 } ?? true
+        let animated = near && !reduceMotion
+        controller.beginProgrammaticScroll(for: animated ? 0.45 : 0.15) { follow in
+            if follow { scrollToBottom() }
+        }
+        withAnimation(animated ? .smooth(duration: 0.35) : nil) {
+            scrollToBottom(animated: animated)
+        }
+    }
+
+    /// Opens a buffer with unread lines at the "New" marker, a little below
+    /// the top. When everything new fits on screen this lands at the bottom
+    /// and the list stays pinned.
+    private func landAtUnreadMarker() {
+        controller.unpin()
+        controller.beginProgrammaticScroll(for: 0.4) { follow in
+            if follow { scrollToBottom() }
+            updatePill()
+        }
+        position.scrollTo(id: DisplayItemID.unreadMarker, anchor: UnitPoint(x: 0.5, y: 0.2))
+        Task {
+            // Rows above were estimated: correct once they're measured.
+            // (An equal ScrollPosition is ignored, hence the nudged anchors.)
+            for nudge in [0.2001, 0.2] {
+                try? await Task.sleep(for: .milliseconds(60))
+                guard !controller.isUserScrolling else { return }
+                position.scrollTo(id: DisplayItemID.unreadMarker, anchor: UnitPoint(x: 0.5, y: nudge))
+            }
         }
     }
 
@@ -241,8 +263,11 @@ struct MessageListView: View {
         let items = controller.displayCache.items
         guard let targetIndex = items.firstIndex(where: { $0.id == id }) else { return }
         uiState.scrollTarget = nil
-        controller.setPinned(false)
-        controller.suspendPinning()
+        controller.unpin()
+        controller.beginProgrammaticScroll { follow in
+            if follow { scrollToBottom() }
+            updatePill()
+        }
         let anchorIndex = controller.topVisibleID.flatMap { visible in items.lastIndex { $0.id == visible } }
         let near = anchorIndex.map { abs($0 - targetIndex) <= 40 } ?? false
         if near && !reduceMotion {
@@ -277,28 +302,15 @@ struct MessageListView: View {
     }
 }
 
-/// The scroll values the list reacts to.
-private struct ScrollMetrics: Equatable {
-    var visibleMinY: CGFloat
-    var visibleMaxY: CGFloat
-    var contentHeight: CGFloat
-    var containerHeight: CGFloat
-
+extension ScrollMetrics {
     init(_ geometry: ScrollGeometry) {
-        visibleMinY = geometry.visibleRect.minY
-        visibleMaxY = geometry.visibleRect.maxY
-        contentHeight = geometry.contentSize.height
-        containerHeight = geometry.containerSize.height
+        self.init(
+            visibleMinY: geometry.visibleRect.minY,
+            visibleMaxY: geometry.visibleRect.maxY,
+            contentHeight: geometry.contentSize.height,
+            containerHeight: geometry.containerSize.height
+        )
     }
-
-    var distanceFromBottom: CGFloat { max(0, contentHeight - visibleMaxY) }
-
-    var fitsWithoutScrolling: Bool { contentHeight <= containerHeight + 1 }
-
-    var isAtBottom: Bool { fitsWithoutScrolling || distanceFromBottom < 24 }
-
-    /// False while the visible rect extends past the (estimated) content.
-    var isConsistent: Bool { fitsWithoutScrolling || visibleMaxY <= contentHeight + 2 }
 }
 
 /// A spinner while older history loads, or a quiet note at the very start.
@@ -359,7 +371,6 @@ private struct JumpToPresentPill: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .keyboardShortcut(.downArrow, modifiers: [.command, .option])
         .help("Jump to the newest messages")
         .accessibilityLabel(count > 0 ? "Jump to present, \(count) new messages" : "Jump to present")
     }

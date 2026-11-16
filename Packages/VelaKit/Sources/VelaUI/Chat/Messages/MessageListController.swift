@@ -32,34 +32,86 @@ final class MessageListController {
 
     @ObservationIgnored let displayCache = MessageDisplayCache()
     @ObservationIgnored let textCache = MessageTextCache()
-    @ObservationIgnored private(set) var isPinnedToBottom = true
-    @ObservationIgnored var topVisibleID: DisplayItemID?
-    @ObservationIgnored var lastSeenLineID: UUID?
     @ObservationIgnored var flashTask: Task<Void, Never>?
-    /// While a programmatic scroll animates, scroll geometry changes don't
-    /// pin or unpin the list.
-    @ObservationIgnored var pinningSuspendedUntil = Date.distantPast
-    @ObservationIgnored var isUserScrolling = false
-    @ObservationIgnored var distanceFromBottom: CGFloat = 0
-    @ObservationIgnored var containerHeight: CGFloat = 0
+
+    // MARK: Scroll state
+
+    /// Whether the list follows the newest line. See `ScrollPinning`.
+    @ObservationIgnored private(set) var pinning = ScrollPinning()
+    /// New lines and sent messages since the last update.
+    @ObservationIgnored var lineTracker: LineTracker
+    @ObservationIgnored var topVisibleID: DisplayItemID?
+    /// The user is dragging or flinging the list (trackpad or wheel gesture).
+    @ObservationIgnored private(set) var isUserScrolling = false
+    @ObservationIgnored private var programmaticScrollEnds = Date.distantPast
+    @ObservationIgnored private var programmaticScrollGeneration = 0
+
+    var isPinnedToBottom: Bool { pinning.isPinned }
+    var metrics: ScrollMetrics? { pinning.metrics }
+
+    var scrollDriver: ScrollPinning.Driver {
+        if Date() < programmaticScrollEnds { return .programmatic }
+        return isUserScrolling ? .user : .idle
+    }
 
     init(buffer: BufferModel, session: NetworkSession) {
         self.buffer = buffer
         self.session = session
-        lastSeenLineID = buffer.lines.last?.id
-    }
-
-    func suspendPinning(for seconds: TimeInterval = 0.6) {
-        pinningSuspendedUntil = Date().addingTimeInterval(seconds)
+        lineTracker = LineTracker(lines: buffer.lines)
     }
 
     /// Whether content-size changes keep the bottom in place. Observed (the
     /// list's scroll anchor depends on it), so only written when it flips.
     private(set) var anchorsToBottom = true
 
-    func setPinned(_ pinned: Bool) {
-        isPinnedToBottom = pinned
-        if anchorsToBottom != pinned { anchorsToBottom = pinned }
+    /// Feeds new scroll geometry to the pinning logic. Returns true when the
+    /// list should scroll to the bottom.
+    func scrollGeometryChanged(_ metrics: ScrollMetrics) -> Bool {
+        let follow = pinning.update(metrics, driver: scrollDriver)
+        syncAnchor()
+        return follow
+    }
+
+    /// Tracks scroll gestures; when one ends, a reader who stopped near the
+    /// bottom follows it again.
+    func scrollPhaseChanged(isUserScrolling scrolling: Bool) {
+        let ended = isUserScrolling && !scrolling
+        isUserScrolling = scrolling
+        if ended {
+            pinning.gestureEnded()
+            syncAnchor()
+        }
+    }
+
+    func pin() {
+        pinning.pin()
+        syncAnchor()
+    }
+
+    func unpin() {
+        pinning.unpin()
+        syncAnchor()
+    }
+
+    private func syncAnchor() {
+        if anchorsToBottom != pinning.isPinned { anchorsToBottom = pinning.isPinned }
+    }
+
+    /// Marks a programmatic scroll as running for `seconds`: geometry
+    /// changes meanwhile don't pin or unpin. Afterwards the pinned state is
+    /// re-derived from where the list landed and `completion` is told
+    /// whether it should still scroll to the bottom.
+    func beginProgrammaticScroll(for seconds: TimeInterval = 0.6, completion: @escaping (Bool) -> Void) {
+        programmaticScrollEnds = Date().addingTimeInterval(seconds)
+        programmaticScrollGeneration &+= 1
+        let generation = programmaticScrollGeneration
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self, generation == self.programmaticScrollGeneration else { return }
+            let follow = self.pinning.settle()
+            self.syncAnchor()
+            completion(follow)
+        }
     }
 
     /// Bottom-anchors size changes while older history is inserted above.
@@ -154,8 +206,9 @@ final class MessageListController {
 enum TimestampMetrics {
     private static var cache: [String: CGFloat] = [:]
 
-    static func columnWidth(style: ChatStyle, bracketed: Bool) -> CGFloat {
-        let size = max(9, style.fontSize - 2)
+    /// The widest time at `size` (default: `style.timestampFont`'s size).
+    static func columnWidth(style: ChatStyle, bracketed: Bool, size: Double? = nil) -> CGFloat {
+        let size = size ?? max(9, style.fontSize - 2)
         let key = "\(style.timestampFormat)|\(size)|\(bracketed)"
         if let cached = cache[key] { return cached }
         let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .regular)
@@ -181,6 +234,48 @@ extension ChatStyle {
 
     /// Leading/trailing inset of every row.
     var rowHorizontalPadding: CGFloat { 20 }
+
+    /// Size of the small times in the grouped layout's gutter (hover times
+    /// on continuation lines) and after event text.
+    var gutterTimestampSize: Double { max(9, fontSize - 3) }
+
+    var gutterTimestampFont: Font { .system(size: gutterTimestampSize).monospacedDigit() }
+}
+
+/// Horizontal geometry of the grouped layout, shared by message rows, event
+/// rows and reply quotes: a leading inset, a gutter, then the text column
+/// where names, messages, media, reactions and quotes all line up.
+///
+/// With avatars the gutter holds them. Without, it's a slim column just
+/// wide enough for a continuation line's hover time and event icons, so
+/// the text sits at a modest inset instead of beside an empty avatar space.
+struct GroupedMetrics: Equatable {
+    /// From the row's leading edge to the gutter.
+    let leading: CGFloat
+    let gutter: CGFloat
+    /// Between the gutter and the text column.
+    let spacing: CGFloat
+
+    /// From the row's leading edge to the text column.
+    var textX: CGFloat { leading + gutter + spacing }
+
+    @MainActor
+    init(style: ChatStyle) {
+        if style.showAvatars {
+            leading = style.rowHorizontalPadding
+            gutter = style.avatarSize
+            spacing = 10
+        } else {
+            let time = style.showTimestamps
+                ? TimestampMetrics.columnWidth(style: style, bracketed: false, size: style.gutterTimestampSize)
+                : 0
+            let icon = CGFloat(style.fontSize).rounded()
+            gutter = max(time, icon)
+            spacing = 7
+            // Text about two row paddings in; wide time formats push it further.
+            leading = max(8, style.rowHorizontalPadding * 2 - gutter - spacing)
+        }
+    }
 }
 
 extension ResolvedTheme {
