@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import AVFoundation
-import AVKit
 import SwiftUI
 import VelaMedia
 import VelaTheme
@@ -11,10 +10,16 @@ import VelaTheme
 /// A direct link to a video file (.mp4, .mov, Imgur .gifv).
 ///
 /// Shows a poster frame with ▶; the AVKit player is only created (and the
-/// video only streamed) when the user clicks play. Never autoplays.
+/// video only streamed) when the user clicks play. Never autoplays. The
+/// player lives in `EmbedPlayerStore` like the provider players: one plays
+/// at a time, it pauses when scrolled out of view, and it can be expanded.
 struct DirectVideoView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
+    @Environment(UIState.self) private var uiState
+    @Environment(\.embedBlur) private var blur
+    /// The line and link this video belongs to.
+    let playerKey: EmbedPlayerKey
     let linkURL: URL
     /// The file after policy-checked redirects.
     let videoURL: URL
@@ -27,13 +32,11 @@ struct DirectVideoView: View {
 
     private static let posterPixelSize = EmbedImagePipeline.pixelBudget(forPoints: VideoEmbedView.maxPlayerWidth)
 
-    @State private var player: AVPlayer?
     @State private var poster: CGImage?
     @State private var hovering = false
-    /// Compact mode: the player is showing under the title row.
-    @State private var expanded = false
 
     init(
+        playerKey: EmbedPlayerKey,
         linkURL: URL,
         videoURL: URL,
         policy: MediaPolicy,
@@ -41,6 +44,7 @@ struct DirectVideoView: View {
         animateAppearance: Bool = false,
         onHide: @escaping () -> Void
     ) {
+        self.playerKey = playerKey
         self.linkURL = linkURL
         self.videoURL = videoURL
         self.policy = policy
@@ -57,6 +61,14 @@ struct DirectVideoView: View {
         return CGFloat(poster.width) / CGFloat(poster.height)
     }
 
+    private var store: EmbedPlayerStore { .shared }
+
+    /// Inline, expanded, or nil while the poster shows.
+    private var placement: EmbedPlayerPlacement? { store.placement(of: playerKey) }
+
+    /// The player exists (in compact mode, it shows under the title row).
+    private var isPlaying: Bool { placement != nil }
+
     var body: some View {
         Group {
             if compact { compactBody } else { fullBody }
@@ -69,8 +81,11 @@ struct DirectVideoView: View {
             EmbedMemory.shared.remember(still: image, for: StillImageKey(url: videoURL, maxPixelSize: Self.posterPixelSize))
             poster = image
         }
-        .onDisappear { player?.pause() }
         .contextMenu {
+            if isAllowed {
+                Button(isPlaying ? "Stop Video" : "Play Video") { isPlaying ? stop() : play() }
+                EmbedPlayerMenuItems(key: playerKey, onStartIfNeeded: play)
+            }
             Button("Open in Browser") { EmbedActions.open(linkURL) }
             Divider()
             EmbedLinkMenuItems(url: linkURL, onHide: onHide)
@@ -102,27 +117,35 @@ struct DirectVideoView: View {
             maxWidth: VideoEmbedView.maxPlayerWidth,
             maxHeight: VideoEmbedView.playerMaxHeight(aspectRatio: aspectRatio, maxImageHeight: style.maxImageHeight)
         ) {
-            ZStack {
-                // Letterboxing behind the video is always black.
-                Color.black
-                if let player {
-                    VideoPlayer(player: player)
-                } else {
-                    posterFacade
+            if placement == .expanded {
+                ExpandedPlayerPlaceholder(cornerRadius: 8) {
+                    ExpandedVideoOverlay.returnToChat(uiState: uiState)
                 }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(theme[ThemeKey.embedBorder], lineWidth: player == nil ? 1 : 0)
-            )
-            .overlay(alignment: .topTrailing) {
-                if player != nil {
-                    MediaOverlayButton(systemImage: "xmark", label: "Close player", action: stop)
-                        .padding(8)
+            } else {
+                ZStack {
+                    // Letterboxing behind the video is always black.
+                    Color.black
+                    if isPlaying {
+                        EmbedPlayerHost(key: playerKey, placement: .inline)
+                    } else {
+                        posterFacade
+                            .blurredMedia(.image(poster), policy: policy, kind: .video, cornerRadius: 8)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(theme[ThemeKey.embedBorder], lineWidth: isPlaying ? 0 : 1)
+                )
+                .overlay(alignment: .topTrailing) {
+                    if isPlaying {
+                        PlayerOverlayButtons(key: playerKey, onClose: stop)
+                            .padding(8)
+                    }
                 }
             }
         }
+        .embedPlayerVisibility(playerKey)
     }
 
     private var posterFacade: some View {
@@ -149,15 +172,15 @@ struct DirectVideoView: View {
     private var compactBody: some View {
         VStack(alignment: .leading, spacing: 6) {
             Button {
-                if expanded {
-                    stop()
-                } else {
-                    expanded = true
-                    play()
+                // The first click on a blurred row only shows it.
+                if !isPlaying, blur.isBlurred {
+                    blur.reveal()
+                    return
                 }
+                isPlaying ? stop() : play()
             } label: {
                 HStack(spacing: 7) {
-                    Image(systemName: expanded ? "stop.circle.fill" : "play.circle.fill")
+                    Image(systemName: isPlaying ? "stop.circle.fill" : (blur.isBlurred ? "eye.slash" : "play.circle.fill"))
                         .font(.system(size: max(12, style.fontSize + 1)))
                         .foregroundStyle(theme[ThemeKey.accent])
                     Text(EmbedActions.displayName(linkURL))
@@ -177,9 +200,9 @@ struct DirectVideoView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(expanded ? "Close video" : "Show video"): \(EmbedActions.displayName(linkURL))")
+            .accessibilityLabel("\(isPlaying ? "Close video" : "Show video"): \(EmbedActions.displayName(linkURL))")
 
-            if expanded {
+            if isPlaying {
                 playerArea
             }
         }
@@ -188,16 +211,21 @@ struct DirectVideoView: View {
 
     private func play() {
         guard isAllowed else { return }
-        let player = AVPlayer(url: videoURL)
-        player.preventsDisplaySleepDuringVideoPlayback = true
-        self.player = player
-        player.play()
+        store.start(
+            playerKey,
+            source: .file(videoURL),
+            info: EmbedPlayerInfo(
+                linkURL: linkURL,
+                title: EmbedActions.displayName(linkURL),
+                provider: nil,
+                siteName: EmbedActions.displayHost(linkURL),
+                aspectRatio: aspectRatio
+            )
+        )
     }
 
     private func stop() {
-        player?.pause()
-        player = nil
-        expanded = false
+        store.stop(playerKey)
     }
 
     /// The first frame, decoded off the main actor.

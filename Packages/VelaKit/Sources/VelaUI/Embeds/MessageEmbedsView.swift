@@ -272,6 +272,10 @@ private struct LinkEmbedView: View {
             for: link, in: lineID, preview: preview, fetchBlock: fetchBlock, context: context
         )
         content(EmbedPresentation(plan: decision.plan, link: link, preview: preview), decision: decision)
+            // Media views blur their images (`.blurredMedia`) from this.
+            .environment(\.embedBlur, EmbedLineStore.shared.blur(
+                for: link, in: lineID, decision: decision, preview: preview, fetchBlock: fetchBlock, context: context
+            ))
             .task(id: FetchKey(shouldFetch: decision.shouldFetch, policy: decision.policy)) {
                 await loadPreview(decision)
             }
@@ -309,6 +313,7 @@ private struct LinkEmbedView: View {
             .padding(.top, 6)
         case .directVideo(let videoURL, let videoStyle):
             DirectVideoView(
+                playerKey: EmbedPlayerKey(lineID: lineID, linkID: link.id),
                 linkURL: link.url,
                 videoURL: videoURL,
                 policy: decision.policy,
@@ -319,6 +324,7 @@ private struct LinkEmbedView: View {
             .padding(.top, 6)
         case .videoEmbed(let embed, let videoStyle):
             VideoEmbedView(
+                playerKey: EmbedPlayerKey(lineID: lineID, linkID: link.id),
                 linkURL: link.url,
                 embed: embed,
                 policy: decision.policy,

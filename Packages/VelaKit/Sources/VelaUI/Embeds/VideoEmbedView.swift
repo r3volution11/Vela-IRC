@@ -12,12 +12,19 @@ import VelaTheme
 /// thumbnail facade up to `maxPlayerWidth` wide; clicking ▶ swaps in the real
 /// player (a web view) at the video's aspect ratio, and × collapses it again.
 /// Compact: a one-line title row with ▶ that expands the player underneath.
+/// A playing player can be expanded to fill the window; its spot here then
+/// shows a placeholder.
 ///
 /// Nothing is loaded from the provider until the user clicks play; the
-/// facade only fetches the thumbnail.
+/// facade only fetches the thumbnail. The player itself lives in
+/// `EmbedPlayerStore`, so it survives this view being re-created.
 struct VideoEmbedView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
+    @Environment(UIState.self) private var uiState
+    @Environment(\.embedBlur) private var blur
+    /// The line and link this video belongs to.
+    let playerKey: EmbedPlayerKey
     let linkURL: URL
     let embed: EmbedInfo
     /// The link's policy; the thumbnail goes through it.
@@ -40,7 +47,6 @@ struct VideoEmbedView: View {
         aspectRatio < 1 ? max(maxImageHeight, 490) : max(maxImageHeight, 315)
     }
 
-    @State private var isPlaying = false
     @State private var hoveringFacade = false
     @State private var hoveringTitle = false
 
@@ -56,17 +62,43 @@ struct VideoEmbedView: View {
         embed.title.flatMap { $0.isEmpty ? nil : $0 }
     }
 
+    private var store: EmbedPlayerStore { .shared }
+
+    /// Inline, expanded, or nil while the facade shows.
+    private var placement: EmbedPlayerPlacement? { store.placement(of: playerKey) }
+
+    private var isPlaying: Bool { placement != nil }
+
     var body: some View {
         Group {
             if compact { compactBody } else { fullBody }
         }
         .embedFadeIn(animateAppearance)
         .contextMenu {
-            Button(isPlaying ? "Stop Video" : "Play Video") { isPlaying.toggle() }
+            Button(isPlaying ? "Stop Video" : "Play Video") { isPlaying ? stop() : play() }
+            EmbedPlayerMenuItems(key: playerKey, onStartIfNeeded: play)
             Button("Open in Browser") { EmbedActions.open(linkURL) }
             Divider()
             EmbedLinkMenuItems(url: linkURL, onHide: onHide)
         }
+    }
+
+    private func play() {
+        store.start(
+            playerKey,
+            source: .embed(embed),
+            info: EmbedPlayerInfo(
+                linkURL: linkURL,
+                title: title,
+                provider: embed.provider,
+                siteName: embed.provider.displayName,
+                aspectRatio: embed.aspectRatio
+            )
+        )
+    }
+
+    private func stop() {
+        store.stop(playerKey)
     }
 
     // MARK: Full
@@ -120,28 +152,37 @@ struct VideoEmbedView: View {
 
     private func player(maxWidth: CGFloat) -> some View {
         FittedMediaLayout(aspectRatio: embed.aspectRatio, naturalSize: nil, maxWidth: maxWidth, maxHeight: playerMaxHeight) {
-            ZStack {
-                // Letterboxing behind the video is always black.
-                Color.black
-                if isPlaying {
-                    EmbedPlayerWebView(embed: embed)
-                } else {
-                    facade
+            switch placement {
+            case .expanded:
+                ExpandedPlayerPlaceholder(cornerRadius: 6) {
+                    ExpandedVideoOverlay.returnToChat(uiState: uiState)
                 }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay(alignment: .topTrailing) {
-                if isPlaying {
-                    MediaOverlayButton(systemImage: "xmark", label: "Close player") { isPlaying = false }
+            case .inline:
+                ZStack {
+                    // Letterboxing behind the video is always black.
+                    Color.black
+                    EmbedPlayerHost(key: playerKey, placement: .inline)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(alignment: .topTrailing) {
+                    PlayerOverlayButtons(key: playerKey, onClose: stop)
                         .padding(8)
                 }
+            case nil:
+                ZStack {
+                    Color.black
+                    facade
+                        .blurredMedia(embed.thumbnailURL.map { .url($0) } ?? .none, policy: policy, kind: .video)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
         }
+        .embedPlayerVisibility(playerKey)
     }
 
     private var facade: some View {
         Button {
-            isPlaying = true
+            play()
         } label: {
             ZStack {
                 if let thumbnail = embed.thumbnailURL {
@@ -171,7 +212,12 @@ struct VideoEmbedView: View {
     private var compactBody: some View {
         VStack(alignment: .leading, spacing: 6) {
             Button {
-                isPlaying.toggle()
+                // The first click on a blurred row only shows it.
+                if !isPlaying, blur.isBlurred {
+                    blur.reveal()
+                    return
+                }
+                isPlaying ? stop() : play()
             } label: {
                 HStack(spacing: 7) {
                     Image(systemName: isPlaying ? "stop.circle.fill" : "play.circle.fill")
@@ -192,6 +238,7 @@ struct VideoEmbedView: View {
                         RemoteImageView(url: thumbnail, maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: 40), policy: policy) {
                             theme[ThemeKey.embedPlaceholderBackground]
                         }
+                        .blurredMedia(.url(thumbnail), policy: policy, kind: .video, cornerRadius: 4)
                         .frame(width: 34, height: 22)
                         .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                     }
@@ -211,6 +258,101 @@ struct VideoEmbedView: View {
             if isPlaying {
                 player(maxWidth: Self.maxPlayerWidth)
             }
+        }
+    }
+}
+
+// MARK: - Player chrome
+
+/// Expand and × over a playing inline player.
+struct PlayerOverlayButtons: View {
+    let key: EmbedPlayerKey
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            MediaOverlayButton(systemImage: "arrow.up.left.and.arrow.down.right", label: "Expand video") {
+                EmbedPlayerStore.shared.expand(key)
+            }
+            MediaOverlayButton(systemImage: "xmark", label: "Close player", action: onClose)
+        }
+    }
+}
+
+/// "Expand Video" (starting the player first if needed), or "Return Video
+/// to Chat" while it's expanded.
+struct EmbedPlayerMenuItems: View {
+    @Environment(UIState.self) private var uiState
+    let key: EmbedPlayerKey
+    let onStartIfNeeded: () -> Void
+
+    var body: some View {
+        let store = EmbedPlayerStore.shared
+        if store.placement(of: key) == .expanded {
+            Button("Return Video to Chat") { ExpandedVideoOverlay.returnToChat(uiState: uiState) }
+        } else {
+            Button("Expand Video") {
+                if !store.isLive(key) { onStartIfNeeded() }
+                store.expand(key)
+            }
+        }
+    }
+}
+
+/// What a player's spot in its line shows while the player is expanded:
+/// the same size as the player, with a way back.
+struct ExpandedPlayerPlaceholder: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    var cornerRadius: CGFloat = 6
+    let onReturn: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(theme[ThemeKey.embedPlaceholderBackground])
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1)
+            )
+            .overlay {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .foregroundStyle(theme[ThemeKey.embedSiteName])
+                    Text("Playing in expanded view")
+                        .foregroundStyle(theme[ThemeKey.embedSiteName])
+                    Text("·")
+                        .foregroundStyle(theme[ThemeKey.embedSiteName])
+                    Button(action: onReturn) {
+                        Text("Return")
+                            .foregroundStyle(theme[ThemeKey.accent])
+                            .underline(hovering)
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovering = $0 }
+                    .pointerStyle(.link)
+                    .help("Return the video to the chat")
+                }
+                .font(style.font(size: max(10, style.fontSize - 1), weight: .medium))
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Playing in expanded view")
+            .accessibilityAction(named: "Return video to chat", onReturn)
+    }
+}
+
+extension View {
+    /// Reports whether a player's spot in its line is in view: scrolling it
+    /// out of view pauses an inline player (`EmbedPlayerStore`).
+    func embedPlayerVisibility(_ key: EmbedPlayerKey) -> some View {
+        onScrollVisibilityChange(threshold: 0.2) { visible in
+            EmbedPlayerStore.shared.inlineVisibilityChanged(key, isVisible: visible)
+        }
+        .onDisappear {
+            EmbedPlayerStore.shared.inlineSpotDisappeared(key)
         }
     }
 }

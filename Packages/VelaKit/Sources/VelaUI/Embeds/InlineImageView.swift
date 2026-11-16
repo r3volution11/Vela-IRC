@@ -11,10 +11,14 @@ import VelaTheme
 /// `chatStyle.maxImageHeight` (or an ~80 pt thumbnail in compact mode).
 /// Animated GIF/APNG/WebP play inline; with Reduce Motion they show the first
 /// frame and a play button. Clicking opens the full-size viewer.
+///
+/// While the link is blurred (`\.embedBlur`) only the image's size is read,
+/// for its frame; it is decoded (and animated) once the user reveals it.
 struct InlineImageView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.embedBlur) private var blur
 
     /// The link as posted (opened by "Open in Browser").
     let linkURL: URL
@@ -73,11 +77,12 @@ struct InlineImageView: View {
         ))
     }
 
-    /// Reloads when the image, its size or the policy changes.
+    /// Reloads when the image, its size, the policy or the blur changes.
     private struct LoadKey: Equatable {
         var imageURL: URL
         var pixelBudget: Int
         var policy: MediaPolicy
+        var blurred: Bool
     }
 
     private static func pixelBudget(compact: Bool, maxImageHeight: CGFloat) -> Int {
@@ -89,7 +94,7 @@ struct InlineImageView: View {
     private var cornerRadius: CGFloat { compact ? 6 : 8 }
 
     private var shouldAnimate: Bool {
-        guard isAnimated, !failed else { return false }
+        guard isAnimated, !failed, !blur.isBlurred else { return false }
         if let userPlayback { return userPlayback }
         if reduceMotion { return false }
         return compact ? hovering : true
@@ -116,6 +121,7 @@ struct InlineImageView: View {
                     maxHeight: maxHeight
                 ) {
                     imageContent
+                        .blurredMedia(.url(imageURL), policy: policy, kind: .image, cornerRadius: cornerRadius)
                 }
                 .embedFadeIn(arrivedAsync)
             } else {
@@ -126,7 +132,8 @@ struct InlineImageView: View {
         .task(id: LoadKey(
             imageURL: imageURL,
             pixelBudget: Self.pixelBudget(compact: compact, maxImageHeight: maxImageHeight),
-            policy: policy
+            policy: policy,
+            blurred: blur.isBlurred
         )) { await load() }
         .onChange(of: shouldAnimate) { _, animate in
             animate ? player.play() : player.pause()
@@ -225,6 +232,16 @@ struct InlineImageView: View {
         guard !failed else { return }
         let hadStill = still != nil
         do {
+            if blur.isBlurred {
+                // The stand-in draws from a tiny copy of its own; the image
+                // only needs its size here, which reading it doesn't decode.
+                guard pixelSize == nil else { return }
+                let loaded = try await ImageLoader.shared.load(imageURL, policy: policy)
+                EmbedMemory.shared.remember(pixelSize: loaded.pixelSize, for: imageURL)
+                if !hadStill { arrivedAsync = true }
+                pixelSize = loaded.pixelSize
+                return
+            }
             let result = try await EmbedImagePipeline.still(
                 imageURL,
                 maxPixelSize: Self.pixelBudget(compact: compact, maxImageHeight: maxImageHeight),

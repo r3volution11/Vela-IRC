@@ -28,6 +28,7 @@ struct BufferContextMenuItems: View {
             Button(mediaOn ? "Disable Inline Media" : "Enable Inline Media") {
                 app.setMediaEnabled(!mediaOn, for: buffer.id)
             }
+            CommandMenuToggle(VelaCommandCatalog.blurCommand(app: app, bufferID: buffer.id))
             Divider()
             if buffer.kind == .channel {
                 if buffer.isJoined {
@@ -72,6 +73,7 @@ struct ServerContextMenuItems: View {
         Button(mediaOn ? "Disable Inline Media on This Network" : "Enable Inline Media on This Network") {
             app.setMediaEnabled(!mediaOn, forNetwork: session.id)
         }
+        CommandMenuToggle(VelaCommandCatalog.networkBlurCommand(app: app, networkID: session.id))
         Divider()
         Button("Edit Network…") {
             uiState.networkEditor = .existing(session.config.parentNetworkID ?? session.id)

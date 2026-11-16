@@ -141,6 +141,72 @@ struct PreviewContextTests {
         #expect(app.isMediaEnabled(for: channel))
     }
 
+    // MARK: Blur
+
+    @Test func blurEverywhereFollowsItsSetting() throws {
+        let app = try makeApp(settings: ["media.blurImages": true])
+        #expect(app.previewContext(for: nil).blurImages)
+        #expect(app.previewContext(for: channel).blurImages)
+        // The per-buffer list is separate from the global switch.
+        #expect(!app.isBlurred(for: channel))
+
+        app.settings[.mediaBlurImages] = false
+        #expect(!app.previewContext(for: nil).blurImages)
+        #expect(!app.previewContext(for: channel).blurImages)
+    }
+
+    @Test func blurredBuffersBlurOnlyThoseBuffers() throws {
+        let app = try makeApp()
+        let sibling = BufferID(networkID: network, foldedName: "#other")
+        let elsewhere = BufferID(networkID: UUID(), foldedName: "#vela")
+        app.setBlurred(true, for: channel)
+        #expect(app.previewContext(for: channel).blurImages)
+        #expect(!app.previewContext(for: sibling).blurImages)
+        #expect(!app.previewContext(for: elsewhere).blurImages)
+        #expect(!app.previewContext(for: nil).blurImages)
+
+        app.setBlurred(false, for: channel)
+        app.setBlurred(true, forNetwork: network)
+        #expect(app.previewContext(for: channel).blurImages)
+        #expect(app.previewContext(for: sibling).blurImages)
+        #expect(!app.previewContext(for: elsewhere).blurImages)
+    }
+
+    @Test func blurSwitchesPerBufferAndNetwork() throws {
+        let app = try makeApp()
+        #expect(!app.isBlurred(for: channel))
+        #expect(!app.isBlurred(forNetwork: network))
+
+        app.setBlurred(true, for: channel)
+        #expect(app.isBlurred(for: channel))
+        #expect(!app.isBlurred(forNetwork: network))
+        #expect(app.settings[.mediaBlurredBuffers] == [channel.description])
+
+        app.setBlurred(true, forNetwork: network)
+        #expect(app.isBlurred(forNetwork: network))
+        #expect(app.isBlurred(for: BufferID(networkID: network, foldedName: "#swift")))
+        #expect(app.settings[.mediaBlurredBuffers] == [channel.description, "\(network.uuidString)/*"])
+
+        // Unblurring the channel alone leaves it blurred through its network.
+        app.setBlurred(false, for: channel)
+        #expect(app.isBlurred(for: channel))
+
+        app.setBlurred(false, forNetwork: network)
+        #expect(app.settings[.mediaBlurredBuffers].isEmpty)
+        #expect(!app.isBlurred(for: channel))
+        // Blurring is separate from turning media off.
+        #expect(app.settings[.mediaDisabledBuffers].isEmpty)
+    }
+
+    @Test func handWrittenBlurEntriesMatch() throws {
+        let app = try makeApp(settings: [
+            "media.blurredBuffers": .array([.string("\(network.uuidString.lowercased())/#vela"), "not-a-uuid/#x"]),
+        ])
+        #expect(app.isBlurred(for: channel))
+        #expect(app.previewContext(for: channel).blurImages)
+        #expect(!app.previewContext(for: BufferID(networkID: network, foldedName: "#other")).blurImages)
+    }
+
     // MARK: Site rules
 
     @Test func siteRulesComeFromSettings() throws {

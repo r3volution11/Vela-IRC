@@ -286,6 +286,11 @@ struct VelaCommandCatalog {
                 id: "media.toggleAdultFilter", category: .media, title: "Hide Adult Site Previews",
                 keywords: ["nsfw", "adult", "porn", "filter", "safe"], isChecked: settings[.mediaFilterAdultSites]
             ) { settings[.mediaFilterAdultSites].toggle() },
+            VelaCommand(
+                id: "media.toggleBlur", category: .media, title: "Blur Images Until Clicked",
+                keywords: ["blur", "spoiler", "hide images", "click to show", "thumbnails", "everywhere"],
+                isChecked: settings[.mediaBlurImages]
+            ) { settings[.mediaBlurImages].toggle() },
             link(.minimal, "Minimal Link Previews", keywords: ["compact", "small", "one line"]),
             link(.standard, "Standard Link Previews", keywords: ["medium", "default"]),
             link(.large, "Large Link Previews", keywords: ["full", "big"]),
@@ -478,6 +483,7 @@ struct VelaCommandCatalog {
                 title: mediaOn ? "Disable Inline Media" : "Enable Inline Media",
                 keywords: ["images", "previews"]
             ) { app.setMediaEnabled(!mediaOn, for: buffer.id) },
+            Self.blurCommand(app: app, bufferID: buffer.id),
         ]
         if buffer.kind == .channel, buffer.isJoined {
             commands.append(VelaCommand(
@@ -490,6 +496,31 @@ struct VelaCommandCatalog {
             keywords: [buffer.name, buffer.kind == .channel ? "leave channel" : "close conversation"]
         ) { app.close(buffer) })
         return commands
+    }
+
+    /// "Blur Images" for one buffer, in the palette (the selected buffer)
+    /// and buffer context menus. Checked while its images stay blurred until
+    /// clicked; disabled (and checked) while a wider setting blurs them
+    /// anyway, everywhere or on its whole network, which this can't undo.
+    static func blurCommand(app: AppModel, bufferID: BufferID) -> VelaCommand {
+        let inherited = app.settings[.mediaBlurImages] || app.isBlurred(forNetwork: bufferID.networkID)
+        let blurred = app.isBlurred(for: bufferID)
+        return VelaCommand(
+            id: "buffer.toggleBlur", category: .buffer, title: "Blur Images",
+            keywords: ["blur", "spoiler", "hide images", "click to show", "thumbnails", "channel"],
+            isEnabled: !inherited, isChecked: inherited || blurred
+        ) { app.setBlurred(!blurred, for: bufferID) }
+    }
+
+    /// "Blur Images on This Network", for network context menus.
+    static func networkBlurCommand(app: AppModel, networkID: UUID) -> VelaCommand {
+        let everywhere = app.settings[.mediaBlurImages]
+        let blurred = app.isBlurred(forNetwork: networkID)
+        return VelaCommand(
+            id: "network.toggleBlur.\(networkID.uuidString)", category: .network, title: "Blur Images on This Network",
+            keywords: ["blur", "spoiler", "hide images"],
+            isEnabled: !everywhere, isChecked: everywhere || blurred, showsInPalette: false
+        ) { app.setBlurred(!blurred, forNetwork: networkID) }
     }
 
     // MARK: Networks & channels

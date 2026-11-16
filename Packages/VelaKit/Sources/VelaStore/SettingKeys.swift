@@ -225,6 +225,10 @@ extension SettingKey where Value == Bool {
         .init("media.filterAdultSites", default: true,
               summary: "Hide previews from adult sites (a list bundled with Vela) and pages that label themselves adult. Links stay clickable.")
     }
+    public static var mediaBlurImages: SettingKey<Bool> {
+        .init("media.blurImages", default: false,
+              summary: "Blur images, thumbnails and video posters until clicked, everywhere.")
+    }
 }
 
 extension SettingKey where Value == LinkPreviewSize {
@@ -259,6 +263,10 @@ extension SettingKey where Value == [String] {
     public static var mediaDisabledBuffers: SettingKey<[String]> {
         .init("media.disabledBuffers", default: [],
               summary: "Buffers without inline media: \"<networkUUID>/<foldedName>\" or \"<networkUUID>/*\".")
+    }
+    public static var mediaBlurredBuffers: SettingKey<[String]> {
+        .init("media.blurredBuffers", default: [],
+              summary: "Buffers whose images, thumbnails and video posters stay blurred until clicked: \"<networkUUID>/<foldedName>\" or \"<networkUUID>/*\".")
     }
 }
 
@@ -359,10 +367,12 @@ public enum SettingsCatalog {
             SettingKey.mediaImageSize.descriptor,
             SettingKey.mediaRestrictToAllowed.descriptor,
             SettingKey.mediaFilterAdultSites.descriptor,
+            SettingKey.mediaBlurImages.descriptor,
             SettingKey.mediaSiteRules.descriptor,
             SettingKey.mediaMaxImageSizeMB.descriptor,
             SettingKey.mediaMaxImageHeight.descriptor,
             SettingKey.mediaDisabledBuffers.descriptor,
+            SettingKey.mediaBlurredBuffers.descriptor,
 
             SettingKey.notifyHighlights.descriptor,
             SettingKey.notifyPrivateMessages.descriptor,

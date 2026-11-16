@@ -600,9 +600,11 @@ enum EmbedActions {
 }
 
 /// Context-menu items shared by every embed: open/copy, the link's site
-/// rule, and hiding the line's previews.
+/// rule, "Blur Again" on revealed media where blurring applies, and hiding
+/// the line's previews.
 struct EmbedLinkMenuItems: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.embedBlur) private var blur
     let url: URL
     let onHide: () -> Void
 
@@ -614,6 +616,9 @@ struct EmbedLinkMenuItems: View {
             EmbedSiteMenuItems(site: site)
         }
         Divider()
+        if blur.canBlurAgain {
+            Button("Blur Again") { blur.blurAgain() }
+        }
         Button("Hide Previews") { onHide() }
     }
 }

@@ -502,7 +502,8 @@ public final class AppModel: SessionHost {
         policy.restrictToAllowedDomains = settings[.mediaRestrictToAllowed]
         policy.maxImageBytes = Int(settings[.mediaMaxImageSizeMB] * 1024 * 1024)
         if let bufferID, !isMediaEnabled(for: bufferID) { policy.autoLoad = false }
-        return PreviewContext(policy: policy, layout: previewLayout, blurImages: false)
+        let blurImages = settings[.mediaBlurImages] || (bufferID.map(isBlurred(for:)) ?? false)
+        return PreviewContext(policy: policy, layout: previewLayout, blurImages: blurImages)
     }
 
     /// Preview sizes from `media.linkPreviewSize`, `media.videos` and
@@ -579,6 +580,30 @@ public final class AppModel: SessionHost {
     /// whole network is off.
     public func setMediaEnabled(_ enabled: Bool, for bufferID: BufferID) {
         updateBufferScopeList(.mediaDisabledBuffers) { $0.set(!enabled, for: bufferID) }
+    }
+
+    // MARK: Blur per buffer
+
+    /// Whether `bufferID` (or its network) is in `media.blurredBuffers`, so
+    /// its images stay blurred until clicked. `media.blurImages` blurs every
+    /// buffer on top of this; ``previewContext(for:)`` combines the two.
+    public func isBlurred(for bufferID: BufferID) -> Bool {
+        BufferScopeList(settings[.mediaBlurredBuffers]).contains(bufferID)
+    }
+
+    /// Images blurred in every buffer of a network (`"<network>/*"` in `media.blurredBuffers`).
+    public func isBlurred(forNetwork networkID: UUID) -> Bool {
+        BufferScopeList(settings[.mediaBlurredBuffers]).containsNetwork(networkID)
+    }
+
+    /// Blurs images in one buffer, or stops. A buffer stays blurred while
+    /// its whole network is.
+    public func setBlurred(_ blurred: Bool, for bufferID: BufferID) {
+        updateBufferScopeList(.mediaBlurredBuffers) { $0.set(blurred, for: bufferID) }
+    }
+
+    public func setBlurred(_ blurred: Bool, forNetwork networkID: UUID) {
+        updateBufferScopeList(.mediaBlurredBuffers) { $0.set(blurred, forNetwork: networkID) }
     }
 
     private func updateBufferScopeList(_ key: SettingKey<[String]>, _ update: (inout BufferScopeList) -> Void) {

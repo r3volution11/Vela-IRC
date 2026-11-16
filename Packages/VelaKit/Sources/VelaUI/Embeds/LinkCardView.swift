@@ -16,10 +16,13 @@ import VelaTheme
 /// thumbnail.
 ///
 /// Without `showsImages` (a text-only site) the card has no image, thumbnail
-/// or favicon; a neutral glyph stands in for the favicon.
+/// or favicon; a neutral glyph stands in for the favicon. While the link is
+/// blurred (`\.embedBlur`), its image and thumbnails are (favicons aren't).
 struct LinkCardView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
+    @Environment(\.embedBlur) private var blur
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let preview: LinkPreview
     /// The link's policy; every image goes through it.
     let policy: MediaPolicy
@@ -147,6 +150,7 @@ struct LinkCardView: View {
         .accessibilityLabel(accessibilitySummary)
         .accessibilityAddTraits(.isLink)
         .accessibilityAction { EmbedActions.open(preview.url) }
+        .accessibilityActions { showImageAction }
     }
 
     private func standardThumbnail(_ url: URL) -> some View {
@@ -166,6 +170,7 @@ struct LinkCardView: View {
         .contentShape(Rectangle())
         .onTapGesture { EmbedActions.open(preview.url) }
         .help(preview.url.absoluteString)
+        .blurredMedia(.url(url), policy: policy, kind: .thumbnail)
         .accessibilityHidden(true)
     }
 
@@ -200,6 +205,7 @@ struct LinkCardView: View {
                 ) {
                     theme[ThemeKey.embedPlaceholderBackground]
                 }
+                .blurredMedia(.url(imageURL), policy: policy, kind: .thumbnail)
                 .frame(width: Self.thumbnailSide, height: Self.thumbnailSide)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .accessibilityHidden(true)
@@ -213,6 +219,7 @@ struct LinkCardView: View {
         .accessibilityLabel(accessibilitySummary)
         .accessibilityAddTraits(.isLink)
         .accessibilityAction { EmbedActions.open(preview.url) }
+        .accessibilityActions { showImageAction }
     }
 
     private var textColumnMaxWidth: CGFloat {
@@ -267,6 +274,7 @@ struct LinkCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .contentShape(Rectangle())
             .onTapGesture { EmbedActions.open(preview.url) }
+            .blurredMedia(.url(url), policy: policy, kind: .thumbnail)
             .accessibilityHidden(true)
         }
     }
@@ -291,6 +299,7 @@ struct LinkCardView: View {
                 RemoteImageView(url: imageURL, maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: 40), policy: policy) {
                     theme[ThemeKey.embedPlaceholderBackground]
                 }
+                .blurredMedia(.url(imageURL), policy: policy, kind: .thumbnail, cornerRadius: 4)
                 .frame(width: 34, height: 22)
                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                 .accessibilityHidden(true)
@@ -307,13 +316,30 @@ struct LinkCardView: View {
         .accessibilityLabel(accessibilitySummary)
         .accessibilityAddTraits(.isLink)
         .accessibilityAction { EmbedActions.open(preview.url) }
+        .accessibilityActions { showImageAction }
     }
 
     private var accessibilitySummary: String {
         var parts = ["Link preview", preview.displaySiteName]
         if let title = preview.displayTitle { parts.append(title) }
         if let summary = preview.displaySummary { parts.append(summary) }
+        if blur.isBlurred, imageURL != nil { parts.append("image blurred") }
         return parts.joined(separator: ", ")
+    }
+
+    /// VoiceOver's way to reveal a blurred image (the stand-ins are hidden
+    /// inside the card's single element).
+    @ViewBuilder
+    private var showImageAction: some View {
+        if blur.isBlurred, imageURL != nil {
+            Button("Show image") {
+                if reduceMotion {
+                    blur.reveal()
+                } else {
+                    withAnimation(.easeOut(duration: 0.22)) { blur.reveal() }
+                }
+            }
+        }
     }
 }
 

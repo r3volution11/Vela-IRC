@@ -53,6 +53,10 @@ struct MainWindowView: View {
                     .transition(.move(edge: .trailing))
             }
         }
+        // An expanded video fills the window, below the command palette.
+        .overlay {
+            ExpandedVideoOverlay()
+        }
         .overlay(alignment: .top) {
             if let mode = uiState.commandPalette {
                 CommandPaletteView(mode: mode)
@@ -67,6 +71,15 @@ struct MainWindowView: View {
         .animation(.snappy(duration: 0.2), value: style.navigationStyle)
         .onChange(of: appearsActive, initial: true) { _, active in
             app.isWindowActive = active
+        }
+        // Switching conversations pauses (and un-expands) videos; closing
+        // the window stops them.
+        .onChange(of: app.selectedBufferID) { _, _ in
+            // The expanded player had the keyboard focus.
+            if EmbedPlayerStore.shared.selectedBufferChanged() { uiState.focusInput() }
+        }
+        .onDisappear {
+            EmbedPlayerStore.shared.stopAll()
         }
         .sheet(item: $uiState.networkEditor) { target in
             NetworkEditorView(target: target)

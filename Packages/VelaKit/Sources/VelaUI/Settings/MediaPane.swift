@@ -120,6 +120,24 @@ struct MediaPane: View {
                     detail: "Blocks previews from sites on a list bundled with Vela (checked on your Mac, never online) and from pages that label themselves adult. Links stay clickable.",
                     isOn: $settings[.mediaFilterAdultSites]
                 )
+                SettingsToggle(
+                    "Blur images until clicked",
+                    detail: "Images and video thumbnails stay blurred until you click them. To blur only some channels, use a channel's right-click menu.",
+                    isOn: $settings[.mediaBlurImages]
+                )
+                let blurred = settings[.mediaBlurredBuffers]
+                if !blurred.isEmpty {
+                    SettingsRow(
+                        Self.blurredTitle(blurred),
+                        detail: settings[.mediaBlurImages]
+                            ? "Images are blurred everywhere while the switch above is on."
+                            : "Set from a channel's or network's right-click menu."
+                    ) {
+                        Button("Clear") { settings[.mediaBlurredBuffers] = [] }
+                            .buttonStyle(ThemedButtonStyle())
+                            .accessibilityLabel("Stop blurring images in these channels")
+                    }
+                }
             }
 
             siteRulesSection(restrictToListed: $settings[.mediaRestrictToAllowed])
@@ -136,6 +154,15 @@ struct MediaPane: View {
                 }
             }
         }
+    }
+
+    /// "Blurred in 2 channels", counting whole networks (`"<uuid>/*"`) apart.
+    static func blurredTitle(_ entries: [String]) -> String {
+        let networks = entries.count(where: { $0.hasSuffix("/*") })
+        let channels = entries.count - networks
+        func count(_ n: Int, _ noun: String) -> String { "\(n) \(noun)\(n == 1 ? "" : "s")" }
+        let parts = [channels > 0 ? count(channels, "channel") : nil, networks > 0 ? count(networks, "network") : nil]
+        return "Blurred in " + parts.compactMap { $0 }.joined(separator: " and ")
     }
 
     private var showsLinkCards: Bool { app.settings[.mediaShowLinkCards] }
