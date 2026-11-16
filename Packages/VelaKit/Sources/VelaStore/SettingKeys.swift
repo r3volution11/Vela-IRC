@@ -193,7 +193,18 @@ extension SettingKey where Value == Bool {
     }
     public static var mediaRestrictToAllowed: SettingKey<Bool> {
         .init("media.restrictToAllowed", default: false,
-              summary: "Only load media from domains listed in media.allowedDomains.")
+              summary: "Only show previews from sites with an allow or textOnly rule in media.siteRules.")
+    }
+    public static var mediaFilterAdultSites: SettingKey<Bool> {
+        .init("media.filterAdultSites", default: true,
+              summary: "Hide previews from adult sites (a list bundled with Vela) and pages that label themselves adult. Links stay clickable.")
+    }
+}
+
+extension SettingKey where Value == [String: JSONValue] {
+    public static var mediaSiteRules: SettingKey<[String: JSONValue]> {
+        .init("media.siteRules", default: [:],
+              summary: "Per-site preview rules: domain to \"allow\", \"textOnly\" or \"block\". The most specific domain wins.")
     }
 }
 
@@ -307,6 +318,8 @@ public enum SettingsCatalog {
             SettingKey.mediaBlockedDomains.descriptor,
             SettingKey.mediaAllowedDomains.descriptor,
             SettingKey.mediaRestrictToAllowed.descriptor,
+            SettingKey.mediaFilterAdultSites.descriptor,
+            SettingKey.mediaSiteRules.descriptor,
             SettingKey.mediaMaxImageSizeMB.descriptor,
             SettingKey.mediaMaxImageHeight.descriptor,
             SettingKey.mediaDisabledBuffers.descriptor,

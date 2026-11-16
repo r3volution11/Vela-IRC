@@ -479,6 +479,73 @@ public final class AppModel: SessionHost {
 
     // MARK: Media policy
 
+    /// What links in `bufferID` may preview, and how previews look there.
+    public func previewContext(for bufferID: BufferID?) -> PreviewContext {
+        var policy = MediaPolicy()
+        policy.autoLoad = settings[.mediaAutoLoad]
+        policy.showLinkCards = settings[.mediaShowLinkCards]
+        policy.siteRules = siteRules
+        policy.filterAdultSites = settings[.mediaFilterAdultSites]
+        // A placeholder adult site for demo screenshots (never resolves).
+        if isDemo { policy.extraAdultDomains = ["nsfw.example"] }
+        policy.restrictToAllowedDomains = settings[.mediaRestrictToAllowed]
+        policy.maxImageBytes = Int(settings[.mediaMaxImageSizeMB] * 1024 * 1024)
+        if let bufferID, !isMediaEnabled(for: bufferID) { policy.autoLoad = false }
+        return PreviewContext(policy: policy, layout: previewLayout, blurImages: false)
+    }
+
+    /// Preview sizes. Until the per-kind size settings arrive, they follow
+    /// `media.presentation` and `media.loadVideoEmbeds`.
+    private var previewLayout: VelaMedia.PreviewLayout {
+        let compact = settings[.mediaPresentation] == .compact
+        return VelaMedia.PreviewLayout(
+            linkSize: compact ? .minimal : .large,
+            videoStyle: !settings[.mediaLoadVideoEmbeds] ? .off : (compact ? .compact : .player),
+            imageSize: compact ? .thumbnail : .full
+        )
+    }
+
+    /// Per-site preview rules (`media.siteRules`), plus the older blocked and
+    /// allowed domain lists until they're migrated into it.
+    public var siteRules: SiteRules {
+        var raw: [String: String] = [:]
+        for (domain, value) in settings[.mediaSiteRules] {
+            if let access = value.stringValue { raw[domain] = access }
+        }
+        var rules = SiteRules(raw)
+        for domain in settings[.mediaAllowedDomains] where rules[domain] == nil { rules[domain] = .allow }
+        for domain in settings[.mediaBlockedDomains] { rules[domain] = .block }
+        return rules
+    }
+
+    /// The rule that decides previews from `url`'s site, if any.
+    public func siteRule(for url: URL) -> (domain: String, access: SiteAccess)? {
+        siteRules.access(for: url)
+    }
+
+    /// Sets (or, with nil, removes) the rule for `domain` and its subdomains.
+    public func setSiteRule(_ access: SiteAccess?, forDomain domain: String) {
+        guard let normalized = SiteRules.normalizedDomain(domain) else { return }
+        var raw = settings[.mediaSiteRules]
+        for key in raw.keys where SiteRules.normalizedDomain(key) == normalized { raw[key] = nil }
+        if let access { raw[normalized] = .string(access.rawValue) }
+        settings[.mediaSiteRules] = raw
+        // The older lists would otherwise put the rule back.
+        settings[.mediaBlockedDomains].removeAll { SiteRules.normalizedDomain($0) == normalized }
+        settings[.mediaAllowedDomains].removeAll { SiteRules.normalizedDomain($0) == normalized }
+    }
+
+    /// "Always allow" on a blocked preview: an allow rule for its site.
+    public func alwaysAllow(_ block: SiteBlock) {
+        setSiteRule(.allow, forDomain: block.domain)
+    }
+
+    /// "Unblock" on a preview you blocked yourself: removes your rule.
+    public func unblock(_ block: SiteBlock) {
+        setSiteRule(nil, forDomain: block.domain)
+    }
+
+    @available(*, deprecated, message: "Use previewContext(for:)")
     public func mediaPolicy(for bufferID: BufferID?) -> MediaPolicy {
         var policy = MediaPolicy()
         policy.autoLoad = settings[.mediaAutoLoad]
