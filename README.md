@@ -72,11 +72,16 @@ See [docs/THEMES.md](docs/THEMES.md) to write your own and [docs/THEME-CREDITS.m
 
 ## Building
 
+The quickest way, with no Xcode UI needed:
+
 ```sh
 git clone git@github.com:r3volution11/Vela-IRC.git
 cd Vela-IRC
-open Vela.xcodeproj          # then Run (⌘R)
+scripts/run.sh               # builds and launches build/Vela.app
+scripts/run.sh --demo        # same, with offline sample content
 ```
+
+Or open `Vela.xcodeproj` (the project file, not the folder) in Xcode, pick the **Vela** scheme and **My Mac**, and press ⌘R.
 
 Almost all code lives in the `VelaKit` Swift package, so you can run the tests without Xcode's UI:
 

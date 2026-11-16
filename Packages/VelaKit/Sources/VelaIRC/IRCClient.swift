@@ -200,6 +200,7 @@ public actor IRCClient {
         "znc.in/playback",
         "znc.in/self-message",
         "znc.in/server-time-iso",
+        "znc.in/batch",
         "standard-replies",
     ]
 

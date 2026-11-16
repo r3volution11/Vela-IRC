@@ -41,6 +41,10 @@ public struct VelaScenes: Scene {
         .windowToolbarStyle(.unified(showsTitle: false))
         .defaultSize(width: 1180, height: 760)
         .defaultLaunchBehavior(.presented)
+        // Always open the main window at launch. Restoring saved window
+        // state could otherwise restore "no windows" after a crash or a
+        // force quit, leaving Vela running with nothing on screen.
+        .restorationBehavior(.disabled)
         .commands {
             VelaCommands(app: app, themeStore: themeStore, uiState: uiState)
         }
