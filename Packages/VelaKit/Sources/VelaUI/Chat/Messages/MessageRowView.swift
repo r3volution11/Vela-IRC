@@ -1,0 +1,514 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import AppKit
+import SwiftUI
+import VelaCore
+import VelaIRC
+import VelaStore
+import VelaTheme
+
+/// One display item. Equatable so unchanged rows skip body evaluation when
+/// the list updates.
+struct DisplayItemRow: View, Equatable {
+    let item: DisplayItem
+
+    var body: some View {
+        switch item {
+        case .dayDivider(let date, _):
+            DayDividerRow(date: date)
+        case .unreadMarker:
+            UnreadMarkerRow()
+        case .line(let lineItem):
+            if lineItem.line.kind.isConversation {
+                MessageRow(item: lineItem)
+            } else {
+                EventRow(line: lineItem.line)
+            }
+        case .membershipRun(let run):
+            MembershipRunRow(run: run)
+        }
+    }
+}
+
+// MARK: Message row
+
+/// A message, action or notice in any layout, with hover, highlight,
+/// context menu and the hover toolbar.
+struct MessageRow: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    @Environment(MessageListController.self) private var controller
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let item: LineItem
+
+    @State private var isHovered = false
+    @State private var isPickerOpen = false
+
+    var body: some View {
+        let line = item.line
+        let rendered = line.isRedacted ? nil : controller.textCache.rendered(line)
+        let links = rendered?.links ?? []
+
+        content(rendered)
+            .padding(.horizontal, style.rowHorizontalPadding)
+            .padding(.top, topPadding)
+            .padding(.bottom, bottomPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background { background(for: line) }
+            .overlay(alignment: .leading) {
+                if line.isHighlight {
+                    Rectangle()
+                        .fill(theme[ThemeKey.chatHighlightBorder])
+                        .frame(width: 3)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if isHovered || isPickerOpen {
+                    MessageHoverToolbar(line: line, links: links, isPickerOpen: $isPickerOpen)
+                        .padding(.trailing, 14)
+                        .offset(y: -14)
+                        .transition(.opacity)
+                }
+            }
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.08)) { isHovered = hovering }
+            }
+            .contextMenu {
+                MessageMenuItems(line: line, links: links)
+            }
+            .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func content(_ rendered: RenderedText?) -> some View {
+        switch style.layout {
+        case .classic:
+            ClassicMessageContent(item: item, rendered: rendered, isHovered: isHovered)
+        case .grouped:
+            GroupedMessageContent(item: item, rendered: rendered, isHovered: isHovered)
+        case .columns:
+            ColumnsMessageContent(item: item, rendered: rendered, isHovered: isHovered)
+        }
+    }
+
+    private var topPadding: CGFloat {
+        switch style.layout {
+        case .grouped: item.isContinuation ? 1 : style.messageSpacing + 5
+        case .classic, .columns: item.isContinuation ? 1 : max(1, style.messageSpacing / 2) + 1
+        }
+    }
+
+    private var bottomPadding: CGFloat { 1 }
+
+    @ViewBuilder
+    private func background(for line: ChatLine) -> some View {
+        ZStack {
+            if line.isHighlight {
+                theme[ThemeKey.chatHighlightBackground]
+            } else if line.isSelf {
+                theme[ThemeKey.chatSelfMessageBackground]
+            }
+            if isHovered {
+                theme[ThemeKey.chatHoverBackground]
+            }
+            if controller.flashedLineID == line.id {
+                theme[ThemeKey.chatSelectionBackground]
+            }
+            if style.layout == .columns {
+                ColumnsSeparator()
+            }
+        }
+    }
+}
+
+// MARK: Layouts
+
+/// `[12:01] <nick> text`, wrapped lines hanging after the timestamp column.
+struct ClassicMessageContent: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    @Environment(MessageListController.self) private var controller
+    let item: LineItem
+    let rendered: RenderedText?
+    let isHovered: Bool
+
+    var body: some View {
+        let line = item.line
+        let timeWidth = TimestampMetrics.columnWidth(style: style, bracketed: true)
+        VStack(alignment: .leading, spacing: 2) {
+            if let reply = item.reply {
+                ReplyQuoteView(reply: reply)
+                    .padding(.leading, style.showTimestamps ? timeWidth + 8 : 0)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if style.showTimestamps {
+                    Text("[\(style.timestamp(line.time))]")
+                        .font(style.timestampFont)
+                        .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                        .frame(width: timeWidth, alignment: .leading)
+                        .accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    MessageBodyText(line: line, rendered: rendered, prefix: prefix(for: line))
+                        .messageAccessibility(line: line, rendered: rendered)
+                    MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
+                }
+            }
+        }
+    }
+
+    private func prefix(for line: ChatLine) -> AttributedString {
+        let nick = line.nick ?? ""
+        var nickRun = AttributedString(nick)
+        nickRun.font = style.nickFont
+        nickRun.foregroundColor = theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks)
+
+        func punctuation(_ text: String, _ key: String) -> AttributedString {
+            var run = AttributedString(text)
+            run.font = style.bodyFont
+            run.foregroundColor = theme[key]
+            return run
+        }
+
+        switch line.kind {
+        case .action:
+            return punctuation("* ", ThemeKey.chatAction) + nickRun + punctuation(" ", ThemeKey.chatAction)
+        case .notice:
+            return punctuation("-", ThemeKey.chatNotice) + nickRun + punctuation("- ", ThemeKey.chatNotice)
+        default:
+            return punctuation("<", ThemeKey.chatSecondaryForeground) + nickRun + punctuation("> ", ThemeKey.chatSecondaryForeground)
+        }
+    }
+}
+
+/// Slack/Discord style: avatar and header for the first message of a group,
+/// bare text for continuations with the time in the gutter on hover.
+struct GroupedMessageContent: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    @Environment(MessageListController.self) private var controller
+    let item: LineItem
+    let rendered: RenderedText?
+    let isHovered: Bool
+
+    var body: some View {
+        let line = item.line
+        let gutter = gutterWidth
+        VStack(alignment: .leading, spacing: 4) {
+            if let reply = item.reply {
+                ReplyQuoteView(reply: reply, showsArrow: gutter == 0)
+                    .padding(.leading, gutter > 0 ? gutter + 10 : 0)
+                    .background(alignment: .leading) {
+                        if gutter > 0 {
+                            ReplyConnector(overshoot: 7)
+                                .stroke(theme[ThemeKey.replyQuoteBar], style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                                .frame(width: gutter)
+                                .accessibilityHidden(true)
+                        }
+                    }
+            }
+            HStack(alignment: item.isContinuation ? .firstTextBaseline : .top, spacing: 10) {
+                if gutter > 0 {
+                    gutterView(for: line, width: gutter)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        if !item.isContinuation {
+                            header(for: line)
+                        }
+                        MessageBodyText(line: line, rendered: rendered)
+                    }
+                    .messageAccessibility(line: line, rendered: rendered)
+                    MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
+                }
+            }
+        }
+    }
+
+    private var gutterWidth: CGFloat {
+        if style.showAvatars { return style.avatarSize }
+        return style.showTimestamps ? TimestampMetrics.columnWidth(style: style, bracketed: false) : 0
+    }
+
+    @ViewBuilder
+    private func gutterView(for line: ChatLine, width: CGFloat) -> some View {
+        if item.isContinuation {
+            Text(style.timestamp(line.time))
+                .font(.system(size: max(9, style.fontSize - 3)).monospacedDigit())
+                .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: width, alignment: .trailing)
+                .opacity(isHovered && style.showTimestamps ? 1 : 0)
+                .accessibilityHidden(true)
+        } else if style.showAvatars {
+            // The avatar hangs from the top without setting the row height,
+            // so one-line groups are as tall as their text.
+            Color.clear
+                .frame(width: width, height: 1)
+                .overlay(alignment: .top) {
+                    AvatarView(nick: line.nick ?? "?", size: width)
+                        .padding(.top, 1)
+                }
+        } else {
+            Color.clear.frame(width: width, height: 1)
+        }
+    }
+
+    private func header(for line: ChatLine) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(line.nick ?? "")
+                .font(style.nickFont)
+                .foregroundStyle(theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks))
+                .lineLimit(1)
+            if line.kind == .notice {
+                Text("notice")
+                    .font(style.font(size: max(9, style.fontSize - 4), weight: .semibold))
+                    .foregroundStyle(theme[ThemeKey.chatNotice])
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .strokeBorder(theme[ThemeKey.chatNotice].opacity(0.5), lineWidth: 1)
+                    )
+            }
+            if style.showTimestamps {
+                Text(style.timestamp(line.time))
+                    .font(style.timestampFont)
+                    .foregroundStyle(theme[ThemeKey.chatTimestamp])
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// irssi/weechat style: time, right-aligned nick, then text, in columns.
+struct ColumnsMessageContent: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    @Environment(MessageListController.self) private var controller
+    let item: LineItem
+    let rendered: RenderedText?
+    let isHovered: Bool
+
+    var body: some View {
+        let line = item.line
+        let metrics = ColumnsMetrics(style: style)
+        VStack(alignment: .leading, spacing: 2) {
+            if let reply = item.reply {
+                ReplyQuoteView(reply: reply)
+                    .padding(.leading, metrics.textX)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                if metrics.timeWidth > 0 {
+                    Text(style.timestamp(line.time))
+                        .font(style.timestampFont)
+                        .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                        .frame(width: metrics.timeWidth, alignment: .leading)
+                        .padding(.trailing, metrics.timeGap)
+                        .accessibilityHidden(true)
+                }
+                nickCell(for: line)
+                    .frame(width: metrics.nickWidth, alignment: .trailing)
+                    .padding(.trailing, metrics.textX - metrics.nickX - metrics.nickWidth)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    MessageBodyText(line: line, rendered: rendered, prefix: actionPrefix(for: line))
+                        .messageAccessibility(line: line, rendered: rendered)
+                    MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func nickCell(for line: ChatLine) -> some View {
+        let nick = line.nick ?? ""
+        switch line.kind {
+        case .action:
+            Text("*")
+                .font(style.nickFont)
+                .foregroundStyle(theme[ThemeKey.chatAction])
+        case .notice:
+            Text("-\(nick)-")
+                .font(style.nickFont)
+                .foregroundStyle(theme[ThemeKey.chatNotice])
+                .lineLimit(1)
+                .truncationMode(.tail)
+        default:
+            Text(nick)
+                .font(style.nickFont)
+                .foregroundStyle(theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+    }
+
+    /// Actions read "nick waves" in the text column.
+    private func actionPrefix(for line: ChatLine) -> AttributedString? {
+        guard line.kind == .action, let nick = line.nick else { return nil }
+        var run = AttributedString(nick + " ")
+        run.font = style.nickFont
+        run.foregroundColor = theme.nickDisplayColor(nick, isSelf: line.isSelf, colorNicks: style.colorNicks)
+        return run
+    }
+}
+
+/// Column positions for the columns layout, measured from the row's content edge.
+struct ColumnsMetrics {
+    let timeWidth: CGFloat
+    let timeGap: CGFloat = 10
+    let nickWidth: CGFloat
+    let separatorGap: CGFloat = 9
+
+    @MainActor
+    init(style: ChatStyle) {
+        timeWidth = style.showTimestamps ? TimestampMetrics.columnWidth(style: style, bracketed: false) : 0
+        nickWidth = max(40, style.columnsNickWidth)
+    }
+
+    var nickX: CGFloat { timeWidth > 0 ? timeWidth + timeGap : 0 }
+    var separatorX: CGFloat { nickX + nickWidth + separatorGap }
+    var textX: CGFloat { separatorX + 1 + separatorGap }
+}
+
+/// The hairline between the nick and text columns. Drawn full-height in
+/// each row's background so consecutive rows form one continuous rule.
+struct ColumnsSeparator: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+
+    var body: some View {
+        let metrics = ColumnsMetrics(style: style)
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(theme[ThemeKey.chatDayDivider])
+                .frame(width: 1)
+                .padding(.leading, style.rowHorizontalPadding + metrics.separatorX)
+            Spacer(minLength: 0)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: Shared pieces
+
+/// The message text itself (or "Message deleted"), with an optional prefix
+/// such as `<nick> ` in the classic layout.
+struct MessageBodyText: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    let line: ChatLine
+    let rendered: RenderedText?
+    var prefix: AttributedString?
+
+    var body: some View {
+        if let rendered {
+            let large = style.largeEmoji && rendered.isEmojiOnly
+            Text(compose(rendered.attributed))
+                .font(large ? style.font(size: (style.fontSize * 2.2).rounded()) : style.bodyFont)
+                .italic(line.kind == .action)
+                .foregroundStyle(theme[baseColorKey])
+                .lineSpacing(style.lineSpacing)
+                .tint(theme[ThemeKey.chatLink])
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, large ? 2 : 0)
+        } else {
+            Text(compose(deletedText))
+                .font(style.bodyFont)
+                .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var deletedText: AttributedString {
+        var deleted = AttributedString(String(localized: "Message deleted"))
+        deleted.inlinePresentationIntent = .emphasized
+        deleted.foregroundColor = theme[ThemeKey.chatSecondaryForeground]
+        return deleted
+    }
+
+    private func compose(_ text: AttributedString) -> AttributedString {
+        guard let prefix else { return text }
+        return prefix + text
+    }
+
+    private var baseColorKey: String {
+        switch line.kind {
+        case .action: ThemeKey.chatAction
+        case .notice: ThemeKey.chatNotice
+        default: ThemeKey.chatForeground
+        }
+    }
+}
+
+/// Inline media and reactions under a message.
+struct MessageExtras: View {
+    let line: ChatLine
+    let bufferID: BufferID
+    let isHovered: Bool
+
+    var body: some View {
+        if !line.isRedacted, line.kind.isConversation {
+            MessageEmbedsView(line: line, bufferID: bufferID)
+        }
+        if line.msgid != nil, !line.isRedacted {
+            ReactionBar(line: line, isRowHovered: isHovered)
+        }
+    }
+}
+
+// MARK: Accessibility
+
+extension View {
+    /// Makes the text block one VoiceOver element reading "nick, time,
+    /// message", with the hover-toolbar actions as custom actions.
+    func messageAccessibility(line: ChatLine, rendered: RenderedText?) -> some View {
+        modifier(MessageAccessibilityModifier(line: line, rendered: rendered))
+    }
+}
+
+private struct MessageAccessibilityModifier: ViewModifier {
+    @Environment(MessageListController.self) private var controller
+    @Environment(UIState.self) private var uiState
+    let line: ChatLine
+    let rendered: RenderedText?
+
+    func body(content: Content) -> some View {
+        content
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Self.label(for: line, rendered: rendered))
+            .accessibilityActions {
+                if controller.canReply(to: line) {
+                    Button("Reply") { controller.reply(to: line, uiState: uiState) }
+                }
+                if !line.isRedacted {
+                    Button("Copy Text") { controller.copyText(of: line) }
+                }
+                if let link = rendered?.links.first {
+                    Button("Open Link") { NSWorkspace.shared.open(link) }
+                }
+                if controller.canDelete(line) {
+                    Button("Delete Message") { controller.confirmDelete(line) }
+                }
+            }
+    }
+
+    static func label(for line: ChatLine, rendered: RenderedText?) -> String {
+        let nick = line.nick ?? ""
+        let time = line.time.formatted(date: .omitted, time: .shortened)
+        guard let rendered else { return "\(nick), \(time), message deleted" }
+        var parts = [nick, time]
+        switch line.kind {
+        case .action: parts.append("\(nick) \(rendered.plain)")
+        case .notice: parts.append("notice: \(rendered.plain)")
+        default: parts.append(rendered.plain)
+        }
+        if line.isHighlight { parts.append("mentions you") }
+        return parts.joined(separator: ", ")
+    }
+}
