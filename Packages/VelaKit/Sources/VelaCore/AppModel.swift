@@ -505,14 +505,13 @@ public final class AppModel: SessionHost {
         return PreviewContext(policy: policy, layout: previewLayout, blurImages: false)
     }
 
-    /// Preview sizes. Until the per-kind size settings arrive, they follow
-    /// `media.presentation` and `media.loadVideoEmbeds`.
+    /// Preview sizes from `media.linkPreviewSize`, `media.videos` and
+    /// `media.imageSize` (VelaMedia mirrors them; the raw values match).
     private var previewLayout: VelaMedia.PreviewLayout {
-        let compact = settings[.mediaPresentation] == .compact
-        return VelaMedia.PreviewLayout(
-            linkSize: compact ? .minimal : .large,
-            videoStyle: !settings[.mediaLoadVideoEmbeds] ? .off : (compact ? .compact : .player),
-            imageSize: compact ? .thumbnail : .full
+        VelaMedia.PreviewLayout(
+            linkSize: PreviewLinkSize(rawValue: settings[.mediaLinkPreviewSize].rawValue) ?? .standard,
+            videoStyle: PreviewVideoStyle(rawValue: settings[.mediaVideos].rawValue) ?? .player,
+            imageSize: PreviewImageSize(rawValue: settings[.mediaImageSize].rawValue) ?? .full
         )
     }
 

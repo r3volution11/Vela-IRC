@@ -32,6 +32,34 @@ public enum TimestampClock: String, Codable, Sendable, CaseIterable, SettingValu
     case twentyFourHour = "24h"
 }
 
+/// How much a link preview shows.
+public enum LinkPreviewSize: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// One line: site, title and a small thumbnail.
+    case minimal
+    /// Title, a short description and a medium thumbnail beside them.
+    case standard
+    /// The full card: a longer description and a large image below.
+    case large
+}
+
+/// How video links (YouTube, Vimeo, Twitch, Streamable, video files) show.
+public enum VideoEmbedStyle: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// A large thumbnail with ▶; the player loads in place when pressed.
+    case player
+    /// One line; ▶ opens the player under it.
+    case compact
+    /// No player: the link shows as a link preview.
+    case off
+}
+
+/// How inline images show.
+public enum InlineImageSize: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// Up to `media.maxImageHeight` tall.
+    case full
+    /// A small thumbnail; click to open the viewer.
+    case thumbnail
+}
+
 // MARK: Appearance
 
 extension SettingKey where Value == String {
@@ -202,6 +230,27 @@ extension SettingKey where Value == Bool {
     }
 }
 
+extension SettingKey where Value == LinkPreviewSize {
+    public static var mediaLinkPreviewSize: SettingKey<LinkPreviewSize> {
+        .init("media.linkPreviewSize", default: .standard,
+              summary: "Link preview size: minimal (one line), standard (title, description and a thumbnail) or large (full card with a large image).")
+    }
+}
+
+extension SettingKey where Value == VideoEmbedStyle {
+    public static var mediaVideos: SettingKey<VideoEmbedStyle> {
+        .init("media.videos", default: .player,
+              summary: "Video links: player (a large thumbnail that plays in place), compact (one line) or off (shown as a link preview).")
+    }
+}
+
+extension SettingKey where Value == InlineImageSize {
+    public static var mediaImageSize: SettingKey<InlineImageSize> {
+        .init("media.imageSize", default: .full,
+              summary: "Inline images: full (up to media.maxImageHeight) or thumbnail.")
+    }
+}
+
 extension SettingKey where Value == [String: JSONValue] {
     public static var mediaSiteRules: SettingKey<[String: JSONValue]> {
         .init("media.siteRules", default: [:],
@@ -308,6 +357,9 @@ public enum SettingsCatalog {
 
             SettingKey.mediaAutoLoad.descriptor,
             SettingKey.mediaShowLinkCards.descriptor,
+            SettingKey.mediaLinkPreviewSize.descriptor,
+            SettingKey.mediaVideos.descriptor,
+            SettingKey.mediaImageSize.descriptor,
             SettingKey.mediaLoadVideoEmbeds.descriptor,
             SettingKey.mediaRestrictToAllowed.descriptor,
             SettingKey.mediaFilterAdultSites.descriptor,
