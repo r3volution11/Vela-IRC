@@ -163,7 +163,9 @@ from the entry its name hashes to (case-insensitively, using IRC's RFC 1459
 case mapping, so `Nick[a]` and `nick{a}` match), so it usually keeps its color
 across channels and launches. Within a conversation, people who talk get
 different entries while the palette has room, so two nicks that hash alike
-don't look alike. Aim for 8–12 clearly different hues with at least 3:1
+don't look alike, and someone whose color would look like (say, orange beside
+red) a person they're talking with gets the nearest palette color that's
+clearly different. Aim for 8–12 clearly different hues with at least 3:1
 contrast — ideally 4.5:1 — against `chat.background`. Entries that would read
 as plain text (a grey close to `chat.foreground`) or fall under 3:1 aren't
 used.
@@ -561,7 +563,7 @@ The Settings window.
 
 ### Nick colors
 
-`nickColors` is an array of colors. Each nickname starts from the entry its name hashes to (case-insensitively, RFC 1459 case mapping), so a nick usually keeps its color across channels and launches. In a conversation, people who talk get different entries while the palette has room: someone whose usual color is held by a recent speaker gets the free entry most unlike the colors in use. Entries that would read as plain text (close to `chat.foreground`) or fall under 3:1 against `chat.background` aren't used.
+`nickColors` is an array of colors. Each nickname starts from the entry its name hashes to (case-insensitively, RFC 1459 case mapping), so a nick usually keeps its color across channels and launches. In a conversation, people who talk get different entries while the palette has room. Someone whose usual entry is taken by, or looks like the color of, a person in the current exchange gets the entry closest to their usual one that is clearly different; when none is, a look-alike keeps its usual color. Entries that would read as plain text (close to `chat.foreground`) or fall under 3:1 against `chat.background` aren't used.
 
 - Dark default: `#F07178` `#F78C6C` `#FFCB6B` `#C3E88D` `#7FDBCA` `#89DDFF` `#82AAFF` `#B4A5FF` `#C792EA` `#FF9CAC` `#E6B07E` `#A8D8A0`
 - Light default: `#C62828` `#BF4A12` `#8C6200` `#4E7A12` `#1B7D4F` `#00727C` `#1565C0` `#3949AB` `#6A3FB5` `#9C27B0` `#AD1457` `#7D5A3C`

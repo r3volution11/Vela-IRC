@@ -7,12 +7,19 @@ import VelaFoundation
 
 @Suite("Nick color assigner")
 struct NickColorAssignerTests {
-    /// `count` colors evenly around a wheel: neighbors look alike, opposite
-    /// entries most different.
-    private func wheel(_ count: Int) -> NickPaletteGeometry {
+    /// `count` colors evenly around a wheel, one step apart from their
+    /// neighbors. With `similar: 2`, neighbors look alike.
+    private func wheel(_ count: Int, similar: Double = NickPaletteGeometry.oklabSimilar) -> NickPaletteGeometry {
         NickPaletteGeometry(distances: (0..<count).map { i in
             (0..<count).map { j in Double(min(abs(i - j), count - abs(i - j))) }
-        })
+        }, similar: similar)
+    }
+
+    /// A nick whose usual color is `index` of `size`.
+    private func nick(usually index: Int, of size: Int, not others: Set<String> = []) -> String {
+        (0...).lazy.map { "nick\($0)" }.first {
+            NickColorAssigner.preferredIndex(for: $0, paletteSize: size) == index && !others.contains($0)
+        }!
     }
 
     @Test func startsFromAStableCaseInsensitiveHash() {
@@ -25,14 +32,54 @@ struct NickColorAssignerTests {
         // The clash that prompted this: both hash to the same entry of 12.
         #expect(NickColorAssigner.preferredIndex(for: "jeebz", paletteSize: 12) == NickColorAssigner.preferredIndex(for: "tomf", paletteSize: 12))
 
-        var assigner = NickColorAssigner(palette: wheel(12))
+        var assigner = NickColorAssigner(palette: wheel(12, similar: 2))
         assigner.noteSpeaker("jeebz")
         assigner.noteSpeaker("tomf")
         let jeebz = assigner.index(for: "jeebz"), tomf = assigner.index(for: "tomf")
         #expect(jeebz == NickColorAssigner.preferredIndex(for: "jeebz", paletteSize: 12))
-        #expect(tomf != jeebz)
-        // Not a neighbor of the clashing color but across the wheel.
-        #expect(tomf == (jeebz + 6) % 12)
+        // The closest color that doesn't look like jeebz's: two steps on,
+        // past the look-alike neighbor.
+        #expect(tomf == (jeebz + 2) % 12)
+    }
+
+    @Test func lookAlikesMoveOnlyWhenNeeded() {
+        let a = nick(usually: 0, of: 12)
+        let b = nick(usually: 1, of: 12)   // looks like a's
+        let c = nick(usually: 6, of: 12)   // nothing like a's
+
+        // Alone, b keeps its usual color.
+        var alone = NickColorAssigner(palette: wheel(12, similar: 2))
+        alone.noteSpeaker(b)
+        #expect(alone.index(for: b) == 1)
+
+        // Beside a (and c), b takes the nearest color unlike both.
+        var assigner = NickColorAssigner(palette: wheel(12, similar: 2))
+        assigner.noteSpeaker(a)
+        assigner.noteSpeaker(c)
+        assigner.noteSpeaker(b)
+        #expect(assigner.index(for: a) == 0)
+        #expect(assigner.index(for: c) == 6)
+        #expect(assigner.index(for: b) == 2)
+
+        // Look-alikes that stopped talking a while ago don't count.
+        var later = NickColorAssigner(palette: wheel(12, similar: 2))
+        later.noteSpeaker(a)
+        for index in [3, 5, 7, 9, 11] { later.noteSpeaker(nick(usually: index, of: 12, not: [a, b])) }
+        later.noteSpeaker(b)
+        #expect(later.index(for: b) == 1)
+    }
+
+    @Test func crowdedLookAlikesKeepTheirColor() {
+        // Four colors; only opposite ones are clearly different.
+        let x = nick(usually: 0, of: 4)
+        let y = nick(usually: 2, of: 4)
+        let z = nick(usually: 1, of: 4)
+        var assigner = NickColorAssigner(palette: wheel(4, similar: 2))
+        assigner.noteSpeaker(x)
+        assigner.noteSpeaker(y)
+        assigner.noteSpeaker(z)
+        // Nothing free is clearly different from both, so z keeps its own.
+        #expect(assigner.index(for: z) == 1)
     }
 
     @Test func colorsStickOnceGiven() {

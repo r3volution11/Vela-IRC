@@ -165,7 +165,7 @@ public enum ThemeSchema {
         }
         output.append("### Nick colors")
         output.append("")
-        output.append("`nickColors` is an array of colors. Each nickname starts from the entry its name hashes to (case-insensitively, RFC 1459 case mapping), so a nick usually keeps its color across channels and launches. In a conversation, people who talk get different entries while the palette has room: someone whose usual color is held by a recent speaker gets the free entry most unlike the colors in use. Entries that would read as plain text (close to `chat.foreground`) or fall under 3:1 against `chat.background` aren't used.")
+        output.append("`nickColors` is an array of colors. Each nickname starts from the entry its name hashes to (case-insensitively, RFC 1459 case mapping), so a nick usually keeps its color across channels and launches. In a conversation, people who talk get different entries while the palette has room. Someone whose usual entry is taken by, or looks like the color of, a person in the current exchange gets the entry closest to their usual one that is clearly different; when none is, a look-alike keeps its usual color. Entries that would read as plain text (close to `chat.foreground`) or fall under 3:1 against `chat.background` aren't used.")
         output.append("")
         output.append("- Dark default: " + NickPalette.darkHex.map { "`\($0)`" }.joined(separator: " "))
         output.append("- Light default: " + NickPalette.lightHex.map { "`\($0)`" }.joined(separator: " "))

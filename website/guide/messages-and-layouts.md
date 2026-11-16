@@ -60,7 +60,7 @@ The same choices are in **View → Message Layout**.
 
 ## Colors and formatting
 
-- **Colored nicknames** gives everyone a color from your theme's nick palette. People talking in the same channel get different colors while the palette has room, so two nicks never look alike just because their names hash alike. Each nick keeps its color once given, and usually has the same one in every channel. Palette colors that would read as plain text are skipped.
+- **Colored nicknames** gives everyone a color from your theme's nick palette. People talking in the same channel get different colors while the palette has room, so two nicks never look alike just because their names hash alike. When someone's usual color would look like the color of a person they're talking with (orange beside red, say), they get the nearest color from the palette that's clearly different; otherwise everyone keeps their usual color. Each nick keeps its color once given, and usually has the same one in every channel. Palette colors that would read as plain text are skipped.
 - **mIRC formatting** shows bold, italic, underline, strikethrough, monospace, colors (including hex colors) and reverse text sent by other clients. Turn it off to see plain text.
 - **Large emoji** shows messages that are only emoji at a bigger size.
 - Messages that **mention you** get a tinted background and an accent bar. See [Notifications & highlights](/guide/notifications).

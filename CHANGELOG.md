@@ -18,7 +18,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ### Changed
 
-- **Nick colors stay apart.** People talking in the same channel get different colors while the theme's palette has room; before, two nicks whose names hashed alike shared a color. A nick keeps its color once given and usually has the same one everywhere. Palette colors too close to the message text (or under 3:1 against the background) are no longer used, so a colored nick never reads as plain text.
+- **Nick colors stay apart.** People talking in the same channel get different colors while the theme's palette has room; before, two nicks whose names hashed alike shared a color. Colors that merely look alike (orange beside red) are kept apart too, using the nearest clearly different color from the theme's palette, but only when a clearly different one is free. A nick keeps its color once given and usually has the same one everywhere. Palette colors too close to the message text (or under 3:1 against the background) are no longer used, so a colored nick never reads as plain text.
 
 ### Fixed
 

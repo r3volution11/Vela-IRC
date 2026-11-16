@@ -9,25 +9,42 @@ import Foundation
 public struct NickPaletteGeometry: Sendable, Hashable {
     /// Perceptual distance between palette entries (`distances[i][j]`).
     public let distances: [[Double]]
+    /// Entries closer than this look alike side by side.
+    public let similar: Double
     /// Tells palettes apart cheaply (checked on every lookup).
     public let signature: Int
 
     public var count: Int { distances.count }
 
-    public init(distances: [[Double]]) {
+    /// OKLab distance under which two nick colors read as alike: red and
+    /// orange, blue and lavender, teal and cyan in a typical palette.
+    public static let oklabSimilar = 0.11
+
+    public init(distances: [[Double]], similar: Double = oklabSimilar) {
         self.distances = distances
-        signature = distances.hashValue
+        self.similar = similar
+        var hasher = Hasher()
+        hasher.combine(distances)
+        hasher.combine(similar)
+        signature = hasher.finalize()
     }
 }
 
 /// Hands out nick colors (indexes into a palette) within one conversation,
-/// so that people talking there get different colors.
+/// so that people talking there can be told apart.
 ///
-/// Everyone starts from a stable color hashed from their nick, so the same
-/// nick mostly looks the same everywhere and across launches. When that
-/// color belongs to someone who spoke recently, a newcomer gets the free
-/// color that looks most unlike the ones in use instead. A color, once
-/// given, stays: nobody changes color mid-conversation.
+/// Everyone starts from their usual color, hashed from their nick, so the
+/// same nick looks the same everywhere and across launches, and most
+/// people never get anything else. A newcomer only gets another color when
+/// their usual one is needed elsewhere:
+/// - it belongs to one of the recent speakers (the last `palette.count - 1`), or
+/// - it looks like the color of someone in the current exchange (the last
+///   few speakers), as red does beside orange.
+/// They then get the palette color closest to their usual one that's
+/// clearly different from everyone in the exchange. When none is (a
+/// crowded channel), a look-alike keeps its usual color, and only a
+/// duplicate moves, to the free color most unlike the ones in use. A
+/// color, once given, stays: nobody changes color mid-conversation.
 public struct NickColorAssigner: Sendable {
     public let palette: NickPaletteGeometry
     /// Case-folded nick → palette index.
@@ -38,6 +55,9 @@ public struct NickColorAssigner: Sendable {
     /// How many recent speakers to remember; only the last
     /// `palette.count - 1` matter when choosing a color.
     private static let recentLimit = 64
+    /// The current exchange: the speakers whose colors a newcomer shouldn't
+    /// resemble.
+    private static let exchangeSize = 5
 
     public init(palette: NickPaletteGeometry) {
         self.palette = palette
@@ -72,26 +92,32 @@ public struct NickColorAssigner: Sendable {
             slots[key] = 0
             return
         }
+        let distances = palette.distances
         let preferred = Self.preferredIndex(folded: key, paletteSize: size)
         let taken = Set(recent.suffix(size - 1).compactMap { slots[$0] })
-        guard taken.contains(preferred) else {
+        let exchange = Set(recent.suffix(min(Self.exchangeSize, size - 1)).compactMap { slots[$0] })
+        func nearest(_ index: Int, among colors: Set<Int>) -> Double {
+            colors.map { distances[index][$0] }.min() ?? .infinity
+        }
+        func isClear(_ index: Int) -> Bool { nearest(index, among: exchange) >= palette.similar }
+
+        let preferredIsFree = !taken.contains(preferred)
+        if preferredIsFree && isClear(preferred) {
             slots[key] = preferred
             return
         }
-        // The free color furthest from every color in use; ties go to the
-        // one closest after the preferred color, so the result is stable.
-        var best = preferred
-        var bestDistance = -1.0
-        for step in 1..<size {
-            let candidate = (preferred + step) % size
-            guard !taken.contains(candidate) else { continue }
-            let nearest = taken.map { palette.distances[candidate][$0] }.min() ?? .infinity
-            if nearest > bestDistance {
-                best = candidate
-                bestDistance = nearest
-            }
+        // Free colors, in a stable order starting after the preferred one.
+        let free = (1..<size).map { (preferred + $0) % size }.filter { !taken.contains($0) }
+        // The clearly different color most like their usual one.
+        if let closest = free.filter(isClear).min(by: { distances[preferred][$0] < distances[preferred][$1] }) {
+            slots[key] = closest
+        } else if preferredIsFree {
+            // Look-alike, but nothing clearly different is left: keep it.
+            slots[key] = preferred
+        } else {
+            // Taken, and nothing clearly different: least alike will do.
+            slots[key] = free.max(by: { nearest($0, among: taken) < nearest($1, among: taken) }) ?? preferred
         }
-        slots[key] = best
     }
 
     // MARK: Hashing
