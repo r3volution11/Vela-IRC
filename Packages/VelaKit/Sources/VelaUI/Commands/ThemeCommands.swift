@@ -9,62 +9,44 @@ import VelaCore
 import VelaStore
 import VelaTheme
 
-/// The Theme menu: every installed theme (dark ones, then light ones, the
-/// active one checked), system-appearance matching, the editor and
-/// file-level actions. SwiftUI refreshes the list each time the menu opens,
-/// so themes loaded or imported later show up.
+/// The Theme menu. Themes aren't listed here (there can be hundreds of
+/// user themes); "Select Theme…" opens the palette's theme picker, which
+/// previews each one live.
 struct ThemeMenuItems: View {
-    @Environment(\.openWindow) private var openWindow
-    let app: AppModel
-    let themeStore: ThemeStore
+    let commands: VelaCommandCatalog
 
     var body: some View {
-        let currentID = themeStore.currentInfo?.id
-        let themes = themeStore.themes
-
-        // Dark themes, then light ones. (Menu `Section`s would each add their
-        // own separators, doubling them up between groups.)
-        ForEach(themes.filter { $0.kind == .dark }) { info in
-            themeToggle(info, isCurrent: info.id == currentID)
-        }
-        Divider()
-        ForEach(themes.filter { $0.kind == .light }) { info in
-            themeToggle(info, isCurrent: info.id == currentID)
-        }
+        CommandMenuButton(commands.selectTheme)
+        CommandMenuToggle(commands.toggleFollowSystem)
 
         Divider()
 
-        Toggle("Match System Appearance", isOn: Binding(
-            get: { app.settings[.appearanceFollowSystem] },
-            set: { app.settings[.appearanceFollowSystem] = $0 }
-        ))
+        CommandMenuButton(commands.themeEditor)
+        CommandMenuButton(commands.importTheme)
+        CommandMenuButton(commands.revealThemesFolder)
 
         Divider()
 
-        Button("Theme Editor…") { openWindow(id: WindowID.themeEditor) }
-        Button("Import Theme…") { ThemeFileActions.importThemes(into: themeStore, settings: app.settings) }
-        Button("Reveal Themes Folder") { ThemeFileActions.revealThemesFolder(of: themeStore) }
-
-        Divider()
-
-        Button("Open settings.json") { ThemeFileActions.openSettingsFile(app.settings) }
-    }
-
-    private func themeToggle(_ info: ThemeInfo, isCurrent: Bool) -> some View {
-        Toggle(info.name, isOn: Binding(
-            get: { isCurrent },
-            set: { _ in ThemeFileActions.select(info, settings: app.settings) }
-        ))
+        CommandMenuButton(commands.openSettingsJSON)
     }
 }
 
-/// AppKit-backed theme actions shared by the menu (and usable from settings).
+/// AppKit-backed theme actions shared by the menu and the palette (and
+/// usable from settings).
 @MainActor
 enum ThemeFileActions {
-    /// Makes `info` the fixed theme (turning off system matching).
-    static func select(_ info: ThemeInfo, settings: SettingsStore) {
-        settings[.appearanceFollowSystem] = false
-        settings[.appearanceTheme] = info.name
+    /// Makes `info` the active theme. With "Match System Appearance" on, it
+    /// becomes the preferred theme for the current system appearance (so
+    /// matching stays on); otherwise it becomes the fixed theme.
+    static func select(_ info: ThemeInfo, settings: SettingsStore, systemAppearance: ThemeKind) {
+        if settings[.appearanceFollowSystem] {
+            switch systemAppearance {
+            case .dark: settings[.appearancePreferredDarkTheme] = info.name
+            case .light: settings[.appearancePreferredLightTheme] = info.name
+            }
+        } else {
+            settings[.appearanceTheme] = info.name
+        }
     }
 
     /// Asks for `.json`/`.vsix` files, imports them and switches to the first
@@ -90,7 +72,7 @@ enum ThemeFileActions {
             }
         }
         if let first = imported.first {
-            select(first, settings: settings)
+            select(first, settings: settings, systemAppearance: themeStore.systemAppearance)
         }
         if !failures.isEmpty {
             let alert = NSAlert()
