@@ -24,3 +24,9 @@ Packages/VelaKit/.swiftpm/
 .vscode/
 .idea/
 
+
+# Website (VitePress): dependencies, build output, cache, generated partials
+website/node_modules/
+website/.vitepress/dist/
+website/.vitepress/cache/
+website/_generated/
