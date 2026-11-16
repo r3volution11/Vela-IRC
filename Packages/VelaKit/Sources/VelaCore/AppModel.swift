@@ -425,6 +425,19 @@ public final class AppModel: SessionHost {
         return !disabled.contains(bufferID.description) && !disabled.contains("\(bufferID.networkID.uuidString)/*")
     }
 
+    /// Inline media for every buffer of a network (`"<network>/*"` in `media.disabledBuffers`).
+    public func isMediaEnabled(forNetwork networkID: UUID) -> Bool {
+        !settings[.mediaDisabledBuffers].contains("\(networkID.uuidString)/*")
+    }
+
+    public func setMediaEnabled(_ enabled: Bool, forNetwork networkID: UUID) {
+        let key = "\(networkID.uuidString)/*"
+        var disabled = settings[.mediaDisabledBuffers]
+        disabled.removeAll { $0 == key }
+        if !enabled { disabled.append(key) }
+        settings[.mediaDisabledBuffers] = disabled
+    }
+
     public func setMediaEnabled(_ enabled: Bool, for bufferID: BufferID) {
         var disabled = settings[.mediaDisabledBuffers]
         disabled.removeAll { $0 == bufferID.description }

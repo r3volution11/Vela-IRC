@@ -24,7 +24,7 @@ The first public release of Vela, a native, deeply themable IRC client for macOS
   - Images and animated GIFs.
   - Link cards with page titles and descriptions.
   - YouTube, Vimeo, Twitch and Streamable players, loaded only when you press play.
-  - Controls per network and per channel, domain block/allow lists, size limits and a compact presentation.
+  - Controls per network and per channel (right-click a network or channel), domain block/allow lists, size limits and a compact presentation.
   - Previews are never fetched from your local network.
 - **Modern IRC.**
   - TLS, with certificate validation and an opt-in "allow invalid certificates" for self-signed bouncers.

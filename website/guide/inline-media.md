@@ -47,7 +47,7 @@ All of these are in **Settings → Media**.
 
 Click the **picture icon** in a channel's header, or right-click the channel and choose **Disable Inline Media**. That channel shows plain links from then on. **Settings → Media** counts the channels you've turned off and can turn them all back on.
 
-To turn media off for a whole network, add `"<network id>/*"` to [`media.disabledBuffers`](/reference/settings#media.disabledBuffers) in settings.json. The network id is the `id` of that network in `networks.json`, in the same folder.
+To turn media off for a whole network, right-click the network in the sidebar (or its tab) and choose **Disable Inline Media on This Network**. Behind the scenes this adds `"<network id>/*"` to [`media.disabledBuffers`](/reference/settings#media.disabledBuffers) in settings.json.
 
 ### By domain
 

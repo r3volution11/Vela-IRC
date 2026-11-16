@@ -25,7 +25,7 @@ With **Match System Appearance** on, the theme you pick becomes the theme for th
 
 **Settings → Appearance** shows every theme as a small preview of Vela's window. Use **All**, **Dark** and **Light** to filter.
 
-- **Click** a theme to use it. Choosing a theme here turns off **Match System Appearance**, so that theme is used in both modes.
+- **Click** a theme to use it. It follows the same rule as Select Theme: with **Match System Appearance** on, it becomes the theme for the current mode.
 - **Right-click** a theme for more: **Use in Dark Mode** or **Use in Light Mode** (which keeps matching on), **Customize in Theme Editor…**, and, for your own themes, **Show in Finder** and **Delete Theme…**.
 
 ## Your own themes

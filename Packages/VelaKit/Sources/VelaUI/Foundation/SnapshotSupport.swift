@@ -55,6 +55,8 @@ enum SnapshotSupport {
         window.contentView = hosting
         window.alphaValue = 0
         window.ignoresMouseEvents = true
+        // Far from any screen, so the real pointer can't trigger hover states.
+        window.setFrameOrigin(NSPoint(x: -30_000, y: -30_000))
         window.orderFrontRegardless()
         self.window = window
 

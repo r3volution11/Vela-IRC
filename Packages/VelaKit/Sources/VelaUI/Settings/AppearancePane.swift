@@ -217,8 +217,9 @@ struct AppearancePane: View {
     }
 
     private func select(_ info: ThemeInfo) {
-        app.settings[.appearanceFollowSystem] = false
-        app.settings[.appearanceTheme] = info.name
+        // Same rule as Select Theme (⌃⌘T): with Match System Appearance on,
+        // this sets the theme for the current appearance and keeps matching.
+        ThemeFileActions.select(info, settings: app.settings, systemAppearance: themeStore.systemAppearance)
     }
 
     private func delete(_ info: ThemeInfo) {

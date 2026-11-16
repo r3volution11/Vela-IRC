@@ -60,6 +60,10 @@ struct ServerContextMenuItems: View {
         }
         Button("Join Channel…") { uiState.joinChannelNetwork = session.id }
             .disabled(!session.isConnected || session.isBouncerControl)
+        let mediaOn = app.isMediaEnabled(forNetwork: session.id)
+        Button(mediaOn ? "Disable Inline Media on This Network" : "Enable Inline Media on This Network") {
+            app.setMediaEnabled(!mediaOn, forNetwork: session.id)
+        }
         Divider()
         Button("Edit Network…") {
             uiState.networkEditor = .existing(session.config.parentNetworkID ?? session.id)
