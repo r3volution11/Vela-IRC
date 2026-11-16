@@ -1,0 +1,547 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import AppKit
+import SwiftUI
+import UniformTypeIdentifiers
+import VelaMedia
+import VelaTheme
+
+// Shared building blocks for inline media: main-actor memo caches, image
+// loading, layouts that reserve exact space for media, chips, placeholders.
+
+// MARK: - Memo caches
+
+/// A small least-recently-used cache for the main actor. The media services
+/// are actors, so asking them costs an async hop; rows that SwiftUI re-creates
+/// (scrolling a lazy list, switching buffers) seed their state from these
+/// memos instead and render known media on the first frame.
+struct MemoCache<Key: Hashable, Value> {
+    private struct Entry {
+        var value: Value
+        var cost: Int
+        var tick: UInt64
+    }
+
+    private var entries: [Key: Entry] = [:]
+    private var tick: UInt64 = 0
+    private var totalCost = 0
+    let countLimit: Int
+    let costLimit: Int
+
+    init(countLimit: Int, costLimit: Int = .max) {
+        self.countLimit = countLimit
+        self.costLimit = costLimit
+    }
+
+    mutating func value(for key: Key) -> Value? {
+        guard var entry = entries[key] else { return nil }
+        tick &+= 1
+        entry.tick = tick
+        entries[key] = entry
+        return entry.value
+    }
+
+    func peek(_ key: Key) -> Value? { entries[key]?.value }
+
+    mutating func insert(_ value: Value, for key: Key, cost: Int = 1) {
+        tick &+= 1
+        if let old = entries[key] { totalCost -= old.cost }
+        entries[key] = Entry(value: value, cost: cost, tick: tick)
+        totalCost += cost
+        while entries.count > countLimit || (totalCost > costLimit && entries.count > 1) {
+            guard let oldest = entries.min(by: { $0.value.tick < $1.value.tick }) else { break }
+            totalCost -= oldest.value.cost
+            entries.removeValue(forKey: oldest.key)
+        }
+    }
+
+    mutating func removeValue(for key: Key) {
+        if let old = entries.removeValue(forKey: key) { totalCost -= old.cost }
+    }
+}
+
+nonisolated struct StillImageKey: Hashable, Sendable {
+    var url: URL
+    var maxPixelSize: Int
+}
+
+/// What the embed views remember on the main actor between re-creations.
+final class EmbedMemory {
+    static let shared = EmbedMemory()
+
+    var previews = MemoCache<URL, LinkPreview>(countLimit: 500)
+    /// Decoded, downsampled images ready to draw (≈96 MB budget).
+    var stills = MemoCache<StillImageKey, CGImage>(countLimit: 400, costLimit: 96 * 1024 * 1024)
+    /// Pixel sizes of images seen so far, to reserve their space up front.
+    var pixelSizes = MemoCache<URL, CGSize>(countLimit: 2_000)
+    /// Images that failed to load, so a re-created row shows its error chip
+    /// immediately instead of flashing a placeholder.
+    var failedImages = MemoCache<URL, Bool>(countLimit: 500)
+    /// Links detected per chat line.
+    var links = MemoCache<UUID, (text: String, links: [EmbedLink])>(countLimit: 2_000)
+
+    private init() {}
+}
+
+// MARK: - Image pipeline
+
+enum EmbedImagePipeline {
+    /// Downloads (policy-checked) and decodes `url` to at most `maxPixelSize`
+    /// on its longest side. Records the image's pixel size in `EmbedMemory`.
+    static func still(_ url: URL, maxPixelSize: Int, policy: MediaPolicy) async throws -> (image: CGImage, info: LoadedImage) {
+        let loaded = try await ImageLoader.shared.load(url, policy: policy)
+        EmbedMemory.shared.pixelSizes.insert(loaded.pixelSize, for: url)
+        let key = StillImageKey(url: url, maxPixelSize: maxPixelSize)
+        if let memo = EmbedMemory.shared.stills.value(for: key) { return (memo, loaded) }
+        let longest = Int(max(loaded.pixelSize.width, loaded.pixelSize.height).rounded(.up))
+        let target = max(1, min(maxPixelSize, longest))
+        // `load(_:policy:)` above put the bytes in the loader's cache, so this
+        // decodes without a second download.
+        let image = try await ImageLoader.shared.downsampledImage(url, maxPixelSize: target, maxBytes: policy.maxImageBytes)
+        EmbedMemory.shared.stills.insert(image, for: key, cost: image.bytesPerRow * image.height)
+        return (image, loaded)
+    }
+
+    static func memoizedStill(_ url: URL, maxPixelSize: Int) -> CGImage? {
+        EmbedMemory.shared.stills.value(for: StillImageKey(url: url, maxPixelSize: maxPixelSize))
+    }
+
+    /// Pixel budget for an image drawn at most `points` wide/high on a Retina display.
+    static func pixelBudget(forPoints points: CGFloat) -> Int {
+        Int((points * 2).rounded(.up))
+    }
+}
+
+/// A remote image (thumbnail, favicon) loaded through `ImageLoader` with the
+/// media policy, drawn with `placeholder` until it arrives.
+struct RemoteImageView<Placeholder: View>: View {
+    let url: URL
+    let maxPixelSize: Int
+    let policy: MediaPolicy
+    var contentMode: ContentMode = .fill
+    var onLoad: ((CGSize) -> Void)?
+    @ViewBuilder var placeholder: () -> Placeholder
+
+    @State private var image: CGImage?
+
+    init(
+        url: URL,
+        maxPixelSize: Int,
+        policy: MediaPolicy,
+        contentMode: ContentMode = .fill,
+        onLoad: ((CGSize) -> Void)? = nil,
+        @ViewBuilder placeholder: @escaping () -> Placeholder
+    ) {
+        self.url = url
+        self.maxPixelSize = maxPixelSize
+        self.policy = policy
+        self.contentMode = contentMode
+        self.onLoad = onLoad
+        self.placeholder = placeholder
+        _image = State(initialValue: EmbedImagePipeline.memoizedStill(url, maxPixelSize: maxPixelSize))
+    }
+
+    var body: some View {
+        // Always exactly the proposed size: a filled image is centered and
+        // cropped rather than spilling out of its frame.
+        Color.clear
+            .overlay {
+                if let image {
+                    Image(decorative: image, scale: 1)
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: contentMode)
+                } else {
+                    placeholder()
+                }
+            }
+            .clipped()
+            .task(id: StillImageKey(url: url, maxPixelSize: maxPixelSize)) {
+            if let image {
+                onLoad?(CGSize(width: image.width, height: image.height))
+                return
+            }
+            // Failures keep the placeholder; thumbnails and favicons are optional.
+            guard let result = try? await EmbedImagePipeline.still(url, maxPixelSize: maxPixelSize, policy: policy) else {
+                return
+            }
+            image = result.image
+            onLoad?(result.info.pixelSize)
+        }
+    }
+}
+
+// MARK: - Layouts
+
+/// Sizes media to its aspect ratio within a width cap (the column width or
+/// `maxWidth`, whichever is smaller), `maxHeight`, and optionally its natural
+/// size, so the exact space is reserved as soon as the dimensions are known.
+struct FittedMediaLayout: Layout {
+    /// Width divided by height.
+    var aspectRatio: CGFloat
+    /// The media's own size in points; it is never scaled up past this.
+    var naturalSize: CGSize?
+    var maxWidth: CGFloat
+    var maxHeight: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let proposed = proposal.width ?? .infinity
+        return fittedSize(availableWidth: proposed.isFinite ? min(proposed, maxWidth) : maxWidth)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for subview in subviews {
+            subview.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
+        }
+    }
+
+    func fittedSize(availableWidth: CGFloat) -> CGSize {
+        let ratio = aspectRatio.isFinite && aspectRatio > 0 ? aspectRatio : 16.0 / 9.0
+        var width = max(0, availableWidth)
+        var height = maxHeight
+        if let naturalSize, naturalSize.width > 0, naturalSize.height > 0 {
+            width = min(width, naturalSize.width)
+            height = min(height, naturalSize.height)
+        }
+        // Fit the ratio inside width × height.
+        if width / ratio > height {
+            width = height * ratio
+        } else {
+            height = width / ratio
+        }
+        return CGSize(width: width.rounded(), height: height.rounded())
+    }
+}
+
+/// Marks the subview whose width an `EmbedColumnLayout` should hug.
+nonisolated private struct PrimaryMediaKey: LayoutValueKey {
+    static let defaultValue = false
+}
+
+extension View {
+    /// The column around this view takes its width (e.g. a video player).
+    func embedPrimaryMedia() -> some View {
+        layoutValue(key: PrimaryMediaKey.self, value: true)
+    }
+}
+
+/// A leading-aligned vertical stack for card content. It hugs the width of
+/// the subview marked `embedPrimaryMedia()` (at least `minWidth`) or, without
+/// one, the widest subview's ideal width, capped at `maxWidth` and the
+/// proposal. Text wraps to that width. Zero-height subviews get no spacing.
+struct EmbedColumnLayout: Layout {
+    var spacing: CGFloat = 6
+    var minWidth: CGFloat = 220
+    var maxWidth: CGFloat = 520
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = columnWidth(proposal: proposal, subviews: subviews)
+        var height: CGFloat = 0
+        var placedAny = false
+        for subview in subviews {
+            let size = subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+            guard size.height > 0 else { continue }
+            height += size.height + (placedAny ? spacing : 0)
+            placedAny = true
+        }
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        var placedAny = false
+        for subview in subviews {
+            let childProposal = ProposedViewSize(width: bounds.width, height: nil)
+            let size = subview.sizeThatFits(childProposal)
+            guard size.height > 0 else {
+                subview.place(at: CGPoint(x: bounds.minX, y: y), proposal: ProposedViewSize(width: bounds.width, height: 0))
+                continue
+            }
+            if placedAny { y += spacing }
+            subview.place(at: CGPoint(x: bounds.minX, y: y), proposal: childProposal)
+            y += size.height
+            placedAny = true
+        }
+    }
+
+    private func columnWidth(proposal: ProposedViewSize, subviews: Subviews) -> CGFloat {
+        let proposed = proposal.width ?? .infinity
+        let available = proposed.isFinite ? min(proposed, maxWidth) : maxWidth
+        if let media = subviews.first(where: { $0[PrimaryMediaKey.self] }) {
+            let mediaWidth = media.sizeThatFits(ProposedViewSize(width: available, height: nil)).width
+            return min(available, max(mediaWidth, min(minWidth, available)))
+        }
+        let ideal = subviews.reduce(CGFloat(0)) { widest, subview in
+            max(widest, subview.sizeThatFits(.unspecified).width)
+        }
+        return min(available, max(ideal, 0))
+    }
+}
+
+// MARK: - Chrome
+
+/// The rounded card every embed sits in: `embed.background`, `embed.border`
+/// and an optional accent bar on the leading edge.
+struct EmbedCardChrome: ViewModifier {
+    @Environment(\.theme) private var theme
+    var accent: Color?
+    var cornerRadius: CGFloat = 8
+    var accentWidth: CGFloat = 4
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        HStack(spacing: 0) {
+            if let accent {
+                Rectangle().fill(accent).frame(width: accentWidth)
+            }
+            content
+        }
+        .background(theme[ThemeKey.embedBackground])
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1))
+    }
+}
+
+extension View {
+    func embedCard(accent: Color?, cornerRadius: CGFloat = 8, accentWidth: CGFloat = 4) -> some View {
+        modifier(EmbedCardChrome(accent: accent, cornerRadius: cornerRadius, accentWidth: accentWidth))
+    }
+
+    /// Fades the view in when it first appears, unless Reduce Motion is on or
+    /// `enabled` is false (content that was already known shouldn't flash).
+    func embedFadeIn(_ enabled: Bool) -> some View {
+        modifier(EmbedFadeIn(enabled: enabled))
+    }
+}
+
+private struct EmbedFadeIn: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let enabled: Bool
+    @State private var visible = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(!enabled || reduceMotion || visible ? 1 : 0)
+            .onAppear {
+                guard enabled, !reduceMotion, !visible else { return }
+                withAnimation(.easeOut(duration: 0.22)) { visible = true }
+            }
+    }
+}
+
+/// Space-holding box shown while an image or video loads.
+struct MediaPlaceholder: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var systemImage = "photo"
+    var cornerRadius: CGFloat = 8
+    @State private var pulse = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(theme[ThemeKey.embedPlaceholderBackground])
+            .overlay {
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundStyle(theme[ThemeKey.embedSiteName].opacity(0.55))
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1)
+            )
+            .opacity(pulse ? 0.6 : 1)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+            }
+            .accessibilityLabel("Loading")
+    }
+}
+
+/// A small capsule button under a message: "Load preview", "Couldn't load image", …
+struct EmbedChip: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    let systemImage: String
+    let title: String
+    var detail: String?
+    var isError = false
+    var help: String?
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.system(size: max(9, style.fontSize - 3), weight: .semibold))
+                    .foregroundStyle(theme[isError ? ThemeKey.chatError : ThemeKey.embedSiteName])
+                Text(title)
+                    .foregroundStyle(theme[isError ? ThemeKey.chatError : ThemeKey.embedTitle])
+                if let detail {
+                    Text(detail)
+                        .foregroundStyle(theme[ThemeKey.embedSiteName])
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(
+                Capsule().fill(hovering ? theme[ThemeKey.chatHoverBackground] : theme[ThemeKey.embedBackground])
+            )
+            .overlay(Capsule().strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(help ?? title)
+        .accessibilityLabel(detail.map { "\(title), \($0)" } ?? title)
+    }
+}
+
+/// Provider name with a brand-colored dot, e.g. "● YouTube".
+struct ProviderBadge: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    let provider: EmbedProvider
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(EmbedColors.color(hex: provider.brandColor) ?? theme[ThemeKey.embedAccent])
+                .frame(width: 7, height: 7)
+            Text(provider.displayName)
+                .font(style.font(size: max(9, style.fontSize - 2), weight: .semibold))
+                .foregroundStyle(theme[ThemeKey.embedSiteName])
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The circular ▶ drawn over video thumbnails.
+struct PlayGlyph: View {
+    @Environment(\.theme) private var theme
+    var diameter: CGFloat = 52
+    var hovering = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(theme[ThemeKey.accent])
+                .shadow(color: theme[ThemeKey.chatBackground].opacity(0.45), radius: 8, y: 2)
+            Image(systemName: "play.fill")
+                .font(.system(size: diameter * 0.38, weight: .bold))
+                .foregroundStyle(theme[ThemeKey.accentForeground])
+                .offset(x: diameter * 0.04)
+        }
+        .frame(width: diameter, height: diameter)
+        .scaleEffect(hovering ? 1.08 : 1)
+        .accessibilityHidden(true)
+    }
+}
+
+/// A round × button drawn over media (close player, etc.).
+struct MediaOverlayButton: View {
+    @Environment(\.theme) private var theme
+    let systemImage: String
+    let label: String
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(theme[ThemeKey.chatForeground])
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(theme[ThemeKey.chatBackground].opacity(hovering ? 0.95 : 0.8)))
+                .overlay(Circle().strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(label)
+        .accessibilityLabel(label)
+    }
+}
+
+// MARK: - Helpers
+
+enum EmbedColors {
+    /// Parses a `#RRGGBB` page or brand color.
+    static func color(hex: String?) -> Color? {
+        guard let hex, let parsed = ThemeColor(hex: hex) else { return nil }
+        return parsed.withAlpha(1).color
+    }
+
+    /// A page's `theme-color` for the card's accent bar, or `embed.accent`
+    /// when the page has none or it would vanish against the card
+    /// (a white theme-color on a light theme, say).
+    static func pageAccent(hex: String?, theme: ResolvedTheme) -> Color {
+        let background = theme.color(ThemeKey.embedBackground)
+        guard let hex, let parsed = ThemeColor(hex: hex)?.withAlpha(1),
+              parsed.contrastRatio(against: background) >= 1.6
+        else { return theme[ThemeKey.embedAccent] }
+        return parsed.color
+    }
+}
+
+enum EmbedActions {
+    static func copy(_ url: URL) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([url as NSURL])
+        pasteboard.setString(url.absoluteString, forType: .string)
+    }
+
+    /// Copies image bytes in their own format plus TIFF for apps that only read that.
+    static func copyImage(data: Data, utType: String?) {
+        let item = NSPasteboardItem()
+        if let utType {
+            item.setData(data, forType: NSPasteboard.PasteboardType(utType))
+        }
+        if let image = NSImage(data: data), let tiff = image.tiffRepresentation {
+            item.setData(tiff, forType: .tiff)
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([item])
+    }
+
+    static func open(_ url: URL) {
+        NSWorkspace.shared.open(url)
+    }
+
+    /// "example.com" for display, without a leading "www.".
+    static func displayHost(_ url: URL) -> String {
+        var host = url.host(percentEncoded: false) ?? url.absoluteString
+        if host.hasPrefix("www.") { host.removeFirst(4) }
+        return host
+    }
+
+    /// The last path component when it looks like a file name, else the host.
+    static func displayName(_ url: URL) -> String {
+        let last = url.lastPathComponent
+        if !last.isEmpty, last != "/", last.contains(".") { return last.removingPercentEncoding ?? last }
+        return displayHost(url)
+    }
+}
+
+/// Context-menu items shared by every embed.
+struct EmbedLinkMenuItems: View {
+    let url: URL
+    let onHide: () -> Void
+
+    var body: some View {
+        Button("Open Link") { EmbedActions.open(url) }
+        Button("Copy Link") { EmbedActions.copy(url) }
+        Divider()
+        Button("Hide Previews") { onHide() }
+    }
+}
