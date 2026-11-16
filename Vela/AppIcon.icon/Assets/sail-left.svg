@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="body" gradientUnits="userSpaceOnUse" x1="478.0" y1="794.0" x2="173.7" y2="168.9"><stop offset="0" stop-color="#A6F6F0" stop-opacity="1"/><stop offset="0.18" stop-color="#4AD4E6" stop-opacity="1"/><stop offset="0.58" stop-color="#22ACDC" stop-opacity="1"/><stop offset="1" stop-color="#2296DA" stop-opacity="1"/></linearGradient>
+<linearGradient id="taut" gradientUnits="userSpaceOnUse" x1="242.0" y1="183.4" x2="105.4" y2="154.4"><stop offset="0" stop-color="#E8FFFC" stop-opacity="0.2"/><stop offset="0.5" stop-color="#E8FFFC" stop-opacity="0.0"/><stop offset="1" stop-color="#062C66" stop-opacity="0.18"/></linearGradient>
+<radialGradient id="sun" gradientUnits="userSpaceOnUse" cx="478.0" cy="814.0" r="445.0"><stop offset="0" stop-color="#F2FFFD" stop-opacity="0.55"/><stop offset="0.35" stop-color="#BFF8F6" stop-opacity="0.2"/><stop offset="1" stop-color="#BFF8F6" stop-opacity="0"/></radialGradient>
+<linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="494.6" y1="659.5" x2="249.8" y2="198.0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/><stop offset="0.5" stop-color="#E8FFFC" stop-opacity="0.7"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.45"/></linearGradient>
+</defs>
+<path d="M 478.0 794.0 L 110.6 163.3 Q 105.4 154.4 115.5 156.5 L 231.9 181.2 Q 242.0 183.4 246.9 192.5 L 494.6 659.5 Z" fill="url(#body)"/>
+<path d="M 478.0 794.0 L 110.6 163.3 Q 105.4 154.4 115.5 156.5 L 231.9 181.2 Q 242.0 183.4 246.9 192.5 L 494.6 659.5 Z" fill="url(#taut)"/>
+<path d="M 478.0 794.0 L 110.6 163.3 Q 105.4 154.4 115.5 156.5 L 231.9 181.2 Q 242.0 183.4 246.9 192.5 L 494.6 659.5 Z" fill="url(#sun)"/>
+<path d="M 494.6 659.5 L 249.8 198.0 L 245.4 200.3 L 492.4 660.6 Z" fill="url(#rim)"/>
+</svg>

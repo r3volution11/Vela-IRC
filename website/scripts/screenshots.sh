@@ -93,7 +93,7 @@ if (( ! ${#only} )) || (( ${only[(Ie)og-image]} )); then
   "$root/scripts/demo-screenshot.sh" "$app" "$work/og-shot.png" \
     --size 1400x900 --snapshot-delay 8 --select "#vela" --theme Palenight --preset modern >/dev/null
   swift "$root/website/scripts/social-card.swift" \
-    "$root/Vela/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" "$work/og-shot.png" "$work/og-image.png"
+    "$root/docs/vela-icon.png" "$work/og-shot.png" "$work/og-image.png"
   sips -s format jpeg -s formatOptions 86 "$work/og-image.png" --out "$public/og-image.jpg" >/dev/null
   printf '%-28s %s\n' "og-image.jpg" "$(du -h "$public/og-image.jpg" | cut -f1)"
 fi

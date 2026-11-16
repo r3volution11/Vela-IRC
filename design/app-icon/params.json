@@ -1,0 +1,49 @@
+{
+  "_doc": "Geometry knobs for Vela 'Horizon Sail'. Canvas 1024x1024, y grows downward. See PARAMS.md.",
+  "limbTop": 796,
+  "planetRadius": 860,
+  "point": [
+    500,
+    794
+  ],
+  "shiftX": -22,
+  "scale": 1.035,
+  "left": {
+    "outerTop": [
+      140,
+      176
+    ],
+    "innerTop": [
+      272,
+      204
+    ]
+  },
+  "notch": [
+    516,
+    664
+  ],
+  "right": {
+    "head": [
+      596,
+      182
+    ],
+    "headCtrl": [
+      724,
+      186
+    ],
+    "clew": [
+      850,
+      140
+    ],
+    "belly1": [
+      900,
+      390
+    ],
+    "belly2": [
+      660,
+      640
+    ]
+  },
+  "fillet": 10,
+  "seams": true
+}

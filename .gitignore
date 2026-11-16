@@ -30,3 +30,6 @@ website/node_modules/
 website/.vitepress/dist/
 website/.vitepress/cache/
 website/_generated/
+
+# Intermediate output of design/app-icon/gen/sails.py
+design/app-icon/gen/derived.json
