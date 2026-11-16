@@ -44,6 +44,12 @@ struct MainWindowView: View {
                     .transition(.move(edge: .trailing))
             }
         }
+        .overlay(alignment: .top) {
+            if let mode = uiState.commandPalette {
+                CommandPaletteView(mode: mode)
+                    .id(mode)
+            }
+        }
         .background(theme[ThemeKey.windowBackground])
         .background(WindowConfigurator(theme: theme))
         .ignoresSafeArea()

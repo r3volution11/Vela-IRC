@@ -26,10 +26,22 @@ public final class UIState {
     public var focusInputToken = 0
     /// Request the message list to scroll to a line id.
     public var scrollTarget: UUID?
+    /// The command palette, when open, and which mode it opened in.
+    public var commandPalette: CommandPaletteMode?
 
     public init() {}
 
     public func focusInput() { focusInputToken &+= 1 }
+}
+
+/// Modes of the VS Code-style command palette.
+public enum CommandPaletteMode: Hashable {
+    /// ⇧⌘P: every command (typing filters; the query has no prefix).
+    case commands
+    /// ⌘P / ⌘K: jump to a channel, conversation or network console.
+    case buffers
+    /// "Select Theme…": arrowing previews each theme live; Esc reverts.
+    case themes
 }
 
 public enum NetworkEditorTarget: Identifiable, Hashable {

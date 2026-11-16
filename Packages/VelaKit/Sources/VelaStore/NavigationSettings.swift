@@ -154,7 +154,7 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
     public static let modern = SettingsPreset(
         id: "modern",
         name: "Modern Chat",
-        summary: "Sidebar with Slack/Discord-style grouped messages, avatars and full inline media.",
+        summary: "Sidebar with grouped messages (one name header per run of messages) and full inline media.",
         systemImage: "bubble.left.and.text.bubble.right",
         values: [
             "navigation.style": "sidebar",
@@ -163,7 +163,7 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "chat.fontSize": 13,
             "chat.lineSpacing": 2,
             "chat.messageSpacing": 8,
-            "chat.showAvatars": true,
+            "chat.showAvatars": false,
             "chat.showJoinPart": "collapse",
             "chat.showTimestamps": true,
             "sidebar.rowHeight": 24,
@@ -189,7 +189,7 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "chat.fontSize": 13,
             "chat.lineSpacing": 2,
             "chat.messageSpacing": 8,
-            "chat.showAvatars": true,
+            "chat.showAvatars": false,
             "chat.showJoinPart": "collapse",
             "memberList.visible": false,
             "media.presentation": "full",

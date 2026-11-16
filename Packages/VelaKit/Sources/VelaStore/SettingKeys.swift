@@ -112,7 +112,7 @@ extension SettingKey where Value == Bool {
         .init("chat.colorNicks", default: true, summary: "Give each nick a stable color.")
     }
     public static var chatShowAvatars: SettingKey<Bool> {
-        .init("chat.showAvatars", default: true, summary: "Show avatars next to message groups.")
+        .init("chat.showAvatars", default: false, summary: "Show initials avatars next to message groups in the grouped layout and member list.")
     }
     public static var chatRenderFormatting: SettingKey<Bool> {
         .init("chat.renderFormatting", default: true,
