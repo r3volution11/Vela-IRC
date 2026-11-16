@@ -92,6 +92,28 @@ extension VelaDatabase {
                 """)
         }
 
+        // ZNC replays its buffer on every connect without msgids, and those
+        // copies used to be stored alongside the lines seen live. Keep the
+        // first of each: same buffer, kind, nick and text within 3 seconds
+        // (`VelaDatabase.copyWindow`).
+        migrator.registerMigration("v2-remove-replayed-copies") { db in
+            try db.execute(sql: """
+                DELETE FROM messages
+                WHERE msgid IS NULL
+                  AND kind IN ('message', 'action', 'notice')
+                  AND EXISTS (
+                      SELECT 1 FROM messages AS earlier
+                      WHERE earlier.network_id = messages.network_id
+                        AND earlier.buffer_name = messages.buffer_name
+                        AND earlier.time BETWEEN messages.time - 3 AND messages.time + 3
+                        AND earlier.seq < messages.seq
+                        AND earlier.kind = messages.kind
+                        AND earlier.nick IS messages.nick
+                        AND earlier.text = messages.text
+                  );
+                """)
+        }
+
         return migrator
     }
 }

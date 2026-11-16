@@ -1303,7 +1303,9 @@ public final class NetworkSession: Identifiable {
     // MARK: Lines
 
     func add(_ line: ChatLine, to buffer: BufferModel) {
-        buffer.append(line, limit: host?.behavior.scrollbackInMemory ?? 1000)
+        // A copy of a line already shown (a bouncer replaying what we saw
+        // live) is neither shown nor stored again.
+        guard buffer.append(line, limit: host?.behavior.scrollbackInMemory ?? 1000) else { return }
         if buffer.kind != .server || line.kind.isConversation {
             enqueue(line.record(networkID: id, bufferName: buffer.id.foldedName))
         }

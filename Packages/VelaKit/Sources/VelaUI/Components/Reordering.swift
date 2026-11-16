@@ -108,6 +108,9 @@ final class ReorderController<ID: Hashable> {
     @ObservationIgnored private var cancelled = false
     @ObservationIgnored private var gestureStart: CGPoint?
     @ObservationIgnored private var keyMonitor: Any?
+    /// The window held still during the drag, and whether it could move.
+    @ObservationIgnored private weak var heldWindow: NSWindow?
+    @ObservationIgnored private var heldWindowWasMovable = true
 
     init(axis: Axis, coordinateSpace: String) {
         self.axis = axis
@@ -116,6 +119,7 @@ final class ReorderController<ID: Hashable> {
 
     isolated deinit {
         removeEscapeMonitor()
+        releaseWindow()
     }
 
     private func animation(_ animation: Animation, reduceMotion: Bool = false) -> Animation? {
@@ -177,6 +181,7 @@ final class ReorderController<ID: Hashable> {
             dragged = id
             gestureStart = start
             installEscapeMonitor()
+            holdWindow()
         }
         move(to: axis == .vertical ? size.height : size.width)
     }
@@ -239,6 +244,23 @@ final class ReorderController<ID: Hashable> {
         target = nil
         layout = nil
         removeEscapeMonitor()
+        releaseWindow()
+    }
+
+    /// Keeps the window from moving while an item is dragged. In the title
+    /// bar, AppKit otherwise takes a drag that's already moving a tab as
+    /// one that moves the window, and the window starts following the
+    /// pointer too.
+    private func holdWindow() {
+        guard heldWindow == nil, let window = NSApp.currentEvent?.window ?? NSApp.keyWindow else { return }
+        heldWindowWasMovable = window.isMovable
+        window.isMovable = false
+        heldWindow = window
+    }
+
+    private func releaseWindow() {
+        heldWindow?.isMovable = heldWindowWasMovable
+        heldWindow = nil
     }
 
     private func installEscapeMonitor() {

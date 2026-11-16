@@ -16,6 +16,8 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 ### Fixed
 
 - The **New** unread marker now appears while the window is in the background, and messages you've already seen no longer appear below it.
+- Messages no longer appear twice after reconnecting to a ZNC bouncer. ZNC replays its buffer without message IDs, and those copies were shown and stored next to the originals; copies already stored are removed on first launch.
+- Dragging a tab in the title bar no longer starts moving the window partway through.
 
 ## 0.1.0 - 2026-11-16
 

@@ -45,17 +45,35 @@ public final class VelaDatabase: Sendable {
 
     // MARK: Messages
 
+    /// How far apart two stored copies of one message without a msgid can
+    /// be stamped: a bouncer's replay of a line seen live carries the
+    /// bouncer's timestamp.
+    public static let copyWindow: TimeInterval = 3
+
     /// Inserts messages, skipping any whose `msgid` already exists in the
-    /// same buffer (or whose `id` already exists). Returns the records that
-    /// were actually inserted, in input order.
+    /// same buffer (or whose `id` already exists), and copies of stored
+    /// lines without a msgid: the same kind, nick and text in the same
+    /// buffer within `copyWindow` (ZNC replays its buffer on every connect
+    /// without msgids). Returns the records that were actually inserted,
+    /// in input order.
     @discardableResult
     public func append(_ messages: [MessageRecord]) async throws -> [MessageRecord] {
         guard !messages.isEmpty else { return [] }
         return try await writer.write { db in
             let statement = try db.cachedStatement(sql: Self.insertMessageSQL)
+            let copyStatement = try db.cachedStatement(sql: Self.storedCopySQL)
             var inserted: [MessageRecord] = []
             inserted.reserveCapacity(messages.count)
             for message in messages {
+                if message.msgid == nil, Self.copyKinds.contains(message.kind) {
+                    let time = message.time.timeIntervalSince1970
+                    let arguments: StatementArguments = [
+                        message.networkID.uuidString, message.bufferName,
+                        time - Self.copyWindow, time + Self.copyWindow,
+                        message.kind, message.nick, message.text,
+                    ]
+                    if try Bool.fetchOne(copyStatement, arguments: arguments) == true { continue }
+                }
                 try statement.execute(arguments: Self.arguments(for: message))
                 if db.changesCount > 0 {
                     inserted.append(message)
@@ -427,6 +445,17 @@ public final class VelaDatabase: Sendable {
     private static func messageColumns(prefix: String) -> String {
         messageColumnNames.map { prefix + $0 }.joined(separator: ", ")
     }
+
+    /// Kinds of lines that can be replayed copies (what people say).
+    private static let copyKinds: Set<String> = ["message", "action", "notice"]
+
+    private static let storedCopySQL = """
+        SELECT EXISTS (
+            SELECT 1 FROM messages
+            WHERE network_id = ? AND buffer_name = ? AND time BETWEEN ? AND ?
+              AND kind = ? AND nick IS ? AND text = ?
+        )
+        """
 
     private static let insertMessageSQL = """
         INSERT OR IGNORE INTO messages (\(messageColumns))

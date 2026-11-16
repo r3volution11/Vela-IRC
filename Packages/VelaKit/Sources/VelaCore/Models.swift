@@ -268,8 +268,12 @@ public final class BufferModel: Identifiable, Hashable {
 
     // MARK: Internal mutation
 
-    func append(_ line: ChatLine, limit: Int) {
-        if let msgid = line.msgid, lines.suffix(200).contains(where: { $0.msgid == msgid }) { return }
+    /// Adds a line in time order. Returns false, adding nothing, for a
+    /// copy of a line already here (see `isCopy(_:of:)`).
+    @discardableResult
+    func append(_ line: ChatLine, limit: Int) -> Bool {
+        if let msgid = line.msgid, lines.suffix(200).contains(where: { $0.msgid == msgid }) { return false }
+        if line.isHistory, line.msgid == nil, containsCopy(of: line) { return false }
         if let last = lines.last, last.time > line.time {
             insertSorted([line])
         } else {
@@ -279,20 +283,65 @@ public final class BufferModel: Identifiable, Hashable {
             lines.removeFirst(lines.count - limit)
             hasMoreHistory = true
         }
+        return true
     }
 
-    /// Merges history lines (any order), skipping duplicates by msgid or id.
+    /// Merges lines (any order), skipping lines already here (by id or
+    /// msgid) and, for history, copies of them (see `isCopy(_:of:)`),
+    /// including copies within `newLines`. Live lines that merely arrive
+    /// out of order are never taken for copies.
     func insertSorted(_ newLines: [ChatLine]) {
         guard !newLines.isEmpty else { return }
         let knownMsgids = Set(lines.compactMap(\.msgid))
         let knownIDs = Set(lines.map(\.id))
-        let fresh = newLines.filter { line in
-            if knownIDs.contains(line.id) { return false }
-            if let msgid = line.msgid, knownMsgids.contains(msgid) { return false }
-            return true
+        var fresh: [ChatLine] = []
+        for line in newLines.sorted(by: { $0.time < $1.time }) {
+            if knownIDs.contains(line.id) { continue }
+            if let msgid = line.msgid {
+                if knownMsgids.contains(msgid) { continue }
+            } else if line.isHistory, containsCopy(of: line) || fresh.reversed().prefix(while: { line.time.timeIntervalSince($0.time) <= Self.copyWindow }).contains(where: { Self.isCopy(line, of: $0) }) {
+                continue
+            }
+            fresh.append(line)
         }
         guard !fresh.isEmpty else { return }
         lines = (lines + fresh).sorted { $0.time < $1.time }
+    }
+
+    // MARK: Copies
+
+    /// How far apart two copies of one message can be stamped. A bouncer
+    /// replaying what it buffered (ZNC sends no msgids) stamps each line
+    /// with its own clock, and our own lines were stamped locally.
+    nonisolated static let copyWindow = VelaDatabase.copyWindow
+
+    /// Whether `line` repeats `other`: something said (not an event) by the
+    /// same nick with the same text, stamped within `copyWindow`. Lines
+    /// that both have msgids are only ever matched by msgid.
+    nonisolated static func isCopy(_ line: ChatLine, of other: ChatLine) -> Bool {
+        guard line.kind.isConversation, line.kind == other.kind,
+              line.msgid == nil || other.msgid == nil,
+              line.nick == other.nick, line.text == other.text else { return false }
+        return abs(line.time.timeIntervalSince(other.time)) <= copyWindow
+    }
+
+    /// Whether a line here is a copy of `line`. Lines are in time order, so
+    /// only those within `copyWindow` of it are compared.
+    func containsCopy(of line: ChatLine) -> Bool {
+        guard line.kind.isConversation else { return false }
+        let start = line.time.addingTimeInterval(-Self.copyWindow)
+        // First line at or after `start`.
+        var low = 0, high = lines.count
+        while low < high {
+            let mid = (low + high) / 2
+            if lines[mid].time < start { low = mid + 1 } else { high = mid }
+        }
+        var index = low
+        while index < lines.count, lines[index].time.timeIntervalSince(line.time) <= Self.copyWindow {
+            if Self.isCopy(line, of: lines[index]) { return true }
+            index += 1
+        }
+        return false
     }
 
     func setReaction(msgid: String, nick: String, emoji: String, active: Bool) {
