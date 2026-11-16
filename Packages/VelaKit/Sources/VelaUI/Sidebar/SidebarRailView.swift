@@ -102,7 +102,7 @@ struct SidebarRailView: View {
                                 section(child, siblings: childIDs)
                                     .background { networkLift(child.id) }
                             }
-                            .zIndex(networkReorder.isDragging(child.id) || holdsDraggedBuffer(child) ? 1 : 0)
+                            .zIndex(networkReorder.isMoving(child.id) || holdsDraggedBuffer(child) ? 1 : 0)
                         }
                     }
                     .reorderPart(of: group.id, in: networkReorder, part: "children")
@@ -181,12 +181,12 @@ struct SidebarRailView: View {
     /// over its neighbours (the dragged item and its shadow overlap them).
     private func holdsDrag(_ group: SidebarNetworkGroup) -> Bool {
         let networks = [group.network] + group.children
-        if let dragged = networkReorder.dragged, networks.contains(where: { $0.id == dragged }) { return true }
+        if let moving = networkReorder.moving, networks.contains(where: { $0.id == moving }) { return true }
         return networks.contains(where: holdsDraggedBuffer)
     }
 
     private func holdsDraggedBuffer(_ session: NetworkSession) -> Bool {
-        bufferReorder.dragged?.networkID == session.id
+        bufferReorder.moving?.networkID == session.id
     }
 
     /// Move Up/Down from VoiceOver or Full Keyboard Access.

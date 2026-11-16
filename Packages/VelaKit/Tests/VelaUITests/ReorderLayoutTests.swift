@@ -49,6 +49,26 @@ struct ReorderLayoutTests {
         #expect(partial.proposedIndex(for: "c", translation: -23) == 1)
     }
 
+    @Test func droppedItemGlidesExactlyIntoItsNewSlot() {
+        // a → index 2: it ends against c's far edge (c moves up by a's 22).
+        #expect(layout.finalOffset(of: "a", to: 2) == 44)
+        // d → index 1: it takes b's place.
+        #expect(layout.finalOffset(of: "d", to: 1) == -44)
+        #expect(layout.finalOffset(of: "b", to: 1) == nil)
+
+        // Variable widths: tab 1 (80 wide) after tab 3 lands at 228 - 80.
+        let tabs = ReorderLayout(ids: [1, 2, 3], spans: [1: 0...80, 2: 84...124, 3: 128...228])
+        #expect(tabs.finalOffset(of: 1, to: 2) == 148)
+        #expect(tabs.finalOffset(of: 3, to: 0) == -128)
+
+        // Sidebar sections: the first has a smaller top inset (2) than the
+        // rest (10), so it swaps with the next. The offsets still land
+        // where the new layout puts each one.
+        let sections = ReorderLayout(ids: ["A", "B"], spans: ["A": 2...42, "B": 53...83])
+        #expect(sections.finalOffset(of: "A", to: 1) == 41)   // new top: 2 + 30 + 1 + 10 = 43
+        #expect(sections.offset(of: "B", dragging: "A", to: 1) == -51)   // new top: 2
+    }
+
     @Test func variableWidthTabs() {
         // Tabs 0…80, 84…124, 128…228 (4pt gaps).
         let tabs = ReorderLayout(ids: [1, 2, 3], spans: [1: 0...80, 2: 84...124, 3: 128...228])

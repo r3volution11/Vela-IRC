@@ -161,7 +161,7 @@ struct TabReorder<ID: Hashable> {
         controller.isDragging(id) || group.map { controller.isDragging($0) } == true
     }
 
-    fileprivate var isRaised: Bool {
+    var isRaised: Bool {
         isLifted || (lastDragged != nil && (lastDragged == id || lastDragged == group))
     }
 }
@@ -194,7 +194,6 @@ extension View {
                     item
                 }
             }
-            .zIndex(reorder.isRaised ? 1 : 0)
         } else {
             self
         }

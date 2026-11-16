@@ -40,7 +40,7 @@ struct ChannelTabRow: View {
         // Mid-drag, the tabs sliding under the pointer aren't being pointed at.
         let hoveredID = reorder.isDragging ? nil : interaction.hovered?.bufferID
         let separated = TabDrawOrder.separated(drawnOrder(ids, groups: groups)) { id in
-            id != selectedID && id != hoveredID && !reorder.isDragging(id)
+            id != selectedID && id != hoveredID && !reorder.isMoving(id)
         }
         let shortcutTargets = TabActions.shortcutTargets(in: session).map(\.id)
 
@@ -85,6 +85,9 @@ struct ChannelTabRow: View {
                         .tabReorderItem(role)
                         .tabScrollID(buffer.id)
                         .transition(tabTransition)
+                        // Outermost, or the row doesn't see it: a lifted tab
+                        // draws over the tabs it passes.
+                        .zIndex(role?.isRaised == true ? 1 : 0)
                     }
                     TabAddMenu(session: session, height: metrics.height, palette: palette)
                         .padding(.leading, metrics.gap == 0 ? 4 : 2)
@@ -124,7 +127,7 @@ struct ChannelTabRow: View {
     /// The tabs as drawn: mid-drag, the dragged one in the slot it would
     /// land in.
     private func drawnOrder(_ ids: [BufferID], groups: [BufferKind: [BufferID]]) -> [BufferID] {
-        guard let dragged = reorder.dragged, let target = reorder.target,
+        guard let dragged = reorder.moving, let target = reorder.target,
               let siblings = groups.values.first(where: { $0.contains(dragged) }) else { return ids }
         return TabDrawOrder.order(ids, siblings: siblings, dragged: dragged, target: target) { id in
             siblings.contains(id) ? id : nil
@@ -278,6 +281,7 @@ struct ServerTabRow: View {
                         .tabReorderItem(role)
                         .tabScrollID(session.id)
                         .transition(reduceMotion ? .opacity : .scale(scale: 0.7).combined(with: .opacity))
+                        .zIndex(role?.isRaised == true ? 1 : 0)
                     }
                     if !isSegmented {
                         TabAddNetworkButton(height: metrics.height, palette: palette)
@@ -355,7 +359,7 @@ struct ServerTabRow: View {
     /// The networks as drawn: mid-drag, the dragged one (with a bouncer's
     /// networks) in the slot it would land in.
     private func drawnOrder(_ ids: [UUID], roles: [UUID: TabReorder<UUID>]) -> [UUID] {
-        guard let dragged = reorder.dragged, let target = reorder.target,
+        guard let dragged = reorder.moving, let target = reorder.target,
               let siblings = roles[dragged]?.siblings else { return ids }
         return TabDrawOrder.order(ids, siblings: siblings, dragged: dragged, target: target) { id in
             if siblings.contains(id) { return id }

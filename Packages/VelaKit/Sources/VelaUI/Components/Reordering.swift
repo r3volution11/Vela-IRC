@@ -63,6 +63,16 @@ struct ReorderLayout<ID: Hashable> {
         return 0
     }
 
+    /// How far `dragged` must move from its slot to sit exactly where the
+    /// move to `target` puts it: against the far edge of the last sibling
+    /// it passes. Nil when that sibling hasn't been laid out.
+    func finalOffset(of dragged: ID, to target: Int) -> CGFloat? {
+        guard let from = ids.firstIndex(of: dragged), let span = spans[dragged],
+              ids.indices.contains(target), target != from,
+              let passed = spans[ids[target]] else { return nil }
+        return from < target ? passed.upperBound - span.upperBound : passed.lowerBound - span.lowerBound
+    }
+
     /// Keeps the dragged item within the siblings' overall span.
     func clampedTranslation(_ translation: CGFloat, for dragged: ID) -> CGFloat {
         guard let span = spans[dragged] else { return translation }
@@ -96,7 +106,11 @@ final class ReorderController<ID: Hashable> {
     /// content that scrolls, so frames don't change as it scrolls.
     let coordinateSpace: String
 
+    /// The item held by the pointer (drawn lifted).
     private(set) var dragged: ID?
+    /// The item drawn away from its slot: the dragged one, then, once it's
+    /// let go, the one gliding into its new slot.
+    private(set) var moving: ID?
     private(set) var translation: CGFloat = 0
     private(set) var target: Int?
 
@@ -108,6 +122,8 @@ final class ReorderController<ID: Hashable> {
     @ObservationIgnored private var cancelled = false
     @ObservationIgnored private var gestureStart: CGPoint?
     @ObservationIgnored private var keyMonitor: Any?
+    /// The move to make once the dropped item has glided into its slot.
+    @ObservationIgnored private var pendingMove: (() -> Void)?
 
     init(axis: Axis, coordinateSpace: String) {
         self.axis = axis
@@ -126,14 +142,18 @@ final class ReorderController<ID: Hashable> {
 
     func isDragging(_ id: ID) -> Bool { dragged == id }
 
+    /// Whether `id` is drawn away from its slot (dragged or settling); it
+    /// should draw above its siblings.
+    func isMoving(_ id: ID) -> Bool { moving == id }
+
     /// The offset to draw item `id`'s views at.
     func offset(for id: ID) -> CGSize {
-        guard let dragged, let layout else { return .zero }
+        guard let moving, let layout else { return .zero }
         let distance: CGFloat
-        if id == dragged {
+        if id == moving {
             distance = translation
         } else if let target {
-            distance = layout.offset(of: id, dragging: dragged, to: target)
+            distance = layout.offset(of: id, dragging: moving, to: target)
         } else {
             distance = 0
         }
@@ -171,10 +191,13 @@ final class ReorderController<ID: Hashable> {
         }
         if dragged != id {
             guard siblings.count > 1, siblings.contains(id) else { return }
+            // Grabbed again before the last drop finished settling.
+            finishPendingMove()
             var spans: [ID: ClosedRange<CGFloat>] = [:]
             for sibling in siblings { spans[sibling] = span(of: sibling) }
             layout = ReorderLayout(ids: siblings, spans: spans)
             dragged = id
+            moving = id
             gestureStart = start
             installEscapeMonitor()
         }
@@ -204,15 +227,49 @@ final class ReorderController<ID: Hashable> {
 
     /// Ends the drag. Unless it was cancelled or went nowhere, `commit`
     /// receives the item and its new index among its siblings and should
-    /// move it in the model; it runs in the same animation that settles
-    /// the dragged view, so the item glides into its slot.
-    func end(reduceMotion: Bool = false, commit: (ID, Int) -> Void) {
+    /// move it in the model.
+    ///
+    /// The drop happens in two steps, so nothing moves in two ways at once.
+    /// First the item glides into the slot it's moving to by its offset
+    /// alone (its siblings already sit in theirs). Then the model moves it,
+    /// with animations off: the new layout puts every view exactly where
+    /// it's already drawn, and the offsets go back to zero unseen. Moving
+    /// the model while animating the offsets back makes SwiftUI animate the
+    /// new layout but not the offsets, and the item wobbles into place.
+    func end(reduceMotion: Bool = false, commit: @escaping (ID, Int) -> Void) {
         defer { cancelled = false }
         guard let dragged else { return }
-        let from = layout?.ids.firstIndex(of: dragged)
-        let to = target
-        withAnimation(animation(.snappy(duration: 0.22), reduceMotion: reduceMotion)) {
-            if !cancelled, let from, let to, from != to { commit(dragged, to) }
+        removeEscapeMonitor()
+        let settle = animation(.smooth(duration: 0.22), reduceMotion: reduceMotion)
+        guard !cancelled, let layout, let from = layout.ids.firstIndex(of: dragged), let to = target, from != to else {
+            withAnimation(settle) { reset() }
+            return
+        }
+        guard let settle, let final = layout.finalOffset(of: dragged, to: to) else {
+            withAnimation(settle) {
+                commit(dragged, to)
+                reset()
+            }
+            return
+        }
+        pendingMove = { commit(dragged, to) }
+        withAnimation(settle, completionCriteria: .logicallyComplete) {
+            self.dragged = nil
+            translation = final
+        } completion: { [weak self] in
+            self?.finishPendingMove()
+        }
+    }
+
+    /// Makes the move a drop is settling into, with animations off (see
+    /// `end(reduceMotion:commit:)`).
+    private func finishPendingMove() {
+        guard let move = pendingMove else { return }
+        pendingMove = nil
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            move()
             reset()
         }
     }
@@ -222,19 +279,25 @@ final class ReorderController<ID: Hashable> {
     func cancel() {
         guard dragged != nil else { return }
         cancelled = true
-        withAnimation(animation(.snappy(duration: 0.22))) { reset() }
+        withAnimation(animation(.smooth(duration: 0.22))) { reset() }
     }
 
     /// Ends the drag without moving anything, when its gesture can't end
-    /// it: the dragged view went away, or the items changed under it.
+    /// it: the dragged view went away, or the items changed under it. A
+    /// drop that's settling is completed instead; it was let go.
     func abandon() {
+        if pendingMove != nil {
+            finishPendingMove()
+            return
+        }
         guard dragged != nil || cancelled else { return }
         cancelled = false
-        withAnimation(animation(.snappy(duration: 0.22))) { reset() }
+        withAnimation(animation(.smooth(duration: 0.22))) { reset() }
     }
 
     private func reset() {
         dragged = nil
+        moving = nil
         translation = 0
         target = nil
         layout = nil
@@ -272,8 +335,10 @@ extension View {
         isEnabled: Bool = true,
         onMove: @escaping (ID, Int) -> Void
     ) -> some View {
-        reorderPart(of: id, in: controller, part: "handle")
-            .reorderHandle(id, siblings: siblings, in: controller, isEnabled: isEnabled, onMove: onMove)
+        // The part goes outside the handle: its z-index only reaches the
+        // container from the outermost modifier.
+        reorderHandle(id, siblings: siblings, in: controller, isEnabled: isEnabled, onMove: onMove)
+            .reorderPart(of: id, in: controller, part: "handle")
     }
 
     /// `reorderable(_:…)`'s drag gesture without its movement, for an item
@@ -292,7 +357,9 @@ extension View {
     }
 
     /// Makes this view part of item `id`: it moves with the item and counts
-    /// toward its frame (a network section's channel rows, say).
+    /// toward its frame (a network section's channel rows, say). Its
+    /// z-index (the moving item draws above its siblings) only reaches the
+    /// container when nothing else wraps it, so apply it last.
     func reorderPart<ID: Hashable>(of id: ID, in controller: ReorderController<ID>, part: String) -> some View {
         modifier(ReorderPartModifier(id: id, controller: controller, part: part))
     }
@@ -327,7 +394,7 @@ private struct ReorderHandleModifier<ID: Hashable>: ViewModifier {
             // Its gesture won't report an end once it's gone, which would
             // leave the controller dragging (and holding on to Escape).
             .onDisappear {
-                if controller.isDragging(id) { controller.abandon() }
+                if controller.isMoving(id) { controller.abandon() }
             }
     }
 }
@@ -347,7 +414,7 @@ private struct ReorderPartModifier<ID: Hashable>: ViewModifier {
             }
             .onDisappear { controller.removeFrame(of: id, part: part) }
             .offset(controller.offset(for: id))
-            .zIndex(controller.isDragging(id) ? 1 : 0)
+            .zIndex(controller.isMoving(id) ? 1 : 0)
     }
 }
 
