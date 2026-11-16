@@ -83,9 +83,6 @@ public struct MediaPolicy: Sendable, Hashable {
     /// channel cannot make Vela send requests into the user's LAN.
     public var allowPrivateNetworkHosts: Bool = false
 
-    /// Only read by the deprecated `permitsAutomaticPreview(of:)`.
-    private var legacyLoadVideoEmbeds = true
-
     public init(
         autoLoad: Bool = true,
         showLinkCards: Bool = true,
@@ -215,49 +212,7 @@ public struct MediaPolicy: Sendable, Hashable {
         key.autoLoad = true
         key.showLinkCards = true
         key.imagesAllowed = true
-        key.legacyLoadVideoEmbeds = true
         return key
-    }
-
-    // MARK: - Deprecated (removed once VelaCore/VelaUI use PreviewDecider)
-
-    /// Show YouTube/Vimeo/Twitch/Streamable facades.
-    @available(*, deprecated, message: "Use PreviewLayout.videoStyle")
-    public var loadVideoEmbeds: Bool {
-        get { legacyLoadVideoEmbeds }
-        set { legacyLoadVideoEmbeds = newValue }
-    }
-
-    /// The domains with a "block" rule. Setting replaces those rules.
-    @available(*, deprecated, message: "Use siteRules")
-    public var blockedDomains: [String] {
-        get { siteRules.domains(with: .block) }
-        set {
-            for domain in siteRules.domains(with: .block) { siteRules[domain] = nil }
-            for domain in newValue { siteRules[domain] = .block }
-        }
-    }
-
-    /// The domains with an "allow" rule. Setting replaces those rules; a
-    /// domain that also has a block rule stays blocked.
-    @available(*, deprecated, message: "Use siteRules")
-    public var allowedDomains: [String] {
-        get { siteRules.domains(with: .allow) }
-        set {
-            for domain in siteRules.domains(with: .allow) { siteRules[domain] = nil }
-            for domain in newValue where siteRules[domain] != .block { siteRules[domain] = .allow }
-        }
-    }
-
-    /// Whether a preview for `url` should be fetched and shown without a click.
-    @available(*, deprecated, message: "Use PreviewDecider.decide")
-    public func permitsAutomaticPreview(of url: URL) -> Bool {
-        guard autoLoad, allows(url) else { return false }
-        switch MediaClassifier.classify(url) {
-        case .image(let media), .video(let media): return allowsImage(media)
-        case .embed: return legacyLoadVideoEmbeds
-        case .page: return showLinkCards
-        }
     }
 
     // MARK: - Private networks

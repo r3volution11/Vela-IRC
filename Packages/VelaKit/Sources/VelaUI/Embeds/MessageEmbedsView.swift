@@ -174,9 +174,6 @@ private extension MediaClassification {
 
 /// The view a link's `PreviewDecision` calls for, with what it draws.
 /// Kept apart from the views so the mapping is testable.
-///
-/// Until the Standard card arrives, `card(.standard)` draws the full card
-/// (`LinkCardView` decides), like `card(.large)`.
 enum EmbedPresentation: Hashable {
     /// Nothing, taking no space: not previewed, still fetching, or the fetch failed.
     case nothing

@@ -164,6 +164,9 @@ struct RemoteImageView<Placeholder: View>: View {
     let policy: MediaPolicy
     var contentMode: ContentMode = .fill
     var onLoad: ((CGSize) -> Void)?
+    /// Called when the image can't be loaded or decoded (not when the task
+    /// is cancelled), so a layout that reserved room for it can drop it.
+    var onFailure: (() -> Void)?
     @ViewBuilder var placeholder: () -> Placeholder
 
     @State private var image: CGImage?
@@ -174,6 +177,7 @@ struct RemoteImageView<Placeholder: View>: View {
         policy: MediaPolicy,
         contentMode: ContentMode = .fill,
         onLoad: ((CGSize) -> Void)? = nil,
+        onFailure: (() -> Void)? = nil,
         @ViewBuilder placeholder: @escaping () -> Placeholder
     ) {
         self.url = url
@@ -181,6 +185,7 @@ struct RemoteImageView<Placeholder: View>: View {
         self.policy = policy
         self.contentMode = contentMode
         self.onLoad = onLoad
+        self.onFailure = onFailure
         self.placeholder = placeholder
         _image = State(initialValue: EmbedImagePipeline.memoizedStill(url, maxPixelSize: maxPixelSize, policy: policy))
     }
@@ -216,11 +221,14 @@ struct RemoteImageView<Placeholder: View>: View {
                 return
             }
             // Failures keep the placeholder; thumbnails and favicons are optional.
-            guard let result = try? await EmbedImagePipeline.still(url, maxPixelSize: maxPixelSize, policy: policy) else {
-                return
+            do {
+                let result = try await EmbedImagePipeline.still(url, maxPixelSize: maxPixelSize, policy: policy)
+                image = result.image
+                onLoad?(result.info.pixelSize)
+            } catch {
+                guard !Task.isCancelled, !(error is CancellationError) else { return }
+                onFailure?()
             }
-            image = result.image
-            onLoad?(result.info.pixelSize)
         }
     }
 }

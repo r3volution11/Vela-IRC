@@ -35,7 +35,6 @@ public struct ChatStyle: Equatable {
     public var sidebarShowUnreadCounts = true
     /// Render chat text in the monospace font (Classic preset).
     public var monospace = false
-    public var mediaPresentation: MediaPresentation = .full
 
     // Navigation
     public var navigationStyle: NavigationStyle = .sidebar
@@ -83,7 +82,6 @@ public struct ChatStyle: Equatable {
         sidebarFontSize = settings[.sidebarFontSize]
         sidebarShowUnreadCounts = settings[.sidebarShowUnreadCounts]
         monospace = settings[.chatMonospace]
-        mediaPresentation = settings[.mediaPresentation]
         navigationStyle = settings[.navigationStyle]
         tabPlacement = settings[.tabsPlacement]
         tabRoundness = settings[.tabsRoundness]

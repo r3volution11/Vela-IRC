@@ -30,14 +30,6 @@ public enum ServerTabRowMode: String, Codable, Sendable, CaseIterable, SettingVa
     case always
 }
 
-/// How much room inline previews take.
-public enum MediaPresentation: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
-    /// Discord-style cards, full-width images and video players.
-    case full
-    /// One-line link titles and small thumbnails; players open on demand.
-    case compact
-}
-
 // MARK: Keys
 
 extension SettingKey where Value == NavigationStyle {
@@ -58,13 +50,6 @@ extension SettingKey where Value == ServerTabRowMode {
     public static var tabsServerRow: SettingKey<ServerTabRowMode> {
         .init("tabs.serverRow", default: .auto,
               summary: "Show the server tab row always, or only when connected to more than one network (auto).")
-    }
-}
-
-extension SettingKey where Value == MediaPresentation {
-    public static var mediaPresentation: SettingKey<MediaPresentation> {
-        .init("media.presentation", default: .full,
-              summary: "Inline preview size: full (cards, large images, players) or compact (title lines and thumbnails).")
     }
 }
 
@@ -103,7 +88,6 @@ enum NavigationSettingsCatalog {
             SettingKey.tabsShowUnreadBadges.descriptor,
             SettingKey.tabsShowCloseButtons.descriptor,
             SettingKey.chatMonospace.descriptor,
-            SettingKey.mediaPresentation.descriptor,
         ]
     }
 }
@@ -146,15 +130,16 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "sidebar.rowHeight": 20,
             "sidebar.fontSize": 12,
             "memberList.visible": true,
-            "media.presentation": "compact",
-            "media.loadVideoEmbeds": false,
+            "media.linkPreviewSize": "minimal",
+            "media.videos": "compact",
+            "media.imageSize": "thumbnail",
         ]
     )
 
     public static let modern = SettingsPreset(
         id: "modern",
         name: "Modern Chat",
-        summary: "Vela's defaults: sidebar, grouped messages (one name header per run of messages) and full inline media.",
+        summary: "Vela's defaults: sidebar, grouped messages (one name header per run of messages), link previews with thumbnails and inline video players.",
         systemImage: "bubble.left.and.text.bubble.right",
         values: [
             "navigation.style": "sidebar",
@@ -169,8 +154,9 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "sidebar.rowHeight": 22,
             "sidebar.fontSize": 12,
             "memberList.visible": true,
-            "media.presentation": "full",
-            "media.loadVideoEmbeds": true,
+            "media.linkPreviewSize": "standard",
+            "media.videos": "player",
+            "media.imageSize": "full",
         ]
     )
 
@@ -192,15 +178,16 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "chat.showAvatars": false,
             "chat.showJoinPart": "collapse",
             "memberList.visible": false,
-            "media.presentation": "full",
-            "media.loadVideoEmbeds": true,
+            "media.linkPreviewSize": "standard",
+            "media.videos": "player",
+            "media.imageSize": "full",
         ]
     )
 
     public static let focus = SettingsPreset(
         id: "focus",
         name: "Focus",
-        summary: "Pill tabs in the title bar, compact columns, no avatars or join/part noise, member list hidden and compact previews. Maximum text, minimum chrome.",
+        summary: "Pill tabs in the title bar, compact columns, no avatars or join/part noise, member list hidden, one-line link previews and small images. Maximum text, minimum chrome.",
         systemImage: "text.alignleft",
         values: [
             "navigation.style": "tabs",
@@ -215,8 +202,9 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "chat.showAvatars": false,
             "chat.showJoinPart": "hide",
             "memberList.visible": false,
-            "media.presentation": "compact",
-            "media.loadVideoEmbeds": true,
+            "media.linkPreviewSize": "minimal",
+            "media.videos": "player",
+            "media.imageSize": "thumbnail",
         ]
     )
 
@@ -235,15 +223,22 @@ extension SettingsStore {
     /// count), or nil when the configuration is custom.
     public func matchingPreset() -> SettingsPreset? {
         SettingsPreset.all.first { preset in
-            preset.values.allSatisfy { key, value in
-                let current = self.value(forKey: key) ?? SettingsCatalog.descriptor(forKey: key)?.defaultValue
-                return Self.equivalent(current, value)
+            SettingsPreset.valuesMatch(preset.values) {
+                self.value(forKey: $0) ?? SettingsCatalog.descriptor(forKey: $0)?.defaultValue
             }
         }
     }
+}
 
-    private static func equivalent(_ lhs: JSONValue?, _ rhs: JSONValue) -> Bool {
-        if case .number(let a) = lhs, case .number(let b) = rhs { return abs(a - b) < 0.0001 }
-        return lhs == rhs
+extension SettingsPreset {
+    /// Whether every key in `presetValues` resolves to its value, where
+    /// `resolve` gives the stored value or the default. Numbers compare
+    /// loosely, so a stored `12.0` matches a preset's `12`.
+    static func valuesMatch(_ presetValues: [String: JSONValue], resolving resolve: (String) -> JSONValue?) -> Bool {
+        presetValues.allSatisfy { key, value in
+            let current = resolve(key)
+            if case .number(let a) = current, case .number(let b) = value { return abs(a - b) < 0.0001 }
+            return current == value
+        }
     }
 }

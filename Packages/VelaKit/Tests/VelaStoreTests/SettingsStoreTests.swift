@@ -212,7 +212,7 @@ import VelaFoundation
 @Suite struct SettingsCatalogTests {
     @Test func catalogIsCompleteAndUnique() {
         let keys = SettingKey.allKnownKeys.map(\.key)
-        #expect(keys.count == 59)
+        #expect(keys.count == 57)
         #expect(Set(keys).count == keys.count)
         #expect(keys.allSatisfy { $0.contains(".") })
         #expect(SettingKey.allKnownKeys.allSatisfy { !$0.summary.isEmpty })
@@ -228,6 +228,22 @@ import VelaFoundation
         // Migrated keys are no longer documented.
         #expect(SettingsCatalog.descriptor(forKey: "media.blockedDomains") == nil)
         #expect(SettingsCatalog.descriptor(forKey: "media.allowedDomains") == nil)
+        #expect(SettingsCatalog.descriptor(forKey: "media.presentation") == nil)
+        #expect(SettingsCatalog.descriptor(forKey: "media.loadVideoEmbeds") == nil)
+    }
+
+    @Test func previewSizeKeysAreDocumented() {
+        let expected: [(key: String, default: JSONValue, cases: [JSONValue])] = [
+            ("media.linkPreviewSize", "standard", ["minimal", "standard", "large"]),
+            ("media.videos", "player", ["player", "compact", "off"]),
+            ("media.imageSize", "full", ["full", "thumbnail"]),
+        ]
+        for (key, defaultValue, cases) in expected {
+            let descriptor = SettingsCatalog.descriptor(forKey: key)
+            #expect(descriptor?.defaultValue == defaultValue, "\(key)")
+            #expect(descriptor?.schema["enum"] == .array(cases), "\(key)")
+            #expect(descriptor?.category == "media")
+        }
     }
 
     @Test func jsonSchemaDescribesEveryKey() throws {
@@ -265,6 +281,50 @@ import VelaFoundation
                 #expect(SettingsCatalog.descriptor(forKey: key) != nil, "\(preset.id) sets unknown key \(key)")
             }
         }
+    }
+
+    @Test func presetsSetEveryPreviewSize() {
+        let expected: [String: [String: JSONValue]] = [
+            "classic": ["media.linkPreviewSize": "minimal", "media.videos": "compact", "media.imageSize": "thumbnail"],
+            "modern": ["media.linkPreviewSize": "standard", "media.videos": "player", "media.imageSize": "full"],
+            "tabbed": ["media.linkPreviewSize": "standard", "media.videos": "player", "media.imageSize": "full"],
+            "focus": ["media.linkPreviewSize": "minimal", "media.videos": "player", "media.imageSize": "thumbnail"],
+        ]
+        #expect(Set(SettingsPreset.all.map(\.id)) == Set(expected.keys))
+        for preset in SettingsPreset.all {
+            let media = preset.values.filter { $0.key.hasPrefix("media.") }
+            #expect(media == expected[preset.id], "\(preset.id)")
+            #expect(preset.values["media.presentation"] == nil)
+            #expect(preset.values["media.loadVideoEmbeds"] == nil)
+        }
+    }
+
+    @Test func defaultsMatchModern() throws {
+        let directory = try TemporaryDirectory()
+        defer { directory.cleanup() }
+        let store = SettingsStore(fileURL: directory.file("settings.json"), watchForChanges: false)
+        #expect(store.matchingPreset()?.id == "modern")
+        // Modern's new media values are the defaults, so a reset still matches.
+        store[.mediaVideos] = .compact
+        #expect(store.matchingPreset() == nil)
+        store.reset(.mediaVideos)
+        #expect(store.matchingPreset()?.id == "modern")
+    }
+
+    @Test(arguments: SettingsPreset.all.map(\.id))
+    func everyPresetIsDetectedAfterApplying(_ id: String) throws {
+        let directory = try TemporaryDirectory()
+        defer { directory.cleanup() }
+        let store = SettingsStore(fileURL: directory.file("settings.json"), watchForChanges: false)
+        store.apply(try #require(SettingsPreset.all.first { $0.id == id }))
+        #expect(store.matchingPreset()?.id == id)
+    }
+
+    @Test func numbersMatchLoosely() {
+        #expect(SettingsPreset.valuesMatch(["a": 12]) { _ in .number(12.00001) })
+        #expect(!SettingsPreset.valuesMatch(["a": 12]) { _ in .number(12.1) })
+        #expect(!SettingsPreset.valuesMatch(["a": 12]) { _ in nil })
+        #expect(!SettingsPreset.valuesMatch(["a": "12"]) { _ in .number(12) })
     }
 
     @Test func applyingPresetIsDetectedAndCustomizationBreaksMatch() throws {

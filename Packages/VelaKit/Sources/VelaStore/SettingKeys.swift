@@ -217,9 +217,6 @@ extension SettingKey where Value == Bool {
     public static var mediaShowLinkCards: SettingKey<Bool> {
         .init("media.showLinkCards", default: true, summary: "Show preview cards for links.")
     }
-    public static var mediaLoadVideoEmbeds: SettingKey<Bool> {
-        .init("media.loadVideoEmbeds", default: true, summary: "Show embedded players for video links.")
-    }
     public static var mediaRestrictToAllowed: SettingKey<Bool> {
         .init("media.restrictToAllowed", default: false,
               summary: "Only show previews from sites with an allow or textOnly rule in media.siteRules.")
@@ -360,7 +357,6 @@ public enum SettingsCatalog {
             SettingKey.mediaLinkPreviewSize.descriptor,
             SettingKey.mediaVideos.descriptor,
             SettingKey.mediaImageSize.descriptor,
-            SettingKey.mediaLoadVideoEmbeds.descriptor,
             SettingKey.mediaRestrictToAllowed.descriptor,
             SettingKey.mediaFilterAdultSites.descriptor,
             SettingKey.mediaSiteRules.descriptor,

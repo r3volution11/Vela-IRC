@@ -18,7 +18,12 @@ struct LayoutSchematicConfig: Equatable {
     var colorNicks = true
     var memberList = true
     var monospace = false
-    var mediaPresentation: MediaPresentation = .full
+    var linkPreviewSize: LinkPreviewSize = .standard
+    var videoStyle: VideoEmbedStyle = .player
+    var imageSize: InlineImageSize = .full
+    /// Off: page links get no preview. Videos and images still show.
+    var showLinkCards = true
+    /// Off: no media at all, for illustrations about something else.
     var showMedia = true
 
     init() {}
@@ -38,7 +43,10 @@ struct LayoutSchematicConfig: Equatable {
         colorNicks = read(.chatColorNicks)
         memberList = read(.memberListVisible)
         monospace = read(.chatMonospace)
-        mediaPresentation = read(.mediaPresentation)
+        linkPreviewSize = read(.mediaLinkPreviewSize)
+        videoStyle = read(.mediaVideos)
+        imageSize = read(.mediaImageSize)
+        showLinkCards = read(.mediaShowLinkCards)
     }
 
     init(preset: SettingsPreset, settings: SettingsStore) {
@@ -56,6 +64,8 @@ struct LayoutSchematic: View {
         case messages
         /// One message with a link preview, zoomed in further.
         case media
+        /// One message with a video link, zoomed in further.
+        case video
     }
 
     let config: LayoutSchematicConfig
@@ -87,7 +97,7 @@ private struct SchematicPainter {
         switch scope {
         case .window: CGSize(width: 320, height: 200)
         case .messages: CGSize(width: 220, height: 110)
-        case .media: CGSize(width: 190, height: 100)
+        case .media, .video: CGSize(width: 190, height: 100)
         }
     }
 
@@ -104,10 +114,10 @@ private struct SchematicPainter {
             context.clip(to: Path(roundedRect: bounds, cornerRadius: 8, style: .continuous))
             fill(&context, bounds, ThemeKey.chatBackground)
             drawMessages(in: &context, rect: bounds.insetBy(dx: 10, dy: 9))
-        case .media:
+        case .media, .video:
             context.clip(to: Path(roundedRect: bounds, cornerRadius: 8, style: .continuous))
             fill(&context, bounds, ThemeKey.chatBackground)
-            drawMediaMessage(in: &context, rect: bounds.insetBy(dx: 10, dy: 10))
+            drawMediaMessage(in: &context, rect: bounds.insetBy(dx: 10, dy: 10), video: scope == .video)
         }
     }
 
@@ -327,9 +337,10 @@ private struct SchematicPainter {
                 text(&context, x: x, y: y, width: (rect.maxX - x) * Self.widths[index % Self.widths.count], height: 4, color: bodyText, seed: index)
             }
             y += step
-            if index == 1 && config.showMedia {
+            if let slot = Self.attachmentLines.firstIndex(of: index) {
                 let indent = rect.minX + (config.showTimestamps ? 17 : 0) + 23
-                y += drawEmbed(in: &context, x: indent, y: y, maxWidth: rect.maxX - indent) + 3
+                let height = drawAttachment(slot, in: &context, x: indent, y: y, maxWidth: rect.maxX - indent, maxY: rect.maxY)
+                if height > 0 { y += height + 3 }
             }
             index += 1
         }
@@ -358,8 +369,9 @@ private struct SchematicPainter {
                 text(&context, x: textX, y: y, width: (rect.maxX - textX) * Self.widths[seed % Self.widths.count], height: 4, color: bodyText, seed: seed)
                 y += 7.5
             }
-            if group == 1 && config.showMedia {
-                y += drawEmbed(in: &context, x: textX, y: y + 1, maxWidth: rect.maxX - textX) + 2
+            if group < Self.attachments.count {
+                let height = drawAttachment(group, in: &context, x: textX, y: y + 1, maxWidth: rect.maxX - textX, maxY: rect.maxY)
+                if height > 0 { y += height + 3 }
             }
             y += 7
         }
@@ -384,52 +396,214 @@ private struct SchematicPainter {
                 text(&context, x: textX, y: y, width: (rect.maxX - textX) * Self.widths[index % Self.widths.count], height: 4, color: bodyText, seed: index)
             }
             y += 9.5
-            if index == 1 && config.showMedia {
-                y += drawEmbed(in: &context, x: textX, y: y, maxWidth: rect.maxX - textX) + 3
+            if let slot = Self.attachmentLines.firstIndex(of: index) {
+                let height = drawAttachment(slot, in: &context, x: textX, y: y, maxWidth: rect.maxX - textX, maxY: rect.maxY)
+                if height > 0 { y += height + 3 }
             }
             index += 1
         }
     }
 
-    /// Draws a link preview and returns its height.
-    @discardableResult
-    private func drawEmbed(in context: inout GraphicsContext, x: Double, y: Double, maxWidth: Double, scale: Double = 1) -> Double {
-        if config.mediaPresentation == .compact {
-            let thumb = CGRect(x: x, y: y, width: 8 * scale, height: 8 * scale)
-            fill(&context, thumb, ThemeKey.embedPlaceholderBackground, radius: 1.5 * scale)
-            fill(&context, thumb.insetBy(dx: 2 * scale, dy: 2 * scale), ThemeKey.embedAccent, radius: 1 * scale, opacity: 0.6)
-            bar(&context, x + 11 * scale, y + 2.25 * scale, min(maxWidth - 11 * scale, 72 * scale), 3.5 * scale, color(ThemeKey.chatLink))
-            return 8 * scale
+    // MARK: Media
+
+    private enum Attachment {
+        case video, link, image
+    }
+
+    /// What the window and message-area drawings show under a few messages,
+    /// in order. Each is skipped when it doesn't fit, so a tight layout keeps
+    /// the first and drops the rest.
+    private static let attachments: [Attachment] = [.video, .link, .image]
+    /// The Classic and Columns lines the attachments follow; Grouped puts
+    /// one under each of its first groups.
+    private static let attachmentLines = [1, 5, 8]
+
+    /// Draws attachment `slot` if it fits above `maxY` and returns its height
+    /// (0 when nothing was drawn).
+    private func drawAttachment(_ slot: Int, in context: inout GraphicsContext, x: Double, y: Double, maxWidth: Double, maxY: Double) -> Double {
+        guard config.showMedia, slot < Self.attachments.count else { return 0 }
+        let origin = CGPoint(x: x, y: y)
+        switch Self.attachments[slot] {
+        case .video:
+            // The player is drawn small here so a link preview still fits under it.
+            let scale = config.videoStyle == .player ? 0.6 : 1
+            guard videoHeight(config.videoStyle, maxWidth: maxWidth, scale: scale) <= maxY - y else { return 0 }
+            return drawVideo(config.videoStyle, in: &context, at: origin, maxWidth: maxWidth, scale: scale)
+        case .link:
+            guard config.showLinkCards, linkHeight(config.linkPreviewSize, scale: 1) <= maxY - y else { return 0 }
+            return drawLinkPreview(config.linkPreviewSize, in: &context, at: origin, maxWidth: maxWidth, scale: 1)
+        case .image:
+            guard imageHeight(config.imageSize, scale: 1) <= maxY - y else { return 0 }
+            return drawImage(config.imageSize, in: &context, at: origin, maxWidth: maxWidth, scale: 1)
         }
-        let width = min(maxWidth, 112 * scale)
-        let height = 56 * scale
-        let card = CGRect(x: x, y: y, width: width, height: height)
-        fill(&context, card, ThemeKey.embedBackground, radius: 4 * scale)
-        stroke(&context, card, ThemeKey.embedBorder, radius: 4 * scale, width: 0.6 * scale)
-        fill(&context, CGRect(x: x, y: y, width: 2.5 * scale, height: height), ThemeKey.embedAccent, radius: 1.2 * scale)
-        let inner = x + 7 * scale
-        bar(&context, inner, y + 5 * scale, 26 * scale, 2.75 * scale, color(ThemeKey.embedSiteName))
-        bar(&context, inner, y + 10.5 * scale, min(width - 14 * scale, 64 * scale), 4 * scale, color(ThemeKey.embedTitle))
-        bar(&context, inner, y + 17.5 * scale, min(width - 14 * scale, 84 * scale), 3 * scale, color(ThemeKey.embedDescription).opacity(0.85))
-        let image = CGRect(x: inner, y: y + 24 * scale, width: min(width - 14 * scale, 62 * scale), height: 26 * scale)
-        fill(&context, image, ThemeKey.embedPlaceholderBackground, radius: 2.5 * scale)
-        // A little landscape glyph.
+    }
+
+    /// An embed card's background, border and accent stripe.
+    private func card(_ context: inout GraphicsContext, _ rect: CGRect, radius: Double, scale: Double) {
+        fill(&context, rect, ThemeKey.embedBackground, radius: radius)
+        stroke(&context, rect, ThemeKey.embedBorder, radius: radius, width: 0.6 * scale)
+        fill(&context, CGRect(x: rect.minX, y: rect.minY, width: 2.5 * scale, height: rect.height), ThemeKey.embedAccent, radius: 1.2 * scale)
+    }
+
+    /// An image placeholder with a little landscape glyph.
+    private func picture(_ context: inout GraphicsContext, _ rect: CGRect, radius: Double) {
+        fill(&context, rect, ThemeKey.embedPlaceholderBackground, radius: radius)
+        let width = rect.width, height = rect.height
         var mountain = Path()
-        mountain.move(to: CGPoint(x: image.minX + 6 * scale, y: image.maxY - 5 * scale))
-        mountain.addLine(to: CGPoint(x: image.minX + 20 * scale, y: image.minY + 9 * scale))
-        mountain.addLine(to: CGPoint(x: image.minX + 30 * scale, y: image.maxY - 11 * scale))
-        mountain.addLine(to: CGPoint(x: image.minX + 37 * scale, y: image.minY + 13 * scale))
-        mountain.addLine(to: CGPoint(x: image.maxX - 6 * scale, y: image.maxY - 5 * scale))
+        mountain.move(to: CGPoint(x: rect.minX + width * 0.1, y: rect.maxY - height * 0.19))
+        mountain.addLine(to: CGPoint(x: rect.minX + width * 0.32, y: rect.minY + height * 0.35))
+        mountain.addLine(to: CGPoint(x: rect.minX + width * 0.48, y: rect.maxY - height * 0.42))
+        mountain.addLine(to: CGPoint(x: rect.minX + width * 0.6, y: rect.minY + height * 0.5))
+        mountain.addLine(to: CGPoint(x: rect.maxX - width * 0.1, y: rect.maxY - height * 0.19))
         mountain.closeSubpath()
         context.fill(mountain, with: .color(color(ThemeKey.embedAccent).opacity(0.45)))
+        let sun = min(width, height) * 0.23
         context.fill(
-            Path(ellipseIn: CGRect(x: image.maxX - 15 * scale, y: image.minY + 4 * scale, width: 6 * scale, height: 6 * scale)),
+            Path(ellipseIn: CGRect(x: rect.maxX - width * 0.24 - sun / 2, y: rect.minY + height * 0.15, width: sun, height: sun)),
             with: .color(color(ThemeKey.embedAccent).opacity(0.7))
         )
+    }
+
+    /// The accent ▶ button, like the real player's.
+    private func playButton(_ context: inout GraphicsContext, center: CGPoint, diameter: Double) {
+        let radius = diameter / 2
+        context.fill(
+            Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: diameter, height: diameter)),
+            with: .color(color(ThemeKey.accent))
+        )
+        let side = diameter * 0.38
+        var triangle = Path()
+        triangle.move(to: CGPoint(x: center.x - side * 0.36, y: center.y - side / 2))
+        triangle.addLine(to: CGPoint(x: center.x + side * 0.56, y: center.y))
+        triangle.addLine(to: CGPoint(x: center.x - side * 0.36, y: center.y + side / 2))
+        triangle.closeSubpath()
+        context.fill(triangle, with: .color(color(ThemeKey.accentForeground)))
+    }
+
+    // MARK: Link previews
+
+    private func linkHeight(_ size: LinkPreviewSize, scale: Double) -> Double {
+        switch size {
+        case .minimal: 11 * scale
+        case .standard: 32 * scale
+        case .large: 56 * scale
+        }
+    }
+
+    /// Draws a link preview and returns its height.
+    @discardableResult
+    private func drawLinkPreview(_ size: LinkPreviewSize, in context: inout GraphicsContext, at origin: CGPoint, maxWidth: Double, scale s: Double) -> Double {
+        let x = origin.x, y = origin.y
+        let height = linkHeight(size, scale: s)
+        switch size {
+        case .minimal:
+            // Favicon, site and title on one line, a tiny thumbnail at the end.
+            let row = CGRect(x: x, y: y, width: min(maxWidth, 96 * s), height: height)
+            card(&context, row, radius: 3 * s, scale: s)
+            context.fill(
+                Path(ellipseIn: CGRect(x: x + 5.5 * s, y: row.midY - 2.25 * s, width: 4.5 * s, height: 4.5 * s)),
+                with: .color(color(ThemeKey.embedSiteName).opacity(0.7))
+            )
+            bar(&context, x + 12.5 * s, row.midY - 1.4 * s, 14 * s, 2.75 * s, color(ThemeKey.embedSiteName))
+            let thumb = CGRect(x: row.maxX - 14.5 * s, y: y + 1.75 * s, width: 12 * s, height: height - 3.5 * s)
+            bar(&context, x + 29.5 * s, row.midY - 1.75 * s, thumb.minX - 4 * s - (x + 29.5 * s), 3.5 * s, color(ThemeKey.embedTitle))
+            picture(&context, thumb, radius: 1.5 * s)
+        case .standard:
+            // Text on the left, a 4:3 thumbnail on the right.
+            let box = CGRect(x: x, y: y, width: min(maxWidth, 124 * s), height: height)
+            card(&context, box, radius: 4 * s, scale: s)
+            let thumb = CGRect(x: box.maxX - 36 * s, y: y + 4 * s, width: 32 * s, height: 24 * s)
+            picture(&context, thumb, radius: 2.5 * s)
+            let textX = x + 7 * s
+            let textWidth = thumb.minX - 5 * s - textX
+            bar(&context, textX, y + 5 * s, min(textWidth, 22 * s), 2.75 * s, color(ThemeKey.embedSiteName))
+            bar(&context, textX, y + 10 * s, textWidth * 0.95, 3.75 * s, color(ThemeKey.embedTitle))
+            bar(&context, textX, y + 15.5 * s, textWidth * 0.6, 3.75 * s, color(ThemeKey.embedTitle))
+            bar(&context, textX, y + 22 * s, textWidth * 0.9, 2.75 * s, color(ThemeKey.embedDescription).opacity(0.85))
+            bar(&context, textX, y + 26.5 * s, textWidth * 0.7, 2.75 * s, color(ThemeKey.embedDescription).opacity(0.85))
+        case .large:
+            // Site, title, description and a big image underneath.
+            let box = CGRect(x: x, y: y, width: min(maxWidth, 112 * s), height: height)
+            card(&context, box, radius: 4 * s, scale: s)
+            let inner = x + 7 * s
+            bar(&context, inner, y + 5 * s, 26 * s, 2.75 * s, color(ThemeKey.embedSiteName))
+            bar(&context, inner, y + 10.5 * s, min(box.width - 14 * s, 64 * s), 4 * s, color(ThemeKey.embedTitle))
+            bar(&context, inner, y + 17.5 * s, min(box.width - 14 * s, 84 * s), 3 * s, color(ThemeKey.embedDescription).opacity(0.85))
+            let image = CGRect(x: inner, y: y + 24 * s, width: min(box.width - 14 * s, 62 * s), height: 26 * s)
+            picture(&context, image, radius: 2.5 * s)
+        }
         return height
     }
 
-    private func drawMediaMessage(in context: inout GraphicsContext, rect: CGRect) {
+    // MARK: Videos
+
+    private func playerWidth(maxWidth: Double, scale s: Double) -> Double { min(maxWidth, 100 * s) }
+
+    private func videoHeight(_ style: VideoEmbedStyle, maxWidth: Double, scale s: Double) -> Double {
+        switch style {
+        case .player: 18 * s + (playerWidth(maxWidth: maxWidth, scale: s) - 13 * s) * 9 / 16 + 5 * s
+        case .compact: 11 * s
+        case .off: config.showLinkCards ? linkHeight(config.linkPreviewSize, scale: s) : 0
+        }
+    }
+
+    /// Draws a video embed and returns its height. Off is a link preview.
+    @discardableResult
+    private func drawVideo(_ style: VideoEmbedStyle, in context: inout GraphicsContext, at origin: CGPoint, maxWidth: Double, scale s: Double) -> Double {
+        let x = origin.x, y = origin.y
+        switch style {
+        case .player:
+            // Provider and title, then a 16:9 dark area with ▶.
+            let box = CGRect(x: x, y: y, width: playerWidth(maxWidth: maxWidth, scale: s), height: videoHeight(.player, maxWidth: maxWidth, scale: s))
+            card(&context, box, radius: 4 * s, scale: s)
+            let inner = x + 7 * s
+            fill(&context, CGRect(x: inner, y: y + 4.25 * s, width: 7 * s, height: 3.75 * s), ThemeKey.embedAccent, radius: 1 * s)
+            bar(&context, inner + 10 * s, y + 4.75 * s, min(box.width - 24 * s, 20 * s), 2.75 * s, color(ThemeKey.embedSiteName))
+            bar(&context, inner, y + 10.5 * s, min(box.width - 14 * s, 58 * s), 3.75 * s, color(ThemeKey.embedTitle))
+            let screenWidth = box.width - 13 * s
+            let screen = CGRect(x: inner, y: y + 18 * s, width: screenWidth, height: screenWidth * 9 / 16)
+            // Letterboxing is always black in the app.
+            fill(&context, screen, Color.black, radius: 2.5 * s)
+            playButton(&context, center: CGPoint(x: screen.midX, y: screen.midY), diameter: screen.height * 0.36)
+            return box.height
+        case .compact:
+            // ▶, provider and title on one line, a tiny thumbnail at the end.
+            let row = CGRect(x: x, y: y, width: min(maxWidth, 100 * s), height: videoHeight(.compact, maxWidth: maxWidth, scale: s))
+            card(&context, row, radius: 3 * s, scale: s)
+            playButton(&context, center: CGPoint(x: x + 8.75 * s, y: row.midY), diameter: 7 * s)
+            fill(&context, CGRect(x: x + 15 * s, y: row.midY - 1.75 * s, width: 6 * s, height: 3.5 * s), ThemeKey.embedAccent, radius: 0.9 * s)
+            let thumb = CGRect(x: row.maxX - 14.5 * s, y: y + 1.75 * s, width: 12 * s, height: row.height - 3.5 * s)
+            bar(&context, x + 24 * s, row.midY - 1.75 * s, thumb.minX - 4 * s - (x + 24 * s), 3.5 * s, color(ThemeKey.embedTitle))
+            picture(&context, thumb, radius: 1.5 * s)
+            return row.height
+        case .off:
+            guard config.showLinkCards else { return 0 }
+            return drawLinkPreview(config.linkPreviewSize, in: &context, at: origin, maxWidth: maxWidth, scale: s)
+        }
+    }
+
+    // MARK: Images
+
+    private func imageHeight(_ size: InlineImageSize, scale s: Double) -> Double {
+        switch size {
+        case .full: 40 * s
+        case .thumbnail: 16 * s
+        }
+    }
+
+    @discardableResult
+    private func drawImage(_ size: InlineImageSize, in context: inout GraphicsContext, at origin: CGPoint, maxWidth: Double, scale s: Double) -> Double {
+        let height = imageHeight(size, scale: s)
+        let width = size == .full ? 64 * s : 21 * s
+        picture(&context, CGRect(x: origin.x, y: origin.y, width: min(maxWidth, width), height: height), radius: 3 * s)
+        return height
+    }
+
+    // MARK: Zoomed-in message
+
+    /// One message with a link (or video link) and its preview, then the
+    /// start of the next message.
+    private func drawMediaMessage(in context: inout GraphicsContext, rect: CGRect, video: Bool) {
         var y = rect.minY
         let avatar = CGRect(x: rect.minX, y: y, width: 16, height: 16)
         context.fill(Path(ellipseIn: avatar), with: .color(nickColor(1).opacity(0.35)))
@@ -441,13 +615,33 @@ private struct SchematicPainter {
         text(&context, x: textX, y: y, width: 52, height: 4.5, color: bodyText, seed: 2)
         bar(&context, textX + 56, y, min(rect.maxX - textX - 56, 70), 4.5, color(ThemeKey.chatLink))
         y += 9
-        let height = drawEmbed(in: &context, x: textX, y: y, maxWidth: rect.maxX - textX, scale: config.mediaPresentation == .compact ? 1.25 : 1.15)
-        y += height + 9
+        let origin = CGPoint(x: textX, y: y)
+        let maxWidth = rect.maxX - textX
+        var height = 0.0
+        if video {
+            let scale = switch config.videoStyle {
+            case .player: 0.9
+            case .compact: 1.25
+            case .off: Self.zoomedLinkScale(config.linkPreviewSize)
+            }
+            height = drawVideo(config.videoStyle, in: &context, at: origin, maxWidth: maxWidth, scale: scale)
+        } else if config.showLinkCards {
+            height = drawLinkPreview(config.linkPreviewSize, in: &context, at: origin, maxWidth: maxWidth, scale: Self.zoomedLinkScale(config.linkPreviewSize))
+        }
+        y += height > 0 ? height + 9 : 3
         if y + 5 < rect.maxY {
             let avatar2 = CGRect(x: rect.minX, y: y, width: 16, height: 16)
             context.fill(Path(ellipseIn: avatar2), with: .color(nickColor(3).opacity(0.35)))
             bar(&context, textX, y + 1, 18, 5, nickColor(3))
             text(&context, x: textX, y: y + 10.5, width: rect.maxX - textX - 20, height: 4.5, color: bodyText, seed: 5)
+        }
+    }
+
+    private static func zoomedLinkScale(_ size: LinkPreviewSize) -> Double {
+        switch size {
+        case .minimal: 1.25
+        case .standard: 1.1
+        case .large: 1.15
         }
     }
 }

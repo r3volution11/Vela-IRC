@@ -8,10 +8,10 @@ import VelaTheme
 
 /// A YouTube/Vimeo/Twitch/Streamable video.
 ///
-/// Full: a card with the provider badge, title and author over a thumbnail
-/// facade; clicking ▶ swaps in the real player (a web view) at the video's
-/// aspect ratio, and × collapses it again. Compact: a one-line title row with
-/// ▶ that expands the player underneath.
+/// Player (full): a card with the provider badge, title and author over a
+/// thumbnail facade up to `maxPlayerWidth` wide; clicking ▶ swaps in the real
+/// player (a web view) at the video's aspect ratio, and × collapses it again.
+/// Compact: a one-line title row with ▶ that expands the player underneath.
 ///
 /// Nothing is loaded from the provider until the user clicks play; the
 /// facade only fetches the thumbnail.
@@ -26,8 +26,19 @@ struct VideoEmbedView: View {
     var animateAppearance = false
     let onHide: () -> Void
 
-    static let maxPlayerWidth: CGFloat = 480
-    private static let cardMaxWidth: CGFloat = 520
+    /// Widest a video player (or its facade) gets; 16:9 at this width is 315 tall.
+    static let maxPlayerWidth: CGFloat = 560
+    /// The player plus the card's accent bar and padding.
+    private static let cardMaxWidth: CGFloat = maxPlayerWidth + 4 + 24
+    /// The compact row's cap, the same as a Minimal link card's.
+    private static let compactRowMaxWidth: CGFloat = LinkCardView.maxWidth
+
+    /// The tallest a player gets: at least 315 (16:9 at full width), or the
+    /// images' maximum height if that's taller. Portrait videos (Shorts) get
+    /// more height so they aren't tiny.
+    static func playerMaxHeight(aspectRatio: CGFloat, maxImageHeight: CGFloat) -> CGFloat {
+        aspectRatio < 1 ? max(maxImageHeight, 490) : max(maxImageHeight, 315)
+    }
 
     @State private var isPlaying = false
     @State private var hoveringFacade = false
@@ -38,8 +49,7 @@ struct VideoEmbedView: View {
     }
 
     private var playerMaxHeight: CGFloat {
-        // Portrait videos (Shorts) get more height so they aren't tiny.
-        embed.aspectRatio < 1 ? max(style.maxImageHeight, 420) : max(style.maxImageHeight, 270)
+        Self.playerMaxHeight(aspectRatio: embed.aspectRatio, maxImageHeight: style.maxImageHeight)
     }
 
     private var title: String? {
@@ -194,7 +204,7 @@ struct VideoEmbedView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: Self.cardMaxWidth, alignment: .leading)
+            .frame(maxWidth: Self.compactRowMaxWidth, alignment: .leading)
             .help(isPlaying ? "Close the player" : "Play \(title ?? "video") here")
             .accessibilityLabel("\(isPlaying ? "Close video" : "Play video"): \(title ?? linkURL.absoluteString), \(embed.provider.displayName)")
 

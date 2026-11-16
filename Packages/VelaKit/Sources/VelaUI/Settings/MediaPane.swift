@@ -38,23 +38,64 @@ struct MediaPane: View {
                 .padding(.vertical, 10)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Privacy note: Loading previews contacts the linked site and reveals your IP address to it.")
-                SettingsToggle("Link cards", detail: "Title, description and image for web pages.", isOn: $settings[.mediaShowLinkCards])
-                SettingsToggle("Video players", detail: "Embedded players for YouTube, Vimeo and similar links.", isOn: $settings[.mediaLoadVideoEmbeds])
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Presentation")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(theme[ThemeKey.settingsForeground])
-                    .accessibilityAddTraits(.isHeader)
-                    .padding(.horizontal, 4)
-                HStack(alignment: .top, spacing: 14) {
-                    presentationCard(.full, title: "Full", subtitle: "Cards, large images and players, like Discord or Slack.")
-                    presentationCard(.compact, title: "Compact", subtitle: "One-line titles with small thumbnails; players open on demand.")
+                sectionTitle("Link previews")
+                SettingsCard {
+                    SettingsToggle(
+                        "Show link previews",
+                        detail: "Title, description and image for web pages.",
+                        isOn: $settings[.mediaShowLinkCards]
+                    )
+                }
+                HStack(alignment: .top, spacing: 12) {
+                    linkSizeCard(.minimal, title: "Minimal", subtitle: "One line: site, title and a tiny thumbnail.")
+                    linkSizeCard(.standard, title: "Standard", subtitle: "Title and description beside a thumbnail.")
+                    linkSizeCard(.large, title: "Large", subtitle: "A full card with a large image underneath.")
+                }
+                .padding(.top, 2)
+                .opacity(showsLinkCards ? 1 : 0.6)
+                if !showsLinkCards {
+                    footnote("Sizes apply when link previews are on.")
                 }
             }
 
+            VStack(alignment: .leading, spacing: 8) {
+                sectionTitle("Videos")
+                HStack(alignment: .top, spacing: 12) {
+                    videoStyleCard(.player, title: "Player", subtitle: "A large thumbnail with ▶ that plays in place.")
+                    videoStyleCard(.compact, title: "Compact", subtitle: "One line with ▶; the player opens underneath.")
+                    videoStyleCard(
+                        .off,
+                        title: "Off",
+                        subtitle: showsLinkCards
+                            ? "No player: video links get a link preview."
+                            : "No player. With link previews off, video links stay plain links."
+                    )
+                }
+                // What Off shows is on its card, which follows the link
+                // previews switch.
+                footnote("The player loads from the video site only when you press ▶.")
+            }
+
             SettingsSection("Images") {
+                SettingsSegmentedRow(
+                    title: "Size",
+                    detail: "Thumbnails keep images small; click one to see it full size.",
+                    selection: $settings[.mediaImageSize],
+                    options: [(.full, "Full size"), (.thumbnail, "Thumbnail")]
+                )
+                SettingsSliderRow(
+                    title: "Maximum image height",
+                    detail: showsThumbnails ? "Applies to full-size images." : "Taller images are scaled down to fit.",
+                    value: $settings[.mediaMaxImageHeight],
+                    range: 120...800,
+                    step: 10,
+                    format: SettingsFormat.points
+                )
+                .disabled(showsThumbnails)
+                .opacity(showsThumbnails ? 0.5 : 1)
                 SettingsRow("Largest image to load automatically", detail: "Bigger images show a placeholder you can click.", labelsControl: true) {
                     HStack(spacing: 6) {
                         Stepper(value: $settings[.mediaMaxImageSizeMB], in: 1...100, step: 1) {
@@ -68,14 +109,6 @@ struct MediaPane: View {
                         .accessibilityValue("\(Int(settings[.mediaMaxImageSizeMB])) megabytes")
                     }
                 }
-                SettingsSliderRow(
-                    title: "Maximum image height",
-                    detail: "Taller images are scaled down to fit.",
-                    value: $settings[.mediaMaxImageHeight],
-                    range: 120...800,
-                    step: 10,
-                    format: SettingsFormat.points
-                )
             }
 
             SettingsSection(
@@ -105,6 +138,9 @@ struct MediaPane: View {
         }
     }
 
+    private var showsLinkCards: Bool { app.settings[.mediaShowLinkCards] }
+    private var showsThumbnails: Bool { app.settings[.mediaImageSize] == .thumbnail }
+
     /// The rules editor, then the switch that turns the rules into an allow
     /// list. `app.siteRules` still folds in the older blocked and allowed
     /// domain lists until they're migrated, so those show up here too.
@@ -130,18 +166,74 @@ struct MediaPane: View {
         }
     }
 
-    private func presentationCard(_ presentation: MediaPresentation, title: String, subtitle: String) -> some View {
+    // MARK: Sizes
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(theme[ThemeKey.settingsForeground])
+            .accessibilityAddTraits(.isHeader)
+            .padding(.horizontal, 4)
+    }
+
+    /// Small print under a group, like a section footer.
+    private func footnote(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11.5))
+            .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 4)
+    }
+
+    /// The illustration drawn with the user's theme, in the Modern layout so
+    /// the cards compare only the preview.
+    private func sizePreviewConfig() -> LayoutSchematicConfig {
         var config = LayoutSchematicConfig(settings: app.settings)
-        config.mediaPresentation = presentation
         config.chatLayout = .grouped
         config.monospace = false
-        return SettingsChoiceCard(
+        return config
+    }
+
+    private func linkSizeCard(_ size: LinkPreviewSize, title: String, subtitle: String) -> some View {
+        var config = sizePreviewConfig()
+        config.linkPreviewSize = size
+        // Show the size even while previews are off; the cards are dimmed.
+        config.showLinkCards = true
+        return choiceCard(
             title,
             subtitle: subtitle,
-            isSelected: app.settings[.mediaPresentation] == presentation,
-            action: { withAnimation(.snappy(duration: 0.2)) { app.settings[.mediaPresentation] = presentation } },
+            isSelected: app.settings[.mediaLinkPreviewSize] == size,
+            select: { app.settings[.mediaLinkPreviewSize] = size },
+            preview: LayoutSchematic(config: config, theme: theme, scope: .media)
+        )
+    }
+
+    private func videoStyleCard(_ style: VideoEmbedStyle, title: String, subtitle: String) -> some View {
+        var config = sizePreviewConfig()
+        config.videoStyle = style
+        return choiceCard(
+            title,
+            subtitle: subtitle,
+            isSelected: app.settings[.mediaVideos] == style,
+            select: { app.settings[.mediaVideos] = style },
+            preview: LayoutSchematic(config: config, theme: theme, scope: .video)
+        )
+    }
+
+    private func choiceCard(
+        _ title: String,
+        subtitle: String,
+        isSelected: Bool,
+        select: @escaping () -> Void,
+        preview: LayoutSchematic
+    ) -> some View {
+        SettingsChoiceCard(
+            title,
+            subtitle: subtitle,
+            isSelected: isSelected,
+            action: { withAnimation(.snappy(duration: 0.2)) { select() } },
             preview: {
-                LayoutSchematic(config: config, theme: theme, scope: .media)
+                preview
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(theme[ThemeKey.settingsBorder])

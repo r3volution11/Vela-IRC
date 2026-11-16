@@ -25,7 +25,7 @@ struct DirectVideoView: View {
     var animateAppearance = false
     let onHide: () -> Void
 
-    private static let posterPixelSize = 960
+    private static let posterPixelSize = EmbedImagePipeline.pixelBudget(forPoints: VideoEmbedView.maxPlayerWidth)
 
     @State private var player: AVPlayer?
     @State private var poster: CGImage?
@@ -100,7 +100,7 @@ struct DirectVideoView: View {
             aspectRatio: aspectRatio,
             naturalSize: nil,
             maxWidth: VideoEmbedView.maxPlayerWidth,
-            maxHeight: aspectRatio < 1 ? max(style.maxImageHeight, 420) : max(style.maxImageHeight, 270)
+            maxHeight: VideoEmbedView.playerMaxHeight(aspectRatio: aspectRatio, maxImageHeight: style.maxImageHeight)
         ) {
             ZStack {
                 // Letterboxing behind the video is always black.
@@ -183,7 +183,7 @@ struct DirectVideoView: View {
                 playerArea
             }
         }
-        .frame(maxWidth: 520, alignment: .leading)
+        .frame(maxWidth: VideoEmbedView.maxPlayerWidth, alignment: .leading)
     }
 
     private func play() {

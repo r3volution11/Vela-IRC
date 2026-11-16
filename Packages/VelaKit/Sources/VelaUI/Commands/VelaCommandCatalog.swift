@@ -250,7 +250,27 @@ struct VelaCommandCatalog {
 
     /// Static so tests can build them from a bare settings store.
     static func mediaCommands(_ settings: SettingsStore) -> [VelaCommand] {
-        let presentation = settings[.mediaPresentation]
+        let linkSize = settings[.mediaLinkPreviewSize]
+        let videos = settings[.mediaVideos]
+        let imageSize = settings[.mediaImageSize]
+        func link(_ size: LinkPreviewSize, _ title: String, keywords: [String]) -> VelaCommand {
+            VelaCommand(
+                id: "media.links.\(size.rawValue)", category: .media, title: title,
+                keywords: ["link cards", "embeds", "size"] + keywords, isChecked: linkSize == size
+            ) { settings[.mediaLinkPreviewSize] = size }
+        }
+        func video(_ style: VideoEmbedStyle, _ title: String, keywords: [String]) -> VelaCommand {
+            VelaCommand(
+                id: "media.videos.\(style.rawValue)", category: .media, title: title,
+                keywords: ["youtube", "vimeo", "embeds"] + keywords, isChecked: videos == style
+            ) { settings[.mediaVideos] = style }
+        }
+        func image(_ size: InlineImageSize, _ title: String, keywords: [String]) -> VelaCommand {
+            VelaCommand(
+                id: "media.images.\(size.rawValue)", category: .media, title: title,
+                keywords: ["photos", "size"] + keywords, isChecked: imageSize == size
+            ) { settings[.mediaImageSize] = size }
+        }
         return [
             // The id predates the title: this switches every automatic
             // preview, not just images.
@@ -266,14 +286,14 @@ struct VelaCommandCatalog {
                 id: "media.toggleAdultFilter", category: .media, title: "Hide Adult Site Previews",
                 keywords: ["nsfw", "adult", "porn", "filter", "safe"], isChecked: settings[.mediaFilterAdultSites]
             ) { settings[.mediaFilterAdultSites].toggle() },
-            VelaCommand(
-                id: "media.full", category: .media, title: "Use Full Previews",
-                keywords: ["large", "cards"], isChecked: presentation == .full
-            ) { settings[.mediaPresentation] = .full },
-            VelaCommand(
-                id: "media.compact", category: .media, title: "Use Compact Previews",
-                keywords: ["small", "thumbnails"], isChecked: presentation == .compact
-            ) { settings[.mediaPresentation] = .compact },
+            link(.minimal, "Minimal Link Previews", keywords: ["compact", "small", "one line"]),
+            link(.standard, "Standard Link Previews", keywords: ["medium", "default"]),
+            link(.large, "Large Link Previews", keywords: ["full", "big"]),
+            video(.player, "Play Videos Inline", keywords: ["player", "large", "full"]),
+            video(.compact, "Compact Videos", keywords: ["small", "one line"]),
+            video(.off, "Videos as Links", keywords: ["no player", "off", "disable"]),
+            image(.full, "Full-Size Images", keywords: ["large", "big"]),
+            image(.thumbnail, "Image Thumbnails", keywords: ["small", "compact"]),
         ]
     }
 

@@ -116,4 +116,115 @@ struct MediaCommandTests {
         let images = try #require(PaletteRanker.rows(for: items, query: "inline images", list: .commands).first)
         #expect(images.id == "media.toggleAutoLoad")
     }
+
+    @Test func sizeCommandsReplaceThePresentationPair() {
+        let commands = VelaCommandCatalog.mediaCommands(makeSettings())
+        let ids = commands.map(\.id)
+        #expect(!ids.contains("media.full"))
+        #expect(!ids.contains("media.compact"))
+        let titles = Dictionary(uniqueKeysWithValues: commands.map { ($0.id, $0.paletteTitle) })
+        #expect(titles["media.links.minimal"] == "Media: Minimal Link Previews")
+        #expect(titles["media.links.standard"] == "Media: Standard Link Previews")
+        #expect(titles["media.links.large"] == "Media: Large Link Previews")
+        #expect(titles["media.videos.player"] == "Media: Play Videos Inline")
+        #expect(titles["media.videos.compact"] == "Media: Compact Videos")
+        #expect(titles["media.videos.off"] == "Media: Videos as Links")
+        #expect(titles["media.images.full"] == "Media: Full-Size Images")
+        #expect(titles["media.images.thumbnail"] == "Media: Image Thumbnails")
+    }
+
+    /// The ids of the checked commands among those starting with `prefix`.
+    private func checked(_ prefix: String, in settings: SettingsStore) -> [String] {
+        VelaCommandCatalog.mediaCommands(settings)
+            .filter { $0.id.hasPrefix(prefix) && $0.isChecked == true }
+            .map(\.id)
+    }
+
+    private func perform(_ id: String, in settings: SettingsStore) throws {
+        try #require(VelaCommandCatalog.mediaCommands(settings).first { $0.id == id }).perform()
+    }
+
+    @Test func sizeCommandsCheckTheDefaults() {
+        let settings = makeSettings()
+        #expect(checked("media.links.", in: settings) == ["media.links.standard"])
+        #expect(checked("media.videos.", in: settings) == ["media.videos.player"])
+        #expect(checked("media.images.", in: settings) == ["media.images.full"])
+    }
+
+    @Test func sizeCommandsSetTheirSettingAndMoveTheCheckmark() throws {
+        let settings = makeSettings()
+
+        try perform("media.links.minimal", in: settings)
+        #expect(settings[.mediaLinkPreviewSize] == .minimal)
+        #expect(checked("media.links.", in: settings) == ["media.links.minimal"])
+        try perform("media.links.large", in: settings)
+        #expect(settings[.mediaLinkPreviewSize] == .large)
+        #expect(checked("media.links.", in: settings) == ["media.links.large"])
+
+        try perform("media.videos.compact", in: settings)
+        #expect(settings[.mediaVideos] == .compact)
+        #expect(checked("media.videos.", in: settings) == ["media.videos.compact"])
+        try perform("media.videos.off", in: settings)
+        #expect(settings[.mediaVideos] == .off)
+        #expect(checked("media.videos.", in: settings) == ["media.videos.off"])
+
+        try perform("media.images.thumbnail", in: settings)
+        #expect(settings[.mediaImageSize] == .thumbnail)
+        #expect(checked("media.images.", in: settings) == ["media.images.thumbnail"])
+
+        // Each group is independent of the others.
+        #expect(settings[.mediaLinkPreviewSize] == .large)
+        #expect(settings[.mediaVideos] == .off)
+    }
+
+    @Test func paletteFindsSizeCommandsByName() throws {
+        let items = PaletteSource.commandItems(VelaCommandCatalog.mediaCommands(makeSettings()), history: [])
+        func first(_ query: String) throws -> String {
+            try #require(PaletteRanker.rows(for: items, query: query, list: .commands).first).id
+        }
+        #expect(try first("thumbnail") == "media.images.thumbnail")
+        #expect(try first("compact videos") == "media.videos.compact")
+        #expect(try first("large link") == "media.links.large")
+        #expect(try first("minimal") == "media.links.minimal")
+        let youtube = PaletteRanker.rows(for: items, query: "youtube", list: .commands).map(\.id)
+        #expect(Set(youtube) == ["media.videos.player", "media.videos.compact", "media.videos.off"])
+    }
+}
+
+@Suite("Layout schematic")
+struct LayoutSchematicConfigTests {
+    private func makeSettings() -> SettingsStore {
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "VelaUITests-\(UUID().uuidString)", directoryHint: .isDirectory)
+            .appending(path: "settings.json")
+        return SettingsStore(fileURL: url, watchForChanges: false)
+    }
+
+    @Test func readsMediaSizesFromSettings() {
+        let settings = makeSettings()
+        var config = LayoutSchematicConfig(settings: settings)
+        #expect(config.linkPreviewSize == .standard)
+        #expect(config.videoStyle == .player)
+        #expect(config.imageSize == .full)
+        #expect(config.showLinkCards)
+
+        settings[.mediaLinkPreviewSize] = .large
+        settings[.mediaShowLinkCards] = false
+        config = LayoutSchematicConfig(settings: settings)
+        #expect(config.linkPreviewSize == .large)
+        #expect(!config.showLinkCards)
+    }
+
+    @Test func presetValuesOverrideSettings() {
+        let settings = makeSettings()
+        settings[.mediaLinkPreviewSize] = .large
+        let config = LayoutSchematicConfig(settings: settings, overrides: [
+            "media.linkPreviewSize": "minimal",
+            "media.videos": "compact",
+            "media.imageSize": "thumbnail",
+        ])
+        #expect(config.linkPreviewSize == .minimal)
+        #expect(config.videoStyle == .compact)
+        #expect(config.imageSize == .thumbnail)
+    }
 }

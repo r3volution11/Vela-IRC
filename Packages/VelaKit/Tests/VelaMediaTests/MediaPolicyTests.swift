@@ -218,39 +218,6 @@ import Testing
         #expect(!MediaError.tooLarge.isPolicyRefusal)
     }
 
-    // MARK: Deprecated shims
-
-    @available(*, deprecated)
-    @Test func legacyDomainListsMapToRules() {
-        var policy = MediaPolicy()
-        policy.blockedDomains = ["*.Example.com", "tracker.io"]
-        policy.allowedDomains = ["imgur.com", "tracker.io"]
-        #expect(policy.siteRules.entries == ["example.com": .block, "tracker.io": .block, "imgur.com": .allow])
-        #expect(policy.blockedDomains == ["example.com", "tracker.io"])
-        #expect(policy.allowedDomains == ["imgur.com"])
-
-        policy.blockedDomains = []
-        #expect(policy.siteRules.entries == ["imgur.com": .allow])
-    }
-
-    @available(*, deprecated)
-    @Test func legacyAutomaticPreviewSwitches() {
-        let page = url("https://example.com/article")
-        let video = url("https://youtu.be/dQw4w9WgXcQ")
-        let image = url("https://example.com/cat.png")
-
-        #expect(MediaPolicy().permitsAutomaticPreview(of: page))
-        #expect(!MediaPolicy(autoLoad: false).permitsAutomaticPreview(of: image))
-        #expect(!MediaPolicy(showLinkCards: false).permitsAutomaticPreview(of: page))
-        #expect(MediaPolicy(showLinkCards: false).permitsAutomaticPreview(of: image))
-        var noVideos = MediaPolicy()
-        noVideos.loadVideoEmbeds = false
-        #expect(!noVideos.permitsAutomaticPreview(of: video))
-        #expect(noVideos.permitsAutomaticPreview(of: page))
-        #expect(!MediaPolicy(siteRules: rules(["youtube.com": "block"])).permitsAutomaticPreview(of: video))
-        #expect(!MediaPolicy(siteRules: rules(["example.com": "textOnly"])).permitsAutomaticPreview(of: image))
-    }
-
     @Test func fetchKeyIgnoresDisplaySwitches() {
         let a = MediaPolicy(autoLoad: false, showLinkCards: false, imagesAllowed: false)
         #expect(a.fetchKey == MediaPolicy().fetchKey)

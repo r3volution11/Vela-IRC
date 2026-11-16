@@ -115,6 +115,12 @@ import VelaFoundation
             [:],
             ["media.blockedDomains": strings("x.example"), "media.allowedDomains": strings("x.example", "y.example")],
             ["media.siteRules": .object(["x.example": "allow"]), "media.blockedDomains": strings("x.example")],
+            ["media.presentation": "compact"],
+            ["media.presentation": "full", "media.loadVideoEmbeds": false],
+            ["media.presentation": "compact", "media.loadVideoEmbeds": false, "media.videos": "player"],
+            ["media.loadVideoEmbeds": "junk", "media.imageSize": 3],
+            Self.oldClassic,
+            Self.oldFocus,
         ]
         for rule in SettingsMigration.rules {
             for sample in samples {
@@ -126,6 +132,151 @@ import VelaFoundation
             }
         }
         #expect(Set(SettingsMigration.rules.map(\.id)).count == SettingsMigration.rules.count)
+    }
+
+    // MARK: Preview sizes
+
+    /// The Classic preset before `media.presentation` was split, as
+    /// `SettingsStore.apply` wrote it.
+    static let oldClassic: [String: JSONValue] = [
+        "navigation.style": "sidebar",
+        "chat.layout": "classic",
+        "chat.monospace": true,
+        "chat.fontSize": 12,
+        "chat.lineSpacing": 1,
+        "chat.messageSpacing": 2,
+        "chat.showAvatars": false,
+        "chat.showJoinPart": "show",
+        "chat.showTimestamps": true,
+        "sidebar.rowHeight": 20,
+        "sidebar.fontSize": 12,
+        "memberList.visible": true,
+        "media.presentation": "compact",
+        "media.loadVideoEmbeds": false,
+    ]
+
+    /// The Focus preset before `media.presentation` was split.
+    static let oldFocus: [String: JSONValue] = [
+        "navigation.style": "tabs",
+        "tabs.placement": "titleBar",
+        "tabs.roundness": 1,
+        "tabs.serverRow": "auto",
+        "chat.layout": "columns",
+        "chat.monospace": false,
+        "chat.fontSize": 13,
+        "chat.lineSpacing": 2,
+        "chat.messageSpacing": 3,
+        "chat.showAvatars": false,
+        "chat.showJoinPart": "hide",
+        "memberList.visible": false,
+        "media.presentation": "compact",
+        "media.loadVideoEmbeds": true,
+    ]
+
+    private func previewSizes(_ values: [String: JSONValue]) -> [String: JSONValue] {
+        values.filter { ["media.linkPreviewSize", "media.videos", "media.imageSize"].contains($0.key) }
+    }
+
+    @Test func compactBecomesMinimalCompactAndThumbnail() {
+        let migrated = SettingsMigration.migrated(["chat.fontSize": 14, "media.presentation": "compact"])
+        #expect(migrated == [
+            "chat.fontSize": 14,
+            "media.linkPreviewSize": "minimal",
+            "media.videos": "compact",
+            "media.imageSize": "thumbnail",
+        ])
+    }
+
+    @Test func fullLeavesTheNewDefaults() {
+        #expect(SettingsMigration.migrated(["chat.fontSize": 14, "media.presentation": "full"]) == ["chat.fontSize": 14])
+        #expect(SettingsMigration.migrated(["media.presentation": "full", "media.loadVideoEmbeds": true]) == [:])
+    }
+
+    @Test func videoEmbedsOffWinsOverCompact() {
+        #expect(SettingsMigration.migrated(["media.loadVideoEmbeds": false]) == ["media.videos": "off"])
+        #expect(SettingsMigration.migrated(["media.presentation": "full", "media.loadVideoEmbeds": false]) == ["media.videos": "off"])
+        #expect(SettingsMigration.migrated(["media.presentation": "compact", "media.loadVideoEmbeds": false]) == [
+            "media.linkPreviewSize": "minimal",
+            "media.videos": "off",
+            "media.imageSize": "thumbnail",
+        ])
+    }
+
+    @Test func explicitPreviewSizesAreKept() {
+        let migrated = SettingsMigration.migrated([
+            "media.presentation": "compact",
+            "media.loadVideoEmbeds": false,
+            "media.linkPreviewSize": "large",
+            "media.videos": "player",
+        ])
+        #expect(migrated == [
+            "media.linkPreviewSize": "large",
+            "media.videos": "player",
+            "media.imageSize": "thumbnail",
+        ])
+        // Explicit values that equal the default are kept too.
+        #expect(SettingsMigration.migrated(["media.presentation": "compact", "media.imageSize": "full"])["media.imageSize"] == "full")
+        // An invalid value reads as the default, so the mapping replaces it.
+        #expect(SettingsMigration.migrated(["media.loadVideoEmbeds": false, "media.videos": "bogus"]) == ["media.videos": "off"])
+    }
+
+    @Test func legacyMediaKeysAreRemovedEvenWhenMalformed() {
+        #expect(SettingsMigration.changes(for: ["media.presentation": "full", "media.loadVideoEmbeds": true]) == [
+            .remove(key: "media.loadVideoEmbeds"),
+            .remove(key: "media.presentation"),
+        ])
+        #expect(SettingsMigration.migrated(["media.presentation": "huge", "media.loadVideoEmbeds": "no"]) == [:])
+        #expect(SettingsMigration.migrated(["media.presentation": 1]) == [:])
+    }
+
+    @Test func oldClassicBecomesNewClassic() {
+        let migrated = SettingsMigration.migrated(Self.oldClassic)
+        // Compact videos, as the new Classic has, rather than the off that
+        // media.loadVideoEmbeds: false would give.
+        #expect(previewSizes(migrated) == ["media.linkPreviewSize": "minimal", "media.videos": "compact", "media.imageSize": "thumbnail"])
+        #expect(migrated["media.presentation"] == nil)
+        #expect(migrated["media.loadVideoEmbeds"] == nil)
+        var expected = Self.oldClassic.filter { !$0.key.hasPrefix("media.") }
+        expected.merge(previewSizes(SettingsPreset.classic.values)) { $1 }
+        #expect(migrated == expected)
+
+        // Keys left at their defaults still count as matching.
+        var sparse = Self.oldClassic
+        for key in ["navigation.style", "chat.showAvatars", "chat.showTimestamps", "sidebar.fontSize", "memberList.visible"] {
+            sparse.removeValue(forKey: key)
+        }
+        sparse["chat.fontSize"] = 12.0
+        #expect(SettingsMigration.migrated(sparse)["media.videos"] == "compact")
+
+        // Explicit new keys still win.
+        var explicit = Self.oldClassic
+        explicit["media.videos"] = "player"
+        #expect(SettingsMigration.migrated(explicit)["media.videos"] == "player")
+    }
+
+    @Test func customizedClassicGetsThePlainMapping() {
+        var custom = Self.oldClassic
+        custom["chat.fontSize"] = 14
+        #expect(previewSizes(SettingsMigration.migrated(custom)) == [
+            "media.linkPreviewSize": "minimal",
+            "media.videos": "off",
+            "media.imageSize": "thumbnail",
+        ])
+    }
+
+    @Test func oldFocusBecomesNewFocus() {
+        let migrated = SettingsMigration.migrated(Self.oldFocus)
+        // Focus now has players, which is the default, so media.videos isn't written.
+        #expect(previewSizes(migrated) == ["media.linkPreviewSize": "minimal", "media.imageSize": "thumbnail"])
+
+        // media.loadVideoEmbeds: true is the old default and may be missing.
+        var sparse = Self.oldFocus
+        sparse.removeValue(forKey: "media.loadVideoEmbeds")
+        #expect(SettingsMigration.migrated(sparse) == migrated)
+
+        var custom = Self.oldFocus
+        custom["memberList.visible"] = true
+        #expect(SettingsMigration.migrated(custom)["media.videos"] == "compact")
     }
 
     @Test func domainNormalization() {
@@ -197,6 +348,31 @@ import VelaFoundation
         let store = SettingsStore(fileURL: url, watchForChanges: false)
         #expect(store.applyMigrations().isEmpty)
         #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    @Test(arguments: ["classic", "modern", "tabbed", "focus"])
+    func oldPresetsStillMatchAfterMigrating(_ id: String) throws {
+        let directory = try TemporaryDirectory()
+        defer { directory.cleanup() }
+        let url = directory.file("settings.json")
+        let preset = try #require(SettingsPreset.all.first { $0.id == id })
+        // What applying the preset wrote before media.presentation was split.
+        var old = preset.values.filter { !$0.key.hasPrefix("media.") }
+        switch id {
+        case "classic": old.merge(["media.presentation": "compact", "media.loadVideoEmbeds": false]) { $1 }
+        case "focus": old.merge(["media.presentation": "compact", "media.loadVideoEmbeds": true]) { $1 }
+        default: old.merge(["media.presentation": "full", "media.loadVideoEmbeds": true]) { $1 }
+        }
+        try JSONValue.object(old).prettyPrinted().write(to: url)
+
+        let store = SettingsStore(fileURL: url, watchForChanges: false)
+        // Old Modern and Tabbed used the defaults, so they match already.
+        #expect((store.matchingPreset()?.id == id) == ["modern", "tabbed"].contains(id))
+        let changes = store.applyMigrations()
+        #expect(changes.contains(.remove(key: "media.presentation")))
+        #expect(changes.contains(.remove(key: "media.loadVideoEmbeds")))
+        #expect(store.matchingPreset()?.id == id)
+        #expect(SettingsStore(fileURL: url, watchForChanges: false).matchingPreset()?.id == id)
     }
 
     @Test func pendingAppChangesAreSavedWithTheMigration() throws {

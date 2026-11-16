@@ -8,10 +8,12 @@ import VelaTheme
 
 /// A link preview card for an ordinary page (or a video when videos are off).
 ///
-/// Large: accent bar, favicon + site name, linked title, a 2–3 line
-/// description and the page image, large underneath when it's wide or small
-/// on the right otherwise. Minimal: a single row with favicon, site, title
-/// and a tiny thumbnail. Standard draws the large card for now.
+/// Standard: accent bar, favicon + site name, a 2-line linked title and a
+/// 2-line description, with a small cropped thumbnail on the right
+/// (`StandardCardLayout`). Large: the same text with a 3-line description and
+/// the page image, large underneath when it's wide or small on the right
+/// otherwise. Minimal: a single row with favicon, site, title and a tiny
+/// thumbnail.
 ///
 /// Without `showsImages` (a text-only site) the card has no image, thumbnail
 /// or favicon; a neutral glyph stands in for the favicon.
@@ -30,6 +32,8 @@ struct LinkCardView: View {
     private static let thumbnailSide: CGFloat = 80
 
     @State private var imagePixelSize: CGSize?
+    /// The Standard card's thumbnail couldn't be loaded, so it takes no room.
+    @State private var thumbnailFailed: Bool
     @State private var titleHovering = false
 
     init(
@@ -49,9 +53,8 @@ struct LinkCardView: View {
         let imageURL = Self.imageURL(of: preview, policy: policy, showsImages: showsImages)
         let known = imageURL.flatMap { preview.imageSize ?? EmbedMemory.shared.pixelSize(for: $0, policy: policy) }
         _imagePixelSize = State(initialValue: known)
+        _thumbnailFailed = State(initialValue: imageURL.flatMap { EmbedMemory.shared.failedImages.peek($0) } ?? false)
     }
-
-    private var compact: Bool { size == .minimal }
 
     /// The page image, unless images are off for this link or its host
     /// (a CDN with its own rule, say) may not serve one.
@@ -66,7 +69,7 @@ struct LinkCardView: View {
 
     private struct ShapeKey: Equatable {
         var imageURL: URL?
-        var compact: Bool
+        var size: PreviewLinkSize
         var policy: MediaPolicy
     }
 
@@ -82,16 +85,21 @@ struct LinkCardView: View {
 
     var body: some View {
         Group {
-            if compact { compactRow } else { fullCard }
+            switch size {
+            case .minimal: compactRow
+            case .standard: standardCard
+            case .large: fullCard
+            }
         }
         .embedFadeIn(animateAppearance)
         .contextMenu {
             EmbedLinkMenuItems(url: preview.url, onHide: onHide)
         }
-        .task(id: ShapeKey(imageURL: imageURL, compact: compact, policy: policy)) {
+        .task(id: ShapeKey(imageURL: imageURL, size: size, policy: policy)) {
             // Learn the image's shape when the page didn't declare it (or
-            // images just became allowed for a card that had none).
-            guard imagePixelSize == nil, !compact, let url = imageURL else { return }
+            // images just became allowed for a card that had none). Only the
+            // Large card lays out by it.
+            guard imagePixelSize == nil, size == .large, let url = imageURL else { return }
             if let declared = preview.imageSize {
                 imagePixelSize = declared
                 return
@@ -100,6 +108,65 @@ struct LinkCardView: View {
             EmbedMemory.shared.remember(pixelSize: loaded.pixelSize, for: url)
             imagePixelSize = loaded.pixelSize
         }
+    }
+
+    // MARK: Standard
+
+    /// The Standard card's thumbnail, unless it failed to load.
+    private var standardThumbnailURL: URL? {
+        thumbnailFailed ? nil : imageURL
+    }
+
+    private var standardCard: some View {
+        StandardCardLayout {
+            EmbedColumnLayout(spacing: 4, minWidth: 0, maxWidth: StandardCardLayout.maxContentWidth) {
+                siteRow
+                    .padding(.bottom, 1)
+                if let title = preview.displayTitle {
+                    titleLink(title, size: style.fontSize + 1, lineLimit: 2)
+                }
+                if let summary = preview.displaySummary {
+                    Text(summary)
+                        .font(style.font(size: max(10, style.fontSize - 1)))
+                        .foregroundStyle(theme[ThemeKey.embedDescription])
+                        .lineLimit(2)
+                        .lineSpacing(1)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                }
+            }
+            if let url = standardThumbnailURL {
+                standardThumbnail(url)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .embedCard(accent: accent)
+        .frame(maxWidth: StandardCardLayout.maxCardWidth, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilitySummary)
+        .accessibilityAddTraits(.isLink)
+        .accessibilityAction { EmbedActions.open(preview.url) }
+    }
+
+    private func standardThumbnail(_ url: URL) -> some View {
+        RemoteImageView(
+            url: url,
+            // Enough pixels to fill the frame from a wide (1.91:1) page image.
+            maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: StandardCardLayout.thumbnailSize.width * 2),
+            policy: policy,
+            onFailure: {
+                EmbedMemory.shared.failedImages.insert(true, for: url)
+                thumbnailFailed = true
+            }
+        ) {
+            theme[ThemeKey.embedPlaceholderBackground]
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .contentShape(Rectangle())
+        .onTapGesture { EmbedActions.open(preview.url) }
+        .help(preview.url.absoluteString)
+        .accessibilityHidden(true)
     }
 
     // MARK: Full
@@ -204,7 +271,7 @@ struct LinkCardView: View {
         }
     }
 
-    // MARK: Compact
+    // MARK: Minimal
 
     private var compactRow: some View {
         HStack(spacing: 7) {
@@ -247,6 +314,79 @@ struct LinkCardView: View {
         if let title = preview.displayTitle { parts.append(title) }
         if let summary = preview.displaySummary { parts.append(summary) }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// Lays out a Standard link card's content: the text column on the left and,
+/// when there is one, the thumbnail on the right, top-aligned at
+/// `thumbnailSize`. The text hugs its content up to the room the thumbnail
+/// leaves. When the row is too narrow for both, the thumbnail is dropped
+/// (placed at zero size) and the text takes the whole row.
+///
+/// Subviews: the text column, then optionally the thumbnail.
+struct StandardCardLayout: Layout {
+    static let maxCardWidth: CGFloat = 480
+    /// The card less its accent bar (4) and horizontal padding (2 × 12).
+    static let maxContentWidth: CGFloat = maxCardWidth - 4 - 24
+    static let thumbnailSize = CGSize(width: 104, height: 78)
+    static let spacing: CGFloat = 12
+    /// Below this the text needs the room more than the thumbnail does.
+    static let minTextWidth: CGFloat = 150
+
+    /// The width the text column may use, and whether the thumbnail sits
+    /// beside it, for `contentWidth` points of card content.
+    static func columns(contentWidth: CGFloat, hasThumbnail: Bool) -> (textWidth: CGFloat, showsThumbnail: Bool) {
+        let width = max(0, min(contentWidth, maxContentWidth))
+        guard hasThumbnail else { return (width, false) }
+        let beside = width - thumbnailSize.width - spacing
+        return beside >= minTextWidth ? (beside, true) : (width, false)
+    }
+
+    /// The content's size given the text column's size at its width.
+    static func contentSize(text: CGSize, showsThumbnail: Bool) -> CGSize {
+        guard showsThumbnail else { return text }
+        return CGSize(
+            width: text.width + spacing + thumbnailSize.width,
+            height: max(text.height, thumbnailSize.height)
+        )
+    }
+
+    private struct Arrangement {
+        var text: CGSize
+        var showsThumbnail: Bool
+        var size: CGSize
+    }
+
+    private func arrange(width: CGFloat?, subviews: Subviews) -> Arrangement {
+        let available = width.flatMap { $0.isFinite ? $0 : nil } ?? Self.maxContentWidth
+        let columns = Self.columns(contentWidth: available, hasThumbnail: subviews.count > 1)
+        let text = subviews.first?.sizeThatFits(ProposedViewSize(width: columns.textWidth, height: nil)) ?? .zero
+        let textSize = CGSize(width: min(text.width, columns.textWidth), height: text.height)
+        return Arrangement(
+            text: textSize,
+            showsThumbnail: columns.showsThumbnail,
+            size: Self.contentSize(text: textSize, showsThumbnail: columns.showsThumbnail)
+        )
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(width: proposal.width, subviews: subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let arrangement = arrange(width: proposal.width ?? bounds.width, subviews: subviews)
+        guard let text = subviews.first else { return }
+        text.place(at: bounds.origin, proposal: ProposedViewSize(width: arrangement.text.width, height: nil))
+        guard subviews.count > 1 else { return }
+        let thumbnail = subviews[1]
+        if arrangement.showsThumbnail {
+            thumbnail.place(
+                at: CGPoint(x: bounds.minX + arrangement.text.width + Self.spacing, y: bounds.minY),
+                proposal: ProposedViewSize(Self.thumbnailSize)
+            )
+        } else {
+            thumbnail.place(at: bounds.origin, proposal: .zero)
+        }
     }
 }
 

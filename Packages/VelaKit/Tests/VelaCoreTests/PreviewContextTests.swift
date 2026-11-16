@@ -56,6 +56,38 @@ struct PreviewContextTests {
         #expect(!app.previewContext(for: nil).blurImages)
     }
 
+    // MARK: Layout
+
+    @Test func layoutFollowsPreviewSizeSettings() throws {
+        let app = try makeApp()
+        #expect(app.previewContext(for: nil).layout == PreviewLayout(linkSize: .standard, videoStyle: .player, imageSize: .full))
+
+        app.settings[.mediaLinkPreviewSize] = .minimal
+        app.settings[.mediaVideos] = .compact
+        app.settings[.mediaImageSize] = .thumbnail
+        #expect(app.previewContext(for: nil).layout == PreviewLayout(linkSize: .minimal, videoStyle: .compact, imageSize: .thumbnail))
+
+        app.settings[.mediaLinkPreviewSize] = .large
+        app.settings[.mediaVideos] = .off
+        #expect(app.previewContext(for: channel).layout == PreviewLayout(linkSize: .large, videoStyle: .off, imageSize: .thumbnail))
+    }
+
+    @Test func invalidPreviewSizesFallBackToDefaults() throws {
+        let app = try makeApp(settings: [
+            "media.linkPreviewSize": "huge",
+            "media.videos": false,
+            "media.imageSize": "thumbnail",
+        ])
+        #expect(app.previewContext(for: nil).layout == PreviewLayout(linkSize: .standard, videoStyle: .player, imageSize: .thumbnail))
+    }
+
+    /// `previewContext` maps the settings onto VelaMedia's copies by raw value.
+    @Test func layoutEnumsMirrorTheSettings() {
+        #expect(LinkPreviewSize.allCases.map(\.rawValue) == PreviewLinkSize.allCases.map(\.rawValue))
+        #expect(VideoEmbedStyle.allCases.map(\.rawValue) == PreviewVideoStyle.allCases.map(\.rawValue))
+        #expect(InlineImageSize.allCases.map(\.rawValue) == PreviewImageSize.allCases.map(\.rawValue))
+    }
+
     @Test func adultFilterFollowsItsSetting() throws {
         let app = try makeApp(isDemo: true)
         let nsfw = url("https://cdn.nsfw.example/a.jpg")
