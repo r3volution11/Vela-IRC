@@ -41,8 +41,10 @@ public final class AppModel: SessionHost {
     /// Whether the main window is key; drives unread counting.
     public var isWindowActive = true {
         didSet {
-            guard isWindowActive, !oldValue, let buffer = selectedBuffer, let session = selectedSession else { return }
-            prepareUnreadMarker(buffer)
+            guard isWindowActive != oldValue, let buffer = selectedBuffer, let session = selectedSession else { return }
+            if isWindowActive { prepareUnreadMarker(buffer) }
+            // Focusing reads what arrived meanwhile. Losing focus records how
+            // far the reader got, so the "New" marker goes above the next line.
             session.markRead(buffer)
         }
     }
@@ -258,6 +260,8 @@ public final class AppModel: SessionHost {
 
     public func select(_ buffer: BufferModel) {
         guard selectedBufferID != buffer.id else { return }
+        // The buffer being left was on screen: it's read to its newest line.
+        if isWindowActive, let previous = selectedBuffer { selectedSession?.markRead(previous) }
         selectedBufferID = buffer.id
         prepareUnreadMarker(buffer)
         session(for: buffer.id.networkID)?.markRead(buffer)

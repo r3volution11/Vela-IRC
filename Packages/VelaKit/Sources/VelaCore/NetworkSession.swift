@@ -1166,11 +1166,14 @@ public final class NetworkSession: Identifiable {
         host?.sessionDidChangeUnreadCounts(self)
     }
 
+    /// Clears the unread counts and moves the read position to the newest
+    /// line, including lines that arrived while the buffer was on screen.
     public func markRead(_ buffer: BufferModel) {
-        guard buffer.unreadCount > 0 || buffer.highlightCount > 0 || buffer.lastReadAt == nil else { return }
+        let readTo = [buffer.lastReadAt, buffer.lines.last?.time].compactMap { $0 }.max() ?? Date()
+        guard buffer.unreadCount > 0 || buffer.highlightCount > 0 || buffer.lastReadAt != readTo else { return }
         buffer.unreadCount = 0
         buffer.highlightCount = 0
-        buffer.lastReadAt = buffer.lines.last?.time ?? Date()
+        buffer.lastReadAt = readTo
         persistBuffer(buffer)
         host?.sessionDidChangeUnreadCounts(self)
     }
@@ -1236,6 +1239,12 @@ public final class NetworkSession: Identifiable {
         let visible = host?.isBufferVisible(buffer.id) ?? false
         let countsAsUnread = line.kind.isConversation
         if !visible && countsAsUnread {
+            if buffer.unreadCount == 0 {
+                // Mark where the new lines start as soon as the first one
+                // arrives, so a channel left open in an unfocused window
+                // shows the marker without waiting for focus.
+                buffer.unreadMarkerAfter = buffer.lastReadAt ?? .distantPast
+            }
             buffer.unreadCount += 1
             if line.isHighlight || (buffer.kind == .query && line.kind != .notice) {
                 buffer.highlightCount += 1
