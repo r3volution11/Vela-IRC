@@ -19,7 +19,7 @@ public struct ChatStyle: Equatable {
     public var timestampFormat = "HH:mm"
     public var joinPart: JoinPartDisplay = .collapse
     public var colorNicks = true
-    public var showAvatars = true
+    public var showAvatars = false
     public var groupingInterval: TimeInterval = 300
     public var columnsNickWidth: Double = 120
     public var renderFormatting = true

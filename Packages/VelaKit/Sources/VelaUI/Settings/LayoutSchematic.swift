@@ -13,7 +13,7 @@ struct LayoutSchematicConfig: Equatable {
     var tabPlacement: TabStackPlacement = .top
     var tabRoundness: Double = 0.35
     var chatLayout: ChatLayout = .grouped
-    var showAvatars = true
+    var showAvatars = false
     var showTimestamps = true
     var colorNicks = true
     var memberList = true

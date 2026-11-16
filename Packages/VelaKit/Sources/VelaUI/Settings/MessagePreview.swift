@@ -171,15 +171,20 @@ struct MessageSamplePreview: View {
     private func groupedBlock(_ group: [Line]) -> some View {
         let first = group[0]
         let avatarSize = max(26, style.fontSize * 2.3)
+        // Without avatars, match the message list's slim time gutter.
+        let metrics = GroupedMetrics(style: style)
+        let textInset = style.showAvatars ? avatarSize + 10 : metrics.gutter + metrics.spacing
         if first.isEvent || first.id == -1 {
             eventText(first)
                 .font(style.metaFont)
-                .padding(.leading, style.showAvatars ? avatarSize + 10 : 0)
+                .padding(.leading, textInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             HStack(alignment: .top, spacing: 10) {
                 if style.showAvatars {
                     AvatarView(nick: first.nick, size: avatarSize)
+                } else {
+                    Color.clear.frame(width: max(0, textInset - 10), height: 1)
                 }
                 VStack(alignment: .leading, spacing: style.lineSpacing + 1) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
