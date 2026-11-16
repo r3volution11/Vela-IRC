@@ -1,0 +1,143 @@
+---
+layout: home
+title: Vela — A modern, deeply themable IRC client for macOS
+titleTemplate: false
+description: Vela is a free, open-source IRC client for macOS with 21 built-in themes, VS Code theme import, a sidebar or tab stacks, inline images and video, IRCv3 and ZNC and soju bouncer support.
+
+hero:
+  name: Vela
+  text: A modern, deeply themable IRC client for macOS
+  tagline: Native SwiftUI, IRCv3, inline media and VS Code-style themes. Make IRC look and work the way you want.
+  image:
+    src: /vela-icon.webp
+    alt: The Vela app icon, a sailboat under a starry sky
+  actions:
+    - theme: brand
+      text: Download for macOS
+      link: https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg
+      target: _self
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/r3volution11/Vela-IRC
+
+features:
+  - title: Themes everywhere
+    details: Every surface is drawn from VS Code-style color tokens. 21 built-in themes, a live theme editor, and any VS Code theme imports in one step.
+    link: /customize/themes
+    linkText: Choosing a theme
+  - title: Your layout, your rules
+    details: A compact sidebar or Vivaldi-style tab stacks. Classic, Modern grouped or Compact columns. One-click presets that never touch your theme.
+    link: /guide/presets
+    linkText: Presets
+  - title: Modern IRC
+    details: IRCv3 reactions, replies, typing and history, SASL and client certificates, and first-class ZNC and soju support.
+    link: /reference/ircv3
+    linkText: IRCv3 support
+---
+
+<ShowcaseRow
+  eyebrow="Themes everywhere"
+  title="Every pixel is yours to color"
+  themes="dracula,nord,catppuccin-latte,tokyo-night,vela-paper,gruvbox-dark"
+  link="/customize/themes"
+  linkText="Browse the themes"
+>
+
+The title bar, sidebar, tabs, chat, input, member list, link previews and even nick colors all come from a theme.
+
+- **21 built-in themes**, from Palenight and Lighter to Dracula, Nord, Catppuccin and Tokyo Night.
+- **Select Theme** (<kbd>⌃⌘T</kbd>) previews each one live as you arrow through the list.
+- **Import any VS Code theme** from a `.json` file or a whole `.vsix` extension.
+- A **theme editor** with contrast warnings, and `settings.json` overrides for any color.
+
+</ShowcaseRow>
+
+<ShowcaseRow
+  eyebrow="Layouts & presets"
+  title="Classic, modern or somewhere in between"
+  src="/screenshots/preset-classic.webp"
+  alt="The Classic IRC preset: one-line monospace messages with timestamps and angle-bracketed nicks"
+  link="/guide/presets"
+  linkText="Compare the presets"
+  reverse
+>
+
+Pick a message layout: Classic `[12:01] <nick> text`, Modern grouped like Slack or Discord, or Compact columns like irssi and WeeChat.
+
+Or start from a preset. **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** each set up navigation, layout, density and media in one click, and your theme is never changed. Fine-tune anything afterwards.
+
+</ShowcaseRow>
+
+<ShowcaseRow
+  eyebrow="Sidebar or tab stacks"
+  title="Navigate the way you think"
+  src="/screenshots/tabs-title-bar.webp"
+  alt="Pill-shaped tab stacks in the title bar: networks on the left, the selected network's channels beside them"
+  link="/guide/tab-stacks"
+  linkText="Tab stacks"
+>
+
+On a lot of networks? Use the compact sidebar, which folds into a thin rail when you want more room.
+
+On just a few? Switch to **Vivaldi-style tab stacks**: networks in one row, that network's channels in the next. Put them at the top, in the title bar or above the message field, with corners anywhere from square to pill.
+
+</ShowcaseRow>
+
+<ShowcaseRow
+  eyebrow="Inline media"
+  title="Links that show what's behind them"
+  src="/screenshots/home-palenight.webp"
+  light="/screenshots/home-lighter.webp"
+  alt="An animated GIF and a link card with the page's title, description and image, shown inline in a conversation"
+  link="/guide/inline-media"
+  linkText="Inline media & privacy"
+  reverse
+>
+
+Images and animated GIFs appear right in the conversation. Links become cards with the page's title, description and image. YouTube, Vimeo, Twitch and Streamable videos play inline, and their players load only when you press play.
+
+Prefer less? Switch to **compact** previews, turn media off for a channel, or allow it only from domains you trust.
+
+</ShowcaseRow>
+
+<ShowcaseRow
+  eyebrow="IRCv3 & bouncers"
+  title="IRC, done properly"
+  src="/screenshots/preset-focus.webp"
+  alt="The Focus preset: pill tabs in the title bar and compact columns of time, nick and message"
+  link="/guide/bouncers"
+  linkText="Connecting through a bouncer"
+>
+
+- **Reactions, replies, typing indicators** and message deletion where the server supports them.
+- **`server-time`, `chathistory`, `echo-message`** and the rest of the modern basics, plus STS upgrades.
+- **SASL PLAIN and EXTERNAL**, client certificates and TLS, with secrets in your Keychain.
+- **ZNC and soju**: playback and self-message for ZNC, automatic network discovery and history for soju.
+
+</ShowcaseRow>
+
+<ShowcaseRow
+  eyebrow="Private by design"
+  title="Your chats stay between you and your servers"
+  src="/screenshots/media-compact.webp"
+  alt="Compact link previews: one-line titles with small thumbnails"
+  link="/help/privacy"
+  linkText="How Vela handles your data"
+  reverse
+>
+
+Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add and, if you let it, to the sites behind the links people post.
+
+Link previews tell those sites your IP address, so you decide: automatic, click-to-load, per channel, or only from an allow list. Vela never fetches previews from addresses on your local network.
+
+</ShowcaseRow>
+
+<div class="home-cta">
+  <img src="/vela-icon.webp" alt="" width="96" height="96">
+  <h2>Free and open source</h2>
+  <p>Vela is built in the open under the Mozilla Public License 2.0. Native Swift, no web views except the video players.</p>
+  <div class="home-cta__actions">
+    <a class="vela-button vela-button--brand no-icon" href="https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg">Download for macOS</a>
+    <a class="vela-button vela-button--alt" href="/guide/install">Read the guide</a>
+  </div>
+</div>

@@ -1,0 +1,99 @@
+#!/bin/zsh
+# Regenerates every screenshot on velairc.app from Vela's demo mode, plus the
+# social card. Shots render offscreen (no screen-recording permission) with
+# scripts/demo-screenshot.sh, then are downscaled with sips and encoded as WebP.
+#
+#   website/scripts/screenshots.sh                  # build Release, then shoot everything
+#   website/scripts/screenshots.sh build/Vela.app   # use an existing build
+#   website/scripts/screenshots.sh build/Vela.app theme-nord home-palenight
+#                                                   # only the named shots
+#
+# Needs cwebp (`brew install webp`) and network access: the demo's #vela
+# channel shows a GIF and a link card that load from the web.
+set -euo pipefail
+
+root="${0:A:h:h:h}"          # repository root
+out="$root/website/public/screenshots"
+public="$root/website/public"
+work="$(mktemp -d -t vela-screenshots)"
+trap 'rm -rf "$work"' EXIT
+
+if ! command -v cwebp >/dev/null; then
+  echo "cwebp not found. Install it with: brew install webp" >&2
+  exit 1
+fi
+
+app="${1:-}"
+[[ $# -gt 0 ]] && shift
+only=("$@")
+
+if [[ -z "$app" ]]; then
+  echo "Building Vela (Release)…"
+  xcodebuild -project "$root/Vela.xcodeproj" -scheme Vela -configuration Release \
+    -destination 'platform=macOS' -derivedDataPath "$root/build/DerivedData" -quiet build \
+    2>&1 | grep -vE "CoreSimulator|appintentsmetadataprocessor|^$" || true
+  app="$root/build/DerivedData/Build/Products/Release/Vela.app"
+fi
+app="${app:A}"
+[[ -x "$app/Contents/MacOS/Vela" ]] || { echo "No Vela app at $app" >&2; exit 1; }
+mkdir -p "$out"
+
+# shot <name> <window size> <output width> [demo args…]
+# Remote media in the demo needs a few seconds, hence --snapshot-delay 8.
+shot() {
+  local name=$1 size=$2 width=$3
+  shift 3
+  if (( ${#only} )) && (( ! ${only[(Ie)$name]} )); then return; fi
+  "$root/scripts/demo-screenshot.sh" "$app" "$work/$name.png" \
+    --size "$size" --snapshot-delay 8 --select "#vela" "$@" >/dev/null
+  sips -Z "$width" "$work/$name.png" >/dev/null
+  cwebp -quiet -q 82 -m 6 -sharp_yuv "$work/$name.png" -o "$out/$name.webp"
+  printf '%-28s %s\n' "$name.webp" "$(du -h "$out/$name.webp" | cut -f1)"
+}
+
+# Home page: the hero in the default dark and light themes.
+shot home-palenight 1400x900 1600 --theme Palenight --preset modern
+shot home-lighter   1400x900 1600 --theme Lighter   --preset modern
+
+# Presets, all in Palenight so they compare at a glance.
+for preset in classic modern tabbed focus; do
+  shot "preset-$preset" 1280x800 1400 --theme Palenight --preset "$preset"
+done
+
+# Message layouts (the grouped layout is preset-modern).
+shot layout-classic 1280x800 1400 --theme Palenight --preset modern --set chat.layout=classic
+shot layout-columns 1280x800 1400 --theme Palenight --preset modern --set chat.layout=columns
+
+# Tab stacks: placements and roundness (top + 0.5 is preset-tabbed).
+shot tabs-title-bar 1280x800 1400 --theme Palenight --preset tabbed --set tabs.placement=titleBar
+shot tabs-bottom    1280x800 1400 --theme Palenight --preset tabbed --set tabs.placement=bottom
+shot tabs-square    1280x800 1400 --theme Palenight --preset tabbed --set tabs.roundness=0
+shot tabs-pill      1280x800 1400 --theme Palenight --preset tabbed --set tabs.roundness=1
+
+# The collapsed sidebar (rail) and compact media.
+shot sidebar-rail   1280x800 1400 --theme Palenight --preset modern --set sidebar.collapsed=true
+shot media-compact  1280x800 1400 --theme Palenight --preset modern --set media.presentation=compact
+
+# One shot per built-in theme, for the theme gallery.
+themes=(
+  palenight:Palenight lighter:Lighter oceanic:Oceanic darker:Darker ocean:Ocean
+  deepforest:Deepforest volcano:Volcano sandy-beach:"Sandy Beach"
+  vela-graphite:"Vela Graphite" vela-paper:"Vela Paper" vela-mist:"Vela Mist"
+  dracula:Dracula nord:Nord catppuccin-latte:"Catppuccin Latte" catppuccin-mocha:"Catppuccin Mocha"
+  tokyo-night:"Tokyo Night" one-dark:"One Dark" gruvbox-dark:"Gruvbox Dark"
+  solarized-dark:"Solarized Dark" solarized-light:"Solarized Light" rose-pine:"Rosé Pine"
+)
+for entry in "${themes[@]}"; do
+  shot "theme-${entry%%:*}" 1280x800 1200 --theme "${entry#*:}" --preset modern
+done
+
+# Social card (Open Graph / Twitter): the app icon, name and tagline beside the
+# hero window, drawn by social-card.swift.
+if (( ! ${#only} )) || (( ${only[(Ie)og-image]} )); then
+  "$root/scripts/demo-screenshot.sh" "$app" "$work/og-shot.png" \
+    --size 1400x900 --snapshot-delay 8 --select "#vela" --theme Palenight --preset modern >/dev/null
+  swift "$root/website/scripts/social-card.swift" \
+    "$root/Vela/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" "$work/og-shot.png" "$work/og-image.png"
+  sips -s format jpeg -s formatOptions 86 "$work/og-image.png" --out "$public/og-image.jpg" >/dev/null
+  printf '%-28s %s\n' "og-image.jpg" "$(du -h "$public/og-image.jpg" | cut -f1)"
+fi
