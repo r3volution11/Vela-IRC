@@ -18,6 +18,15 @@ struct MainWindowView: View {
     @Environment(\.appearsActive) private var appearsActive
     @Environment(\.chatStyle) private var style
 
+    /// Stacked vertically inside the narrow rail, side by side whenever the
+    /// sidebar (or the hover-expanded rail) is wide enough.
+    private var trafficLightLayout: TrafficLightLayout {
+        let usesRail = style.navigationStyle == .sidebar
+            && app.settings[.sidebarCollapsed]
+            && !uiState.isRailHoverExpanded
+        return usesRail ? .vertical(columnWidth: SidebarMetrics.railWidth) : .horizontal(stripHeight: 52)
+    }
+
     var body: some View {
         @Bindable var uiState = uiState
         let settings = app.settings
@@ -51,7 +60,7 @@ struct MainWindowView: View {
             }
         }
         .background(theme[ThemeKey.windowBackground])
-        .background(WindowConfigurator(theme: theme))
+        .background(WindowConfigurator(theme: theme, trafficLights: trafficLightLayout))
         .ignoresSafeArea()
         .frame(minWidth: 640, minHeight: 420)
         .animation(.snappy(duration: 0.2), value: showMembers)
@@ -87,15 +96,32 @@ struct MainWindowView: View {
 /// color and light/dark appearance for system-drawn controls.
 struct WindowConfigurator: NSViewRepresentable {
     let theme: ResolvedTheme
+    var trafficLights: TrafficLightLayout = .horizontal(stripHeight: 52)
+
+    func makeCoordinator() -> TrafficLightPositioner { TrafficLightPositioner() }
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
-        DispatchQueue.main.async { configure(view.window) }
+        let positioner = context.coordinator
+        let layout = trafficLights
+        DispatchQueue.main.async {
+            configure(view.window)
+            if let window = view.window {
+                positioner.update(layout)
+                positioner.attach(to: window)
+            }
+        }
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
         configure(nsView.window)
+        context.coordinator.update(trafficLights)
+        if let window = nsView.window { context.coordinator.attach(to: window) }
+    }
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: TrafficLightPositioner) {
+        coordinator.detach()
     }
 
     private func configure(_ window: NSWindow?) {

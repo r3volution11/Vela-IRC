@@ -18,7 +18,8 @@ struct SidebarRailView: View {
         let selectedID = app.selectedBufferID
 
         VStack(spacing: 0) {
-            SidebarTitleStrip { EmptyView() }
+            // Tall enough for the traffic lights, which stack vertically here.
+            SidebarTitleStrip(height: TrafficLightLayout.verticalStackHeight) { EmptyView() }
 
             ScrollView(.vertical) {
                 LazyVStack(spacing: 6) {

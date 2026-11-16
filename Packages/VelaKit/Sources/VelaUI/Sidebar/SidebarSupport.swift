@@ -344,6 +344,7 @@ struct SidebarAddMenu: View {
 
 /// The empty top strip that keeps the traffic lights clear and drags the window.
 struct SidebarTitleStrip<Accessory: View>: View {
+    var height: CGFloat = SidebarMetrics.titleStripHeight
     @ViewBuilder var accessory: Accessory
 
     var body: some View {
@@ -352,7 +353,7 @@ struct SidebarTitleStrip<Accessory: View>: View {
             accessory
         }
         .padding(.horizontal, SidebarMetrics.outerInset)
-        .frame(height: SidebarMetrics.titleStripHeight)
+        .frame(height: height)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         .gesture(WindowDragGesture())

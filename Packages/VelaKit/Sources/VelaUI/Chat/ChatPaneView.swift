@@ -60,8 +60,10 @@ struct ChatColumnView: View {
 /// nothing (or only the rail) sits to its left.
 @MainActor
 func trafficLightInset(style: ChatStyle, sidebarCollapsed: Bool) -> CGFloat {
-    if style.navigationStyle == .tabs { return 80 }
-    return sidebarCollapsed ? 30 : 16
+    // With tabs there's no sidebar, so the traffic lights sit over this strip.
+    // With the rail they stack vertically inside it; with the sidebar they sit
+    // in its title strip — either way the header needs only its normal margin.
+    style.navigationStyle == .tabs ? 80 : 16
 }
 
 /// The themed title strip. It doubles as the window's drag area, since the
