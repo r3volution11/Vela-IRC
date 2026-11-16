@@ -80,6 +80,8 @@ struct ChannelTabRow: View {
                             },
                             onHover: { interaction.setHovering($0, .buffer(buffer.id)) }
                         )
+                        // In the title bar, a drag on a tab is the tab's, never the window's.
+                        .excludedFromWindowDragRegion()
                         .tabReorderItem(role)
                         .tabScrollID(buffer.id)
                         .transition(tabTransition)
@@ -272,6 +274,7 @@ struct ServerTabRow: View {
                             },
                             onHover: { interaction.setHovering($0, .network(session.id)) }
                         )
+                        .excludedFromWindowDragRegion()
                         .tabReorderItem(role)
                         .tabScrollID(session.id)
                         .transition(reduceMotion ? .opacity : .scale(scale: 0.7).combined(with: .opacity))
