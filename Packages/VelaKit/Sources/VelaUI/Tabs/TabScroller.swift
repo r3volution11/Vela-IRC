@@ -40,18 +40,22 @@ struct TabScroller<ID: Hashable, Content: View>: View {
 
     var body: some View {
         ScrollView(.horizontal) {
-            content
-                .environment(\.tabFrameStore, frames)
-                // In the title bar, empty space after the tabs still drags the window.
-                .frame(minWidth: dragsWindow ? scroll.containerWidth : nil, alignment: .leading)
-                .background {
-                    if dragsWindow {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .windowTitleBarArea()
-                            .allowsWindowActivationEvents(true)
-                    }
+            ZStack(alignment: .leading) {
+                if dragsWindow {
+                    // In the title bar, empty space after the tabs still
+                    // drags the window: this fills the visible width behind
+                    // them. Sized by layout rather than by the measured
+                    // width, so the content never resizes in response to
+                    // its own scroll geometry.
+                    Color.clear
+                        .containerRelativeFrame(.horizontal)
+                        .contentShape(Rectangle())
+                        .windowTitleBarArea()
+                        .allowsWindowActivationEvents(true)
                 }
+                content
+                    .environment(\.tabFrameStore, frames)
+            }
         }
         .scrollIndicators(.never)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
@@ -64,11 +68,11 @@ struct TabScroller<ID: Hashable, Content: View>: View {
             )
         } action: { oldValue, newValue in
             scroll = newValue
-            if isOverflowing != newValue.overflows { isOverflowing = newValue.overflows }
-            onContentWidthChange?(newValue.contentWidth)
-            if oldValue.containerWidth != newValue.containerWidth || oldValue.contentWidth != newValue.contentWidth {
-                revealTarget(animated: false)
-            }
+            let resized = oldValue.containerWidth != newValue.containerWidth || oldValue.contentWidth != newValue.contentWidth
+            // Geometry is reported during layout. Showing the » menu,
+            // resizing the row and scrolling all change that layout, so they
+            // wait for the next turn instead of re-running layout in this pass.
+            Task { geometrySettled(resized: resized) }
         }
         .mask { edgeFade }
         .onChange(of: target) {
@@ -79,6 +83,12 @@ struct TabScroller<ID: Hashable, Content: View>: View {
             await Task.yield()
             revealTarget(animated: false)
         }
+    }
+
+    private func geometrySettled(resized: Bool) {
+        if isOverflowing != scroll.overflows { isOverflowing = scroll.overflows }
+        onContentWidthChange?(scroll.contentWidth)
+        if resized { revealTarget(animated: false) }
     }
 
     /// Scrolls the least distance that brings the target clear of the fades.

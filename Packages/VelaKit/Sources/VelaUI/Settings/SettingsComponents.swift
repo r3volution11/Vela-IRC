@@ -840,14 +840,13 @@ struct ThemedWindowConfigurator: NSViewRepresentable {
 
     private func configure(_ window: NSWindow?) {
         guard let window else { return }
-        window.title = title
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.styleMask.insert(.fullSizeContentView)
-        if resizable { window.styleMask.insert(.resizable) }
-        window.backgroundColor = theme.color(backgroundKey).nsColor
-        window.appearance = NSAppearance(named: theme.appearanceName)
-        window.tabbingMode = .disallowed
+        WindowChrome.apply(
+            to: window,
+            title: title,
+            backgroundColor: theme.color(backgroundKey).nsColor,
+            appearanceName: theme.appearanceName,
+            resizable: resizable
+        )
         if tallTitleBar, window.toolbar == nil {
             let toolbar = NSToolbar(identifier: "Vela.\(title.filter(\.isLetter))")
             toolbar.displayMode = .iconOnly

@@ -261,7 +261,9 @@ public final class AppModel: SessionHost {
         selectedBufferID = buffer.id
         prepareUnreadMarker(buffer)
         session(for: buffer.id.networkID)?.markRead(buffer)
-        UserDefaults.standard.set(buffer.id.description, forKey: "Vela.lastSelectedBuffer")
+        // Demo mode shares the real app's defaults; don't replace the
+        // channel Vela reopens with a demo one.
+        if !isDemo { UserDefaults.standard.set(buffer.id.description, forKey: "Vela.lastSelectedBuffer") }
     }
 
     /// Closes a channel or query and, if it was selected, selects its

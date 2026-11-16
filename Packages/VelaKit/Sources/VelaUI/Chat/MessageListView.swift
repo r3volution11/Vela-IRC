@@ -140,7 +140,7 @@ struct MessageListView: View {
 
     private func scrollMetricsChanged(from old: ScrollMetrics, to new: ScrollMetrics) {
         if controller.scrollGeometryChanged(new) {
-            scrollToBottom()
+            controller.queueFollow { scrollToBottom() }
         }
         if controller.isPinnedToBottom {
             markAllSeen()

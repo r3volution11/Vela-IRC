@@ -15,6 +15,10 @@ public struct VelaScenes: Scene {
     @State private var uiState: UIState
 
     public init() {
+        // Vela opens no documents. Without this, AppKit treats launch
+        // arguments such as the "Lighter" in `--theme Lighter` as files to
+        // open, and a launch that opens files skips the main window.
+        UserDefaults.standard.register(defaults: ["NSTreatUnknownArgumentsAsOpen": "NO"])
         let arguments = ProcessInfo.processInfo.arguments
         let demo = UserDefaults.standard.bool(forKey: "VelaDemoMode") || arguments.contains("--demo")
         let app = demo ? AppModel.demo() : AppModel.live()

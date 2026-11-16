@@ -126,13 +126,12 @@ struct WindowConfigurator: NSViewRepresentable {
 
     private func configure(_ window: NSWindow?) {
         guard let window else { return }
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.styleMask.insert(.fullSizeContentView)
-        window.isOpaque = theme.vibrancy != .window
-        window.backgroundColor = theme.vibrancy == .window ? .clear : theme.color(ThemeKey.windowBackground).nsColor
-        window.appearance = NSAppearance(named: theme.kind == .dark ? .darkAqua : .aqua)
-        window.tabbingMode = .disallowed
+        WindowChrome.apply(
+            to: window,
+            backgroundColor: theme.vibrancy == .window ? .clear : theme.color(ThemeKey.windowBackground).nsColor,
+            isOpaque: theme.vibrancy != .window,
+            appearanceName: theme.appearanceName
+        )
     }
 }
 

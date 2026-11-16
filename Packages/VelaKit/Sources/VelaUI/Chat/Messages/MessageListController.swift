@@ -45,6 +45,7 @@ final class MessageListController {
     @ObservationIgnored private(set) var isUserScrolling = false
     @ObservationIgnored private var programmaticScrollEnds = Date.distantPast
     @ObservationIgnored private var programmaticScrollGeneration = 0
+    @ObservationIgnored private var followQueued = false
 
     var isPinnedToBottom: Bool { pinning.isPinned }
     var metrics: ScrollMetrics? { pinning.metrics }
@@ -70,6 +71,28 @@ final class MessageListController {
         let follow = pinning.update(metrics, driver: scrollDriver)
         syncAnchor()
         return follow
+    }
+
+    /// Runs `scrollToBottom` once on the next main-actor turn, however many
+    /// geometry changes ask for it before then, if the list is still pinned
+    /// and the reader isn't scrolling.
+    ///
+    /// Geometry changes are reported during layout. Scrolling from there
+    /// changes the geometry being reported and lays the list out again in
+    /// the same pass. While rows are being re-measured (media switching
+    /// between full and compact, lazy rows replacing estimates) that can
+    /// keep re-requesting layout within one display cycle, which AppKit
+    /// treats as a fatal loop. Following on the next turn lets each pass
+    /// finish first.
+    func queueFollow(_ scrollToBottom: @escaping @MainActor () -> Void) {
+        guard !followQueued else { return }
+        followQueued = true
+        Task { [weak self] in
+            guard let self else { return }
+            self.followQueued = false
+            guard self.isPinnedToBottom, !self.isUserScrolling else { return }
+            scrollToBottom()
+        }
     }
 
     /// Tracks scroll gestures; when one ends, a reader who stopped near the
