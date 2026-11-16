@@ -70,7 +70,8 @@ struct EventRowLayout<Content: View>: View {
             case .columns: columns
             }
         }
-        .padding(.horizontal, style.rowHorizontalPadding)
+        .padding(.leading, style.layout == .grouped ? GroupedMetrics(style: style).leading : style.rowHorizontalPadding)
+        .padding(.trailing, style.rowHorizontalPadding)
         .padding(.vertical, style.layout == .grouped ? 3 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
@@ -101,21 +102,17 @@ struct EventRowLayout<Content: View>: View {
         }
     }
 
+    /// The icon in the gutter (centered under avatars, otherwise against the
+    /// text column), the text in the message column, then the time.
     private var grouped: some View {
-        let gutter: CGFloat = style.showAvatars
-            ? style.avatarSize
-            : (style.showTimestamps ? TimestampMetrics.columnWidth(style: style, bracketed: false) : 0)
-        return HStack(alignment: .firstTextBaseline, spacing: 10) {
-            if gutter > 0 {
-                icon.frame(width: gutter, alignment: style.showAvatars ? .center : .trailing)
-            } else {
-                icon
-            }
+        let metrics = GroupedMetrics(style: style)
+        return HStack(alignment: .firstTextBaseline, spacing: metrics.spacing) {
+            icon.frame(width: metrics.gutter, alignment: style.showAvatars ? .center : .trailing)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 content()
                 if style.showTimestamps {
                     Text(style.timestamp(time))
-                        .font(.system(size: max(9, style.fontSize - 3)).monospacedDigit())
+                        .font(style.gutterTimestampFont)
                         .foregroundStyle(theme[ThemeKey.chatTimestamp])
                         .fixedSize()
                 }

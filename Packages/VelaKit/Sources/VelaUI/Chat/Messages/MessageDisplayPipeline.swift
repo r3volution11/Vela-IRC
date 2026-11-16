@@ -16,6 +16,8 @@ nonisolated enum DisplayItemID: Hashable, Sendable {
     case line(UUID)
     /// A collapsed membership run, keyed by its first line.
     case membershipRun(UUID)
+    /// The spacer after the last row; see `MessageListView.scrollToBottom`.
+    case end
 }
 
 /// What a reply points at.
