@@ -92,7 +92,7 @@ struct MemberListView: View {
             Rectangle().fill(theme[ThemeKey.memberListBorder]).frame(height: 1)
         }
         .contentShape(Rectangle())
-        .gesture(WindowDragGesture())
+        .windowTitleBarArea()
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
     }

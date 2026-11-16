@@ -356,7 +356,7 @@ struct SidebarTitleStrip<Accessory: View>: View {
         .frame(height: height)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
-        .gesture(WindowDragGesture())
+        .windowTitleBarArea()
         .allowsWindowActivationEvents(true)
     }
 }

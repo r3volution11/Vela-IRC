@@ -108,7 +108,7 @@ private struct TitleBarTabStack: View {
         .frame(height: barHeight)
         .background {
             theme[palette.background]
-                .gesture(WindowDragGesture())
+                .windowTitleBarArea()
                 .allowsWindowActivationEvents(true)
         }
         .overlay(alignment: .bottom) {

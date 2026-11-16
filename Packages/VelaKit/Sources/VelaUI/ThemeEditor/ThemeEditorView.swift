@@ -135,7 +135,7 @@ struct ThemeEditorView: View {
         .padding(.trailing, 14)
         .frame(height: 52)
         .background(theme[ThemeKey.settingsSidebarBackground])
-        .gesture(WindowDragGesture())
+        .windowTitleBarArea()
         .allowsWindowActivationEvents(true)
     }
 

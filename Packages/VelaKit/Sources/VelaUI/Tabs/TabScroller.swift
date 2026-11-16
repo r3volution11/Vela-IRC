@@ -48,7 +48,7 @@ struct TabScroller<ID: Hashable, Content: View>: View {
                     if dragsWindow {
                         Color.clear
                             .contentShape(Rectangle())
-                            .gesture(WindowDragGesture())
+                            .windowTitleBarArea()
                             .allowsWindowActivationEvents(true)
                     }
                 }

@@ -27,7 +27,7 @@ struct ChatColumnView: View {
             } else if let buffer, let session {
                 ChatHeaderView(buffer: buffer, session: session)
             } else {
-                Color.clear.frame(height: 52).gesture(WindowDragGesture())
+                Color.clear.frame(height: 52).windowTitleBarArea()
             }
 
             if usesTabs && style.tabPlacement == .top {
@@ -116,7 +116,7 @@ struct ChatHeaderView: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(theme[ThemeKey.titleBarBorder]).frame(height: 1)
         }
-        .gesture(WindowDragGesture())
+        .windowTitleBarArea()
         .allowsWindowActivationEvents(true)
     }
 }
