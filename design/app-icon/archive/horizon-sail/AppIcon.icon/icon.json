@@ -1,0 +1,113 @@
+{
+  "groups": [
+    {
+      "layers": [
+        {
+          "glass": true,
+          "name": "sail-right",
+          "image-name-specializations": [
+            {
+              "value": "sail-right.svg"
+            },
+            {
+              "appearance": "tinted",
+              "value": "sail-right-mono.svg"
+            }
+          ]
+        },
+        {
+          "glass": true,
+          "name": "sail-left",
+          "image-name-specializations": [
+            {
+              "value": "sail-left.svg"
+            },
+            {
+              "appearance": "tinted",
+              "value": "sail-left-mono.svg"
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.6
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.45
+      },
+      "specular": true,
+      "lighting": "individual"
+    },
+    {
+      "layers": [
+        {
+          "glass": false,
+          "name": "space",
+          "image-name-specializations": [
+            {
+              "value": "space.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "space-dark.png"
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  },
+  "fill-specializations": [
+    {
+      "value": {
+        "linear-gradient": [
+          "display-p3:0.01200,0.01800,0.05200,1.00000",
+          "display-p3:0.03600,0.07200,0.17000,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 0.78
+          }
+        }
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "linear-gradient": [
+          "display-p3:0.00600,0.01000,0.03400,1.00000",
+          "display-p3:0.02600,0.05400,0.13600,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 0.78
+          }
+        }
+      }
+    }
+  ]
+}

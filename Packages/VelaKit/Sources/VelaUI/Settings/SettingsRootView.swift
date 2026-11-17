@@ -62,6 +62,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
 /// immediately, so changes apply live in the main window.
 struct SettingsRootView: View {
     @Environment(\.theme) private var theme
+    @Environment(UIState.self) private var uiState
     @State private var selection: SettingsPane
 
     private static let paneDefaultsKey = "Vela.settingsPane"
@@ -87,6 +88,13 @@ struct SettingsRootView: View {
         .onChange(of: selection) { _, pane in
             UserDefaults.standard.set(pane.rawValue, forKey: Self.paneDefaultsKey)
         }
+        // The palette's "Settings: Search…", the sidebar search and "Show
+        // in settings editor" links ask for a pane through shared state.
+        .onChange(of: uiState.settingsEditor.requestedPane, initial: true) { _, pane in
+            guard let pane else { return }
+            selection = pane
+            uiState.settingsEditor.requestedPane = nil
+        }
     }
 
     @ViewBuilder
@@ -106,40 +114,63 @@ struct SettingsRootView: View {
     }
 }
 
-/// The custom pane list. Arrow keys move the selection when it has focus.
+/// The custom pane list with a search field on top. Arrow keys move the
+/// selection when the list has focus.
 private struct SettingsSidebar: View {
     @Environment(\.theme) private var theme
+    @Environment(UIState.self) private var uiState
     @Binding var selection: SettingsPane
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(SettingsPane.groups.enumerated()), id: \.offset) { index, group in
-                if index > 0 {
-                    Spacer().frame(height: 12)
+        let editor = uiState.settingsEditor
+        VStack(alignment: .leading, spacing: 12) {
+            // Typing searches every setting in Advanced; focus stays here,
+            // and Return moves it to the results' search field.
+            ThemedSuggestionField(
+                text: Binding(get: { editor.query }, set: { editor.searchFromSidebar($0) }),
+                placeholder: "Search",
+                accessibilityLabel: "Search all settings",
+                leadingSystemImage: "magnifyingglass",
+                onSubmit: { editor.showInEditor(editor.query) },
+                onCancel: {
+                    guard !editor.query.isEmpty else { return false }
+                    editor.query = ""
+                    return true
                 }
-                ForEach(group) { pane in
-                    SettingsSidebarItem(pane: pane, isSelected: pane == selection) {
-                        selection = pane
+            )
+            .help("Search every setting. Results show in Advanced.")
+            .padding(.horizontal, 10)
+
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(SettingsPane.groups.enumerated()), id: \.offset) { index, group in
+                    if index > 0 {
+                        Spacer().frame(height: 12)
+                    }
+                    ForEach(group) { pane in
+                        SettingsSidebarItem(pane: pane, isSelected: pane == selection) {
+                            selection = pane
+                        }
                     }
                 }
+                Spacer(minLength: 12)
+                Text("Vela \(AppModel.appVersion)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                    .padding(.horizontal, 10)
             }
-            Spacer(minLength: 12)
-            Text("Vela \(AppModel.appVersion)")
-                .font(.system(size: 11))
-                .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
-                .padding(.horizontal, 10)
+            .padding(.horizontal, 10)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .focusable()
+            .focusEffectDisabled()
+            .onKeyPress(.upArrow) { move(by: -1) }
+            .onKeyPress(.downArrow) { move(by: 1) }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Settings sections")
         }
-        .padding(.horizontal, 10)
         .padding(.top, 14)
         .padding(.bottom, 14)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(theme[ThemeKey.settingsSidebarBackground])
-        .focusable()
-        .focusEffectDisabled()
-        .onKeyPress(.upArrow) { move(by: -1) }
-        .onKeyPress(.downArrow) { move(by: 1) }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Settings sections")
     }
 
     private func move(by offset: Int) -> KeyPress.Result {

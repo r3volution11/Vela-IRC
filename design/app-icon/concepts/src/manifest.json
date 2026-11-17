@@ -1,0 +1,97 @@
+[
+  {
+    "id": "A-chamfer",
+    "letter": "A",
+    "title": "Chamfer",
+    "dir": "/Users/r3volution11/Projects/Vela IRC/design/app-icon/concepts/A-chamfer",
+    "notes": {
+      "width": 604,
+      "height": 540,
+      "stroke": 150,
+      "angle": 25.7,
+      "chamfer": 74,
+      "flat": 84,
+      "notch": 531.5
+    }
+  },
+  {
+    "id": "B-facet",
+    "letter": "B",
+    "title": "Facet",
+    "dir": "/Users/r3volution11/Projects/Vela IRC/design/app-icon/concepts/B-facet",
+    "notes": {
+      "width": 604,
+      "height": 560,
+      "stroke": 156,
+      "angle": 28.3,
+      "chamfer": 58,
+      "ridge": 641.7,
+      "notch": 477.3
+    }
+  },
+  {
+    "id": "C-bars",
+    "letter": "C",
+    "title": "Twin Bars",
+    "dir": "/Users/r3volution11/Projects/Vela IRC/design/app-icon/concepts/C-bars",
+    "notes": {
+      "width": 664,
+      "height": 566,
+      "stroke": 150,
+      "angle": 30.4,
+      "chamfer": 46,
+      "gap": 18,
+      "notch": 515.5,
+      "cap_drop": 75.9
+    }
+  },
+  {
+    "id": "D-sail",
+    "letter": "D",
+    "title": "Leeward",
+    "dir": "/Users/r3volution11/Projects/Vela IRC/design/app-icon/concepts/D-sail",
+    "notes": {
+      "width": 604,
+      "height": 540,
+      "stroke": 150,
+      "angle": 25.7,
+      "chamfer": 74,
+      "flat": 84,
+      "belly": 30,
+      "clew_rise": 16,
+      "shift": -12,
+      "notch": 560.9
+    }
+  },
+  {
+    "id": "E-glint",
+    "letter": "E",
+    "title": "Glint",
+    "dir": "/Users/r3volution11/Projects/Vela IRC/design/app-icon/concepts/E-glint",
+    "notes": {
+      "width": 596,
+      "height": 544,
+      "stroke": 140,
+      "angle": 28.7,
+      "chamfer": 54,
+      "star_r": 56,
+      "star_y": 292,
+      "notch": 514.6
+    }
+  },
+  {
+    "id": "F-neon",
+    "letter": "F",
+    "title": "Neon",
+    "dir": "/Users/r3volution11/Projects/Vela IRC/design/app-icon/concepts/F-neon",
+    "notes": {
+      "width": 600,
+      "height": 518,
+      "stroke": 96,
+      "angle": 27.8,
+      "chamfer": 36,
+      "flat": 54,
+      "notch": 625.3
+    }
+  }
+]

@@ -21,7 +21,7 @@ On servers without reply support, the bar warns that your message will be **sent
 
 ## Typing indicators
 
-When someone is typing in the current channel or conversation, you'll see "**wren is typing…**" just above the message field ("Several people are typing…" when it's busy).
+When someone is typing in the current channel or conversation, you'll see "**wren is typing…**" just above the message field ("Several people are typing…" when it's busy). The line only takes up room while someone's typing: the conversation slides up gently to make space, and stays put if you've scrolled up to read.
 
 Vela tells others when you're typing, too. It doesn't when you're typing a command, or while [Writing Tools](/guide/sending-messages#writing-tools) is working on your message, and you can turn it off with **Send typing indicators** in **Settings → Messages → Typing**.
 

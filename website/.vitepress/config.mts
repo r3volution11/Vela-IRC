@@ -40,6 +40,8 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Theme editor', link: '/customize/theme-editor' },
       { text: 'Importing VS Code themes', link: '/customize/vs-code-themes' },
       { text: 'Creating themes', link: '/customize/creating-themes' },
+      { text: 'App icon', link: '/customize/app-icon' },
+      { text: 'Settings editor', link: '/customize/settings-editor' },
       { text: 'settings.json', link: '/customize/settings-json' },
     ],
   },

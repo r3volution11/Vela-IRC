@@ -65,4 +65,34 @@ struct UnreadMarkerTests {
         app.select(vela)
         #expect(newLines(in: vela) == ["arrived later"])
     }
+
+    /// Marking one message read (Siri) keeps what came after it unread,
+    /// but never counts lines that were read on screen.
+    @Test func readingUpToAMessageRecountsWhatFollows() throws {
+        let app = AppModel.demo()
+        let session = try #require(app.sessions.first)
+        let vela = try #require(session.buffer(named: "#vela"))
+
+        say("seen on screen", in: "#vela", at: 60, to: session)
+        say("also seen", in: "#vela", at: 90, to: session)
+        let seen = try #require(vela.lines.first { $0.text == "seen on screen" })
+        session.markRead(vela, upTo: seen.time)
+        #expect(vela.unreadCount == 0)
+        #expect(vela.lastReadAt == seen.time)
+
+        app.isWindowActive = false
+        say("first new", in: "#vela", at: 120, to: session)
+        say("second new", in: "#vela", at: 180, to: session)
+        #expect(vela.unreadCount == 2)
+
+        let first = try #require(vela.lines.first { $0.text == "first new" })
+        session.markRead(vela, upTo: first.time)
+        #expect(vela.unreadCount == 1)
+        #expect(vela.lastReadAt == first.time)
+
+        // Earlier than the read position: nothing moves back.
+        session.markRead(vela, upTo: seen.time)
+        #expect(vela.unreadCount == 1)
+        #expect(vela.lastReadAt == first.time)
+    }
 }

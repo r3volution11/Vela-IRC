@@ -62,13 +62,17 @@ public struct CatchMeUpIntent: AppIntent {
             return .result(dialog: "\(nothingNew)", view: CatchUpSnippetView(content: .nothingNew(header)))
         }
         do {
-            let summary = try await services.summarizer.summary(for: request)
+            // Through the store: a summary already cached, or being written
+            // for an open card, is shared rather than made again.
+            let summary = try await services.catchUp.summary(for: request)
             let overview = summary.overview.trimmingCharacters(in: .whitespacesAndNewlines)
             let dialog = overview.isEmpty ? "Here's what you missed in \(buffer.name)." : overview
             return .result(dialog: "\(dialog)", view: CatchUpSnippetView(content: .summary(header, summary)))
         } catch CatchUpError.nothingToSummarize {
             return .result(dialog: "\(nothingNew)", view: CatchUpSnippetView(content: .nothingNew(header)))
         } catch let error as CatchUpError {
+            // Including "Apple Intelligence is busy…" when a long catch-up
+            // hits the background rate limit.
             throw IntentFailure(error.errorDescription ?? "Apple Intelligence couldn't summarize this conversation.")
         }
     }

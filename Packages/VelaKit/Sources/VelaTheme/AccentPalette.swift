@@ -254,12 +254,21 @@ public enum AccentCustomizations {
     /// The scope entry listing the keys the accent picker wrote.
     public static let markerKey = "$accentPicker"
 
+    /// The markers the pickers in Settings → Appearance leave in a scope:
+    /// this one and the message box border's (`MessageBoxBorderCustomizations`).
+    /// They aren't colors.
+    public static let pickerMarkerKeys: Set<String> = [markerKey, MessageBoxBorderCustomizations.markerKey]
+
     /// The scope key the picker writes to for a theme: an existing
     /// single-theme scope naming it (by name or id, any case), else
-    /// `"[Name]"` (`"[id]"` when the name has `[`, `]` or `*` in it).
+    /// `"[Name]"` (`"[id]"` when the name has `[`, `]` or `*` in it). A
+    /// scope either picker already wrote to comes first, so they share one.
     public static func scopeKey(in customizations: [String: JSONValue], themeName: String, themeID: String) -> String {
         let own = ownScopeKeys(in: customizations, themeName: themeName, themeID: themeID)
         if let marked = own.first(where: { customizations[$0]?.objectValue?[markerKey] != nil }) { return marked }
+        if let marked = own.first(where: { key in
+            pickerMarkerKeys.contains { customizations[key]?.objectValue?[$0] != nil }
+        }) { return marked }
         if let exact = own.first(where: { ThemeOverrides.scopePatterns(in: $0) == [themeName] }) { return exact }
         if let first = own.first { return first }
         let usesName = !themeName.contains(where: { "[]*".contains($0) })
@@ -309,14 +318,25 @@ public enum AccentCustomizations {
     }
 
     /// How many overrides were written by hand: top-level entries plus
-    /// scoped ones, not counting what the accent picker wrote.
+    /// scoped ones, not counting what the accent and border pickers wrote.
     public static func handWrittenCount(in customizations: [String: JSONValue]) -> Int {
         customizations.reduce(0) { count, entry in
             guard ThemeOverrides.scopePatterns(in: entry.key) != nil else { return count + 1 }
             guard let scope = entry.value.objectValue else { return count + 1 }
-            let generated = Set(markerKeys(in: scope))
-            return count + scope.keys.filter { $0 != markerKey && !generated.contains($0) }.count
+            let generated = Set(markerKeys(in: scope) + MessageBoxBorderCustomizations.markerKeys(in: scope))
+            return count + scope.keys.filter { !pickerMarkerKeys.contains($0) && !generated.contains($0) }.count
         }
+    }
+
+    /// The accent the picker set for a theme, if it has.
+    static func pickedAccent(in customizations: [String: JSONValue], themeName: String, themeID: String) -> ThemeColor? {
+        for key in ownScopeKeys(in: customizations, themeName: themeName, themeID: themeID) {
+            guard let scope = customizations[key]?.objectValue, markerKeys(in: scope).contains(ThemeKey.accent),
+                  let hex = scope[ThemeKey.accent]?.stringValue, let color = ThemeColor(hex: hex)
+            else { continue }
+            return color
+        }
+        return nil
     }
 
     // MARK: Helpers

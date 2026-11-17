@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="mbody" gradientUnits="userSpaceOnUse" x1="512" y1="800" x2="512" y2="240"><stop offset="0" stop-color="#F2FFFD"/><stop offset="0.28" stop-color="#DBFFFF"/><stop offset="0.62" stop-color="#9EFAFF"/><stop offset="1" stop-color="#5FB8E8"/></linearGradient></defs>
+<path d="M 284.0 250.0 L 376.5 250.0 L 512.0 531.5 L 647.5 250.0 L 740.0 250.0 L 790.0 299.9 L 554.0 790.0 L 470.0 790.0 L 234.1 299.9 Z" fill="url(#mbody)"/>
+</svg>

@@ -150,6 +150,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 ### Fast to drive
 
 - **Command palette** (⇧⌘P) runs any command: layouts, presets, themes, network actions, settings and more.
+- **Settings editor:** every setting in one searchable list, VS Code style, with filters such as `@modified`, plus a JSON view of `settings.json` that suggests settings and values, flags mistakes as you type and shows docs on hover.
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
 - **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. Pasting multiple lines asks for confirmation before sending.
 - **Typing options:** spelling, grammar, autocorrect, text replacements and smart quotes, following your Mac's settings until you change them. Commands, nicks, channel names, links and code are never corrected.
@@ -189,8 +190,9 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ## Customizing Vela
 
-- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Apple Intelligence and Advanced. Every change applies immediately.
-- **`settings.json`** holds everything, VS Code style. Open it from **Theme → Open settings.json** or **Settings → Advanced**. Edits made in any editor apply live. Example:
+- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Apple Intelligence and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
+- **Settings → Advanced** is a VS Code-style settings editor: every setting with the right control for it, search and filters (`@modified`, `@unknown`, `@category:`, `@pane:`), and a JSON view with suggestions, inline problems, hover docs and the defaults alongside.
+- **`settings.json`** holds everything, VS Code style. Edit it in the settings editor's JSON view, or open it in your own editor from **Theme → Open settings.json**. Edits made in any editor apply live, and changes made in Vela keep your comments and formatting. Example:
 
   ```jsonc
   {

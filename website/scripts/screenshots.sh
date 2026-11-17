@@ -110,8 +110,52 @@ pane() {
 }
 pane settings-intelligence 820x530 intelligence
 pane settings-siri         820x620 intelligence --settings-scroll 9999
-pane settings-typing       820x600 messages --settings-scroll 9999
-pane settings-accent       820x600 appearance --accent Cyan
+pane settings-typing       820x716 messages --settings-scroll 9999
+pane settings-accent       820x705 appearance --accent Cyan
+pane settings-app-icon     820x600 appearance --settings-scroll 9999 --set appearance.appIcon=sunrise
+
+# The settings editor (Settings → Advanced): the UI view, filtered to
+# @modified, and the JSON view of a small settings.json with a typo and a
+# bad value. --settings-json-text saves the file first; the other
+# --settings-json-* flags take a UTF-16 offset into the text (ASCII here).
+pane settings-editor          820x660 advanced
+pane settings-editor-modified 820x585 advanced --settings-search "@modified"
+settings_json=$(cat <<'EOF'
+// Comments and trailing commas are fine.
+{
+    // Always Palenight
+    "appearance.theme": "Palenight",
+    "appearance.followSystem": false,
+    "appearance.messageBoxBorder": "accent",
+
+    /* Messages */
+    "chat.layout": "columns",
+    "chat.fontSzie": 14,
+    "chat.clock": "24-hour",
+    "chat.timestampSeconds": true,
+
+    // Three months is plenty
+    "history.retentionDays": 90,
+}
+EOF
+)
+# The same file with a setting half typed, for the suggestions list.
+settings_json_typing=${settings_json/'"chat.timestampSeconds": true,'/'"chat.timestampSeconds": true,
+    "media.'}
+offset() { local index=${1[(i)$2]}; print $(( index - 1 )) }   # where $2 starts in $1
+json() {
+  local name=$1 size=$2
+  shift 2
+  shot "$name" "$size" 1400 --theme Palenight --preset modern --settings-pane advanced \
+    --settings-mode json --settings-json-text "$settings_json" "$@"
+}
+json settings-json          1040x620 --settings-json-defaults
+json settings-json-complete 820x600 --settings-json-unsaved "$settings_json_typing" \
+  --settings-json-complete $(( $(offset "$settings_json_typing" '"media.') + 7 ))
+json settings-json-problems 820x540 --settings-json-problems \
+  --settings-json-hover $(( $(offset "$settings_json" '"chat.fontSzie"') + 3 ))
+json settings-json-hover    820x540 \
+  --settings-json-hover $(( $(offset "$settings_json" '"history.retentionDays"') + 3 ))
 
 # One shot per built-in theme, for the theme gallery.
 themes=(

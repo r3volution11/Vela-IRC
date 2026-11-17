@@ -128,18 +128,101 @@ struct AppActionTests {
 
     @Test func awayGoesToConnectedNetworks() async throws {
         let (app, _, _) = try await demo()
-        #expect(try app.setAway("lunch").map(\.displayName) == ["Libera.Chat", "Ergo Testnet"])
-        #expect(try app.setBack().map(\.displayName) == ["Libera.Chat", "Ergo Testnet"])
+        #expect(try await app.setAway("lunch").map(\.displayName) == ["Libera.Chat", "Ergo Testnet"])
+        #expect(try await app.setBack().map(\.displayName) == ["Libera.Chat", "Ergo Testnet"])
     }
 
     @Test func awayNeedsAConnection() async throws {
         let (app, _, _) = try await demo()
         for session in app.sessions { session.connectionState = .disconnected }
-        #expect(throws: AppActionError.noConnectedNetworks) { try app.setAway(nil) }
-        #expect(throws: AppActionError.noConnectedNetworks) { try app.setBack() }
+        let start = Date()
+        await #expect(throws: AppActionError.noConnectedNetworks) { try await app.setAway(nil) }
+        await #expect(throws: AppActionError.noConnectedNetworks) { try await app.setBack() }
+        // Nothing was connecting, so nothing was waited for.
+        #expect(Date().timeIntervalSince(start) < 1)
+    }
+
+    /// Siri may have just launched Vela: networks still connecting get a
+    /// few seconds before away is set.
+    @Test func awayWaitsForNetworksStillConnecting() async throws {
+        let (app, _, oftc) = try await demo()
+        oftc.connectionState = .connecting
+        Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            oftc.connectionState = .registering
+            try? await Task.sleep(for: .milliseconds(200))
+            oftc.connectionState = .connected
+        }
+        let names = try await app.setAway("lunch", connectionTimeout: .seconds(5)).map(\.displayName)
+        #expect(Set(names) == ["Libera.Chat", "Ergo Testnet", "OFTC"])
+    }
+
+    @Test func awayStopsWaitingForAConnectionThatFails() async throws {
+        let (app, _, oftc) = try await demo()
+        oftc.connectionState = .connecting
+        Task {
+            try? await Task.sleep(for: .milliseconds(200))
+            oftc.connectionState = .disconnected
+        }
+        let start = Date()
+        let names = try await app.setBack(connectionTimeout: .seconds(5)).map(\.displayName)
+        #expect(names == ["Libera.Chat", "Ergo Testnet"])
+        #expect(Date().timeIntervalSince(start) < 3)
+    }
+
+    @Test func awayWaitsNoLongerThanTheTimeout() async throws {
+        let (app, _, oftc) = try await demo()
+        oftc.connectionState = .connecting
+        let start = Date()
+        let names = try await app.setAway(nil, connectionTimeout: .milliseconds(400)).map(\.displayName)
+        #expect(names == ["Libera.Chat", "Ergo Testnet"])
+        #expect(Date().timeIntervalSince(start) < 2)
     }
 
     // MARK: Read state and mentions
+
+    /// Siri's "mark as read" on one message: what came after stays unread.
+    @Test func markingAMessageReadKeepsLaterOnesUnread() async throws {
+        let (app, libera, _) = try await demo()
+        let vela = try #require(libera.buffer(named: "#vela"))
+        // Off screen (leaving it marks it read), so new lines count as unread.
+        app.select(libera.serverBuffer)
+        let base = (vela.lines.last?.time ?? Date()).addingTimeInterval(60)
+        let lines = (0..<4).map { index in
+            ChatLine(time: base.addingTimeInterval(Double(index)), kind: .message, nick: "kenji", text: "line \(index)",
+                     isHighlight: index == 3)
+        }
+        for line in lines { libera.add(line, to: vela) }
+        #expect(vela.unreadCount == 4)
+        #expect(vela.highlightCount == 1)
+
+        try app.markRead(upTo: lines[1].id, in: vela.id)
+        #expect(vela.lastReadAt == lines[1].time)
+        #expect(vela.unreadCount == 2)
+        #expect(vela.highlightCount == 1)
+
+        // Never backwards.
+        try app.markRead(upTo: lines[0].id, in: vela.id)
+        #expect(vela.lastReadAt == lines[1].time)
+        #expect(vela.unreadCount == 2)
+
+        try app.markRead(upTo: lines[3].id, in: vela.id)
+        #expect(vela.unreadCount == 0)
+        #expect(vela.highlightCount == 0)
+    }
+
+    @Test func markingAMessageNoLongerLoadedChangesNothing() async throws {
+        let (app, libera, _) = try await demo()
+        let swift = try #require(libera.buffer(named: "#swift"))
+        let unread = swift.unreadCount
+        #expect(throws: AppActionError.messageNotFound(buffer: "#swift")) {
+            try app.markRead(upTo: UUID(), in: swift.id)
+        }
+        #expect(swift.unreadCount == unread)
+        #expect(throws: AppActionError.unknownBuffer) {
+            try app.markRead(upTo: UUID(), in: BufferID(networkID: libera.id, foldedName: "#nowhere"))
+        }
+    }
 
     @Test func markAllReadClearsEverything() async throws {
         let (app, _, _) = try await demo()

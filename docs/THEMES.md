@@ -479,8 +479,8 @@ The message composer.
 | `input.background` | The message field. | `mix(input.containerBackground, chat.foreground, 6%)` | `mix(input.containerBackground, #FFFFFF, 70%)` |
 | `input.foreground` | Text typed in the message field. | `chat.foreground` | `chat.foreground` |
 | `input.placeholder` | Placeholder text in the empty message field. | `mix(input.foreground, input.background, 50%)` | `mix(input.foreground, input.background, 42%)` |
-| `input.border` | Border of the message field. | `mix(input.background, input.foreground, 12%)` | `mix(input.background, input.foreground, 15%)` |
-| `input.focusBorder` | Border of the message field while it has focus. | `focusBorder` | `focusBorder` |
+| `input.border` | Border of the message field (with the Subtle border style, also while it has focus). | `mix(input.background, input.foreground, 12%)` | `mix(input.background, input.foreground, 15%)` |
+| `input.focusBorder` | Border of the message field while it has focus, with the Accent when typing border style. | `focusBorder` | `focusBorder` |
 | `input.iconForeground` | Buttons and icons inside the composer. | `mix(input.foreground, input.background, 35%)` | `mix(input.foreground, input.background, 35%)` |
 
 ### Member list

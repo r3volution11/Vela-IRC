@@ -394,6 +394,19 @@ struct VelaCommandCatalog {
         ) { [context] in context.openSettings() }
     }
 
+    /// Opens Settings → Advanced with its search field focused (the
+    /// current search is kept).
+    var searchSettings: VelaCommand {
+        VelaCommand(
+            id: "settings.search", category: .settings, title: "Search…",
+            menuTitle: "Search Settings…",
+            keywords: ["preferences", "find", "settings editor", "advanced", "options", "filter"]
+        ) { [context] in
+            context.uiState.settingsEditor.openSearch()
+            context.openSettings()
+        }
+    }
+
     var openSettingsJSON: VelaCommand {
         VelaCommand(
             id: "settings.openJSON", category: .settings, title: "Open settings.json",
@@ -619,14 +632,15 @@ struct VelaCommandCatalog {
         commands += mediaCommands
         commands += [textBigger, textSmaller, textActualSize]
         commands += [selectTheme, toggleFollowSystem, themeEditor, importTheme, revealThemesFolder]
-        commands += [openSettings, openSettingsJSON]
+        commands += [openSettings, searchSettings, openSettingsJSON]
         commands += [previousBuffer, nextBuffer, previousUnread, nextUnread, focusInput]
         commands.append(markAllAsRead)
         commands += selectedBufferCommands
-        commands += typingCommands
+        commands += typingCommands + messageBoxBorderCommands
         commands += catchUpCommands
         commands += translationCommands
         commands += accentCommands
+        commands += appIconCommands
         commands += [addNetwork, joinChannel, sortChannels]
         for session in app.sessions {
             commands += networkCommands(for: session)

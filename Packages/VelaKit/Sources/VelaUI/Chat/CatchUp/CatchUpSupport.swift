@@ -63,9 +63,10 @@ enum CatchUpActions {
     }
 
     /// Summarizes the card's stretch again, including anything that has
-    /// arrived since. Also Try Again after a failure.
+    /// arrived since. Also Try Again after a failure. The stretch starts at
+    /// the card's own anchor, wherever the live New marker has gone.
     static func regenerate(_ card: CatchUpCard, buffer: BufferModel, session: NetworkSession, store: CatchUpStore) {
-        let request = CatchUpRequest(buffer: buffer, session: session, since: card.marker ?? buffer.unreadMarkerAfter)
+        let request = CatchUpRequest(buffer: buffer, session: session, since: card.anchor)
         store.regenerate(request.lines.isEmpty ? card.request : request, marker: card.marker)
     }
 

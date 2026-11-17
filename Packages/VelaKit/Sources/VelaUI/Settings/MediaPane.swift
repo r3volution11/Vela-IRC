@@ -17,7 +17,7 @@ struct MediaPane: View {
     var body: some View {
         @Bindable var settings = app.settings
 
-        SettingsPage("Media", subtitle: "Inline images, link previews and video players, and where they're allowed to load from.") {
+        SettingsPage("Media", subtitle: "Inline images, link previews and video players, and where they're allowed to load from.", pane: .media) {
             SettingsSection("Loading") {
                 SettingsToggle(
                     "Load previews automatically",

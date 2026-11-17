@@ -54,12 +54,12 @@ extension CatchUpRequest {
     /// The conversation in `buffer` newer than `since` (by default, the
     /// buffer's New marker or last-read time): messages, actions and
     /// notices only, with formatting stripped. Your own lines are kept for
-    /// context.
+    /// context; deleted (redacted) ones are left out.
     @MainActor
     public init(buffer: BufferModel, session: NetworkSession, since: Date? = nil) {
         let cutoff = since ?? buffer.unreadMarkerAfter ?? buffer.lastReadAt ?? .distantPast
         let lines = buffer.lines.lazy
-            .filter { $0.kind.isConversation && $0.time > cutoff }
+            .filter { $0.kind.isConversation && !$0.isRedacted && $0.time > cutoff }
             .map { line in
                 CatchUpLine(
                     id: line.id,
@@ -130,6 +130,9 @@ nonisolated public enum CatchUpError: Error, Equatable, LocalizedError {
     case nothingToSummarize
     /// The model's safety guardrails declined the conversation.
     case declined
+    /// Apple Intelligence turned the request away for now; it limits how
+    /// much an app asks of it, more so in the background (Siri, Shortcuts).
+    case rateLimited
     case failed(String)
 
     public var errorDescription: String? {
@@ -137,6 +140,7 @@ nonisolated public enum CatchUpError: Error, Equatable, LocalizedError {
         case .unavailable(let status): status.detail
         case .nothingToSummarize: "There's nothing new to summarize."
         case .declined: "Apple Intelligence couldn't summarize this conversation."
+        case .rateLimited: "Apple Intelligence is busy. Try again in a moment."
         case .failed(let message): message
         }
     }

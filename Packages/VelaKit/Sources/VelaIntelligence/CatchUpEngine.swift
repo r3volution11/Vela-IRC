@@ -31,6 +31,8 @@ nonisolated enum CatchUpModelError: Error, Equatable {
     case unsupportedLanguage
     /// The model's assets aren't there (still downloading, say).
     case unavailable
+    /// Too many requests for now (long stretches make many in the background).
+    case rateLimited
     case failed(String)
 
     var catchUpError: CatchUpError {
@@ -39,6 +41,7 @@ nonisolated enum CatchUpModelError: Error, Equatable {
         case .declined: .declined
         case .unsupportedLanguage: .unavailable(.unsupportedLanguage)
         case .unavailable: .unavailable(.modelNotReady)
+        case .rateLimited: .rateLimited
         case .failed(let message): .failed(message)
         }
     }

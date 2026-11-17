@@ -35,9 +35,9 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Chat** | Toggle Timestamps, Toggle Monospace Font, Toggle Nick Colors, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages |
 | **Media** | Load Previews Automatically, Toggle Link Previews, Minimal / Standard / Large Link Previews, Play Videos Inline, Compact Videos, Videos as Links, Full-Size Images, Image Thumbnails, Hide Adult Site Previews, Blur Images Until Clicked |
 | **Text** | Bigger, Smaller, Actual Size |
-| **Typing** | Check Spelling While Typing, Check Grammar, Correct Spelling Automatically, Use Text Replacements, Use Smart Quotes and Dashes, Use Writing Tools |
+| **Typing** | Check Spelling While Typing, Check Grammar, Correct Spelling Automatically, Use Text Replacements, Use Smart Quotes and Dashes, Use Writing Tools, Message Box Border: None / Subtle / Accent When Typing |
 | **Theme** | Select Theme…, Toggle Match System Appearance, Next Accent Color, Reset Accent Color, Open Theme Editor, Import Theme…, Reveal Themes Folder |
-| **Settings** | Open Settings, Open settings.json |
+| **Settings** | Open Settings, Search…, Open settings.json |
 | **Go** | Go to Conversation…, Previous / Next Conversation, Previous / Next Unread, Focus Input |
 | **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Translate Messages Automatically, Catch Me Up, Close |
 | **Channel** | Join…, Leave _#channel_ |

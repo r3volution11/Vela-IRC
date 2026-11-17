@@ -72,6 +72,11 @@ public enum ThemeSchema {
             "items": .object(["type": "string"]),
             "description": "Written by Settings → Appearance → Accent color: the tokens it set in this theme's scope. Choosing Default removes exactly these and keeps the rest.",
         ])
+        properties[MessageBoxBorderCustomizations.markerKey] = .object([
+            "type": "array",
+            "items": .object(["type": "string"]),
+            "description": "Written by Settings → Appearance → Message box → Border color: the tokens it set in this theme's scope. Choosing Default removes exactly these and keeps the rest.",
+        ])
         return ["type": "object", "properties": .object(properties)]
     }
 

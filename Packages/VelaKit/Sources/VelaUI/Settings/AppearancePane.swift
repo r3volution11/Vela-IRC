@@ -39,7 +39,8 @@ struct AppearancePane: View {
 
         SettingsPage(
             "Appearance",
-            subtitle: "Every surface in Vela is drawn from a theme. Pick one, follow the system's light and dark mode, or make your own."
+            subtitle: "Every surface in Vela is drawn from a theme. Pick one, follow the system's light and dark mode, or make your own.",
+            pane: .appearance
         ) {
             QuickPresetsStrip(navigate: navigate)
 
@@ -49,6 +50,8 @@ struct AppearancePane: View {
                         .buttonStyle(ThemedButtonStyle())
                 }
             }
+
+            messageBox
 
             SettingsSection(
                 "Theme",
@@ -112,6 +115,8 @@ struct AppearancePane: View {
             }
             problems
 
+            DockIconSection()
+
             SettingsSection("Details") {
                 let overrides = AccentCustomizations.handWrittenCount(in: settings[.appearanceColorCustomizations])
                 SettingsRow(
@@ -145,6 +150,34 @@ struct AppearancePane: View {
             }
         } message: {
             Text("The theme file is removed from your Themes folder. This can't be undone.")
+        }
+    }
+
+    // MARK: Message box
+
+    /// The message box border: a style for every theme, and a color per
+    /// theme (for both themes with Match System Appearance, as for accents).
+    private var messageBox: some View {
+        @Bindable var settings = app.settings
+        let style = settings[.appearanceMessageBoxBorder]
+        let detail = switch style {
+        case .none: "No border, just the field's background."
+        case .subtle: "A quiet line that stays the same while you type."
+        case .accent: "The line turns the accent color while you type."
+        }
+        return SettingsSection("Message box") {
+            SettingsSegmentedRow(
+                title: "Border",
+                detail: detail,
+                selection: $settings[.appearanceMessageBoxBorder],
+                options: [(MessageBoxBorder.none, "None"), (.subtle, "Subtle"), (.accent, "Accent when typing")]
+            )
+            ForEach(accentThemes) { entry in
+                if let palette = MessageBoxBorderActions.palette(for: entry.info, themeStore: themeStore) {
+                    MessageBoxBorderColorRow(palette: palette, info: entry.info, mode: entry.mode)
+                        .themedDisabled(style == MessageBoxBorder.none)
+                }
+            }
         }
     }
 
@@ -485,14 +518,114 @@ private struct AccentRow: View {
     }
 }
 
-/// One round accent swatch, ringed when selected.
+/// A theme's message box border colors: its own border ("Default"), its
+/// quiet neutrals, its accent and other colors, then Custom… for any color.
+/// The color shows focused or not.
+private struct MessageBoxBorderColorRow: View {
+    @Environment(AppModel.self) private var app
+    @Environment(ThemeStore.self) private var themeStore
+    @Environment(\.theme) private var theme
+    let palette: MessageBoxBorderPalette
+    let info: ThemeInfo
+    /// "Dark Mode" or "Light Mode" when both preferred themes are shown.
+    let mode: String?
+
+    var body: some View {
+        let choice = MessageBoxBorderActions.choice(in: palette, settings: app.settings)
+        SettingsRow(mode.map { "\($0) border color" } ?? "Border color", detail: detail(for: choice)) {
+            HStack(spacing: 2) {
+                ForEach(palette.swatches) { swatch in
+                    AccentSwatchButton(
+                        color: swatch.color,
+                        title: swatch.title,
+                        accessibilityLabel: swatch.accessibilityLabel,
+                        isSelected: choice.swatch == swatch
+                    ) {
+                        MessageBoxBorderActions.select(swatch, in: palette, settings: app.settings)
+                    }
+                    if swatch.isDefault { divider }
+                }
+                divider
+                customWell(choice: choice)
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("\(palette.themeName) message box border color")
+        }
+    }
+
+    private var divider: some View {
+        SettingsHairline(vertical: true)
+            .frame(height: 16)
+            .padding(.horizontal, 4)
+    }
+
+    /// A color well for any color, ringed when the color is one of no swatch.
+    private func customWell(choice: MessageBoxBorderChoice) -> some View {
+        var isCustom = false
+        if case .custom = choice { isCustom = true }
+        // The panel starts from the border as it's drawn now.
+        let current: ThemeColor = switch choice {
+        case .custom(let color): color
+        case .swatch(let swatch) where !swatch.isDefault: swatch.color
+        case .swatch: themeStore.resolvedTheme(for: info)?.color(ThemeKey.inputBorder) ?? palette.defaultSwatch.color
+        }
+        return HStack(spacing: 6) {
+            Text("Custom…")
+                .font(.system(size: 12))
+                .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                .fixedSize()
+                .accessibilityHidden(true)
+            ColorPicker(
+                "Custom border color",
+                selection: Binding(
+                    get: { current.color },
+                    set: { MessageBoxBorderActions.select(ThemeColor(swiftUIColor: $0), in: palette, settings: app.settings) }
+                ),
+                supportsOpacity: true
+            )
+            .labelsHidden()
+            .controlSize(.small)
+            .fixedSize()
+            .padding(3)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(isCustom ? theme[ThemeKey.settingsForeground] : .clear, lineWidth: 2)
+            )
+            .help("Any color")
+            .accessibilityAddTraits(isCustom ? .isSelected : [])
+        }
+    }
+
+    private func detail(for choice: MessageBoxBorderChoice) -> String {
+        if case .custom = choice, !MessageBoxBorderActions.hasPickedColor(in: palette, settings: app.settings) {
+            return "settings.json sets input.border for \(palette.themeName)."
+        }
+        return "\(palette.themeName)'s own colors, or any color. Shown while you type, too."
+    }
+}
+
+/// One round color swatch, ringed when selected.
 private struct AccentSwatchButton: View {
     @Environment(\.theme) private var theme
-    let swatch: AccentSwatch
+    let color: ThemeColor
+    let title: String
+    let accessibilityLabel: String
     let isSelected: Bool
     let action: () -> Void
 
     @State private var isHovered = false
+
+    init(color: ThemeColor, title: String, accessibilityLabel: String, isSelected: Bool, action: @escaping () -> Void) {
+        self.color = color
+        self.title = title
+        self.accessibilityLabel = accessibilityLabel
+        self.isSelected = isSelected
+        self.action = action
+    }
+
+    init(swatch: AccentSwatch, isSelected: Bool, action: @escaping () -> Void) {
+        self.init(color: swatch.color, title: swatch.title, accessibilityLabel: swatch.accessibilityLabel, isSelected: isSelected, action: action)
+    }
 
     var body: some View {
         Button(action: action) {
@@ -503,7 +636,7 @@ private struct AccentSwatchButton: View {
                         lineWidth: 2
                     )
                 Circle()
-                    .fill(swatch.color.color)
+                    .fill(color.color)
                     .overlay(Circle().strokeBorder(theme[ThemeKey.settingsBorder], lineWidth: 1))
                     .padding(4)
             }
@@ -512,8 +645,8 @@ private struct AccentSwatchButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .help(swatch.title)
-        .accessibilityLabel(swatch.accessibilityLabel)
+        .help(title)
+        .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }

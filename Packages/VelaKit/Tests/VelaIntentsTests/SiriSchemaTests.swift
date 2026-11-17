@@ -59,6 +59,20 @@ struct SiriSchemaTests {
         #expect(MessageEntity(id: MessageEntity.id(line: UUID(), buffer: vela.id), in: app) == nil)
     }
 
+    @Test func deletedMessagesHaveNoText() async throws {
+        guard #available(macOS 27, *) else { return }
+        let (app, libera) = try await demo()
+        let vela = try #require(libera.buffer(named: "#vela"))
+        let index = try #require(vela.lines.lastIndex { $0.kind == .message && !$0.isSelf })
+        vela.lines[index].isRedacted = true
+        let line = vela.lines[index]
+        let message = try #require(MessageEntity(id: MessageEntity.id(line: line.id, buffer: vela.id), in: app))
+        #expect(message.body == nil)
+        #expect(message.author.name == line.nick)
+        // Search skips it too.
+        #expect(!MessageEntity.recent(matching: line.text, in: app).contains { $0.id == message.id })
+    }
+
     @Test func recipientsResolveToTheirNames() async throws {
         guard #available(macOS 27, *) else { return }
         let (app, libera) = try await demo()
@@ -105,6 +119,40 @@ struct SiriSchemaTests {
         let elsewhere = MessagePersonEntity(name: "#elsewhere", networkID: libera.id, networkName: "Libera.Chat", isChannel: true, fold: libera.foldName)
         #expect(throws: (any Error).self) { try app.bufferID(for: elsewhere) }
         #expect(libera.buffer(named: "#elsewhere") == nil)
+    }
+
+    @Test func aFailedSendLeavesNoEmptyConversation() async throws {
+        guard #available(macOS 27, *) else { return }
+        let (app, libera) = try await demo()
+        let oftc = try #require(app.sessions.first { $0.displayName == "OFTC" })
+        let stranger = MessagePersonEntity(nick: "stranger", session: oftc)
+        await #expect(throws: AppActionError.notConnected(network: "OFTC")) {
+            try await app.sendMessage("hi", to: [stranger], connectionTimeout: .milliseconds(200))
+        }
+        #expect(oftc.buffer(named: "stranger") == nil)
+
+        // Sent to the first; only the second's new conversation goes.
+        let kenji = MessagePersonEntity(nick: "kenji", session: libera)
+        await #expect(throws: AppActionError.notConnected(network: "OFTC")) {
+            try await app.sendMessage("hi", to: [kenji, stranger], connectionTimeout: .milliseconds(200))
+        }
+        #expect(libera.buffer(named: "kenji")?.lines.last?.text == "hi")
+        #expect(oftc.buffer(named: "stranger") == nil)
+
+        // A target that can't be resolved stops it before anything is sent.
+        let newcomer = MessagePersonEntity(nick: "newcomer", session: libera)
+        let elsewhere = MessagePersonEntity(name: "#elsewhere", networkID: libera.id, networkName: "Libera.Chat", isChannel: true, fold: libera.foldName)
+        await #expect(throws: (any Error).self) {
+            try await app.sendMessage("hi", to: [newcomer, elsewhere])
+        }
+        #expect(libera.buffer(named: "newcomer") == nil)
+
+        // A conversation that was already open stays open.
+        let marisol = try #require(libera.buffer(named: "marisol"))
+        await #expect(throws: AppActionError.emptyMessage) {
+            try await app.sendMessage("  ", to: [MessagePersonEntity(buffer: marisol, session: libera)])
+        }
+        #expect(libera.buffer(named: "marisol") === marisol)
     }
 
     // MARK: Spotlight

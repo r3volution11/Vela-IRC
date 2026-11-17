@@ -53,8 +53,8 @@ struct TranslationStoreTests {
         TranslationContext(target: Locale.Language(identifier: target), isAutomatic: automatic, isDemo: false)
     }
 
-    private func makeStore(_ translator: FakeTranslator) -> TranslationStore {
-        let store = TranslationStore(translator: translator, collectionDelay: .zero)
+    private func makeStore(_ translator: FakeTranslator, stateLimit: Int = 5_000) -> TranslationStore {
+        let store = TranslationStore(translator: translator, collectionDelay: .zero, stateLimit: stateLimit)
         store.prepare(isDemo: false)
         return store
     }
@@ -174,6 +174,25 @@ struct TranslationStoreTests {
         #expect(store.state(for: another.id) == nil)
     }
 
+    @Test func aLaterDownloadBringsAutomaticTranslationBack() async {
+        let translator = FakeTranslator()
+        translator.failure = .notDownloaded
+        let store = makeStore(translator)
+        store.translate(spanishLine, from: spanish, context: context())
+        await eventually { store.state(for: spanishLine.id) != .translating(source: spanish) }
+
+        // The reader downloads Spanish when asked the next time.
+        translator.failure = nil
+        store.translateAgain(spanishLine, in: buffer, context: context())
+        await eventually { store.state(for: spanishLine.id)?.isTranslated == true }
+
+        let another = ChatLine(kind: .message, nick: "marisol", text: "vale, nos vemos mañana en la reunión")
+        store.autoTranslate(another, in: buffer, context: context(automatic: true))
+        #expect(store.state(for: another.id) == .translating(source: spanish))
+        await eventually { store.state(for: another.id)?.isTranslated == true }
+        #expect(store.state(for: another.id)?.isTranslated == true)
+    }
+
     // MARK: Automatic
 
     @Test func automaticTranslationNeedsAnAutomaticBuffer() async {
@@ -212,6 +231,7 @@ struct TranslationStoreTests {
         let translator = FakeTranslator()
         let store = makeStore(translator)
         store.translate(spanishLine, from: spanish, context: context())
+        store.rowAppeared(spanishLine, context: context())
         await eventually { store.state(for: spanishLine.id)?.isTranslated == true }
 
         store.retarget(to: Locale.Language(identifier: "ja"), isDemo: false)
@@ -220,6 +240,81 @@ struct TranslationStoreTests {
 
         // Into the line's own language: nothing to show.
         store.retarget(to: Locale.Language(identifier: "es"), isDemo: false)
+        #expect(store.state(for: spanishLine.id) == nil)
+    }
+
+    @Test func aNewTargetWaitsForRowsOffScreen() async {
+        let translator = FakeTranslator()
+        let store = makeStore(translator)
+        let japanese = Locale.Language(identifier: "ja")
+        let other = ChatLine(kind: .message, nick: "marisol", text: "vale, nos vemos mañana en la reunión")
+        store.translate(spanishLine, from: spanish, context: context())
+        store.translate(other, from: spanish, context: context())
+        store.rowAppeared(spanishLine, context: context())
+        await eventually { store.state(for: other.id)?.isTranslated == true && store.state(for: spanishLine.id)?.isTranslated == true }
+        let calls = translator.calls.flatMap { $0 }.count
+
+        // Only the row on screen is translated again now.
+        store.retarget(to: japanese, isDemo: false)
+        await eventually { store.state(for: spanishLine.id) == .translated(text: "[ja] " + spanishLine.text.uppercased(), source: spanish) }
+        #expect(translator.calls.flatMap { $0 }.count == calls + 1)
+        #expect(store.state(for: other.id) == .translated(text: "[en] " + other.text.uppercased(), source: spanish))
+
+        // The other when it comes on screen.
+        store.rowAppeared(other, context: context(target: "ja"))
+        await eventually { store.state(for: other.id) == .translated(text: "[ja] " + other.text.uppercased(), source: spanish) }
+        #expect(translator.calls.flatMap { $0 }.count == calls + 2)
+
+        // Back to English: the row still on screen is redone; the one that
+        // scrolled away waits.
+        store.rowDisappeared(spanishLine.id)
+        store.retarget(to: english, isDemo: false)
+        await eventually { store.state(for: other.id) == .translated(text: "[en] " + other.text.uppercased(), source: spanish) }
+        #expect(store.state(for: other.id) == .translated(text: "[en] " + other.text.uppercased(), source: spanish))
+        #expect(store.state(for: spanishLine.id) == .translated(text: "[ja] " + spanishLine.text.uppercased(), source: spanish))
+        #expect(translator.calls.flatMap { $0 }.count == calls + 3)
+    }
+
+    @Test func statesAreBounded() {
+        let store = makeStore(FakeTranslator(), stateLimit: 10)
+        let lines = (0..<50).map { ChatLine(kind: .message, nick: "marisol", text: "línea \($0)") }
+        for line in lines { store.hide(line.id) }
+        #expect(store.states.count <= 10)
+        // The newest are kept.
+        #expect(store.state(for: lines[49].id) == .hidden)
+        #expect(store.state(for: lines[0].id) == nil)
+    }
+
+    // MARK: Deleted messages
+
+    @Test func aDeletedMessageLosesItsTranslation() async {
+        let translator = FakeTranslator()
+        let store = makeStore(translator)
+        store.translate(spanishLine, from: spanish, context: context())
+        store.rowAppeared(spanishLine, context: context())
+        await eventually { store.state(for: spanishLine.id)?.isTranslated == true }
+
+        var deleted = spanishLine
+        deleted.isRedacted = true
+        store.rowAppeared(deleted, context: context())
+        #expect(store.state(for: spanishLine.id) == nil)
+        // Not even from the cache, and not into a new target.
+        store.translate(deleted, from: spanish, context: context())
+        #expect(store.state(for: spanishLine.id) == nil)
+        store.retarget(to: Locale.Language(identifier: "ja"), isDemo: false)
+        #expect(store.state(for: spanishLine.id) == nil)
+        store.autoTranslate(deleted, in: buffer, context: context(automatic: true))
+        #expect(store.state(for: spanishLine.id) == nil)
+        #expect(translator.calls.count == 1)
+    }
+
+    @Test func deletingWhileTranslatingDropsTheResult() async {
+        let translator = FakeTranslator()
+        let store = makeStore(translator)
+        store.translate(spanishLine, from: spanish, context: context())
+        store.forget(spanishLine.id)
+        await eventually { translator.calls.count == 1 }
+        try? await Task.sleep(for: .milliseconds(30))
         #expect(store.state(for: spanishLine.id) == nil)
     }
 

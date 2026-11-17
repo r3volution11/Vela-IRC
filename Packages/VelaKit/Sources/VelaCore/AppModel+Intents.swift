@@ -21,6 +21,8 @@ nonisolated public enum AppActionError: Error, Equatable, LocalizedError {
     case noConnectedNetworks
     case emptyMessage
     case invalidChannelName(String)
+    /// The message has left memory (or never was in this buffer).
+    case messageNotFound(buffer: String)
 
     public var errorDescription: String? {
         switch self {
@@ -32,6 +34,7 @@ nonisolated public enum AppActionError: Error, Equatable, LocalizedError {
         case .noConnectedNetworks: "You're not connected to any networks."
         case .emptyMessage: "There's nothing to send."
         case .invalidChannelName(let name): "“\(name)” isn't a channel name."
+        case .messageNotFound(let buffer): "Vela can't find that message in \(buffer) anymore."
         }
     }
 }
@@ -229,10 +232,33 @@ extension AppModel {
         sessions.filter { $0.isConnected && !$0.isBouncerControl }
     }
 
-    /// Marks you away on every connected network, like `/away`. Returns the
-    /// networks it was sent to.
+    /// Waits up to `timeout` for networks whose connection is on its way
+    /// (``NetworkSession/isAwaitingConnection``): Vela may have just been
+    /// launched to run this. Each is settled once it's connected, or still
+    /// disconnected after a moment (it isn't connecting after all, as in
+    /// ``waitForConnection(_:timeout:)``). Returns at once when none are
+    /// pending. Demo networks never connect on their own.
+    public func waitForPendingConnections(timeout: Duration = .seconds(10)) async {
+        let pending = sessions.filter { session in
+            guard !session.isBouncerControl, !session.isConnected else { return false }
+            return isDemo ? session.connectionState != .disconnected : session.isAwaitingConnection
+        }
+        guard !pending.isEmpty else { return }
+        let clock = ContinuousClock()
+        let grace = clock.now + min(timeout, .milliseconds(1500))
+        _ = await waitUntil(timeout: timeout) {
+            let pastGrace = clock.now >= grace
+            return pending.allSatisfy { $0.isConnected || ($0.connectionState == .disconnected && pastGrace) }
+        }
+    }
+
+    /// Marks you away on every connected network, like `/away`, once
+    /// networks still connecting have had up to `connectionTimeout` (see
+    /// ``waitForPendingConnections(timeout:)``). Returns the networks it
+    /// was sent to.
     @discardableResult
-    public func setAway(_ message: String?) throws -> [NetworkSession] {
+    public func setAway(_ message: String?, connectionTimeout: Duration = .seconds(10)) async throws -> [NetworkSession] {
+        await waitForPendingConnections(timeout: connectionTimeout)
         let targets = awayTargets
         guard !targets.isEmpty else { throw AppActionError.noConnectedNetworks }
         let text = message?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -242,9 +268,11 @@ extension AppModel {
         return targets
     }
 
-    /// Marks you back on every connected network, like `/back`.
+    /// Marks you back on every connected network, like `/back`, after the
+    /// same wait as ``setAway(_:connectionTimeout:)``.
     @discardableResult
-    public func setBack() throws -> [NetworkSession] {
+    public func setBack(connectionTimeout: Duration = .seconds(10)) async throws -> [NetworkSession] {
+        await waitForPendingConnections(timeout: connectionTimeout)
         let targets = awayTargets
         guard !targets.isEmpty else { throw AppActionError.noConnectedNetworks }
         for session in targets {
@@ -254,6 +282,17 @@ extension AppModel {
     }
 
     // MARK: Read state
+
+    /// Marks the line `lineID` and everything before it in `bufferID` read;
+    /// what came after stays unread (Siri's "mark as read"). Throws when the
+    /// line is no longer in memory rather than marking the whole buffer.
+    public func markRead(upTo lineID: UUID, in bufferID: BufferID) throws {
+        guard let target = lookup(bufferID) else { throw AppActionError.unknownBuffer }
+        guard let line = target.buffer.lines.last(where: { $0.id == lineID }) else {
+            throw AppActionError.messageNotFound(buffer: target.buffer.name)
+        }
+        target.session.markRead(target.buffer, upTo: line.time)
+    }
 
     /// Marks every buffer read, like Go → Mark All as Read. Returns how many
     /// buffers had something unread.

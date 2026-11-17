@@ -22,32 +22,14 @@ public struct VelaScenes: Scene {
     /// - Parameter appShortcuts: The app's App Shortcuts, refreshed when
     ///   channels change so phrases like "Open #vela in Vela" stay current.
     public init(appShortcuts: (any AppShortcutsProvider.Type)? = nil) {
-        // Vela opens no documents. Without this, AppKit treats launch
-        // arguments such as the "Lighter" in `--theme Lighter` as files to
-        // open, and a launch that opens files skips the main window.
-        UserDefaults.standard.register(defaults: ["NSTreatUnknownArgumentsAsOpen": "NO"])
-        let arguments = ProcessInfo.processInfo.arguments
-        let demo = UserDefaults.standard.bool(forKey: "VelaDemoMode") || arguments.contains("--demo")
-        let app = demo ? AppModel.demo() : AppModel.live()
-        if demo {
-            DemoArguments.apply(arguments, to: app.settings)
-            DemoArguments.selectBuffer(from: arguments, in: app)
-        }
-        let themeStore = ThemeStore(userThemesDirectory: AppPaths.themesDirectory)
-        let uiState = UIState()
-        let services = SceneServices(intelligence: demo ? .demo() : .live())
-        // Siri, Shortcuts and Spotlight run App Intents in this process;
-        // they reach the same model and services through dependencies.
-        AppDependencyManager.shared.add(dependency: app)
-        AppDependencyManager.shared.add(dependency: services.intelligence)
-        if SnapshotSupport.isActive {
-            SnapshotSupport.scheduleOffscreenCapture(app: app, themeStore: themeStore, uiState: uiState, services: services)
-        }
-        _app = State(initialValue: app)
-        _themeStore = State(initialValue: themeStore)
-        _uiState = State(initialValue: uiState)
-        _services = State(initialValue: services)
-        _siri = State(initialValue: SiriSceneSupport(app: app, uiState: uiState, appShortcuts: appShortcuts))
+        // SwiftUI can run this more than once; every run gets the same
+        // instances (see `AppInstances`).
+        let shared = AppInstances.shared(appShortcuts: appShortcuts)
+        _app = State(initialValue: shared.app)
+        _themeStore = State(initialValue: shared.themeStore)
+        _uiState = State(initialValue: shared.uiState)
+        _services = State(initialValue: shared.services)
+        _siri = State(initialValue: shared.siri)
     }
 
     public var body: some Scene {
@@ -96,6 +78,68 @@ extension View {
     /// Injects the shared models, the resolved theme and the chat style.
     func velaEnvironment(app: AppModel, themeStore: ThemeStore, uiState: UIState, services: SceneServices, isPrimary: Bool) -> some View {
         modifier(VelaEnvironmentModifier(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: isPrimary))
+    }
+}
+
+/// The app's models and services: one set per process, made by the first
+/// `VelaScenes.init`. SwiftUI may initialize the scene more than once (it
+/// keeps the first `@State` values); later inits reuse these instead of
+/// making a second `AppModel` that Siri, Shortcuts and Spotlight would be
+/// handed through their dependencies while the window shows the first.
+@MainActor
+private final class AppInstances {
+    let app: AppModel
+    let themeStore: ThemeStore
+    let uiState: UIState
+    let services: SceneServices
+    let siri: SiriSceneSupport
+    /// Shows the chosen Dock icon (`appearance.appIcon`). Snapshot runs
+    /// leave the Dock alone.
+    let dockIcon: DockIconController?
+
+    private static var current: AppInstances?
+
+    static func shared(appShortcuts: (any AppShortcutsProvider.Type)?) -> AppInstances {
+        if let current { return current }
+        let instances = AppInstances(appShortcuts: appShortcuts)
+        current = instances
+        return instances
+    }
+
+    private init(appShortcuts: (any AppShortcutsProvider.Type)?) {
+        // Vela opens no documents. Without this, AppKit treats launch
+        // arguments such as the "Lighter" in `--theme Lighter` as files to
+        // open, and a launch that opens files skips the main window.
+        UserDefaults.standard.register(defaults: ["NSTreatUnknownArgumentsAsOpen": "NO"])
+        let arguments = ProcessInfo.processInfo.arguments
+        let demo = UserDefaults.standard.bool(forKey: "VelaDemoMode") || arguments.contains("--demo")
+        let app = demo ? AppModel.demo() : AppModel.live()
+        if demo {
+            DemoArguments.apply(arguments, to: app.settings)
+            DemoArguments.selectBuffer(from: arguments, in: app)
+        }
+        let themeStore = ThemeStore(userThemesDirectory: AppPaths.themesDirectory)
+        let uiState = UIState()
+        let services = SceneServices(intelligence: demo ? .demo() : .live())
+        // Siri, Shortcuts and Spotlight run App Intents in this process;
+        // they reach the same model and services through dependencies.
+        AppDependencyManager.shared.add(dependency: app)
+        AppDependencyManager.shared.add(dependency: services.intelligence)
+        if SnapshotSupport.isActive {
+            SnapshotSupport.scheduleOffscreenCapture(app: app, themeStore: themeStore, uiState: uiState, services: services)
+        }
+        self.app = app
+        self.themeStore = themeStore
+        self.uiState = uiState
+        self.services = services
+        self.siri = SiriSceneSupport(app: app, uiState: uiState, appShortcuts: appShortcuts)
+        if SnapshotSupport.isActive {
+            dockIcon = nil
+        } else {
+            let dockIcon = DockIconController(settings: app.settings)
+            dockIcon.start()
+            self.dockIcon = dockIcon
+        }
     }
 }
 
@@ -165,20 +209,15 @@ final class SiriSceneSupport {
     let showRequests: ShowRequestRouter
     let integration: SiriIntegration
 
-    /// `VelaScenes.init` can run more than once; only the first instance
-    /// (the one SwiftUI keeps) starts.
-    private static var started = false
-
     /// Refreshes the parameters (channel names) of `provider`'s phrases.
     private static func refresher<Provider: AppShortcutsProvider>(for provider: Provider.Type) -> @MainActor () -> Void {
         { Provider.updateAppShortcutParameters() }
     }
 
+    /// Made once per process (by `AppInstances`), so it starts right away.
     init(app: AppModel, uiState: UIState, appShortcuts: (any AppShortcutsProvider.Type)?) {
         showRequests = ShowRequestRouter(app: app, uiState: uiState)
         integration = SiriIntegration(app: app, refreshAppShortcuts: appShortcuts.map { Self.refresher(for: $0) })
-        guard !Self.started else { return }
-        Self.started = true
         ShowRequestRouter.shared = showRequests
         showRequests.start()
         integration.start()

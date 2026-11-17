@@ -19,6 +19,9 @@ struct SiteRulesEditor: View {
     var emptyMessage = "No site rules."
     /// Sets the rule for a domain, or removes it when given nil.
     let setRule: (SiteAccess?, String) -> Void
+    /// Sites to offer while typing a new one (the settings editor's sites
+    /// seen in chat). None shows a plain field.
+    var domainSuggestions: [TokenSuggestion] = []
 
     @State private var newDomain = ""
     /// Most rules people add by hand are blocks, so the picker starts there.
@@ -92,13 +95,28 @@ struct SiteRulesEditor: View {
         let isUpdate = candidate.map { rules[$0] != nil } ?? false
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                ThemedTextField(
-                    "example.com",
-                    text: $newDomain,
-                    monospaced: true,
-                    accessibilityName: "Site to add a rule for",
-                    onSubmit: add
-                )
+                if domainSuggestions.isEmpty {
+                    ThemedTextField(
+                        "example.com",
+                        text: $newDomain,
+                        monospaced: true,
+                        accessibilityName: "Site to add a rule for",
+                        onSubmit: add
+                    )
+                } else {
+                    let available = domainSuggestions.filter { rules[$0.value] == nil }
+                    let filtered = TokenFieldModel.filter(available, query: newDomain)
+                    ThemedSuggestionField(
+                        text: $newDomain,
+                        placeholder: "example.com",
+                        accessibilityLabel: "Site to add a rule for",
+                        suggestions: filtered,
+                        autoHighlight: TokenFieldModel.autoHighlight(query: newDomain, in: filtered),
+                        monospaced: true,
+                        onPick: { newDomain = $0.value },
+                        onSubmit: add
+                    )
+                }
                 accessPicker("Previews from the new site", selection: $newAccess)
                 Button(isUpdate ? "Update" : "Add", action: add)
                     .buttonStyle(ThemedButtonStyle())

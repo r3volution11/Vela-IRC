@@ -491,6 +491,7 @@ struct EmbedChip: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        .pointerStyle(.link)
         .help(help ?? title)
         .accessibilityLabel(detail.map { "\(title), \($0)" } ?? title)
         .accessibilityHint(actionTitle != nil ? help ?? "" : "")

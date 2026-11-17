@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="mbar_front" gradientUnits="userSpaceOnUse" x1="512" y1="800" x2="780" y2="250"><stop offset="0" stop-color="#B4FAF4"/><stop offset="0.35" stop-color="#66E6EE"/><stop offset="1" stop-color="#34C6E6"/></linearGradient></defs>
+<path d="M 776.2 361.6 L 521.0 796.7 L 521.0 500.2 L 670.1 246.0 L 759.8 298.6 Z" fill="url(#mbar_front)"/>
+</svg>

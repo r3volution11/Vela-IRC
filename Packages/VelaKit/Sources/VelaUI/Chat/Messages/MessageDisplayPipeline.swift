@@ -13,7 +13,8 @@ nonisolated enum DisplayItemID: Hashable, Sendable {
     /// A day divider, keyed by `year * 10_000 + month * 100 + day`.
     case day(Int)
     case unreadMarker
-    /// The Catch me up card, right under the unread marker.
+    /// The Catch me up card, where its stretch starts (under the unread
+    /// marker it was opened from).
     case catchUpCard
     case line(UUID)
     /// A collapsed membership run, keyed by its first line.
@@ -48,7 +49,8 @@ nonisolated enum DisplayItem: Identifiable, Hashable, Sendable {
     /// The first moment of a calendar day.
     case dayDivider(Date, key: Int)
     case unreadMarker
-    /// The Catch me up summary, right after the unread marker while it's open.
+    /// The Catch me up summary while it's open: before the first line it
+    /// covers, right after the unread marker when that's still there.
     case catchUpCard
     case line(LineItem)
     case membershipRun(MembershipRun)
@@ -69,8 +71,11 @@ nonisolated struct MessageDisplayOptions: Equatable, Sendable {
     var joinPart: JoinPartDisplay = .collapse
     var groupingInterval: TimeInterval = 300
     var unreadMarkerAfter: Date?
-    /// Show the Catch me up card under the unread marker.
-    var showsCatchUpCard = false
+    /// Show the Catch me up card before the first line newer than this
+    /// (`CatchUpCard.anchor`); nil while no card is open.
+    /// Independent of `unreadMarkerAfter`, which moves or goes when the
+    /// window loses focus; when both mark the same line, the marker comes first.
+    var catchUpCardAfter: Date?
     var calendar: Calendar = .current
 }
 
@@ -89,6 +94,7 @@ nonisolated struct MessageDisplayBuilder: Sendable {
 
     private var dayRange: Range<Date>?
     private var markerPlaced = false
+    private var cardPlaced = false
     /// The previous conversational line, while grouping with it is possible.
     private var groupAnchor: ChatLine?
     private var linesByMsgid: [String: ChatLine] = [:]
@@ -126,7 +132,14 @@ nonisolated struct MessageDisplayBuilder: Sendable {
             markerPlaced = true
             flushRun()
             items.append(.unreadMarker)
-            if options.showsCatchUpCard { items.append(.catchUpCard) }
+            groupAnchor = nil
+        }
+        // An anchor older than every line loaded (scrolled out of memory)
+        // puts the card at the top, until older history brings it back.
+        if !cardPlaced, let anchor = options.catchUpCardAfter, line.time > anchor {
+            cardPlaced = true
+            flushRun()
+            items.append(.catchUpCard)
             groupAnchor = nil
         }
 
@@ -209,6 +222,15 @@ nonisolated struct DisplayItems: RandomAccessCollection, Sendable {
 
     func contains(id: DisplayItemID) -> Bool {
         tail.contains { $0.id == id } || head.contains { $0.id == id }
+    }
+
+    /// What to scroll to for the Catch me up card: the unread marker right
+    /// above it, so both show, or the card itself once the marker has moved
+    /// on. Nil when there's no card.
+    var catchUpCardScrollTarget: DisplayItemID? {
+        guard let index = firstIndex(where: { $0.id == .catchUpCard }) else { return nil }
+        if index > startIndex, self[index - 1].id == .unreadMarker { return .unreadMarker }
+        return .catchUpCard
     }
 
     var lastID: DisplayItemID? { last?.id }

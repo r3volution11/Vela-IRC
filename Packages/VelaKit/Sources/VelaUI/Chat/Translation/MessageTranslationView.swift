@@ -10,13 +10,13 @@ import VelaTheme
 /// A message's translation, under its text: the translated text in the
 /// quieter secondary color, then a small "Translated from Japanese" caption
 /// whose menu hides it or translates it again. Shows nothing until the line
-/// is translated.
+/// is translated, or once its message is deleted.
 struct MessageTranslationView: View {
     @Environment(TranslationStore.self) private var store
     let line: ChatLine
 
     var body: some View {
-        if let state = store.state(for: line.id), state.isShowing {
+        if !line.isRedacted, let state = store.state(for: line.id), state.isShowing {
             TranslationContent(line: line, state: state)
         }
     }
@@ -172,7 +172,9 @@ extension View {
     /// Translates `line` when it appears in a buffer that translates
     /// automatically, or when the buffer starts to. Rows only exist near
     /// the visible part of the list, so this never reaches far back into
-    /// history.
+    /// history. Also tells the store which rows are on screen (a new target
+    /// redoes only those at once) and drops the translation of a message
+    /// that gets deleted.
     func autoTranslation(for line: ChatLine) -> some View {
         modifier(AutoTranslationModifier(line: line))
     }
@@ -185,9 +187,15 @@ private struct AutoTranslationModifier: ViewModifier {
     let line: ChatLine
 
     func body(content: Content) -> some View {
-        content.onChange(of: context?.isAutomatic == true ? context : nil, initial: true) { _, context in
-            guard let context else { return }
-            store.autoTranslate(line, in: controller.buffer, context: context)
-        }
+        content
+            .onChange(of: context?.isAutomatic == true ? context : nil, initial: true) { _, context in
+                guard let context else { return }
+                store.autoTranslate(line, in: controller.buffer, context: context)
+            }
+            .onAppear { store.rowAppeared(line, context: context) }
+            .onDisappear { store.rowDisappeared(line.id) }
+            .onChange(of: line.isRedacted) { _, redacted in
+                if redacted { store.forget(line.id) }
+            }
     }
 }

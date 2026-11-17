@@ -22,6 +22,9 @@ import VelaTheme
 /// loads late, reactions, resizes and style changes — until the reader
 /// scrolls up. Then nothing moves them and a "Jump to present" pill counts
 /// what's new. Sending a message always returns to the bottom.
+///
+/// The typing line floats over the bottom of the list; the space under the
+/// last row grows to fit it only while someone is typing (`ListEndSpacing`).
 struct MessageListView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -34,6 +37,10 @@ struct MessageListView: View {
 
     @State private var controller: MessageListController
     @State private var position = ScrollPosition(idType: DisplayItemID.self)
+    /// Someone is typing: the typing line shows and the list makes room for it.
+    @State private var typingShown = false
+    /// The typing line's measured height.
+    @State private var typingLineHeight: CGFloat = 0
 
     init(buffer: BufferModel, session: NetworkSession) {
         self.buffer = buffer
@@ -46,7 +53,7 @@ struct MessageListView: View {
             joinPart: style.joinPart,
             groupingInterval: style.groupingInterval,
             unreadMarkerAfter: buffer.unreadMarkerAfter,
-            showsCatchUpCard: intelligence.catchUp.cards[buffer.id] != nil
+            catchUpCardAfter: intelligence.catchUp.cards[buffer.id]?.anchor
         )
         let items = controller.displayCache.items(for: buffer.lines, options: options)
         let _ = controller.textCache.prepare(
@@ -65,11 +72,12 @@ struct MessageListView: View {
                     DisplayItemRow(item: item)
                         .equatable()
                 }
-                // Room under the last row, and the target for scrolling to
-                // the bottom. Inside the stack, so scrolling here lays out
-                // the real last rows rather than estimated space.
+                // Room under the last row (and for the typing line), and the
+                // target for scrolling to the bottom. Inside the stack, so
+                // scrolling here lays out the real last rows rather than
+                // estimated space.
                 Color.clear
-                    .frame(height: 12)
+                    .frame(height: ListEndSpacing.height(typingLine: shownTypingLineHeight))
                     .id(DisplayItemID.end)
                     .accessibilityHidden(true)
             }
@@ -114,13 +122,6 @@ struct MessageListView: View {
                 revealCatchUpCard()
             }
         }
-        .onChange(of: buffer.unreadMarkerAfter, initial: true) { _, marker in
-            // A card belongs to the stretch under its marker; once that
-            // marker is gone or moved, so is the card.
-            if let card = intelligence.catchUp.card(for: buffer.id), card.marker != marker {
-                intelligence.catchUp.dismiss(buffer.id)
-            }
-        }
         .onAppear {
             guard items.contains(id: .unreadMarker), uiState.scrollTarget == nil else { return }
             if let reveal = intelligence.catchUp.reveal, reveal.bufferID == buffer.id {
@@ -132,10 +133,18 @@ struct MessageListView: View {
             }
         }
         .overlay(alignment: .bottom) {
+            // Rises from the list's bottom edge with the conversation, so
+            // it never overlaps the last row on the way.
+            TypingIndicatorView(buffer: buffer, isShown: typingShown, onActiveChange: typingChanged)
+                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { typingLineHeight = $0 }
+                .offset(y: typingShown || reduceMotion ? 0 : ListEndSpacing.typingRise(typingLine: typingLineHeight))
+                .clipped()
+        }
+        .overlay(alignment: .bottom) {
             ZStack {
                 if controller.showsJumpToPresent {
                     JumpToPresentPill(count: controller.unseenCount) { jumpToPresent() }
-                        .padding(.bottom, 12)
+                        .padding(.bottom, ListEndSpacing.pillBottomPadding(typingLine: shownTypingLineHeight))
                         .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
             }
@@ -157,6 +166,28 @@ struct MessageListView: View {
         } message: { line in
             Text("“\(ReplyQuoteView.snippet(for: line))” will be removed for everyone in \(buffer.name).")
         }
+    }
+
+    // MARK: Typing line
+
+    private var shownTypingLineHeight: CGFloat? {
+        typingShown ? typingLineHeight : nil
+    }
+
+    /// Someone started typing, or everyone stopped: show or hide the line
+    /// and the room for it in one animation. Pinned, the list's bottom
+    /// anchor carries the conversation up (or down) with the room; the
+    /// pinning logic stands back until that's done, so it doesn't snap to
+    /// the end mid-animation.
+    private func typingChanged(_ active: Bool, animated: Bool) {
+        guard typingShown != active else { return }
+        let animation = animated && !reduceMotion ? ListEndSpacing.typingAnimation : nil
+        if animation != nil, controller.isPinnedToBottom, controller.scrollDriver == .idle {
+            controller.beginProgrammaticScroll(for: ListEndSpacing.typingAnimationSettle) { follow in
+                if follow { scrollToBottom() }
+            }
+        }
+        withAnimation(animation) { typingShown = active }
     }
 
     // MARK: Scrolling
@@ -281,15 +312,16 @@ struct MessageListView: View {
         }
     }
 
-    /// Brings the Catch me up card into view: the New marker near the top,
-    /// so the card has room to grow beneath it.
+    /// Brings the Catch me up card into view: the New marker above it (or
+    /// the card, once the marker has moved on) near the top, so the card has
+    /// room to grow beneath it.
     private func revealCatchUpCard() {
-        guard controller.displayCache.items.contains(id: .catchUpCard) else { return }
+        guard let target = controller.displayCache.items.catchUpCardScrollTarget else { return }
         controller.unpin()
         controller.beginProgrammaticScroll(for: 0.4) { _ in updatePill() }
         let anchor = UnitPoint(x: 0.5, y: 0.08)
         withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) {
-            position.scrollTo(id: DisplayItemID.unreadMarker, anchor: anchor)
+            position.scrollTo(id: target, anchor: anchor)
         }
         Task {
             // Rows above were estimated: correct once they're measured.
@@ -297,7 +329,7 @@ struct MessageListView: View {
             for nudge in [0.0801, 0.08] {
                 try? await Task.sleep(for: .milliseconds(80))
                 guard !controller.isUserScrolling else { return }
-                position.scrollTo(id: DisplayItemID.unreadMarker, anchor: UnitPoint(x: 0.5, y: nudge))
+                position.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: nudge))
             }
         }
     }

@@ -22,9 +22,11 @@ struct NetworksPane: View {
     var body: some View {
         let groups = networkGroups
         let entries = groups.flatMap { [$0.network] + $0.children }
+        @Bindable var settings = app.settings
         SettingsPage(
             "Networks",
-            subtitle: "The IRC networks and bouncers Vela connects to. Passwords, channel keys and certificates are kept in your Keychain."
+            subtitle: "The IRC networks and bouncers Vela connects to. Passwords, channel keys and certificates are kept in your Keychain.",
+            pane: .networks
         ) {
             SettingsSection(footer: "Double-click a network to edit it, or drag it to change the order. Networks provided by a soju bouncer appear under their bouncer, follow its connection settings and move with it.") {
                 if groups.isEmpty {
@@ -33,6 +35,14 @@ struct NetworksPane: View {
                     networkList(groups)
                 }
                 toolbar(entries: entries)
+            }
+
+            SettingsSection("Connection") {
+                SettingsToggle(
+                    "Reconnect automatically",
+                    detail: "Retry after a dropped connection, and after your Mac wakes.",
+                    isOn: $settings[.connectionAutoReconnect]
+                )
             }
         }
         .sheet(item: $editorTarget) { target in

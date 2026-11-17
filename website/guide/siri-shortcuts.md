@@ -68,7 +68,7 @@ On macOS 27 or later, Siri can do more with Vela:
 
 - **Send to a channel or a nick.** A message to a nick opens a private conversation, like `/msg`.
 - **Draft a message.** Siri puts the text in the channel's message field and opens the channel; press <kbd>Return</kbd> when it's right.
-- **Mark a message, and everything before it, as read.**
+- **Mark a message, and everything before it, as read.** Newer messages stay unread.
 - **Know what's on screen.** Siri knows which channel you're looking at, so "reply to this" and "summarize this" work. Notifications for mentions and private messages support "reply to this" too.
 
 IRC messages are text, so Siri can't send attachments or locations through Vela, or schedule a message for later.

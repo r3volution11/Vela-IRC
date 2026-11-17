@@ -34,6 +34,13 @@ struct VelaCommands: Commands {
             }
         }
 
+        // Vela → Settings…, then Search Settings….
+        CommandGroup(after: .appSettings) {
+            CommandItems(app: app, themeStore: themeStore, uiState: uiState) { commands in
+                CommandMenuButton(commands.searchSettings)
+            }
+        }
+
         // An IRC client has nothing to print; this also frees ⌘P and ⇧⌘P
         // (Print… and Page Setup…) for the palette.
         CommandGroup(replacing: .printItem) {}

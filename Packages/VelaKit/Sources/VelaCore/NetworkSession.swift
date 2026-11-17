@@ -106,6 +106,17 @@ public final class NetworkSession: Identifiable {
 
     public var isConnected: Bool { connectionState == .connected }
 
+    /// Not connected, but a connection is on its way: connecting or
+    /// registering, or disconnected with one due on its own (an auto-connect
+    /// network Vela was just launched with, or a retry after a drop).
+    public var isAwaitingConnection: Bool {
+        switch connectionState {
+        case .connecting, .registering: true
+        case .connected: false
+        case .disconnected: !userRequestedDisconnect && (config.autoConnect || reconnectTask != nil)
+        }
+    }
+
     /// Soju "control" connection that lists bouncer networks rather than chatting.
     public var isBouncerControl: Bool {
         config.bouncerKind == .soju && config.parentNetworkID == nil && config.bouncerNetworkID == nil
@@ -1182,6 +1193,31 @@ public final class NetworkSession: Identifiable {
         guard buffer.unreadCount > 0 || buffer.highlightCount > 0 || buffer.lastReadAt != readTo else { return }
         buffer.unreadCount = 0
         buffer.highlightCount = 0
+        buffer.lastReadAt = readTo
+        persistBuffer(buffer)
+        host?.sessionDidChangeUnreadCounts(self)
+    }
+
+    /// Moves the read position up to `time` (never back) and recounts what's
+    /// still unread after it: ``markRead(_:)`` for everything up to one
+    /// message, as Siri's "mark as read" asks. Lines after it that were
+    /// never counted (seen on screen, history, your own) stay uncounted.
+    public func markRead(_ buffer: BufferModel, upTo time: Date) {
+        let readTo = max(buffer.lastReadAt ?? .distantPast, time)
+        var unread = 0
+        var highlights = 0
+        // Lines are in time order: count back to the read position.
+        for line in buffer.lines.reversed() {
+            guard line.time > readTo else { break }
+            guard !line.isHistory, !line.isSelf, line.kind.isConversation else { continue }
+            unread += 1
+            if line.isHighlight || (buffer.kind == .query && line.kind != .notice) { highlights += 1 }
+        }
+        unread = min(unread, buffer.unreadCount)
+        highlights = min(highlights, buffer.highlightCount)
+        guard unread != buffer.unreadCount || highlights != buffer.highlightCount || buffer.lastReadAt != readTo else { return }
+        buffer.unreadCount = unread
+        buffer.highlightCount = highlights
         buffer.lastReadAt = readTo
         persistBuffer(buffer)
         host?.sessionDidChangeUnreadCounts(self)

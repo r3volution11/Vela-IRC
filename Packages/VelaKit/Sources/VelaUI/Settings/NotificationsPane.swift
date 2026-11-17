@@ -15,7 +15,7 @@ struct NotificationsPane: View {
     var body: some View {
         @Bindable var settings = app.settings
 
-        SettingsPage("Notifications", subtitle: "Decide what deserves your attention while Vela is in the background.") {
+        SettingsPage("Notifications", subtitle: "Decide what deserves your attention while Vela is in the background.", pane: .notifications) {
             SettingsSection("Notify me about") {
                 SettingsToggle(
                     "Highlights",

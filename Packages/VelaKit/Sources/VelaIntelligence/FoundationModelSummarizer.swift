@@ -105,6 +105,7 @@ nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
             if let error = error as? LanguageModelError {
                 switch error {
                 case .contextSizeExceeded: return CatchUpModelError.contextExceeded
+                case .rateLimited: return CatchUpModelError.rateLimited
                 case .guardrailViolation, .refusal: return CatchUpModelError.declined
                 case .unsupportedLanguageOrLocale: return CatchUpModelError.unsupportedLanguage
                 default: return CatchUpModelError.failed(error.localizedDescription)
@@ -115,6 +116,7 @@ nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
         if let error = error as? LanguageModelSession.GenerationError {
             switch error {
             case .exceededContextWindowSize: return CatchUpModelError.contextExceeded
+            case .rateLimited: return CatchUpModelError.rateLimited
             case .guardrailViolation, .refusal: return CatchUpModelError.declined
             case .unsupportedLanguageOrLocale: return CatchUpModelError.unsupportedLanguage
             case .assetsUnavailable: return CatchUpModelError.unavailable

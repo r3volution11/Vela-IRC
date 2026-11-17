@@ -33,14 +33,54 @@ extension AppModel {
     /// The buffer a message to `target` goes to: an open channel or
     /// conversation, or a new private conversation with a nick (like `/msg`).
     func bufferID(for target: MessagePersonEntity) throws -> BufferID {
+        try messageBuffer(for: target).id
+    }
+
+    /// ``bufferID(for:)``, and whether it opened a new private conversation.
+    private func messageBuffer(for target: MessagePersonEntity) throws -> (id: BufferID, isNew: Bool) {
         guard let parsed = BufferID(string: target.id), let session = session(for: parsed.networkID) else {
             throw IntentFailure(.unknownBuffer)
         }
-        if let buffer = session.buffer(id: parsed), buffer.kind != .server { return buffer.id }
+        if let buffer = session.buffer(id: parsed), buffer.kind != .server { return (buffer.id, false) }
         guard !session.isupport.isChannel(target.name) else {
             throw IntentFailure(.notJoined(channel: target.name, network: session.displayName))
         }
-        return session.ensureBuffer(name: target.name, kind: .query).id
+        return (session.ensureBuffer(name: target.name, kind: .query).id, true)
+    }
+
+    /// Sends `text` to each target in turn, opening private conversations
+    /// as needed. One opened here that the message never reached (a target
+    /// that failed, or one after it) is closed again, so a failed send
+    /// leaves no empty conversation behind. Returns where it was sent.
+    func sendMessage(_ text: String, to targets: [MessagePersonEntity], connectionTimeout: Duration = .seconds(10)) async throws -> [BufferID] {
+        var opened: [BufferID] = []
+        do {
+            var bufferIDs: [BufferID] = []
+            for target in targets {
+                let buffer = try messageBuffer(for: target)
+                if buffer.isNew { opened.append(buffer.id) }
+                bufferIDs.append(buffer.id)
+            }
+            guard !bufferIDs.isEmpty else { throw IntentFailure(.unknownBuffer) }
+            for bufferID in bufferIDs {
+                try await send(text, to: bufferID, connectionTimeout: connectionTimeout)
+                opened.removeAll { $0 == bufferID }
+            }
+            return bufferIDs
+        } catch {
+            for id in opened { closeUnusedConversation(id) }
+            throw error
+        }
+    }
+
+    /// Closes a private conversation opened for a message that wasn't sent,
+    /// unless something new has happened in it meanwhile (only restored
+    /// scrollback, if any, is there).
+    private func closeUnusedConversation(_ id: BufferID) {
+        guard let target = lookup(id), target.buffer.kind == .query,
+              target.buffer.lines.allSatisfy(\.isHistory)
+        else { return }
+        close(target.buffer)
     }
 
     /// The channel or conversation you're looking at, if any.
@@ -84,15 +124,14 @@ struct SiriSendMessageIntent: AppIntent {
         }
         guard scheduledDate == nil else { throw IntentFailure("Vela can't schedule messages.") }
         let text = messageText(content: content, links: links)
-        let bufferIDs = try destination.targets.map { try app.bufferID(for: $0) }
-        guard !bufferIDs.isEmpty else { throw IntentFailure(.unknownBuffer) }
+        let bufferIDs: [BufferID]
+        do {
+            bufferIDs = try await app.sendMessage(text, to: destination.targets)
+        } catch {
+            throw IntentFailure.wrapping(error)
+        }
         var sent: [MessageEntity] = []
         for bufferID in bufferIDs {
-            do {
-                try await app.send(text, to: bufferID)
-            } catch {
-                throw IntentFailure.wrapping(error)
-            }
             guard let target = app.lookup(bufferID) else { continue }
             let line = target.buffer.lines.last { $0.isSelf && $0.text == text }
                 ?? ChatLine(kind: .message, nick: target.session.nick, text: text, isSelf: true)
@@ -142,6 +181,7 @@ struct SiriDraftMessageIntent: AppIntent {
 }
 
 /// Marks a message, and everything before it in its conversation, read.
+/// Anything newer stays unread.
 @available(macOS 27, *)
 @AppIntent(schema: .messages.setMessageReadStatus)
 struct SiriSetMessageReadStatusIntent: AppIntent {
@@ -156,10 +196,12 @@ struct SiriSetMessageReadStatusIntent: AppIntent {
     func perform() async throws -> some IntentResult & ReturnsValue<MessageEntity> {
         await app.ready()
         guard isRead else { throw IntentFailure("Vela can't mark messages as unread.") }
-        guard let parsed = MessageEntity.parse(message.id), let target = app.lookup(parsed.buffer) else {
-            throw IntentFailure(.unknownBuffer)
+        guard let parsed = MessageEntity.parse(message.id) else { throw IntentFailure(.unknownBuffer) }
+        do {
+            try app.markRead(upTo: parsed.line, in: parsed.buffer)
+        } catch {
+            throw IntentFailure.wrapping(error)
         }
-        target.session.markRead(target.buffer)
         let updated = MessageEntity(id: message.id, in: app) ?? message
         return .result(value: updated)
     }

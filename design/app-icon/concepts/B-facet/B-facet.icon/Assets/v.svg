@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><linearGradient id="mf_lo" gradientUnits="userSpaceOnUse" x1="300" y1="250" x2="512" y2="800"><stop offset="0" stop-color="#66E6EE"/><stop offset="1" stop-color="#B4FAF4"/></linearGradient><linearGradient id="mf_li" gradientUnits="userSpaceOnUse" x1="400" y1="250" x2="512" y2="700"><stop offset="0" stop-color="#2296DA"/><stop offset="1" stop-color="#34C6E6"/></linearGradient><linearGradient id="mf_ri" gradientUnits="userSpaceOnUse" x1="640" y1="250" x2="512" y2="700"><stop offset="0" stop-color="#34C6E6"/><stop offset="1" stop-color="#66E6EE"/></linearGradient><linearGradient id="mf_ro" gradientUnits="userSpaceOnUse" x1="760" y1="250" x2="512" y2="800"><stop offset="0" stop-color="#1A6FB8"/><stop offset="1" stop-color="#2296DA"/></linearGradient></defs>
+<path d="M 230.3 283.7 L 268.0 246.0 L 298.6 246.0 L 512.0 641.7 L 512.0 806.0 Z" fill="url(#mf_lo)"/>
+<path d="M 298.6 246.0 L 387.2 246.0 L 512.0 477.3 L 512.0 641.7 Z" fill="url(#mf_li)"/>
+<path d="M 636.8 246.0 L 725.4 246.0 L 512.0 641.7 L 512.0 477.3 Z" fill="url(#mf_ri)"/>
+<path d="M 725.4 246.0 L 756.0 246.0 L 793.7 283.7 L 512.0 806.0 L 512.0 641.7 Z" fill="url(#mf_ro)"/>
+</svg>

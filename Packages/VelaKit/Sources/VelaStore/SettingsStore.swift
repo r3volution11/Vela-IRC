@@ -10,11 +10,18 @@ import VelaFoundation
 ///
 /// - The file is JSONC (comments and trailing commas are accepted) holding a
 ///   flat object of dotted keys. Only keys that were explicitly set are
-///   stored; everything else reads as its ``SettingKey`` default.
+///   stored; everything else reads as its ``SettingKey`` default. With
+///   duplicate keys, the last one wins (as in VS Code).
 /// - Unknown keys are preserved when saving.
-/// - Changes made in the app are written back after a short debounce
-///   (pretty-printed, sorted keys, atomic replace). Comments in the file are
-///   not preserved by app-side writes.
+/// - Changes made in the app are written back after a short debounce as
+///   minimal edits to the file's text (``JSONCEditing``): comments,
+///   indentation, line endings and trailing commas are kept, a changed value
+///   is replaced in place, a removed key takes its line (and its trailing
+///   comment) with it, and a new key is appended after the last one. Object
+///   values are compared member by member, so comments inside
+///   `appearance.colorCustomizations` and `media.siteRules` survive too. A
+///   missing or blank file gets a fresh pretty-printed object. Writes are
+///   atomic.
 /// - External edits are picked up through ``FileWatcher``; the app's own
 ///   writes are recognized by content and ignored. Changes still pending
 ///   from the app are re-applied on top of an externally edited file.
@@ -22,6 +29,9 @@ import VelaFoundation
 ///   good values in place, sets ``lastError``, and blocks app-side writes
 ///   (they stay pending) until the file parses again, so a half-typed edit
 ///   is never overwritten.
+/// - The settings editor's JSON view reads and writes the text itself with
+///   ``fileText()`` and ``saveFileText(_:)``, and watches ``fileRevision``
+///   to notice changes on disk.
 @MainActor
 @Observable
 public final class SettingsStore {
@@ -29,6 +39,11 @@ public final class SettingsStore {
     public private(set) var values: [String: JSONValue] = [:]
     /// Why the file could not be read or written, if it couldn't.
     public private(set) var lastError: String?
+    /// Bumped whenever settings.json's contents change: app-side writes,
+    /// ``saveFileText(_:)``, and edits made elsewhere (once the file watcher
+    /// or ``reload()`` notices them). Starts at 0 for the contents read at
+    /// launch. Observable.
+    public private(set) var fileRevision = 0
 
     public let fileURL: URL
     /// Debounce interval for app-side writes.
@@ -45,6 +60,10 @@ public final class SettingsStore {
     /// The file contents last read or written by this store.
     @ObservationIgnored private var lastSeenData: Data?
     @ObservationIgnored private var fileIsInvalid = false
+    /// True when the last write had to rewrite the whole file because the
+    /// minimal edits didn't produce the expected values (a safety net that
+    /// should never be needed). For tests.
+    @ObservationIgnored private(set) var lastWriteRewroteFile = false
 
     /// Loads `fileURL` and, if `watchForChanges` is true, starts watching it.
     public init(fileURL: URL, watchForChanges: Bool = true) {
@@ -54,6 +73,7 @@ public final class SettingsStore {
             withIntermediateDirectories: true
         )
         refreshFromDisk(force: true)
+        fileRevision = 0
         if watchForChanges {
             startWatching()
         }
@@ -113,7 +133,8 @@ public final class SettingsStore {
 
     // MARK: Persistence
 
-    /// Writes pending changes immediately. Call on app termination.
+    /// Writes pending changes immediately, as minimal edits to the file's
+    /// text. Call on app termination.
     public func flush() {
         saveTask?.cancel()
         saveTask = nil
@@ -123,11 +144,10 @@ public final class SettingsStore {
         refreshFromDisk(force: false)
         guard !fileIsInvalid else { return }
         do {
-            var data = try JSONValue.object(values).prettyPrinted()
-            data.append(0x0A)
-            if data != lastSeenData {
+            let data = Data(try editedText().utf8)
+            if data != lastSeenData ?? Data() {
                 try FileSupport.writeAtomically(data, to: fileURL)
-                lastSeenData = data
+                noteContents(data)
             }
             pending.removeAll()
             lastError = nil
@@ -136,8 +156,73 @@ public final class SettingsStore {
         }
     }
 
+    /// The current file text with the pending changes applied as minimal
+    /// edits. Falls back to rewriting the whole file if the edits don't
+    /// produce exactly ``values`` (which they should always do).
+    private func editedText() throws -> String {
+        let text = lastSeenData.map { String(decoding: $0, as: UTF8.self) } ?? ""
+        let changes: [SettingsFileWriter.Change] = pending.map { key, change in
+            switch change {
+            case .set(let value): (key, value)
+            case .remove: (key, nil)
+            }
+        }
+        lastWriteRewroteFile = false
+        if let edited = try? SettingsFileWriter.text(applying: changes, to: text, fullValues: values),
+           case .success(let written) = Self.parse(edited),
+           written == values
+        {
+            return edited
+        }
+        lastWriteRewroteFile = true
+        let format = JSONCFormat(detectingIn: JSONCDocument(text))
+        return JSONCEditing.format(.object(values), format: format) + format.lineEnding
+    }
+
     /// Re-reads the file now (normally the file watcher does this).
     public func reload() {
+        refreshFromDisk(force: true)
+        if !pending.isEmpty, !fileIsInvalid {
+            scheduleSave()
+        }
+    }
+
+    // MARK: settings.json text (the settings editor's JSON view)
+
+    /// settings.json's text as it is on disk, for editing it in the app;
+    /// `"{\n}\n"` when the file is missing or blank.
+    ///
+    /// Changes still waiting to be written are written first (unless the
+    /// file is invalid), so the text matches ``values``.
+    public func fileText() -> String {
+        if pending.isEmpty {
+            refreshFromDisk(force: false)
+        } else {
+            flush()
+        }
+        let text = lastSeenData.map { String(decoding: $0, as: UTF8.self) } ?? ""
+        return text.allSatisfy(\.isWhitespace) ? "{\n}\n" : text
+    }
+
+    /// Writes `text` to settings.json exactly as given, then reloads it.
+    ///
+    /// Invalid text is saved too: the store then keeps the last good
+    /// values, sets ``lastError`` and holds app-side writes until the file
+    /// is fixed, just as with an invalid edit made in another editor.
+    /// Changes the app made meanwhile are re-applied on top afterwards.
+    /// ``fileRevision`` is bumped (read it afterwards as the new baseline).
+    ///
+    /// - Throws: When the file can't be written.
+    public func saveFileText(_ text: String) throws {
+        saveTask?.cancel()
+        saveTask = nil
+        do {
+            try FileSupport.writeAtomically(Data(text.utf8), to: fileURL)
+        } catch {
+            lastError = "Could not save settings.json: \(error.localizedDescription)"
+            if !pending.isEmpty { scheduleSave() }
+            throw error
+        }
         refreshFromDisk(force: true)
         if !pending.isEmpty, !fileIsInvalid {
             scheduleSave()
@@ -166,7 +251,7 @@ public final class SettingsStore {
             return
         }
         if !force, data == lastSeenData { return }
-        lastSeenData = data
+        noteContents(data)
 
         guard let data else {
             fileIsInvalid = false
@@ -174,22 +259,45 @@ public final class SettingsStore {
             apply(fileValues: [:])
             return
         }
-        do {
-            let normalized = JSONC.normalize(data)
-            let isBlank = normalized.allSatisfy { $0 == 0x20 || $0 == 0x09 || $0 == 0x0A || $0 == 0x0D }
-            let root = isBlank ? JSONValue.object([:]) : try JSONDecoder().decode(JSONValue.self, from: normalized)
-            guard case .object(let object) = root else {
-                throw CocoaError(.fileReadCorruptFile, userInfo: [
-                    NSLocalizedDescriptionKey: "The top level must be an object.",
-                ])
-            }
+        switch Self.parse(data) {
+        case .success(let object):
             fileIsInvalid = false
             lastError = nil
             apply(fileValues: object)
-        } catch {
+        case .failure(let problem):
             fileIsInvalid = true
-            lastError = "settings.json is invalid; keeping previous values. \(Self.describe(error))"
+            lastError = "settings.json is invalid; keeping previous values. \(problem.message)"
         }
+    }
+
+    /// Records the file's contents, bumping ``fileRevision`` when they changed.
+    private func noteContents(_ data: Data?) {
+        if data != lastSeenData { fileRevision &+= 1 }
+        lastSeenData = data
+    }
+
+    private struct ParseProblem: Error {
+        let message: String
+    }
+
+    /// The top-level object of settings.json's contents. Blank and
+    /// comment-only files are empty; anything with a syntax error, or whose
+    /// top level isn't an object, fails.
+    private static func parse(_ data: Data) -> Result<[String: JSONValue], ParseProblem> {
+        parse(String(decoding: data, as: UTF8.self))
+    }
+
+    private static func parse(_ text: String) -> Result<[String: JSONValue], ParseProblem> {
+        let document = JSONCDocument(text)
+        if let error = document.errors.first {
+            let (line, column) = document.lineAndColumn(at: error.range.location)
+            return .failure(ParseProblem(message: "Line \(line), column \(column): \(error.message)"))
+        }
+        guard let root = document.root else { return .success([:]) }
+        guard root.kind == .object, case .object(let object)? = root.jsonValue else {
+            return .failure(ParseProblem(message: "The top level must be an object."))
+        }
+        return .success(object)
     }
 
     private func apply(fileValues: [String: JSONValue]) {
@@ -222,18 +330,5 @@ public final class SettingsStore {
         if !pending.isEmpty, !fileIsInvalid, saveTask == nil {
             scheduleSave()
         }
-    }
-
-    private static func describe(_ error: Error) -> String {
-        if let decoding = error as? DecodingError {
-            switch decoding {
-            case .dataCorrupted(let context):
-                let underlying = (context.underlyingError as NSError?)?.userInfo[NSDebugDescriptionErrorKey]
-                return (underlying as? String) ?? context.debugDescription
-            default:
-                return String(describing: decoding)
-            }
-        }
-        return error.localizedDescription
     }
 }

@@ -304,10 +304,14 @@ struct MessageEntity: AppEntity {
 
     var displayRepresentation: DisplayRepresentation {
         DisplayRepresentation(
-            title: "\(body ?? "")",
+            title: "\(body ?? Self.deletedPlaceholder)",
             subtitle: "\(author.name) in \(conversation.displayName)"
         )
     }
+
+    /// What a deleted (redacted) message shows instead of its text, as in
+    /// the message list.
+    static var deletedPlaceholder: AttributedString { "Message deleted" }
 
     static func id(line: UUID, buffer: BufferID) -> String {
         "\(line.uuidString)/\(buffer.description)"
@@ -332,7 +336,8 @@ struct MessageEntity: AppEntity {
         self.attributes = line.isHighlight ? [.mention] : []
         self.conversation = ConversationEntity(buffer: buffer, session: session)
         self.date = line.time
-        self.body = AttributedString(IRCFormatting.strip(line.text))
+        // A deleted message's text stays in memory; Siri never gets it.
+        self.body = line.isRedacted ? nil : AttributedString(IRCFormatting.strip(line.text))
         self.attachments = []
         self.customAttachments = []
         self.locations = []

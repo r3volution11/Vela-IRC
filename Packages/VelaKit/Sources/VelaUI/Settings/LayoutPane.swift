@@ -16,7 +16,7 @@ struct LayoutPane: View {
         @Bindable var settings = app.settings
         let usesTabs = settings[.navigationStyle] == .tabs
 
-        SettingsPage("Layout", subtitle: "Choose how you move between networks and channels, and how much room each pane gets.") {
+        SettingsPage("Layout", subtitle: "Choose how you move between networks and channels, and how much room each pane gets.", pane: .layout) {
             VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("Navigation")
                 HStack(alignment: .top, spacing: 14) {

@@ -15,6 +15,7 @@
 - [x] **Storage**
   - [x] SQLite scrollback with FTS5
   - [x] VS Code-style `settings.json` with live reload
+  - [x] Comment- and format-preserving writes to `settings.json`, with validation (unknown keys, types, ranges)
   - [x] Network configs
   - [x] Keychain secrets
 - [x] **Theme engine**
@@ -52,6 +53,7 @@
   - [x] Theme gallery
   - [x] Network editor with SASL and certificates
   - [x] Notifications
+  - [x] VS Code-style settings editor: every setting in a searchable UI view (filters, Modified, chip fields, per-theme color overrides, unknown keys), and a JSON view with completion, inline problems, hover docs and the defaults alongside
 - [x] **Basic in-app theme editor** with live preview
 - [x] **Typing:** IRC-safe spelling, grammar, autocorrect, text replacements and smart quotes, following macOS until changed
 - [x] **Apple Intelligence**

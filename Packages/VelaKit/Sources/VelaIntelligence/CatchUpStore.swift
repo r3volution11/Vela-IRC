@@ -21,10 +21,16 @@ public final class CatchUpCard {
     public let bufferID: BufferID
     /// What's being summarized.
     public private(set) var request: CatchUpRequest
-    /// The New marker the card was opened under (`BufferModel.unreadMarkerAfter`),
-    /// so the list can drop it once that marker is gone.
+    /// The New marker the card was opened under (`BufferModel.unreadMarkerAfter`).
+    /// The card stays there (see ``anchor``) after the live marker moves or
+    /// goes, as it does when the window loses and regains focus.
     public private(set) var marker: Date?
     public internal(set) var phase: Phase
+
+    /// Where the card sits in the list: before the first line newer than
+    /// this. Its own marker, or the start of the buffer when it was opened
+    /// without one (it then covers everything loaded).
+    public var anchor: Date { marker ?? .distantPast }
 
     @ObservationIgnored var key: CatchUpRangeKey
 
@@ -151,16 +157,25 @@ public final class CatchUpStore {
     }
 
     /// Closes the buffer's card and stops its summary (unless Siri is
-    /// waiting for the same one). A finished summary stays cached.
+    /// waiting for the same one). A finished summary stays cached. Called
+    /// when the reader dismisses the card, and when they leave or close
+    /// its buffer.
     public func dismiss(_ bufferID: BufferID) {
         guard let card = cards.removeValue(forKey: bufferID) else { return }
         detach(card.key)
+    }
+
+    /// Closes every card except `bufferID`'s: the buffer on screen. The
+    /// others' buffers were left or closed.
+    public func dismissAll(except bufferID: BufferID?) {
+        for id in cards.keys where id != bufferID { dismiss(id) }
     }
 
     // MARK: Siri and Shortcuts
 
     /// The finished summary of `request`, from the cache when possible.
     /// Shares the work with an open card summarizing the same stretch.
+    /// Errors are ``CatchUpError``s (or `CancellationError`).
     public func summary(for request: CatchUpRequest) async throws -> CatchUpSummary {
         guard !request.lines.isEmpty else { throw CatchUpError.nothingToSummarize }
         let key = CatchUpRangeKey(request)
@@ -174,7 +189,13 @@ public final class CatchUpStore {
         defer { job.waiters.remove(token) }
         let task: Task<CatchUpSummary, Error> = job.task
         return try await withTaskCancellationHandler {
-            try await task.value
+            do {
+                return try await task.value
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                throw Self.catchUpError(error)
+            }
         } onCancel: {
             Task { @MainActor [weak self] in self?.stopWaiting(token, for: job) }
         }

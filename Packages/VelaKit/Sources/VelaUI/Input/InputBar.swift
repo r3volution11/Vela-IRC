@@ -142,6 +142,7 @@ struct InputBar: View {
 
     private var field: some View {
         let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        let border = app.settings[.appearanceMessageBoxBorder]
         return VStack(alignment: .leading, spacing: 0) {
             if let replyTarget {
                 ReplyBar(line: replyTarget, supportsReplies: session.supportsReplies) {
@@ -173,15 +174,15 @@ struct InputBar: View {
         }
         .background(shape.fill(theme[ThemeKey.inputBackground]))
         .clipShape(shape)
-        .overlay(
-            shape.strokeBorder(
-                theme[isFocused ? ThemeKey.inputFocusBorder : ThemeKey.inputBorder],
-                lineWidth: isFocused ? 1.5 : 1
-            )
-        )
+        .overlay {
+            // Settings → Appearance → Message box → Border.
+            if let stroke = border.stroke(isFocused: isFocused) {
+                shape.strokeBorder(theme[stroke.token], lineWidth: stroke.width)
+            }
+        }
         .modifier(ShakeEffect(shakes: reduceMotion ? 0 : CGFloat(rejectCount)))
         .animation(reduceMotion ? nil : .linear(duration: 0.32), value: rejectCount)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isFocused)
+        .animation(reduceMotion || !border.changesWithFocus ? nil : .easeOut(duration: 0.12), value: isFocused)
     }
 
     @ViewBuilder

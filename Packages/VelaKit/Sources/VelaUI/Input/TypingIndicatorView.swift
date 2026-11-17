@@ -6,37 +6,93 @@ import SwiftUI
 import VelaCore
 import VelaTheme
 
-/// "alice is typing…" above the composer, from IRCv3 `+typing`.
+/// "alice is typing…" at the bottom of the message list, from IRCv3 `+typing`.
 ///
-/// The line's height is always reserved, so the chat doesn't jump when
-/// someone starts or stops typing. The dots animate unless Reduce Motion is on.
+/// It floats over the list rather than taking a row of its own, so nobody
+/// typing costs no space. `MessageListView` keeps it mounted, fades it in
+/// and out with `isShown` and makes room under the last message while it
+/// shows (see `ListEndSpacing`). `onActiveChange` reports when someone
+/// starts typing or everyone stops (`animated` is false for the first
+/// report); the list owns `isShown` so the line, the room for it and the
+/// scroll position move in one animation. The last names stay up while the
+/// line fades out. The dots animate unless Reduce Motion is on.
 struct TypingIndicatorView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let buffer: BufferModel
+    let isShown: Bool
+    let onActiveChange: (_ active: Bool, _ animated: Bool) -> Void
 
-    static let height: CGFloat = 18
+    /// The names on the line: the current ones, or the last ones while it fades out.
+    @State private var shownNicks: [String] = []
 
     var body: some View {
         let nicks = buffer.kind == .server ? [] : buffer.typingNicks
-        HStack(spacing: 6) {
-            if let message = Self.message(for: nicks) {
-                TypingDots(animated: !reduceMotion)
-                message
-                    .font(style.font(size: max(9, style.fontSize - 2)))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .transition(.opacity)
+        line
+            .foregroundStyle(theme[ThemeKey.typingForeground])
+            .padding(.trailing, style.rowHorizontalPadding)
+            .padding(.top, ListEndSpacing.typingLineTopPadding)
+            .padding(.bottom, ListEndSpacing.typingLineBottomPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background { band }
+            .opacity(isShown ? 1 : 0)
+            .allowsHitTesting(false)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Self.plainMessage(for: nicks) ?? "")
+            .accessibilityHidden(nicks.isEmpty)
+            .onChange(of: nicks, initial: true) { old, new in
+                if !new.isEmpty {
+                    // Cross-fade only names changing on a line that's showing;
+                    // appearing, the line moves as a whole.
+                    let crossFade = isShown && !old.isEmpty && !reduceMotion
+                    withAnimation(crossFade ? .easeOut(duration: 0.15) : nil) { shownNicks = new }
+                }
+                if old.isEmpty != new.isEmpty || old == new {
+                    // `old == new` only on the first call.
+                    onActiveChange(!new.isEmpty, old != new)
+                }
             }
+    }
+
+    /// Placed like an event row: in the grouped layout the dots sit in the
+    /// gutter and the names line up with the messages; otherwise both start
+    /// at the rows' leading edge.
+    @ViewBuilder
+    private var line: some View {
+        let dots = TypingDots(animated: isShown && !reduceMotion)
+        // A blank line keeps the height (which the list measures) the same
+        // before anyone has typed.
+        let text = (Self.message(for: shownNicks) ?? Text(verbatim: " "))
+            .font(style.font(size: max(9, style.fontSize - 2)))
+            .lineLimit(1)
+            .truncationMode(.tail)
+        if style.layout == .grouped {
+            let metrics = GroupedMetrics(style: style)
+            HStack(spacing: metrics.spacing) {
+                dots.frame(width: metrics.gutter, alignment: style.showAvatars ? .center : .trailing)
+                text
+            }
+            .padding(.leading, metrics.leading)
+        } else {
+            HStack(spacing: 6) {
+                dots
+                text
+            }
+            .padding(.leading, style.rowHorizontalPadding)
         }
-        .foregroundStyle(theme[ThemeKey.typingForeground])
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height, alignment: .leading)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: nicks)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Self.plainMessage(for: nicks) ?? "")
-        .accessibilityHidden(nicks.isEmpty)
+    }
+
+    /// The chat background behind the line, fading in over its top
+    /// padding, so it reads cleanly over messages when the list is scrolled
+    /// up. (At the bottom it only covers the room made for it.)
+    private var band: some View {
+        let background = theme[ThemeKey.chatBackground]
+        return VStack(spacing: 0) {
+            LinearGradient(colors: [background.opacity(0), background], startPoint: .top, endPoint: .bottom)
+                .frame(height: ListEndSpacing.typingLineTopPadding)
+            background
+        }
     }
 
     static func message(for nicks: [String]) -> Text? {
@@ -66,7 +122,8 @@ struct TypingIndicatorView: View {
     }
 }
 
-/// Three dots that rise and fade in turn; static under Reduce Motion.
+/// Three dots that rise and fade in turn; static under Reduce Motion (and
+/// while the line is hidden).
 private struct TypingDots: View {
     let animated: Bool
 

@@ -55,7 +55,8 @@ public enum MentionsSpeech {
     }
 }
 
-/// Marks you away on every connected network.
+/// Marks you away on every connected network, waiting a few seconds for
+/// networks still connecting (Siri may have just launched Vela).
 public struct SetAwayIntent: AppIntent {
     public static let title: LocalizedStringResource = "Set Away"
     public static let description = IntentDescription(
@@ -79,7 +80,7 @@ public struct SetAwayIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         await app.ready()
         do {
-            let sessions = try app.setAway(message)
+            let sessions = try await app.setAway(message)
             return .result(dialog: "You're away on \(IntentText.list(sessions.map(\.displayName))).")
         } catch {
             throw IntentFailure.wrapping(error)
@@ -87,7 +88,7 @@ public struct SetAwayIntent: AppIntent {
     }
 }
 
-/// Marks you back on every connected network.
+/// Marks you back on every connected network, waiting like Set Away.
 public struct SetBackIntent: AppIntent {
     public static let title: LocalizedStringResource = "Set Back"
     public static let description = IntentDescription(
@@ -104,7 +105,7 @@ public struct SetBackIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         await app.ready()
         do {
-            let sessions = try app.setBack()
+            let sessions = try await app.setBack()
             return .result(dialog: "You're back on \(IntentText.list(sessions.map(\.displayName))).")
         } catch {
             throw IntentFailure.wrapping(error)

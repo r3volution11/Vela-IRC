@@ -25,6 +25,7 @@ struct LayoutSchematicConfig: Equatable {
     var showLinkCards = true
     /// Off: no media at all, for illustrations about something else.
     var showMedia = true
+    var messageBoxBorder: MessageBoxBorder = .subtle
 
     init() {}
 
@@ -47,6 +48,7 @@ struct LayoutSchematicConfig: Equatable {
         videoStyle = read(.mediaVideos)
         imageSize = read(.mediaImageSize)
         showLinkCards = read(.mediaShowLinkCards)
+        messageBoxBorder = read(.appearanceMessageBoxBorder)
     }
 
     init(preset: SettingsPreset, settings: SettingsStore) {
@@ -225,7 +227,9 @@ private struct SchematicPainter {
         fill(&context, CGRect(x: chat.minX, y: bottom, width: chat.width, height: inputArea), ThemeKey.inputContainerBackground)
         let field = CGRect(x: chat.minX + 8, y: bottom + 6, width: chat.width - 16, height: 16)
         fill(&context, field, ThemeKey.inputBackground, radius: 5)
-        stroke(&context, field, ThemeKey.inputBorder, radius: 5)
+        if config.messageBoxBorder != MessageBoxBorder.none {
+            stroke(&context, field, ThemeKey.inputBorder, radius: 5)
+        }
         bar(&context, field.minX + 7, field.midY - 1.5, min(70, field.width * 0.4), 3, color(ThemeKey.inputPlaceholder))
 
         if usesTabs && config.tabPlacement == .bottom {

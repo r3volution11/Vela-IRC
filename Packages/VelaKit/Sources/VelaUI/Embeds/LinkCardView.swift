@@ -174,6 +174,7 @@ struct LinkCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture { EmbedActions.open(preview.url) }
+        .pointerStyle(.link)
         .help(preview.url.absoluteString)
         .blurredMedia(.url(url), policy: policy, kind: .thumbnail)
         .accessibilityHidden(true)
@@ -279,6 +280,7 @@ struct LinkCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .contentShape(Rectangle())
             .onTapGesture { EmbedActions.open(preview.url) }
+            .pointerStyle(.link)
             .blurredMedia(.url(url), policy: policy, kind: .thumbnail)
             .accessibilityHidden(true)
         }

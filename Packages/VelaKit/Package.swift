@@ -82,10 +82,12 @@ let package = Package(
             swiftSettings: mainActorByDefault
         ),
 
-        // SwiftUI views and scenes.
+        // SwiftUI views and scenes. Resources/AppIcons holds the Dock icons
+        // (design/app-icon/build.sh writes them).
         .target(
             name: "VelaUI",
             dependencies: ["VelaCore", "VelaTheme", "VelaMedia", "VelaIRC", "VelaStore", "VelaIntelligence", "VelaIntents"],
+            resources: [.copy("Resources/AppIcons")],
             swiftSettings: mainActorByDefault
         ),
 

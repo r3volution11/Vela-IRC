@@ -49,7 +49,7 @@ Come back to a busy channel and a **Catch me up** button appears at the end of t
 - **Topics**, each with a title, who took part and a one-line summary. Click a topic to jump to its first message, which is briefly highlighted.
 - **You were mentioned**, when people said something to you.
 
-The buttons at the top of the card copy the summary (**Copy Summary**), write a new one (**Regenerate**) and close the card (**Dismiss**).
+The buttons at the top of the card copy the summary (**Copy Summary**), write a new one (**Regenerate**) and close the card (**Dismiss**). The card stays put while you're in the channel, even if you switch to another app, and closes when you go to another channel.
 
 ### When the button appears
 
@@ -69,7 +69,7 @@ In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#int
 
 ### What it reads, and how long it takes {#catch-up-limits}
 
-- **The new messages, actions and notices** after the New marker. Joins, parts and other events are left out, and links are reduced to the site they point to.
+- **The new messages, actions and notices** after the New marker. Joins, parts, other events and deleted messages are left out, and links are reduced to the site they point to.
 - **At most the latest 600.** For a longer stretch, the card says "Covers the latest 600 messages."
 - **It takes a moment.** About 10 seconds for a few dozen messages, and up to about a minute for 600. Until the first words arrive, the card says "Reading 250 messages…".
 - **A summary is kept until new messages arrive**, so opening the card again shows it straight away. **Regenerate** writes a fresh one.
@@ -96,13 +96,13 @@ Right-click a channel or conversation and choose **Translate Messages Automatica
 
 - **Messages are translated as they scroll into view**, new ones included. Vela never translates a channel's whole history at once.
 - **A translation you hide stays hidden.**
-- **Languages macOS can't translate**, or whose download you declined, are skipped quietly.
+- **Languages macOS can't translate**, or whose download you declined, are skipped quietly. A declined language comes back once you translate one of its messages by hand and download it.
 
 **Settings → Apple Intelligence → Translation** counts where it's on ("Translated automatically in 2 channels"), and **Clear** turns it off everywhere. In settings.json it's [`translation.autoTranslate`](/reference/settings#translation.autoTranslate).
 
 ### Languages and downloads {#languages}
 
-**Translate into** (in **Settings → Apple Intelligence → Translation**) starts as **Same as Mac**, your Mac's first preferred language. You can choose any language Apple supports, regional variants included. When you change it, translations on screen are redone in the new language. In settings.json it's [`translation.language`](/reference/settings#translation.language).
+**Translate into** (in **Settings → Apple Intelligence → Translation**) starts as **Same as Mac**, your Mac's first preferred language. You can choose any language Apple supports, regional variants included. When you change it, translations on screen are redone in the new language, and the rest as they scroll back into view. In settings.json it's [`translation.language`](/reference/settings#translation.language).
 
 The first time you translate from a language, **macOS asks to download it**. That's Apple's own prompt: macOS downloads each language once, from Apple, and translation happens on your Mac from then on.
 

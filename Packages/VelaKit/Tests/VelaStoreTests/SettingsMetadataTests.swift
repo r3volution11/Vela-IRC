@@ -49,4 +49,15 @@ struct SettingsMetadataTests {
         #expect(SettingsCatalog.descriptor(forKey: "input.smartPunctuation")?.followsSystem == true)
         #expect(SettingsCatalog.descriptor(forKey: "media.siteRules")?.objectValueEnum == ["allow", "textOnly", "block"])
     }
+
+    @Test(arguments: [
+        ("grouped", "Grouped"),
+        ("textOnly", "Text only"),
+        ("12h", "12-hour"),
+        ("titleBar", "Title bar"),
+        ("system", "System"),
+    ])
+    func labelsEnumValues(_ raw: String, _ expected: String) {
+        #expect(SettingsMetadata.enumLabel(raw) == expected)
+    }
 }

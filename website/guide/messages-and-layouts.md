@@ -76,4 +76,4 @@ The same choices are in **View → Message Layout**.
 
 Vela stores your messages on your Mac in a local database. Each channel keeps the most recent **1,000** messages in memory (**Messages kept in memory**); scroll up and older messages load from disk, then from the server if it supports [`chathistory`](/reference/ircv3).
 
-To limit how much history is kept, set **Settings → Advanced → Keep messages**. Older messages are removed when Vela starts. By default history is kept forever.
+To limit how much history is kept, set **Settings → Messages → History → Keep messages** (from a week to two years). Older messages are removed when Vela starts. By default history is kept forever. In settings.json it's [`history.retentionDays`](/reference/settings#history.retentionDays), which takes any number of days.

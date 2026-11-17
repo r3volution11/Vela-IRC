@@ -53,7 +53,7 @@ struct CatchUpUITests {
     @Test func theCardSitsRightAfterTheMarker() {
         let lines = [line(0), line(1), line(2)]
         var options = MessageDisplayOptions(unreadMarkerAfter: start.addingTimeInterval(30))
-        options.showsCatchUpCard = true
+        options.catchUpCardAfter = start.addingTimeInterval(30)
         var builder = MessageDisplayBuilder(options: options)
         builder.append(contentsOf: lines)
         let ids = Array(builder.result).map(\.id)
@@ -63,23 +63,77 @@ struct CatchUpUITests {
         }
         #expect(ids[marker + 1] == .catchUpCard)
         #expect(ids[marker + 2] == .line(lines[1].id))
+        #expect(builder.result.catchUpCardScrollTarget == .unreadMarker)
     }
 
-    @Test func noMarkerNoCard() {
+    /// Losing focus marks everything read, so the live marker goes: the
+    /// card stays where its stretch starts.
+    @Test func theCardStaysWhenTheMarkerGoes() {
+        let lines = [line(0), line(1), line(2)]
         var options = MessageDisplayOptions(unreadMarkerAfter: nil)
-        options.showsCatchUpCard = true
+        options.catchUpCardAfter = start.addingTimeInterval(30)
+        var builder = MessageDisplayBuilder(options: options)
+        builder.append(contentsOf: lines)
+        let ids = Array(builder.result).map(\.id)
+        #expect(!ids.contains(.unreadMarker))
+        #expect(ids.dropFirst() == [.line(lines[0].id), .catchUpCard, .line(lines[1].id), .line(lines[2].id)])
+        #expect(builder.result.catchUpCardScrollTarget == .catchUpCard)
+    }
+
+    /// A line arriving while the window is inactive puts a new marker
+    /// further down; the card keeps its place above it.
+    @Test func theCardStaysWhenTheMarkerMoves() {
+        let lines = [line(0), line(1), line(2), line(3)]
+        var options = MessageDisplayOptions(unreadMarkerAfter: start.addingTimeInterval(150))
+        options.catchUpCardAfter = start.addingTimeInterval(30)
+        var builder = MessageDisplayBuilder(options: options)
+        builder.append(contentsOf: lines)
+        #expect(Array(builder.result).map(\.id).dropFirst() == [
+            .line(lines[0].id), .catchUpCard, .line(lines[1].id), .line(lines[2].id), .unreadMarker, .line(lines[3].id),
+        ])
+        #expect(builder.result.catchUpCardScrollTarget == .catchUpCard)
+    }
+
+    /// The card's first lines were dropped from memory: it waits at the top.
+    @Test func anAnchorOutOfMemoryPutsTheCardAtTheTop() {
+        let lines = [line(10), line(11)]
+        var options = MessageDisplayOptions(unreadMarkerAfter: nil)
+        options.catchUpCardAfter = start
+        var builder = MessageDisplayBuilder(options: options)
+        builder.append(contentsOf: lines)
+        let ids = Array(builder.result).map(\.id)
+        #expect(ids.first.map { if case .day = $0 { true } else { false } } == true)
+        #expect(ids.dropFirst() == [.catchUpCard, .line(lines[0].id), .line(lines[1].id)])
+    }
+
+    @Test func noCardNoAnchor() {
+        let options = MessageDisplayOptions(unreadMarkerAfter: start.addingTimeInterval(30))
         var builder = MessageDisplayBuilder(options: options)
         builder.append(contentsOf: [line(0), line(1)])
         #expect(!Array(builder.result).contains { $0.id == .catchUpCard })
+        #expect(builder.result.catchUpCardScrollTarget == nil)
+    }
+
+    @Test func newLinesKeepTheCardInPlace() {
+        let cache = MessageDisplayCache()
+        var lines = [line(0), line(1)]
+        var options = MessageDisplayOptions(unreadMarkerAfter: nil)
+        options.catchUpCardAfter = start.addingTimeInterval(30)
+        _ = cache.items(for: lines, options: options)
+        lines.append(line(2))
+        let ids = Array(cache.items(for: lines, options: options)).map(\.id)
+        #expect(ids.filter { $0 == .catchUpCard }.count == 1)
+        #expect(ids.firstIndex(of: .catchUpCard) == ids.firstIndex(of: .line(lines[1].id)).map { $0 - 1 })
+        #expect(cache.rebuildCount == 1)
     }
 
     @Test func closingTheCardRebuildsWithoutIt() {
         let cache = MessageDisplayCache()
         let lines = [line(0), line(1)]
         var options = MessageDisplayOptions(unreadMarkerAfter: start.addingTimeInterval(30))
-        options.showsCatchUpCard = true
+        options.catchUpCardAfter = start.addingTimeInterval(30)
         #expect(cache.items(for: lines, options: options).contains(id: .catchUpCard))
-        options.showsCatchUpCard = false
+        options.catchUpCardAfter = nil
         #expect(!cache.items(for: lines, options: options).contains(id: .catchUpCard))
     }
 

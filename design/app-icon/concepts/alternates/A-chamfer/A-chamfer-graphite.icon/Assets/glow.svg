@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><radialGradient id="gbloom" gradientUnits="userSpaceOnUse" cx="512" cy="600" r="560"><stop offset="0" stop-color="#5A6270" stop-opacity="0.22"/><stop offset="0.55" stop-color="#5A6270" stop-opacity="0.084"/><stop offset="1" stop-color="#5A6270" stop-opacity="0"/></radialGradient><filter id="gblur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="40"/></filter></defs>
+<rect width="1024" height="1024" fill="url(#gbloom)"/>
+<path d="M 284.0 250.0 L 376.5 250.0 L 512.0 531.5 L 647.5 250.0 L 740.0 250.0 L 790.0 299.9 L 554.0 790.0 L 470.0 790.0 L 234.1 299.9 Z" fill="#DCE2E8" opacity="0.160" filter="url(#gblur)"/>
+</svg>

@@ -188,4 +188,62 @@ struct CatchUpStoreTests {
             try await store.summary(for: F.request([]))
         }
     }
+
+    /// Siri says the error's description, so every failure arrives as a
+    /// `CatchUpError`.
+    @Test func siriGetsCatchUpErrors() async throws {
+        struct Unexpected: LocalizedError {
+            var errorDescription: String? { "Something odd happened." }
+        }
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        let first = Task { try await store.summary(for: F.request(F.chatter(30))) }
+        #expect(await eventually { summarizer.callCount == 1 })
+        summarizer.call(0).continuation.finish(throwing: Unexpected())
+        await #expect(throws: CatchUpError.failed("Something odd happened.")) { try await first.value }
+
+        let second = Task { try await store.summary(for: F.request(F.chatter(31))) }
+        #expect(await eventually { summarizer.callCount == 2 })
+        summarizer.call(1).continuation.finish(throwing: CatchUpError.rateLimited)
+        await #expect(throws: CatchUpError.rateLimited) { try await second.value }
+    }
+
+    // MARK: Anchoring
+
+    @Test func aCardKeepsItsOwnAnchor() throws {
+        let store = CatchUpStore(summarizer: ManualSummarizer())
+        let marker = Date(timeIntervalSince1970: 1_800_000_000)
+        store.open(F.request(F.chatter(30)), marker: marker)
+        #expect(try #require(store.card(for: F.bufferID)).anchor == marker)
+
+        // Opened without a New marker, it covers (and sits above) everything loaded.
+        let other = BufferID(networkID: F.bufferID.networkID, foldedName: "#swift")
+        store.open(F.request(F.chatter(30), bufferID: other, name: "#swift"))
+        #expect(try #require(store.card(for: other)).anchor == .distantPast)
+    }
+
+    @Test func leavingABufferClosesOnlyItsCard() async throws {
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        let swiftID = BufferID(networkID: F.bufferID.networkID, foldedName: "#swift")
+        let swift = F.request(F.chatter(30), bufferID: swiftID, name: "#swift")
+        store.open(swift, reveal: false)
+        #expect(await eventually { summarizer.callCount == 1 })
+        summarizer.complete(0, overview: "Swift talk.")
+        #expect(await eventually { overview(store.card(for: swiftID)) == "Swift talk." })
+        store.open(F.request(F.chatter(40)), reveal: false)
+
+        // #vela is on screen now.
+        store.dismissAll(except: F.bufferID)
+        #expect(store.card(for: swiftID) == nil)
+        #expect(store.card(for: F.bufferID) != nil)
+
+        // The finished summary is still there for Siri, or the card again.
+        #expect(store.cachedSummary(for: swift)?.overview == "Swift talk.")
+        store.open(swift, reveal: false)
+        #expect(overview(store.card(for: swiftID)) == "Swift talk.")
+
+        store.dismissAll(except: nil)
+        #expect(store.cards.isEmpty)
+    }
 }

@@ -20,13 +20,15 @@ struct EventRow: View {
 
     var body: some View {
         EventRowLayout(time: line.time, symbol: line.kind.eventSymbol, symbolColorKey: line.kind.eventSymbolColorKey) {
-            Text(eventText)
-                .font(line.kind == .motd ? style.monospaceFont(size: max(10, style.fontSize - 1)) : style.font(size: max(10, style.fontSize - 1)))
-                .foregroundStyle(theme[line.kind.eventTextColorKey])
-                .lineSpacing(style.lineSpacing)
-                .tint(theme[ThemeKey.chatLink])
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            LinkPointerText(eventText) { text in
+                text
+                    .font(line.kind == .motd ? style.monospaceFont(size: max(10, style.fontSize - 1)) : style.font(size: max(10, style.fontSize - 1)))
+                    .foregroundStyle(theme[line.kind.eventTextColorKey])
+            }
+            .lineSpacing(style.lineSpacing)
+            .tint(theme[ThemeKey.chatLink])
+            .textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(line.time.formatted(date: .omitted, time: .shortened)), \(IRCFormatting.strip(line.text))")

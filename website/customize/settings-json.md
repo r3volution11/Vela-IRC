@@ -1,19 +1,23 @@
 ---
 title: settings.json
-description: Configure Vela with a VS Code-style settings.json that applies as soon as you save, including appearance.colorCustomizations to override theme colors and accents globally or per theme.
+description: Configure Vela with a VS Code-style settings.json that keeps your comments and applies as soon as you save, and override theme colors and accents with appearance.colorCustomizations.
 ---
 
 # settings.json
 
 Everything you can set in Vela's Settings window, and a little more, lives in one plain-text file, `settings.json`, just like VS Code's user settings. Edit it in any text editor and Vela applies your changes the moment you save.
 
+You can also edit it without leaving Vela: the [settings editor](/customize/settings-editor) in **Settings → Advanced** lists every setting with a control for each, and its **JSON** view edits the file itself, with suggestions and checks as you type.
+
 ## Opening it
 
-- **Theme → Open settings.json**
-- **Settings → Advanced → Open settings.json**
-- In the [command palette](/guide/command-palette): **Settings: Open settings.json**
+To open settings.json in your default editor for JSON files:
 
-It opens in your default editor for JSON files. The file is at:
+- **Theme → Open settings.json**
+- In the [command palette](/guide/command-palette): **Settings: Open settings.json**
+- In **Settings → Advanced**: **⋯ → Open settings.json in External Editor**, or **Open in External Editor** in the JSON view's toolbar
+
+The file is at:
 
 ```text
 ~/Library/Containers/io.github.r3volution11.Vela/Data/Library/Application Support/Vela/settings.json
@@ -21,18 +25,27 @@ It opens in your default editor for JSON files. The file is at:
 
 ## How it works
 
-- It's a flat JSON object of dotted keys, such as `"chat.fontSize": 14`. Comments and trailing commas are allowed.
-- **Only the settings you change are stored.** A missing key uses its default, and a value of the wrong type falls back to the default too.
-- **Changes in either direction are live.** Saving the file updates Vela immediately, and changes you make in Settings are written back to the file.
-- **Mistakes are safe.** If the file doesn't parse (say, a missing comma), Vela keeps your last good settings, shows the problem in **Settings → Advanced**, and won't overwrite the file until you fix it.
+- It's a flat JSON object of dotted keys, such as `"chat.fontSize": 14`. It's JSON with Comments: `//` and `/* */` comments and trailing commas are allowed.
+- **Only the settings you change are stored.** A missing key uses its default, and a value of the wrong type, or one that isn't among a setting's choices, falls back to the default too.
+- **Changes in either direction are live.** Saving the file updates Vela immediately, and changes you make in Settings are written back to the file, [keeping your comments](#comments).
+- **Mistakes are safe.** If the file doesn't parse (say, a missing comma), Vela keeps your last good settings and shows where the problem is in **Settings → Advanced**, for example "settings.json is invalid; keeping previous values. Line 3, column 3: Expected a comma." Changes you make in Settings meanwhile work as usual, and are written to the file once it's fixed, so a half-typed edit is never overwritten.
 - **Unknown keys are kept**, so a setting from a newer version of Vela survives a trip through an older one.
+- **A key set twice uses the last one**, as in VS Code.
 - **Replaced settings are upgraded.** When a newer Vela replaces a setting (`media.blockedDomains` became `media.siteRules`, for example), it converts your value when it starts and removes the old key.
 
-::: warning Comments are not preserved
-When Vela writes the file (after you change something in Settings), it rewrites it neatly formatted with sorted keys, and **comments are dropped**. Keep notes elsewhere if they matter to you.
-:::
+Every key is listed, with its description, type and default, in the [settings reference](/reference/settings), and in the [settings editor](/customize/settings-editor), where you can search them and see which ones you've changed.
 
-**Settings → Advanced → All settings** lists every key with its current value and default; right-click one to copy the key or a ready-to-paste JSON line. The [settings reference](/reference/settings) has the same list with descriptions.
+## Comments and formatting {#comments}
+
+When you change a setting in Vela, in Settings, the settings editor, a preset or the accent color picker, Vela edits settings.json the way you would: it changes only that setting's text and leaves the rest of the file alone, comments, blank lines and all.
+
+- **A changed value** is replaced where it is.
+- **A setting reset to its default** is removed along with its line, including a comment at the end of that line. Comments on the lines above it stay.
+- **A new setting** goes after the last one, before any comments at the end of the file. It follows the file's own style: tabs or spaces and how many, line endings, `"key": value` or `"key" : value`, and whether the last entry has a trailing comma.
+- **Objects** such as `appearance.colorCustomizations` and `media.siteRules` are changed entry by entry, so comments inside them survive too.
+- **Lists** (arrays) are rewritten whole when they change, so comments inside a list are lost. Comments around it are kept.
+- **A missing or empty file** is created fresh, indented with four spaces. A file with nothing but comments keeps them.
+- **While the file has a syntax error,** Vela doesn't write to it at all.
 
 ## An example
 
@@ -114,7 +127,28 @@ The [accent color](/customize/themes#accent-color) picker in **Settings → Appe
 - **Default (or Theme: Reset Accent Color) removes only what the picker wrote**, as listed in `"$accentPicker"`, and drops the theme's scope if nothing else is left in it. Your own entries stay.
 - **Leave `"$accentPicker"` alone.** It isn't a color, and it's how Vela knows which entries are its own. If you edit one of those entries by hand, also take its name out of the list, or Default will remove it.
 - **The picker writes to an existing scope** that names only this theme (such as `"[palenight]"`), or else adds `"[Theme Name]"`.
-- **Settings → Appearance → Color overrides** counts only the entries you wrote yourself.
+- **Settings → Appearance → Color overrides** counts only the entries you wrote yourself, not the accent or border pickers'.
+
+### Message box border color {#message-box-border-color}
+
+The [message box border](/customize/themes#message-box-border) color in **Settings → Appearance → Message box** is saved the same way, in the theme's own scope. It sets both `input.border` and `input.focusBorder` to the color, so it shows whether or not you're typing, and lists them under `"$borderPicker"`:
+
+```jsonc
+"appearance.colorCustomizations": {
+  "[Palenight]": {
+    "input.border": "#4E5579",
+    "input.focusBorder": "#4E5579",
+    "$borderPicker": ["input.border", "input.focusBorder"]
+  }
+}
+```
+
+- **It wins over the accent color picker.** Choosing a border color takes `input.focusBorder` over from the accent picker (out of `"$accentPicker"`, when the accent picker had set it), and picking or resetting an accent leaves the border's entries alone. Both pickers share the theme's scope.
+- **Default removes only the picker's two entries and `"$borderPicker"`.** If you're using a picked accent, `input.focusBorder` goes back to it. The theme's scope is dropped if nothing else is left in it.
+- **Leave `"$borderPicker"` alone**, as with `"$accentPicker"`. Changing one of its entries in the [settings editor](/customize/settings-editor#color-customizations) (**Settings → Advanced**) takes it out of the list for you; in the file, take its name out too.
+- **`input.border` you set yourself** (at the top level or in a scope) shows as a custom color in Settings → Appearance, and Default doesn't remove it.
+
+Whether there's a border at all is a separate setting, [`appearance.messageBoxBorder`](/reference/settings#appearance.messageBoxBorder): `"none"`, `"subtle"` (the default) or `"accent"` (the accent color while you type).
 
 ## networks.json
 

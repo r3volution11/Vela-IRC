@@ -1,6 +1,6 @@
 ---
 title: Choosing a theme
-description: Pick one of Vela's 21 built-in themes or your own, preview themes live with Select Theme (⌃⌘T), use different themes for Light and Dark Mode, and change a theme's accent color.
+description: Pick one of Vela's 21 built-in themes or your own, preview themes live with Select Theme (⌃⌘T), use different themes for Light and Dark Mode, and change a theme's accent color and message box border.
 ---
 
 # Choosing a theme
@@ -30,7 +30,7 @@ With **Match System Appearance** on, the theme you pick becomes the theme for th
 
 ## Accent color {#accent-color}
 
-<Screenshot src="/screenshots/settings-accent.webp" alt="Settings → Appearance: the Accent color row above the theme gallery, with round swatches from Palenight's colors and a ring around Cyan" caption="Accent color, at the top of the theme gallery." />
+<Screenshot src="/screenshots/settings-accent.webp" alt="Settings → Appearance: the Message box section with its Border and Border color rows, then the Accent color row above the theme gallery, with round swatches from Palenight's colors and a ring around Cyan" caption="Accent color, at the top of the theme gallery." />
 
 Every theme has an **accent color**, used for buttons, the selected channel, links, mention highlights, focus rings and more. To use a different one, pick it from **Accent color** at the top of **Settings → Appearance → Theme**.
 
@@ -46,6 +46,28 @@ From the [command palette](/guide/command-palette): **Theme: Next Accent Color**
 
 If a theme has no other colors that work as an accent, the row says so. If you've set the theme's accent yourself in settings.json, the row says that instead, and picking a swatch replaces it. The picker saves its choice in [settings.json](/customize/settings-json#accent-colors), so it survives updates and travels with your settings.
 
+## Message box border {#message-box-border}
+
+The message box has a quiet border that doesn't change while you type; the blinking cursor shows where you're typing. To change it, go to **Settings → Appearance → Message box**:
+
+- **Border** sets the style:
+  - **None:** no border, just the field's own background color.
+  - **Subtle** (the default): a quiet 1-point line in the theme's border color, the same whether or not you're typing.
+  - **Accent when typing:** the quiet line turns into a thicker line in the accent color while the field has focus.
+- **Border color** sets its color, from the theme's own colors:
+  - **Default** first: the theme's own border (and, with **Accent when typing**, its accent while you type).
+  - Then the theme's quiet grays, from quietest to strongest: its **Divider**, **Window Border**, **Link Preview Border**, **Placeholder** and **Secondary Text** colors, leaving out any that look like another swatch.
+  - Then its **Accent** and a few of its other colors. Hover a swatch for its name.
+  - **Custom…** opens the macOS color panel for any color, transparency included.
+
+A color you choose shows whether or not you're typing, with either style, and it's grayed out with **None**. Each theme keeps its own color; with **Match System Appearance** on and different themes for Dark and Light Mode, there are two rows, **Dark Mode border color** and **Light Mode border color**.
+
+- **The border color beats the accent color.** Picking or resetting an [accent](#accent-color) never changes a border color you chose. Choose **Default** for the border, and it follows the accent again.
+- **The same color is used nearby:** the line under the reply bar, the outline of the paste confirmation, the command palette's outline and the emoji picker's search field use the same two theme colors, `input.border` and `input.focusBorder`.
+- **None on light themes:** with no border, the field stands apart from the bar around it only by its background. In Lighter, Vela Paper, Vela Mist and Sandy Beach (and the dark Ocean theme), the field is only slightly lighter than the bar, so it's hard to see. **Subtle** with a quiet color, such as **Divider**, is a gentler choice there.
+
+From the [command palette](/guide/command-palette): **Typing: Message Box Border: None**, **Subtle** and **Accent When Typing**. The style is [`appearance.messageBoxBorder`](/reference/settings#appearance.messageBoxBorder) in settings.json, and the color is saved in [`appearance.colorCustomizations`](/customize/settings-json#message-box-border-color).
+
 ## Your own themes
 
 Themes you import, save from the theme editor or write yourself live in the **Themes folder**. Open it with **Theme → Reveal Themes Folder**. Drop a theme file in, and it appears in the list right away; edit one in your text editor, and Vela reloads it the moment you save.
@@ -56,7 +78,7 @@ A theme of your own with the same file name as a built-in one (for example `nord
 
 ## Adjusting a theme without editing it
 
-To change just a color or two, add `appearance.colorCustomizations` to [settings.json](/customize/settings-json#color-customizations). (The [accent color](#accent-color) picker saves its choices there too.) Overrides can apply to every theme or only to one:
+To change just a color or two, add `appearance.colorCustomizations` to [settings.json](/customize/settings-json#color-customizations). (The [accent color](#accent-color) and [message box border color](#message-box-border) pickers save their choices there too.) Overrides can apply to every theme or only to one:
 
 ```jsonc
 "appearance.colorCustomizations": {

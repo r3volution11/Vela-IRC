@@ -132,10 +132,28 @@ function settingType({ type }) {
   }[type] ?? fail(`unknown setting type ${type}`)
 }
 
+// Allowed number ranges: `"chat.fontSize": 9...28,` in SettingsMetadata.numberRanges.
+const metadataSwift = read('Packages/VelaKit/Sources/VelaStore/SettingsMetadata.swift')
+const rangesStart = metadataSwift.indexOf('static let numberRanges')
+if (rangesStart < 0) fail("couldn't find SettingsMetadata.numberRanges")
+const rangesBody = metadataSwift.slice(rangesStart, metadataSwift.indexOf(']', metadataSwift.indexOf('= [', rangesStart) + 3))
+const numberRanges = new Map(
+  [...rangesBody.matchAll(/"([^"]+)":\s*(-?[\d_.]+)\.\.\.(-?[\d_.]+)/g)].map(([, key, low, high]) => [
+    key,
+    [low, high].map((n) => Number(n.replace(/_/g, '')).toLocaleString('en-US')),
+  ]),
+)
+if (numberRanges.size < 5) fail(`only ${numberRanges.size} number ranges found; has SettingsMetadata.swift changed shape?`)
+
 const settings = order.map((property) => {
   const definition = keyDefinitions.get(property)
-  return { ...definition, category: definition.key.split('.')[0], default: settingDefault(definition), typeLabel: settingType(definition) }
+  const range = numberRanges.get(definition.key)
+  const typeLabel = settingType(definition) + (range ? ` from ${range[0]} to ${range[1]}` : '')
+  return { ...definition, category: definition.key.split('.')[0], default: settingDefault(definition), typeLabel }
 })
+for (const key of numberRanges.keys()) {
+  if (!settings.some((s) => s.key === key)) fail(`SettingsMetadata.numberRanges has unknown key ${key}`)
+}
 const settingKeys = new Set(settings.map((s) => s.key))
 
 const categoryNames = {

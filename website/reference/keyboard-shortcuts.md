@@ -1,6 +1,6 @@
 ---
 title: Keyboard shortcuts
-description: Every keyboard shortcut in Vela, the native macOS IRC client, from the command palette and quick switcher to navigation, the message field, spelling and the theme editor.
+description: Every keyboard shortcut in Vela, the native macOS IRC client, from the command palette and quick switcher to navigation, the message field, the settings editor and the theme editor.
 ---
 
 # Keyboard shortcuts
@@ -69,6 +69,21 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | Close (and, in Select Theme, go back to your theme) | <kbd>Esc</kbd> |
 | Switch from conversations to commands | type <kbd>></kbd> |
 | Switch back to conversations | <kbd>Backspace</kbd> in the empty field |
+
+## The settings editor
+
+In **Settings → Advanced**. See [Settings editor](/customize/settings-editor).
+
+| Action | Shortcut |
+| --- | --- |
+| Search settings (UI view) | <kbd>⌘F</kbd> |
+| Clear the search | <kbd>Esc</kbd> |
+| Save settings.json (JSON view) | <kbd>⌘S</kbd> |
+| Find / find and replace (JSON view) | <kbd>⌘F</kbd> / <kbd>⌥⌘F</kbd> |
+| Next / previous match | <kbd>⌘G</kbd> / <kbd>⇧⌘G</kbd> |
+| Find the selected text | <kbd>⌘E</kbd> |
+| Show suggestions | <kbd>⌃Space</kbd>, <kbd>⌥Esc</kbd> or <kbd>F5</kbd> |
+| Indent / outdent | <kbd>Tab</kbd> / <kbd>⇧Tab</kbd> |
 
 ## Images and the theme editor
 

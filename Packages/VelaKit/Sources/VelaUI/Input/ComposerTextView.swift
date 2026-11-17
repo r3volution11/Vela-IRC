@@ -199,11 +199,8 @@ struct ComposerTextView: NSViewRepresentable {
         private var nickSet = NickSet([String]())
 
         // Writing Tools
-        private var isWritingToolsSession = false
+        private var writingToolsUndo = WritingToolsUndoGroup()
         private var textBeforeWritingTools: String?
-        /// The undo manager holding Writing Tools' open undo group, if any
-        /// (kept, since the view may have left its window when it closes).
-        private weak var writingToolsUndoManager: UndoManager?
 
         private struct CompletionState {
             var range: NSRange
@@ -330,11 +327,11 @@ struct ComposerTextView: NSViewRepresentable {
         // MARK: Writing Tools
 
         var isWritingToolsActive: Bool {
-            isWritingToolsSession || (textView?.isWritingToolsActive ?? false)
+            writingToolsUndo.isSessionActive || (textView?.isWritingToolsActive ?? false)
         }
 
         func textViewWritingToolsWillBegin(_ textView: NSTextView) {
-            isWritingToolsSession = true
+            writingToolsUndo.sessionWillBegin()
             textBeforeWritingTools = textView.string
             // The result is its own undo step, apart from what was typed.
             textView.breakUndoCoalescing()
@@ -342,8 +339,7 @@ struct ComposerTextView: NSViewRepresentable {
         }
 
         func textViewWritingToolsDidEnd(_ textView: NSTextView) {
-            endWritingToolsUndoGroup()
-            isWritingToolsSession = false
+            writingToolsUndo.sessionDidEnd()
             textView.breakUndoCoalescing()
             let value = textView.string
             if parent.text != value { parent.text = value }
@@ -361,20 +357,13 @@ struct ComposerTextView: NSViewRepresentable {
         }
 
         /// Called before every text change. Writing Tools' edits are grouped
-        /// into one undo step, opened lazily so a session that changes
-        /// nothing leaves no empty step behind.
+        /// into one undo step (see ``WritingToolsUndoGroup``).
         func willChangeText() {
-            guard isWritingToolsActive, writingToolsUndoManager == nil, let undoManager = textView?.undoManager else { return }
-            undoManager.beginUndoGrouping()
-            writingToolsUndoManager = undoManager
+            writingToolsUndo.textWillChange(textView?.undoManager)
         }
 
         func endWritingToolsUndoGroup() {
-            guard let undoManager = writingToolsUndoManager else { return }
-            writingToolsUndoManager = nil
-            if undoManager.groupingLevel > 0 {
-                undoManager.endUndoGrouping()
-            }
+            writingToolsUndo.close()
         }
 
         // MARK: Focus
@@ -680,6 +669,51 @@ struct ComposerTextView: NSViewRepresentable {
             case 0x30...0x39, 0x41...0x5A, 0x61...0x7A, 0x5F, 0x2B, 0x2D: true // 0-9 A-Z a-z _ + -
             default: false
             }
+        }
+    }
+}
+
+/// Groups a Writing Tools session's edits into one undo step. The group
+/// opens lazily, at the session's first change, so a session that changes
+/// nothing leaves no empty step behind, and closes when the session ends.
+///
+/// The session is tracked from will-begin to did-end here, not read from
+/// `NSTextView.isWritingToolsActive`, which can still be true after did-end:
+/// a change arriving then must not open a group nothing would close.
+struct WritingToolsUndoGroup {
+    /// Between Writing Tools' will-begin and did-end.
+    private(set) var isSessionActive = false
+    /// The undo manager holding the open group, if any (kept, since the
+    /// view may have left its window by the time it closes).
+    private weak var undoManager: UndoManager?
+
+    /// Whether a group is open.
+    var isOpen: Bool { undoManager != nil }
+
+    mutating func sessionWillBegin() {
+        // A session that never reported its end doesn't leave its group open.
+        close()
+        isSessionActive = true
+    }
+
+    /// Text is about to change.
+    mutating func textWillChange(_ undoManager: UndoManager?) {
+        guard isSessionActive, self.undoManager == nil, let undoManager else { return }
+        undoManager.beginUndoGrouping()
+        self.undoManager = undoManager
+    }
+
+    mutating func sessionDidEnd() {
+        isSessionActive = false
+        close()
+    }
+
+    /// Closes the open group, if any (also when the composer goes away).
+    mutating func close() {
+        guard let undoManager else { return }
+        self.undoManager = nil
+        if undoManager.groupingLevel > 0 {
+            undoManager.endUndoGrouping()
         }
     }
 }

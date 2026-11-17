@@ -81,13 +81,11 @@ import VelaFoundation
         #expect(saved["chat.layout"] == .string("classic"))
         #expect(saved["sidebar.width"] == .number(240))
 
-        // Pretty-printed with sorted keys and a trailing newline.
+        // Minimal edits: the one-line object stays on one line, the removed
+        // key is gone with its comma, and new keys are appended in key order.
         let text = try readString(url)
-        #expect(text.hasSuffix("}\n"))
-        #expect(text.contains("\n  \"chat.layout\" : \"classic\""))
-        let chatIndex = try #require(text.range(of: "chat.layout")).lowerBound
-        let sidebarIndex = try #require(text.range(of: "sidebar.width")).lowerBound
-        #expect(chatIndex < sidebarIndex)
+        #expect(text == #"{"future.setting": {"nested": [1, 2]}, "chat.layout": "classic", "highlight.words": ["vela"], "sidebar.width": 240}"#)
+        #expect(!store.lastWriteRewroteFile)
 
         // Explicitly setting the default value keeps the key.
         store[.chatLayout] = .grouped
@@ -212,7 +210,7 @@ import VelaFoundation
 @Suite struct SettingsCatalogTests {
     @Test func catalogIsCompleteAndUnique() {
         let keys = SettingKey.allKnownKeys.map(\.key)
-        #expect(keys.count == 69)
+        #expect(keys.count == 71)
         #expect(Set(keys).count == keys.count)
         #expect(keys.allSatisfy { $0.contains(".") })
         #expect(SettingKey.allKnownKeys.allSatisfy { !$0.summary.isEmpty })

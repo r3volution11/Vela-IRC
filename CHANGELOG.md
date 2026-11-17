@@ -32,16 +32,19 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Catch me up.** Back in a busy channel, a **Catch me up** button on the New marker summarizes what you missed with Apple Intelligence, on your Mac: an overview, the topics with who took part (click one to jump to where it starts), and where you were mentioned. Copy, regenerate or dismiss the summary from its card. New settings: `intelligence.catchUp` and `intelligence.catchUpThreshold`.
   - The button appears after 25 new messages; choose 10, 25, 50 or 100 in Settings → Apple Intelligence.
   - For any number of new messages, right-click a channel or conversation and choose **Catch Me Up**, or run **Buffer: Catch Me Up** from the command palette.
-  - Covers the latest 600 messages and takes from about 10 seconds to a minute. Summaries can contain mistakes.
+  - Covers the latest 600 messages, leaving out deleted ones, and takes from about 10 seconds to a minute. Summaries can contain mistakes.
+  - The card stays open, and keeps writing, when you switch to another app or open Settings, until you dismiss it or go to another channel.
   - Needs a Mac with Apple silicon, with Apple Intelligence turned on.
 - **Translate messages**, on your Mac. Right-click a message in another language (or click **…**) and choose **Translate**; the translation appears under it, with **Translate Again** and **Hide Translation** in its caption. New settings: `translation.language` and `translation.autoTranslate`.
   - **Translate Messages Automatically**, in a channel's, conversation's or network's right-click menu (and the palette, as **Buffer: Translate Messages Automatically**), translates lines in other languages as they scroll into view.
-  - **Translate into** follows your Mac's language unless you choose another.
+  - **Translate into** follows your Mac's language unless you choose another. Changing it redoes the translations on screen straight away, and the rest as you scroll to them.
+  - A language whose download you declined is skipped, and comes back once you download it. Deleted messages are never translated.
   - Doesn't need Apple Intelligence. macOS downloads each language from Apple, once, after asking.
 - **Siri, Shortcuts and Spotlight.** Ask Siri "Catch me up in Vela", "Check my Vela mentions", "Message #vela in Vela", "Open #vela in Vela" or "Set me away in Vela", with no setup. New setting: `intelligence.spotlightChannels`.
   - Shortcuts actions: Open Channel, Send Message, Join Channel, Check Mentions, Catch Me Up, Set Away, Set Back, Mark All as Read, Connect Network and Disconnect Network.
   - Your channels and conversations appear in Spotlight: names only, never messages.
-  - On macOS 27, Siri can also send and draft messages, mark messages as read, and knows which channel is open, so "reply to this" and "summarize this" work.
+  - Sending, joining, Set Away and Set Back wait about 10 seconds for a network that's still connecting.
+  - On macOS 27, Siri can also send and draft messages, mark a message and everything before it as read, and knows which channel is open, so "reply to this" and "summarize this" work. Deleted messages are never read out.
 - **Settings → Apple Intelligence**, a new pane for Catch me up, translation, Writing Tools, and Siri & Shortcuts, with a status box that says whether Apple Intelligence is ready.
 - **Typing options** in Settings → Messages → **Typing**: check spelling, check grammar, correct spelling automatically, use text replacements, smart quotes and dashes, and Writing Tools. New settings: `input.grammarCheck`, `input.autocorrect`, `input.textReplacements`, `input.smartPunctuation` and `input.writingTools`.
   - Autocorrect, text replacements, and smart quotes and dashes follow System Settings → Keyboard until you change them in Vela; **Use macOS Setting** follows macOS again.
@@ -51,9 +54,26 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Accent colors.** Settings → Appearance → **Accent color** switches the theme's accent to one of its own colors (from its nick and mIRC colors). Buttons, selection, links, mentions and everything else in the accent follow, text stays readable, and colors with a meaning (errors, joins and parts) never change. Each theme keeps its own choice.
   - Saved in the theme's scope in `appearance.colorCustomizations`, with `"$accentPicker"` listing what the picker wrote; your own overrides there always win.
   - Palette: **Theme: Next Accent Color** and **Theme: Reset Accent Color**.
+- **Message box border.** Settings → Appearance → **Message box** sets the border's style and color. New setting: `appearance.messageBoxBorder`.
+  - **Border:** **None** (just the field's background), **Subtle** (the new default: a quiet line that stays the same while you type) or **Accent when typing** (the accent-colored focus border from before).
+  - **Border color:** Default, the theme's own quiet grays (its divider, window and link preview borders, placeholder and secondary text), its accent and a few of its other colors, or **Custom…** for any color. It shows whether or not you're typing, and each theme keeps its own.
+  - Saved in the theme's scope in `appearance.colorCustomizations` (`input.border` and `input.focusBorder`), with `"$borderPicker"` listing what the picker wrote. A border color you choose wins over the accent color picker.
+  - Palette: **Typing: Message Box Border: None**, **Subtle** and **Accent When Typing**.
+- **Settings editor.** Settings → Advanced is now a VS Code-style editor for every setting, with a UI view and a JSON view.
+  - **UI view:** every setting with the right control: switches, pop-up menus, number fields that know their range, chip fields with suggestions (fonts, themes, timestamp formats, channels, languages), site rules, and a group of color overrides for each theme. Settings you've changed are marked; setting one back to its default removes it from settings.json. Keys Vela doesn't know are listed with a warning, and kept.
+  - **Search** by name, key, description or value, with filters (`@modified`, `@unknown`, `@category:…`, `@pane:…`), a **Modified** button and category chips. **Reset All Settings…** is in its **⋯** menu.
+  - **JSON view:** edit settings.json in Vela, with suggestions for setting names and values (⌃Space, ⌥Esc or F5), problems underlined as you type (with a fix for misspelled keys), docs when you hover a setting, the default settings alongside, find and replace, and ⌘S to save. It asks before you leave with unsaved changes, and offers **Reload** or **Keep My Changes** when the file changes on disk.
+  - **Find any setting from anywhere in Settings:** a search field at the top of the Settings sidebar, **Show in settings editor** on each pane, **Vela → Search Settings…** and **Settings: Search…** in the command palette.
+- **settings.json keeps your comments.** Changes you make in Vela now edit only the setting that changed, leaving comments, blank lines, indentation and trailing commas as they were. Before, Vela rewrote the whole file with sorted keys and dropped your comments. (Comments inside a list are still lost when that list changes.)
+- **settings.json is checked.** Unknown settings ("Did you mean “chat.fontSize”?"), values of the wrong type or not among a setting's choices, numbers out of range, settings set twice and settings from older versions are flagged in the JSON view, and a file Vela can't read says where the problem is ("Line 3, column 3: Expected a comma.").
+
+- **Choose a Dock icon.** Settings → Appearance → **Dock icon** offers six versions of Vela's icon: **Vela** (the standard icon), **Midnight**, **Graphite**, **Sunrise**, **Paper** and **Vivid**. New setting: `appearance.appIcon`; palette commands **Appearance: Next App Icon** and **Appearance: App Icon: …**.
+  - The choice shows in the Dock and the app switcher while Vela is open. Finder, Spotlight, the Apps list and notifications always show the standard icon, which follows your Icon & widget style; macOS doesn't let apps change those.
 
 ### Changed
 
+- **A new app icon, "Glint":** a glass V on navy with a small star in its notch, built for macOS 26's Default, Dark, Clear and Tinted icon styles. The website's favicons, logo and social card use it too.
+- **The message box no longer lights up in the accent color while you type.** Its border now stays a quiet line, so it doesn't pull attention from the chat. To get the accent border back, choose **Accent when typing** in Settings → Appearance → Message box (or set `appearance.messageBoxBorder` to `"accent"`).
 - **Media settings changed, and yours are upgraded automatically** the first time the new version starts:
   - `media.presentation` and `media.loadVideoEmbeds` are replaced by `media.linkPreviewSize`, `media.videos` and `media.imageSize`. `"compact"` becomes Minimal links, Compact videos and Thumbnail images, and `media.loadVideoEmbeds: false` becomes `media.videos: "off"`.
   - `media.blockedDomains` and `media.allowedDomains` become `media.siteRules` entries: blocked domains are set to Nothing and allowed domains to Everything. **Allowed sites now also get past the adult-site filter.**
@@ -62,11 +82,13 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Link previews are Standard size by default**, smaller than the old full card. Choose **Large** in Settings → Media for the old look.
 - **Presets set the new media settings.** Classic IRC: Minimal links, Compact videos and Thumbnail images, so videos get a one-line row with ▶ instead of a title line. Modern Chat and Tabbed: Standard, Player and Full size. Focus: Minimal, Player and Thumbnail, so videos now get a full player.
 - In the command palette, **Toggle Inline Images** is now **Load Previews Automatically**, which is what it always did. **Use Full Previews** and **Use Compact Previews** are replaced by the size commands above.
-- **Send typing indicators** and **Check spelling while typing** moved from Settings → Advanced to Settings → Messages → Typing. Their settings.json keys (`input.sendTypingIndicators`, `input.spellCheck`) haven't changed.
+- **Settings → Advanced is now the settings editor**, and its switches have moved: **Send typing indicators** and **Check spelling while typing** to Settings → Messages → Typing, **Keep messages** to Settings → Messages → History, and **Reconnect automatically** to Settings → Networks. Their settings.json keys (`input.sendTypingIndicators`, `input.spellCheck`, `history.retentionDays`, `connection.autoReconnect`) haven't changed. **Open settings.json** and **Reveal Data Folder** are in the editor's **⋯** menu, and the **All settings** list is now its UI view.
 - **Nick colors stay apart.** People talking in the same channel get different colors while the theme's palette has room; before, two nicks whose names hashed alike shared a color. Colors that merely look alike (orange beside red) are kept apart too, using the nearest clearly different color from the theme's palette, but only when a clearly different one is free. A nick keeps its color once given and usually has the same one everywhere. Palette colors too close to the message text (or under 3:1 against the background) are no longer used, so a colored nick never reads as plain text.
 
 ### Fixed
 
+- **No more empty strip above the message box.** The last message now sits just above it. The "is typing…" line only takes up room while someone is typing; the conversation slides up gently to make space, and stays put if you've scrolled up. In the Modern layout, the typing line lines up with the messages, and **Jump to present** moves above it while it shows.
+- Links in messages, link preview images and preview chips show the pointing-hand cursor when you hover them. The rest of a message keeps the text cursor.
 - The **New** unread marker now appears while the window is in the background, and messages you've already seen no longer appear below it.
 - Messages no longer appear twice after reconnecting to a ZNC bouncer. ZNC replays its buffer without message IDs, and those copies were shown and stored next to the originals; copies already stored are removed on first launch.
 - Dragging a tab in the title bar no longer starts moving the window partway through.

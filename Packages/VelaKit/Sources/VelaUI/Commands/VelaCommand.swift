@@ -33,6 +33,7 @@ struct VelaCommand: Identifiable {
     let perform: () -> Void
 
     enum Category: String, CaseIterable {
+        case appearance = "Appearance"
         case buffer = "Buffer"
         case channel = "Channel"
         case chat = "Chat"

@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import Foundation
+import FoundationModels
 import Testing
 @testable import VelaIntelligence
 
@@ -180,6 +181,29 @@ struct CatchUpEngineTests {
         let model = FakeCatchUpModel(final: { _ in throw CatchUpModelError.unsupportedLanguage })
         await #expect(throws: CatchUpError.unavailable(.unsupportedLanguage)) {
             try await CatchUpEngine(model: model).run(F.request(F.chatter(3)))
+        }
+    }
+
+    /// Long stretches make many requests, which Siri runs in the background,
+    /// where Apple Intelligence limits them sooner.
+    @Test func aRateLimitSaysToTryAgain() async {
+        let model = FakeCatchUpModel(
+            context: 2048,
+            digest: { _ in throw CatchUpModelError.rateLimited },
+            final: { _ in throw CatchUpModelError.rateLimited }
+        )
+        await #expect(throws: CatchUpError.rateLimited) {
+            try await CatchUpEngine(model: model).run(F.request(F.chatter(240)))
+        }
+        #expect(CatchUpError.rateLimited.errorDescription == "Apple Intelligence is busy. Try again in a moment.")
+    }
+
+    @Test func foundationModelsRateLimitsAreRecognized() {
+        let older = LanguageModelSession.GenerationError.rateLimited(.init(debugDescription: "busy"))
+        #expect(FoundationModelsCatchUpModel.classify(older) as? CatchUpModelError == .rateLimited)
+        if #available(macOS 27.0, *) {
+            let current = LanguageModelError.rateLimited(.init(resetDate: nil, debugDescription: "busy"))
+            #expect(FoundationModelsCatchUpModel.classify(current) as? CatchUpModelError == .rateLimited)
         }
     }
 

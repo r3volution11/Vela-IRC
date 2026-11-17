@@ -60,6 +60,37 @@ public enum InlineImageSize: String, Codable, Sendable, CaseIterable, SettingVal
     case thumbnail
 }
 
+/// How the message box's border is drawn. Its color is the theme's
+/// `input.border` (and `input.focusBorder`), which Settings → Appearance can
+/// change per theme.
+public enum MessageBoxBorder: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// No border, just the field's background.
+    case none
+    /// A quiet 1 pt line that stays the same while you type.
+    case subtle
+    /// The quiet line, turning the accent color while the field has focus.
+    case accent
+}
+
+/// The icon Vela shows in the Dock and the app switcher while it's open.
+/// Finder, Spotlight and the Apps list always show the standard icon, which
+/// follows the Mac's Icon & widget style; macOS has no way for an app to
+/// change those.
+public enum AppIcon: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// The standard icon: navy with a cyan V.
+    case vela
+    /// Near-black, with a pale ice V.
+    case midnight
+    /// Charcoal, with a silver V.
+    case graphite
+    /// Deep plum, with a peach-to-coral V and a warm star.
+    case sunrise
+    /// White, with a deep blue V.
+    case paper
+    /// Bright blue, with a white V.
+    case vivid
+}
+
 /// A switch that follows a macOS setting until it's changed in Vela, such
 /// as autocorrect following System Settings → Keyboard → Text Input.
 ///
@@ -138,7 +169,21 @@ extension SettingKey where Value == Bool {
 extension SettingKey where Value == [String: JSONValue] {
     public static var appearanceColorCustomizations: SettingKey<[String: JSONValue]> {
         .init("appearance.colorCustomizations", default: [:],
-              summary: "Overrides for theme color tokens, for every theme or for one (\"[Palenight]\": {…}), e.g. {\"chat.background\": \"#1e1e2e\"}. The accent color picker in Settings → Appearance saves its choice here too.")
+              summary: "Overrides for theme color tokens, for every theme or for one (\"[Palenight]\": {…}), e.g. {\"chat.background\": \"#1e1e2e\"}. The accent color and message box border color pickers in Settings → Appearance save their choices here too.")
+    }
+}
+
+extension SettingKey where Value == MessageBoxBorder {
+    public static var appearanceMessageBoxBorder: SettingKey<MessageBoxBorder> {
+        .init("appearance.messageBoxBorder", default: .subtle,
+              summary: "Border around the message box: none (just its background), subtle (a quiet line that stays the same while you type) or accent (the line turns the accent color while you type). Settings → Appearance also sets its color per theme.")
+    }
+}
+
+extension SettingKey where Value == AppIcon {
+    public static var appearanceAppIcon: SettingKey<AppIcon> {
+        .init("appearance.appIcon", default: .vela,
+              summary: "Icon in the Dock and app switcher while Vela is open: vela (the standard icon), midnight, graphite, sunrise, paper or vivid. Finder and Spotlight always show the standard icon, which follows your Icon & widget style.")
     }
 }
 
@@ -441,6 +486,8 @@ public enum SettingsCatalog {
             SettingKey.appearancePreferredLightTheme.descriptor,
             SettingKey.appearanceFollowSystem.descriptor,
             SettingKey.appearanceColorCustomizations.descriptor,
+            SettingKey.appearanceMessageBoxBorder.descriptor,
+            SettingKey.appearanceAppIcon.descriptor,
 
             SettingKey.chatLayout.descriptor,
             SettingKey.chatFontFamily.descriptor,

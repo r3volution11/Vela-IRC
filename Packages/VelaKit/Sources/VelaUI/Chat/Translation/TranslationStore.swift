@@ -41,11 +41,12 @@ struct TranslationContext: Equatable {
 /// `TranslationQueue` (batched per language, a few batches at a time) to a
 /// `MessageTranslator`. Detected languages and finished translations are
 /// cached by line id, so scrolling back or hiding and showing again never
-/// translates twice.
+/// translates twice. Everything is bounded: the oldest lines' state goes
+/// first. A deleted (redacted) message's translation is dropped.
 @Observable
 final class TranslationStore {
     /// Lines with a translation shown, in progress, failed or hidden.
-    private(set) var states: [UUID: LineTranslationState] = [:]
+    private(set) var states: BoundedDictionary<UUID, LineTranslationState>
 
     /// Downloads waiting for the chat view's translation task (live
     /// translator only).
@@ -70,6 +71,11 @@ final class TranslationStore {
     @ObservationIgnored private var supportedCodes: Set<String>?
     /// The target the lines on show were translated into.
     @ObservationIgnored private var currentTarget: Locale.Language?
+    /// Message rows on screen (or about to be), as the list builds them.
+    @ObservationIgnored private var onScreen: Set<UUID> = []
+    /// Lines still showing a translation into a previous target; redone
+    /// when their row next appears.
+    @ObservationIgnored private var staleLines: Set<UUID> = []
     @ObservationIgnored private var supportedLanguagesCache: [Locale.Language]?
 
     private struct Translation {
@@ -89,11 +95,14 @@ final class TranslationStore {
         var isAutomatic: Bool
     }
 
-    /// - Parameter translator: Fixed translator (tests). By default the
-    ///   store picks the live one, or canned text in demo mode, on first use.
-    init(translator: (any MessageTranslator)? = nil, collectionDelay: Duration = .milliseconds(120)) {
+    /// - Parameters:
+    ///   - translator: Fixed translator (tests). By default the store picks
+    ///     the live one, or canned text in demo mode, on first use.
+    ///   - stateLimit: How many lines' states to keep (tests use fewer).
+    init(translator: (any MessageTranslator)? = nil, collectionDelay: Duration = .milliseconds(120), stateLimit: Int = 5_000) {
         self.translator = translator
         self.collectionDelay = collectionDelay
+        self.states = BoundedDictionary(limit: stateLimit)
     }
 
     // MARK: Setup
@@ -173,6 +182,10 @@ final class TranslationStore {
     /// Translates `line` from `source` into the context's target, from the
     /// cache when it's been translated before.
     func translate(_ line: ChatLine, from source: Locale.Language, context: TranslationContext, isAutomatic: Bool = false) {
+        guard !line.isRedacted else {
+            forget(line.id)
+            return
+        }
         let text = IRCFormatting.strip(line.text)
         sources[line.id] = Source(text: text, language: source)
         if currentTarget == nil { currentTarget = context.target }
@@ -210,19 +223,17 @@ final class TranslationStore {
         translate(line, from: source, context: context)
     }
 
-    /// The target language changed: translations on show are redone in it.
-    /// Called whenever a chat appears or its target changes; does nothing
-    /// while the target stays the same.
+    /// The target language changed: translations on screen are redone in
+    /// it at once, the others when their rows next appear (see
+    /// ``rowAppeared(_:context:)``), so a long scrollback isn't translated
+    /// again all at once. Called whenever a chat appears or its target
+    /// changes; does nothing while the target stays the same.
     func retarget(to target: Locale.Language, isDemo: Bool) {
         let previous = currentTarget
         currentTarget = target
         guard let previous, previous != target else { return }
-        let showing = states.compactMap { id, state -> UUID? in
-            switch state {
-            case .translating, .translated: id
-            case .failed, .hidden: nil
-            }
-        }
+        staleLines.removeAll()
+        let showing = states.dictionary.compactMap { id, state in Self.followsTarget(state) ? id : nil }
         for id in showing {
             guard let source = sources[id] else { continue }
             if source.language.isSameTranslationLanguage(as: target) {
@@ -233,9 +244,57 @@ final class TranslationStore {
                 states[id] = .translated(text: cached.text, source: cached.source)
                 continue
             }
-            prepare(isDemo: isDemo)
-            request(id, text: source.text, pair: TranslationPair(source: source.language, target: target), isAutomatic: false)
+            if onScreen.contains(id) {
+                redo(id, source: source, target: target, isDemo: isDemo)
+            } else {
+                staleLines.insert(id)
+            }
         }
+    }
+
+    // MARK: Rows
+
+    /// A message row came on screen. A translation left in a previous
+    /// target by ``retarget(to:isDemo:)`` is redone now; a deleted
+    /// message's is dropped.
+    func rowAppeared(_ line: ChatLine, context: TranslationContext?) {
+        guard !line.isRedacted else {
+            forget(line.id)
+            return
+        }
+        onScreen.insert(line.id)
+        guard staleLines.remove(line.id) != nil, let context, let source = sources[line.id],
+              let state = states[line.id], Self.followsTarget(state)
+        else { return }
+        redo(line.id, source: source, target: context.target, isDemo: context.isDemo)
+    }
+
+    func rowDisappeared(_ lineID: UUID) {
+        onScreen.remove(lineID)
+    }
+
+    /// Forgets the line's translation, its text and anything in flight:
+    /// its message was deleted.
+    func forget(_ lineID: UUID) {
+        attempts = attempts.filter { $0.value.lineID != lineID }
+        if states[lineID] != nil { states[lineID] = nil }
+        translations[lineID] = nil
+        sources[lineID] = nil
+        staleLines.remove(lineID)
+    }
+
+    /// Translating or translated: redone when the target changes. (Failed
+    /// and hidden lines show nothing in any target.)
+    private static func followsTarget(_ state: LineTranslationState) -> Bool {
+        switch state {
+        case .translating, .translated: true
+        case .failed, .hidden: false
+        }
+    }
+
+    private func redo(_ lineID: UUID, source: Source, target: Locale.Language, isDemo: Bool) {
+        prepare(isDemo: isDemo)
+        request(lineID, text: source.text, pair: TranslationPair(source: source.language, target: target), isAutomatic: false)
     }
 
     // MARK: Queue
@@ -257,6 +316,9 @@ final class TranslationStore {
         case .success(let text):
             translations[lineID] = Translation(text: text, source: source, target: attempt.pair.target)
             pairStatus[attempt.pair] = .installed
+            // Downloaded after all (a later Translate): automatic translation
+            // picks the pair up again.
+            declinedPairs.remove(attempt.pair)
             states[lineID] = .translated(text: text, source: source)
         case .failure(.cancelled):
             states[lineID] = nil
@@ -317,6 +379,9 @@ struct BoundedDictionary<Key: Hashable, Value> {
     }
 
     var count: Int { storage.count }
+
+    /// The entries, in no order.
+    var dictionary: [Key: Value] { storage }
 
     subscript(key: Key) -> Value? {
         get { storage[key] }

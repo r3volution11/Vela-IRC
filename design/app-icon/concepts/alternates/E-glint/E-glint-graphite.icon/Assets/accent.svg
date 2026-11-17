@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><radialGradient id="sstar" gradientUnits="userSpaceOnUse" cx="512" cy="292" r="60"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#ECEFF3"/></radialGradient></defs>
+<path d="M 512.0 225.9 Q 520.4 283.6 568.0 292.0 Q 520.4 300.4 512.0 358.1 Q 503.6 300.4 456.0 292.0 Q 503.6 283.6 512.0 225.9 Z" fill="url(#sstar)"/>
+</svg>

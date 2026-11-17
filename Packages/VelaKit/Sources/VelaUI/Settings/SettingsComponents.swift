@@ -14,33 +14,28 @@ import VelaTheme
 // MARK: - Page
 
 /// A scrolling settings page: large title, optional subtitle, then sections.
+///
+/// With `pane`, the title gets a "Show in settings editor" link that opens
+/// Advanced filtered to that pane's settings (when it has any in
+/// settings.json).
 struct SettingsPage<Content: View>: View {
     @Environment(\.theme) private var theme
     let title: String
     var subtitle: String?
+    var pane: SettingsPane?
     let content: Content
 
-    init(_ title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+    init(_ title: String, subtitle: String? = nil, pane: SettingsPane? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
         self.subtitle = subtitle
+        self.pane = pane
         self.content = content()
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(title)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(theme[ThemeKey.settingsForeground])
-                        .accessibilityAddTraits(.isHeader)
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.system(size: 12.5))
-                            .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                SettingsPageHeader(title: title, subtitle: subtitle, pane: pane)
                 content
             }
             .padding(.horizontal, 28)
@@ -51,6 +46,41 @@ struct SettingsPage<Content: View>: View {
         }
         .scrollIndicators(.automatic)
         .background(theme[ThemeKey.settingsBackground])
+    }
+}
+
+/// A settings page's large title and subtitle, plus the "Show in settings
+/// editor" link for panes with settings in settings.json.
+struct SettingsPageHeader: View {
+    @Environment(\.theme) private var theme
+    @Environment(UIState.self) private var uiState: UIState?
+    let title: String
+    var subtitle: String?
+    var pane: SettingsPane?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(theme[ThemeKey.settingsForeground])
+                    .accessibilityAddTraits(.isHeader)
+                if let pane, let uiState, !SettingsCategory.categories(forPane: pane.rawValue).isEmpty {
+                    Spacer(minLength: 8)
+                    SettingsLinkButton("Show in settings editor", systemImage: "slider.horizontal.3") {
+                        uiState.settingsEditor.showInEditor("\(SettingsQuery.panePrefix)\(pane.rawValue)")
+                    }
+                    .help("See this pane's settings in Advanced, as they're stored in settings.json")
+                    .accessibilityHint("Opens Advanced, filtered to the \(pane.title) settings.")
+                }
+            }
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 

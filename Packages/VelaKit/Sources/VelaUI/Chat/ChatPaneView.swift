@@ -9,8 +9,9 @@ import VelaStore
 import VelaTheme
 
 /// The center column: header (or title-bar tabs), optional tab stacks,
-/// scrollback, typing line and input. Tab stacks live here rather than in
-/// the per-buffer views so they persist while switching buffers.
+/// scrollback (with the typing line over its bottom edge) and input. Tab
+/// stacks live here rather than in the per-buffer views so they persist
+/// while switching buffers.
 struct ChatColumnView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.chatStyle) private var style
@@ -41,8 +42,6 @@ struct ChatColumnView: View {
                     .environment(\.nickColorBuffer, buffer)
                     .translationHost(buffer: buffer)
                     .onscreenEntity(buffer: buffer, session: session)
-                TypingIndicatorView(buffer: buffer)
-                    .id(buffer.id)
                 if usesTabs && style.tabPlacement == .bottom {
                     TabStackView(placement: .bottom)
                 }

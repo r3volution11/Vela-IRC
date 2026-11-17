@@ -17,6 +17,8 @@ Type in the message field at the bottom of the window and press **Return** to se
 
 The field grows as you type, up to eight lines, then scrolls. IRC limits how long a single message can be, so long or multi-line text is sent as several messages; a small "2 messages" label tells you before you send.
 
+The field has a quiet border that stays the same while you type. To remove it, change its color, or have it turn the accent color while you type, see [Message box border](/customize/themes#message-box-border).
+
 ## Tab completion
 
 Press <kbd>Tab</kbd> after typing the start of a word:
@@ -62,7 +64,7 @@ If you're offline, or you've left the channel, the field says so (**Offline — 
 
 ## Typing options {#typing}
 
-<Screenshot src="/screenshots/settings-typing.webp" alt="Settings → Messages → Typing: switches for spelling, grammar, autocorrect, text replacements, smart quotes and dashes, Writing Tools and typing indicators, some marked Same as macOS" caption="Settings → Messages → Typing." />
+<Screenshot src="/screenshots/settings-typing.webp" alt="Settings → Messages → Typing: switches for spelling, grammar, autocorrect, text replacements, smart quotes and dashes, Writing Tools and typing indicators, some marked Same as macOS, followed by the Memory and History sections" caption="Settings → Messages → Typing." />
 
 macOS can check and correct what you type in the message field, as it does in Mail or Notes, and Vela makes sure it never breaks IRC. The switches are in **Settings → Messages → Typing**:
 

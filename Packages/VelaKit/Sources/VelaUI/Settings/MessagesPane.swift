@@ -22,7 +22,7 @@ struct MessagesPane: View {
     var body: some View {
         @Bindable var settings = app.settings
 
-        SettingsPage("Messages", subtitle: "How conversations look and how you type: layout, timestamps, noise and spelling.") {
+        SettingsPage("Messages", subtitle: "How conversations look and how you type: layout, timestamps, noise and spelling.", pane: .messages) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Layout")
                     .font(.system(size: 13, weight: .semibold))
@@ -148,6 +148,18 @@ struct MessagesPane: View {
                         [500, 1000, 2000, 5000, 10000],
                         current: settings[.chatScrollbackInMemory],
                         label: { $0.formatted() }
+                    )
+                )
+            }
+
+            SettingsSection("History", footer: "Older messages are removed from this Mac when Vela starts.") {
+                SettingsMenuRow(
+                    title: "Keep messages",
+                    selection: $settings[.historyRetentionDays],
+                    options: Self.options(
+                        [0, 7, 30, 90, 180, 365, 730],
+                        current: settings[.historyRetentionDays],
+                        label: AdvancedPane.retentionLabel
                     )
                 )
             }

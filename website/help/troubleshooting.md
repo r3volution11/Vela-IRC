@@ -21,7 +21,7 @@ Start with the network's **server console**: click the network's name in the sid
 
 **A firewall or VPN is in the way.** Some workplace and public networks block IRC ports, and some IRC networks block VPN and Tor addresses (they usually explain how to connect anyway on their website). If you use an outgoing firewall such as Little Snitch or LuLu, allow Vela to connect.
 
-**It disconnects when my Mac sleeps.** That's deliberate: Vela says goodbye with "Computer going to sleep" and reconnects when your Mac wakes. To stay online around the clock, use a [bouncer](/guide/bouncers).
+**It disconnects when my Mac sleeps.** That's deliberate: Vela says goodbye with "Computer going to sleep" and reconnects when your Mac wakes, as long as **Reconnect automatically** is on in **Settings → Networks** (it is by default). To stay online around the clock, use a [bouncer](/guide/bouncers).
 
 ## Link previews aren't showing
 
@@ -79,7 +79,11 @@ Vela keeps passwords, channel keys and client certificates in your login keychai
 
 ## A theme or settings.json has a mistake
 
-Vela never leaves you with a broken window. If a theme file can't be read, Vela keeps the last version that worked and explains the problem in **Settings → Appearance**. If `settings.json` can't be read, Vela keeps your last good settings and shows the error in **Settings → Advanced**, and it won't write to the file until you fix it.
+Vela never leaves you with a broken window. If a theme file can't be read, Vela keeps the last version that worked and explains the problem in **Settings → Appearance**.
+
+If `settings.json` can't be read, Vela keeps your last good settings and says where the problem is in **Settings → Advanced** ("settings.json is invalid; keeping previous values. Line 3, column 3: Expected a comma."). It won't write to the file until you fix it, so nothing you typed is lost. Click **Open JSON View** to fix it right there: the [JSON view](/customize/settings-editor#problems) underlines the mistake and lists every problem, and the bottom bar says how many are left.
+
+Saved settings.json in another editor while you had unsaved changes in the JSON view? The view says **settings.json changed on disk.** Choose **Reload** to take the other version, or **Keep My Changes** to keep yours and save over it. See [Unsaved changes](/customize/settings-editor#unsaved).
 
 ## Where Vela keeps your files {#where-files-live}
 
@@ -96,18 +100,21 @@ Vela is sandboxed, so everything lives in its container:
 | `Themes/` | Your own themes |
 | `vela.sqlite` | Message history, read positions and cached link previews |
 
-**Settings → Advanced → Reveal Data Folder** opens it in Finder. Passwords, channel keys and certificates are in your login keychain, under `io.github.r3volution11.Vela`.
+**Settings → Advanced → ⋯ → Reveal Data Folder** opens it in Finder. Passwords, channel keys and certificates are in your login keychain, under `io.github.r3volution11.Vela`.
 
 ## Resetting Vela {#reset}
 
-Quit Vela first, then:
-
-- **Reset all settings** to their defaults: delete `settings.json` (or move it somewhere as a backup). Your networks, themes and history stay.
-- **Start completely fresh**: delete the whole `Vela` folder above. This removes your networks, themes and message history. To remove saved passwords too, open **Keychain Access** and delete the items named `io.github.r3volution11.Vela`.
-
-To reset a single setting, delete its line from `settings.json`.
+- **Reset one setting**: in **Settings → Advanced**, hover it and choose **⚙ → Reset Setting**, or delete its line from `settings.json`.
+- **Reset all settings** to their defaults: choose **Settings → Advanced → ⋯ → [Reset All Settings…](/customize/settings-editor#reset-all)**. Your networks, themes and history stay, and so do keys Vela doesn't know. Or quit Vela and delete `settings.json` (or move it somewhere as a backup).
+- **Start completely fresh**: quit Vela, then delete the whole `Vela` folder above. This removes your networks, themes and message history. To remove saved passwords too, open **Keychain Access** and delete the items named `io.github.r3volution11.Vela`.
 
 ## FAQ
+
+### I can't find a setting
+
+Type what you're looking for in the **Search** field at the top of the Settings sidebar. Vela searches every setting, by name, key, description and value, and shows the matches in **Settings → Advanced**. See [Settings editor](/customize/settings-editor#search).
+
+Two settings have moved: **Reconnect automatically** is in **Settings → Networks**, and **Keep messages** is in **Settings → Messages → History**.
 
 ### Which macOS versions does Vela support?
 

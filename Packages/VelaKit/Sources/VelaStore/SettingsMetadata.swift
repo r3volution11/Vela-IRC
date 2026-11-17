@@ -223,6 +223,30 @@ public enum SettingsMetadata {
     /// Common timestamp patterns offered for `chat.timestampFormat`.
     public static let timestampPatterns = ["HH:mm", "HH:mm:ss", "h:mm a", "h:mm:ss a", "[HH:mm]", "[HH:mm:ss]", "HH.mm"]
 
+    /// Labels for enum values that don't read well humanized.
+    static let enumLabels: [String: String] = [
+        "12h": "12-hour",
+        "24h": "24-hour",
+        "textOnly": "Text only",
+        "titleBar": "Title bar",
+        "allow": "Everything",
+        "block": "Nothing",
+        // appearance.messageBoxBorder
+        "accent": "Accent when typing",
+    ]
+
+    /// A readable label for a settings.json enum value, in sentence case:
+    /// `"grouped"` → `"Grouped"`, `"textOnly"` → `"Text only"`, `"12h"` → `"12-hour"`.
+    public static func enumLabel(_ raw: String) -> String {
+        if let label = enumLabels[raw] { return label }
+        let words = humanize(raw).split(separator: " ")
+        guard let first = words.first else { return raw }
+        let rest = words.dropFirst().map { word in
+            word.allSatisfy(\.isUppercase) ? String(word) : word.lowercased()
+        }
+        return ([String(first)] + rest).joined(separator: " ")
+    }
+
     /// `"fontSize"` → `"Font Size"`, `"showJoinPart"` → `"Show Join Part"`,
     /// `"maxImageSizeMB"` → `"Max Image Size MB"`.
     public static func humanize(_ identifier: String) -> String {

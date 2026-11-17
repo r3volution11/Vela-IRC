@@ -418,15 +418,18 @@ struct MessageBodyText: View {
     var body: some View {
         if let rendered {
             let large = style.largeEmoji && rendered.isEmojiOnly
-            Text(compose(rendered.attributed))
-                .font(large ? style.font(size: (style.fontSize * 2.2).rounded()) : style.bodyFont)
-                .italic(line.kind == .action)
-                .foregroundStyle(theme[baseColorKey])
-                .lineSpacing(style.lineSpacing)
-                .tint(theme[ThemeKey.chatLink])
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, large ? 2 : 0)
+            // The pointing hand over links, the I-beam elsewhere.
+            LinkPointerText(compose(rendered.attributed)) { text in
+                text
+                    .font(large ? style.font(size: (style.fontSize * 2.2).rounded()) : style.bodyFont)
+                    .italic(line.kind == .action)
+                    .foregroundStyle(theme[baseColorKey])
+            }
+            .lineSpacing(style.lineSpacing)
+            .tint(theme[ThemeKey.chatLink])
+            .textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, large ? 2 : 0)
         } else {
             Text(compose(deletedText))
                 .font(style.bodyFont)

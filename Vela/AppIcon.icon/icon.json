@@ -3,39 +3,39 @@
     {
       "layers": [
         {
+          "name": "accent",
           "glass": true,
-          "name": "sail-right",
           "image-name-specializations": [
             {
-              "value": "sail-right.svg"
+              "value": "accent.svg"
             },
             {
               "appearance": "tinted",
-              "value": "sail-right-mono.svg"
+              "value": "accent-mono.svg"
             }
           ]
         },
         {
+          "name": "v",
           "glass": true,
-          "name": "sail-left",
           "image-name-specializations": [
             {
-              "value": "sail-left.svg"
+              "value": "v.svg"
             },
             {
               "appearance": "tinted",
-              "value": "sail-left-mono.svg"
+              "value": "v-mono.svg"
             }
           ]
         }
       ],
       "shadow": {
         "kind": "layer-color",
-        "opacity": 0.6
+        "opacity": 0.5
       },
       "translucency": {
-        "enabled": true,
-        "value": 0.45
+        "enabled": false,
+        "value": 0.0
       },
       "specular": true,
       "lighting": "individual"
@@ -43,15 +43,22 @@
     {
       "layers": [
         {
+          "name": "glow",
           "glass": false,
-          "name": "space",
-          "image-name-specializations": [
+          "image-name": "glow.svg",
+          "hidden-specializations": [
             {
-              "value": "space.png"
+              "appearance": "tinted",
+              "value": true
+            }
+          ],
+          "opacity-specializations": [
+            {
+              "value": 1.0
             },
             {
               "appearance": "dark",
-              "value": "space-dark.png"
+              "value": 0.85
             }
           ]
         }
@@ -75,8 +82,8 @@
     {
       "value": {
         "linear-gradient": [
-          "display-p3:0.01200,0.01800,0.05200,1.00000",
-          "display-p3:0.03600,0.07200,0.17000,1.00000"
+          "display-p3:0.01176,0.01961,0.05098,1.00000",
+          "display-p3:0.03529,0.07059,0.16863,1.00000"
         ],
         "orientation": {
           "start": {
@@ -94,8 +101,8 @@
       "appearance": "dark",
       "value": {
         "linear-gradient": [
-          "display-p3:0.00600,0.01000,0.03400,1.00000",
-          "display-p3:0.02600,0.05400,0.13600,1.00000"
+          "display-p3:0.00784,0.01176,0.03529,1.00000",
+          "display-p3:0.02745,0.05490,0.13725,1.00000"
         ],
         "orientation": {
           "start": {

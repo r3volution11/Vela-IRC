@@ -79,6 +79,8 @@ Perform commands are saved in `networks.json` as plain text. Don't put passwords
 
 **Connect automatically** connects this network when Vela opens. It's on by default.
 
+Whether Vela reconnects after a dropped connection, and after your Mac wakes, is one setting for all networks: **Reconnect automatically** in **Settings → Networks → Connection** ([`connection.autoReconnect`](/reference/settings#connection.autoReconnect)). It's on by default.
+
 ## Editing and removing networks
 
 Right-click a network in the sidebar, or use the **Network** menu, to **Connect**, **Disconnect**, **Reconnect**, **Edit Network…** or **Remove Network…**. **Settings → Networks** lists them all; double-click one to edit it, or drag it to change the order your networks appear in. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).

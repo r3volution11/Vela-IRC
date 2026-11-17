@@ -1,0 +1,120 @@
+{
+  "groups": [
+    {
+      "layers": [
+        {
+          "name": "accent",
+          "glass": true,
+          "image-name-specializations": [
+            {
+              "value": "accent.svg"
+            },
+            {
+              "appearance": "tinted",
+              "value": "accent-mono.svg"
+            }
+          ]
+        },
+        {
+          "name": "v",
+          "glass": true,
+          "image-name-specializations": [
+            {
+              "value": "v.svg"
+            },
+            {
+              "appearance": "tinted",
+              "value": "v-mono.svg"
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.0
+      },
+      "specular": true,
+      "lighting": "individual"
+    },
+    {
+      "layers": [
+        {
+          "name": "glow",
+          "glass": false,
+          "image-name": "glow.svg",
+          "hidden-specializations": [
+            {
+              "appearance": "tinted",
+              "value": true
+            }
+          ],
+          "opacity-specializations": [
+            {
+              "value": 1.0
+            },
+            {
+              "appearance": "dark",
+              "value": 0.85
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  },
+  "fill-specializations": [
+    {
+      "value": {
+        "linear-gradient": [
+          "display-p3:0.00392,0.00784,0.03137,1.00000",
+          "display-p3:0.02353,0.04314,0.11765,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 0.78
+          }
+        }
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "linear-gradient": [
+          "display-p3:0.00000,0.00392,0.01961,1.00000",
+          "display-p3:0.01569,0.03137,0.10196,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 0.78
+          }
+        }
+      }
+    }
+  ]
+}

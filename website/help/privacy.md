@@ -41,7 +41,7 @@ This is how IRC works in any client, but it's worth knowing:
 
 Everything stays on your Mac, inside Vela's sandbox container:
 
-- **Message history** in a local database, kept forever unless you set **Settings → Advanced → Keep messages**.
+- **Message history** in a local database, kept forever unless you set **Settings → Messages → History → Keep messages**.
 - **Link previews** you've loaded. Page previews are refreshed after a week, and cached previews older than 30 days are deleted when Vela starts.
 - **Settings, networks and themes** as plain files you can read.
 - **Passwords, channel keys and client certificates** in your macOS Keychain, never in plain files.

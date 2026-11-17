@@ -183,4 +183,54 @@ struct TypingCommandTests {
         dashes.perform()
         #expect(settings[.inputSmartPunctuation] == .on)
     }
+
+    // MARK: Writing Tools
+
+    @Test func writingToolsEditsAreOneUndoStep() {
+        let undoManager = UndoManager()
+        undoManager.groupsByEvent = false
+        var group = WritingToolsUndoGroup()
+
+        // Typing outside a session isn't grouped.
+        group.textWillChange(undoManager)
+        #expect(undoManager.groupingLevel == 0)
+
+        group.sessionWillBegin()
+        #expect(!group.isOpen)
+        group.textWillChange(undoManager)
+        group.textWillChange(undoManager)
+        #expect(undoManager.groupingLevel == 1)
+        group.sessionDidEnd()
+        #expect(undoManager.groupingLevel == 0)
+        #expect(!group.isOpen)
+    }
+
+    /// Changes can arrive after did-end while the text view still says
+    /// Writing Tools is active: they mustn't open a group nothing closes.
+    @Test func changesAfterTheSessionEndsOpenNoGroup() {
+        let undoManager = UndoManager()
+        undoManager.groupsByEvent = false
+        var group = WritingToolsUndoGroup()
+        group.sessionWillBegin()
+        group.textWillChange(undoManager)
+        group.sessionDidEnd()
+        group.textWillChange(undoManager)
+        #expect(undoManager.groupingLevel == 0)
+        #expect(!group.isOpen)
+    }
+
+    @Test func aSessionThatNeverEndedIsClosedByTheNext() {
+        let undoManager = UndoManager()
+        undoManager.groupsByEvent = false
+        var group = WritingToolsUndoGroup()
+        group.sessionWillBegin()
+        group.textWillChange(undoManager)
+        group.sessionWillBegin()
+        #expect(undoManager.groupingLevel == 0)
+        group.textWillChange(undoManager)
+        #expect(undoManager.groupingLevel == 1)
+        // The composer going away closes it too.
+        group.close()
+        #expect(undoManager.groupingLevel == 0)
+    }
 }

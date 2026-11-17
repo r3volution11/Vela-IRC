@@ -64,7 +64,7 @@ The title bar, sidebar, tabs, chat, input, member list, link previews and even n
 
 Pick a message layout: Classic `[12:01] <nick> text`, Modern grouped like Slack or Discord, or Compact columns like irssi and WeeChat.
 
-Or start from a preset. **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** each set up navigation, layout, density and media in one click, and your theme is never changed. Fine-tune anything afterwards.
+Or start from a preset. **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** each set up navigation, layout, density and media in one click, and your theme is never changed. Fine-tune anything afterwards, down to every setting in a searchable, VS Code-style [settings editor](/customize/settings-editor).
 
 </ShowcaseRow>
 

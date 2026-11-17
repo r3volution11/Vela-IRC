@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaStore
 import VelaTheme
 
@@ -14,6 +15,7 @@ import VelaTheme
 struct MainWindowView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
+    @Environment(IntelligenceServices.self) private var intelligence
     @Environment(\.theme) private var theme
     @Environment(\.appearsActive) private var appearsActive
     @Environment(\.chatStyle) private var style
@@ -77,6 +79,11 @@ struct MainWindowView: View {
         .onChange(of: app.selectedBufferID) { _, _ in
             // The expanded player had the keyboard focus.
             if EmbedPlayerStore.shared.selectedBufferChanged() { uiState.focusInput() }
+        }
+        // A Catch me up card lasts while its buffer is on screen; leaving
+        // or closing the buffer closes it (the summary stays cached).
+        .onChange(of: app.selectedBufferID, initial: true) { _, selected in
+            intelligence.catchUp.dismissAll(except: selected)
         }
         .onDisappear {
             EmbedPlayerStore.shared.stopAll()
