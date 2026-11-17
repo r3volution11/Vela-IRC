@@ -22,23 +22,24 @@ Press <kbd>⌘J</kbd>, type a channel name such as `#libera` (Libera.Chat's help
 Out of the box, Vela follows your Mac's light or dark appearance with the **Palenight** and **Lighter** themes, uses a sidebar for navigation and groups messages under each sender's name. If that's not you:
 
 - **Try a preset.** Open **Settings** (<kbd>⌘,</kbd>) → **Presets** and pick Classic IRC, Modern Chat, Tabbed or Focus. Presets change layout, density and media, never your theme. See [Presets](/guide/presets).
-- **Pick a theme.** Press <kbd>⌃⌘T</kbd> and move through the list with the arrow keys. Each theme previews live; Return keeps it. See [Choosing a theme](/customize/themes).
+- **Pick a theme.** Press <kbd>⌃⌘T</kbd> and move through the list with the arrow keys. Each theme previews live; Return keeps it. Then try a different [accent color](/customize/themes#accent-color) in **Settings → Appearance**. See [Choosing a theme](/customize/themes).
 - **Fine-tune anything** in Settings. Every change applies immediately, and every option is also a key in [settings.json](/customize/settings-json).
 
 ## A quick tour of Settings
 
-Settings (<kbd>⌘,</kbd>) has eight panes:
+Settings (<kbd>⌘,</kbd>) has nine panes:
 
 | Pane | What's there |
 | --- | --- |
 | **Presets** | The four one-click setups, and which one matches your current settings. |
-| **Appearance** | The theme gallery, light/dark matching, the theme editor and theme import. |
+| **Appearance** | The theme gallery, the theme's accent color, light/dark matching, the theme editor and theme import. |
 | **Layout** | Sidebar or tabs, tab placement and roundness, sidebar and member list sizes. |
-| **Messages** | Message layout, fonts, spacing, timestamps, join/part display, nick colors and avatars. |
+| **Messages** | Message layout, fonts, spacing, timestamps, join/part display, nick colors and avatars, and typing: spelling, autocorrect, Writing Tools and typing indicators. |
 | **Media** | Link preview size, video players, images, the adult-site filter, blurring and site rules. |
 | **Networks** | Add, edit, connect and remove networks and bouncers. |
 | **Notifications** | Highlights, private messages, sounds and your highlight words. |
-| **Advanced** | Typing indicators, spell checking, reconnecting, history, and every setting in one searchable list. |
+| **Apple Intelligence** | Catch me up summaries, translation, Writing Tools, and Siri, Shortcuts and Spotlight. |
+| **Advanced** | Reconnecting, history, settings.json, and every setting in one searchable list. |
 
 ::: tip Want to look around first?
 Vela has a demo mode with sample networks and conversations that never connects anywhere. Quit Vela, then open Terminal and run:

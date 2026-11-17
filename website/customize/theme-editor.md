@@ -46,7 +46,7 @@ Every Vela window shows your changes as you make them, including this one. Nothi
 Closing without saving puts your previous theme back.
 
 ::: tip
-Overrides from `appearance.colorCustomizations` in settings.json don't apply inside the editor's preview, so you always see the theme exactly as it's written.
+Overrides from `appearance.colorCustomizations` in settings.json, including an [accent color](/customize/themes#accent-color) picked in **Settings → Appearance**, don't apply inside the editor's preview, so you always see the theme exactly as it's written.
 :::
 
 Saved themes are ordinary theme files, so you can keep refining them in a text editor. See [Creating themes](/customize/creating-themes).

@@ -84,6 +84,7 @@ IRC is simple, open and everywhere, but IRC clients on the Mac have stood still.
   - Vela originals: Vela Graphite, Vela Paper and Vela Mist.
   - Ports of popular editor themes: Dracula, Nord, Catppuccin Latte and Mocha, Tokyo Night, One Dark, Gruvbox Dark, Solarized Dark and Light, and Rosé Pine.
 - **Select Theme** in the command palette previews each theme live as you move through the list.
+- **Accent colors:** switch a theme's accent to one of its own colors in Settings → Appearance. Each theme keeps its own choice, and text stays readable.
 - **Follows macOS** light and dark appearance, using a preferred theme for each.
 - **Theme editor** with color wells for every token, contrast warnings and live preview of the whole app.
 - **Import VS Code themes** (`.json` or `.vsix`). Editor, sidebar, list, input, badge and terminal ANSI colors map onto Vela's tokens automatically.
@@ -125,6 +126,13 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **Reactions, replies, typing indicators and message deletion,** where the server supports IRCv3 message tags.
 - **Day dividers, a "New" marker** at your last read position, and a "Jump to present" button.
 
+### Apple Intelligence, Siri and Shortcuts
+
+- **Catch me up:** back in a busy channel, an Apple Intelligence summary of what you missed, topic by topic, made on your Mac.
+- **Translation:** translate a message from another language, or a whole channel as messages arrive, on your Mac with Apple's Translation framework. No Apple Intelligence needed.
+- **Writing Tools** in the message field, where Apple Intelligence is available.
+- **Siri and Shortcuts:** ask Siri to catch you up, check your mentions, send a message, open a channel or set you away, and use the same actions in your own shortcuts. Your channels show up in Spotlight (names only).
+
 ### IRC done properly
 
 - **Secure connections:** TLS with certificate validation, plus an opt-in "Allow invalid certificates" for self-signed bouncers.
@@ -144,6 +152,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **Command palette** (⇧⌘P) runs any command: layouts, presets, themes, network actions, settings and more.
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
 - **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. Pasting multiple lines asks for confirmation before sending.
+- **Typing options:** spelling, grammar, autocorrect, text replacements and smart quotes, following your Mac's settings until you change them. Commands, nicks, channel names, links and code are never corrected.
 - **Slash commands:**
   - `/join`, `/part`, `/msg`, `/query`, `/me`, `/nick`, `/topic`, `/away`, `/whois`
   - `/mode`, `/kick`, `/ban`, `/op`, `/voice`, `/invite`
@@ -180,7 +189,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ## Customizing Vela
 
-- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications and Advanced. Every change applies immediately.
+- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Apple Intelligence and Advanced. Every change applies immediately.
 - **`settings.json`** holds everything, VS Code style. Open it from **Theme → Open settings.json** or **Settings → Advanced**. Edits made in any editor apply live. Example:
 
   ```jsonc
@@ -211,6 +220,7 @@ One click sets navigation, layout, density and media together. Presets never tou
   - Set per-site rules: everything, text only or nothing.
 - **No previews from your local network.** Vela never fetches previews from private, local or LAN addresses.
 - **Passwords and certificates** are stored in the macOS Keychain. Vela is sandboxed.
+- **On-device intelligence.** Catch me up summaries and translations are made on your Mac. Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
 
 ## Building from source
 
@@ -244,6 +254,8 @@ Packages/VelaKit/
   Sources/VelaTheme      Token registry, theme loading, VS Code import, live reload
   Sources/VelaMedia      Link detection, previews, images, video embeds
   Sources/VelaCore       App and session models tying it together
+  Sources/VelaIntelligence Catch me up summaries and message translation (Apple Intelligence, Translation)
+  Sources/VelaIntents    Siri, Shortcuts and Spotlight (App Intents)
   Sources/VelaUI         SwiftUI views, scenes, command palette
 schemas/                 JSON Schema for theme files
 website/                 velairc.app (VitePress)

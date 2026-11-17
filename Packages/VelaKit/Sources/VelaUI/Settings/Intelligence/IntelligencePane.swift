@@ -18,7 +18,7 @@ struct IntelligencePane: View {
     var body: some View {
         SettingsPage(
             "Apple Intelligence",
-            subtitle: "Summaries, translation, Writing Tools and Siri. Everything runs on this Mac."
+            subtitle: "Summaries, translation, Writing Tools and Siri. Summaries and translation run on this Mac."
         ) {
             status
             IntelligenceCatchUpSection()

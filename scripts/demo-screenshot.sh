@@ -1,13 +1,20 @@
 #!/bin/zsh
-# Renders Vela's main window in demo mode to a PNG and quits. The window is
-# hosted offscreen and stays invisible; no screen-recording permission needed.
+# Renders Vela's main window (or a Settings pane) in demo mode to a PNG and
+# quits. The window is hosted offscreen and stays invisible; no
+# screen-recording permission needed.
 #
 #   scripts/demo-screenshot.sh <Vela.app> <out.png> [demo args…]
 #   scripts/demo-screenshot.sh build/Vela.app shot.png --theme Lighter --preset tabbed --size 1280x800
 #
 # Demo args: --theme <name>, --preset classic|modern|tabbed|focus,
 #            --set key=value (any settings.json key), --size WxH,
-#            --snapshot-delay <seconds> (default 3; raise it for remote images)
+#            --snapshot-delay <seconds> (default 3; raise it for remote images),
+#            --select <buffer> ("#swift" or "OFTC/#debian"), --catch-up,
+#            --accent <name> (one of the theme's accent swatches, e.g. Cyan),
+#            --settings-pane <pane> (presets, appearance, layout, messages,
+#              media, networks, notifications, intelligence, advanced; renders
+#              the Settings window instead, 820x600 unless --size is given),
+#            --settings-scroll <points> (scroll the pane down first)
 set -euo pipefail
 app="${1:A}"; out="${2:A}"; shift 2
 rm -f "$out"

@@ -40,7 +40,7 @@ nonisolated public enum IntelligenceStatus: Equatable, Sendable {
     public var detail: String {
         switch self {
         case .available:
-            "Summaries run on this Mac. Nothing you read or write is sent anywhere."
+            "Catch me up summaries are made on this Mac. The conversation isn't sent anywhere."
         case .turnedOff:
             "Turn on Apple Intelligence in System Settings → Apple Intelligence & Siri to use Catch me up and Writing Tools."
         case .deviceNotEligible:

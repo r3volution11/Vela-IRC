@@ -1,6 +1,6 @@
 ---
 title: settings.json
-description: Configure Vela with a VS Code-style settings.json that applies as soon as you save, including appearance.colorCustomizations to override theme colors globally or per theme.
+description: Configure Vela with a VS Code-style settings.json that applies as soon as you save, including appearance.colorCustomizations to override theme colors and accents globally or per theme.
 ---
 
 # settings.json
@@ -90,6 +90,31 @@ Like VS Code's `workbench.colorCustomizations`, `appearance.colorCustomizations`
 - Customizations apply to the theme in use and to the previews in the theme gallery and picker, but not inside the theme editor.
 
 From lowest to highest priority, a color comes from: the token's default, the included theme(s), the theme's own `colors`, global `colorCustomizations`, then `"[Theme Name]"` customizations.
+
+### Accent colors {#accent-colors}
+
+The [accent color](/customize/themes#accent-color) picker in **Settings → Appearance** saves its choice here too, in the theme's own scope. It sets `accent`, a readable `accentText` and `accentForeground`, and every other token the theme draws in its accent, then lists what it wrote under `"$accentPicker"`. Picking Cyan for Palenight writes:
+
+```jsonc
+"appearance.colorCustomizations": {
+  "[Palenight]": {
+    "accent": "#89DDFF",
+    "accentForeground": "#08222B",
+    "accentText": "#89DDFF",
+    "button.background": "#89DDFF",
+    "chat.highlightBorder": "#89DDFF",
+    "sidebar.activeBackground": "#304153",
+    // …and the other tokens Palenight draws in its accent
+    "$accentPicker": ["accent", "accentForeground", "accentText", "button.background", "chat.highlightBorder", "sidebar.activeBackground", …]
+  }
+}
+```
+
+- **Your own overrides win.** The picker never replaces a token you set yourself, in the theme's scope, at the top level or in another scope that matches the theme. The exception is `accent` itself: picking a swatch always sets it.
+- **Default (or Theme: Reset Accent Color) removes only what the picker wrote**, as listed in `"$accentPicker"`, and drops the theme's scope if nothing else is left in it. Your own entries stay.
+- **Leave `"$accentPicker"` alone.** It isn't a color, and it's how Vela knows which entries are its own. If you edit one of those entries by hand, also take its name out of the list, or Default will remove it.
+- **The picker writes to an existing scope** that names only this theme (such as `"[palenight]"`), or else adds `"[Theme Name]"`.
+- **Settings → Appearance → Color overrides** counts only the entries you wrote yourself.
 
 ## networks.json
 

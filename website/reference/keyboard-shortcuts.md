@@ -1,6 +1,6 @@
 ---
 title: Keyboard shortcuts
-description: Every keyboard shortcut in Vela, the native macOS IRC client, from the command palette and quick switcher to navigation, the message field and the theme editor.
+description: Every keyboard shortcut in Vela, the native macOS IRC client, from the command palette and quick switcher to navigation, the message field, spelling and the theme editor.
 ---
 
 # Keyboard shortcuts
@@ -56,6 +56,8 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | Previous / next message you sent in this channel | <kbd>↑</kbd> / <kbd>↓</kbd> |
 | Cancel a reply or a pending multi-line paste | <kbd>Esc</kbd> |
 | Emoji & Symbols (macOS) | <kbd>⌃⌘Space</kbd> |
+| Show Spelling and Grammar | <kbd>⌘:</kbd> |
+| Check Document Now (check the message's spelling) | <kbd>⌘;</kbd> |
 
 ## In the palette
 

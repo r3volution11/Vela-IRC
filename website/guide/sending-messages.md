@@ -1,6 +1,6 @@
 ---
 title: Sending messages
-description: Use Vela's message field, with Tab completion for nicks, channels, commands and emoji, per-channel history and drafts, replies, multi-line paste confirmation and slash commands.
+description: Vela's message field, with Tab completion, history and drafts, replies, paste confirmation, slash commands, and IRC-safe spelling, autocorrect and Writing Tools.
 ---
 
 # Sending messages
@@ -60,6 +60,65 @@ Commands Vela doesn't know are sent to the server as typed, so commands like `/l
 
 If you're offline, or you've left the channel, the field says so (**Offline — reconnect to send** or **Not in channel — /join to rejoin**) and shows a **Reconnect** or **Join** button. Commands still work.
 
-## Spelling and typing indicators
+## Typing options {#typing}
 
-In **Settings → Advanced** you can turn off spell checking, and choose whether others see when you're typing (on servers that support typing indicators).
+<Screenshot src="/screenshots/settings-typing.webp" alt="Settings → Messages → Typing: switches for spelling, grammar, autocorrect, text replacements, smart quotes and dashes, Writing Tools and typing indicators, some marked Same as macOS" caption="Settings → Messages → Typing." />
+
+macOS can check and correct what you type in the message field, as it does in Mail or Notes, and Vela makes sure it never breaks IRC. The switches are in **Settings → Messages → Typing**:
+
+| Setting | What it does | Default |
+| --- | --- | --- |
+| **Check spelling while typing** | Underlines misspelled words. | On |
+| **Check grammar** | Underlines grammar mistakes too. It never changes anything for you. | Off |
+| **Correct spelling automatically** | Fixes misspelled words as you type. | Same as macOS |
+| **Use text replacements** | Expands the text replacements you set up in macOS. **Edit Text Replacements…** opens them in System Settings → Keyboard. | Same as macOS |
+| **Smart quotes and dashes** | Uses curly quotes, and turns double hyphens into dashes. | Same as macOS |
+| **Writing Tools** | Lets Apple Intelligence proofread and rewrite your message. See [below](#writing-tools). | On |
+| **Send typing indicators** | Lets others see when you're typing, on servers that [support it](/guide/reactions-replies-typing#typing-indicators). | On |
+
+### Following macOS {#following-macos}
+
+Autocorrect, text replacements, and smart quotes and dashes start out following your Mac's settings in **System Settings → Keyboard → Text Input**, and change as soon as you change them there. Under each of these switches, **Same as macOS** tells you it's following.
+
+Change one in Vela and it stays the way you set it, whatever macOS does. A **Use macOS Setting** button appears under it to go back to following macOS.
+
+While **Smart quotes and dashes** follows macOS, quotes and dashes each follow their own macOS switch. Once you set it in Vela, it turns both on or off.
+
+### The Edit menu {#edit-menu}
+
+The same switches are in **Edit → Spelling and Grammar** (**Check Spelling While Typing**, **Check Grammar With Spelling**, **Correct Spelling Automatically**) and **Edit → Substitutions** (**Smart Quotes**, **Smart Dashes**, **Text Replacement**), and in the **Spelling and Grammar** and **Substitutions** submenus when you right-click the message field. Whichever you use:
+
+- **The change is saved to your settings,** so it applies in every channel and is still set the next time you open Vela.
+- **It's always an explicit on or off.** To follow macOS again, click **Use macOS Setting** in **Settings → Messages → Typing**.
+- **Smart Quotes and Smart Dashes share one setting,** so switching either one switches both.
+
+The Edit menu also has **Show Spelling and Grammar** (<kbd>⌘:</kbd>), **Check Document Now** (<kbd>⌘;</kbd>) and **Show Substitutions**. In the [command palette](/guide/command-palette), type "typing" for **Typing: Check Spelling While Typing**, **Check Grammar**, **Correct Spelling Automatically**, **Use Text Replacements**, **Use Smart Quotes and Dashes** and **Use Writing Tools**.
+
+### What's never corrected {#irc-safe}
+
+Autocorrect, text replacements, smart quotes and dashes, and Writing Tools leave the parts of a message that IRC depends on exactly as you typed them:
+
+- **The command** at the start of a line, such as `/join`. A line that starts with `//` is ordinary text.
+- **Who a message goes to** in `/msg`, `/notice` and `/query`, the channel you name in `/topic` and `/part`, and **everything after other commands**, such as `/join`, `/mode` and `/kick`.
+- **Links, `#channels`, the nicks of people in the conversation**, and `nick:` at the start of a line.
+- **`:emoji:` codes** and `` `code` ``.
+
+What you write after `/me`, `/say`, `/msg`, `/notice`, `/away`, `/topic`, `/part` and `/quit` is a message, so it's checked like one.
+
+Nicks, commands, channel names, links and code aren't underlined as misspelled, either. And text Vela puts in the field for you, such as a message from history (<kbd>↑</kbd>), a Tab completion or a draft, is never autocorrected.
+
+### Writing Tools {#writing-tools}
+
+With [Apple Intelligence](/guide/apple-intelligence#requirements) turned on, right-click in the message field and choose **Writing Tools** to proofread or rewrite your message. It opens in Apple's Writing Tools panel rather than rewriting the text in place. While it works:
+
+- <kbd>Return</kbd> doesn't send and <kbd>Tab</kbd> doesn't complete.
+- Typing indicators and `:emoji:` replacement pause.
+
+Its changes are a single undo step, so <kbd>⌘Z</kbd> puts your message back the way it was. When Apple Intelligence isn't available, the **Writing Tools** setting says why.
+
+### Good to know
+
+- **Grammar checking only underlines.** Right-click an underlined word for suggestions.
+- **Return sends exactly what you typed.** It doesn't autocorrect the last word first.
+- **Perform on connect** commands in the [network editor](/guide/adding-a-network#perform-on-connect) are never checked or corrected.
+- All of these are keys in [settings.json](/reference/settings#input): [`input.spellCheck`](/reference/settings#input.spellCheck), [`input.grammarCheck`](/reference/settings#input.grammarCheck), [`input.autocorrect`](/reference/settings#input.autocorrect), [`input.textReplacements`](/reference/settings#input.textReplacements), [`input.smartPunctuation`](/reference/settings#input.smartPunctuation), [`input.writingTools`](/reference/settings#input.writingTools) and [`input.sendTypingIndicators`](/reference/settings#input.sendTypingIndicators). The three that can follow macOS take `true`, `false`, or `"system"` to follow it (the same as leaving them out).

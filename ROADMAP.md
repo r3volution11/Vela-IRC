@@ -24,6 +24,7 @@
   - [x] VS Code theme import (`.json` / `.vsix`)
   - [x] Generated JSON Schema
   - [x] ~21 built-in themes
+  - [x] Per-theme accent colors, picked from each theme's own palette
 - [x] **Window**
   - [x] Fully themed custom 3-pane window shell
   - [x] Compact sidebar that collapses to a rail
@@ -52,6 +53,12 @@
   - [x] Network editor with SASL and certificates
   - [x] Notifications
 - [x] **Basic in-app theme editor** with live preview
+- [x] **Typing:** IRC-safe spelling, grammar, autocorrect, text replacements and smart quotes, following macOS until changed
+- [x] **Apple Intelligence**
+  - [x] Catch me up: on-device summaries of what you missed
+  - [x] Writing Tools in the message field
+  - [x] On-device message translation, per message or per channel
+- [x] **Siri, Shortcuts and Spotlight:** App Shortcuts phrases, Shortcuts actions, channel names in Spotlight, and the macOS 27 Siri messages domain
 
 ## Later
 

@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting & FAQ
-description: Fix common Vela problems, such as not connecting, TLS and certificate errors, ZNC logins, link previews, notifications and Keychain prompts, and find or reset Vela's settings files.
+description: Fix common Vela problems, such as connecting, TLS errors, ZNC logins, link previews, notifications, Catch me up, translation and Siri, and find or reset Vela's settings files.
 ---
 
 # Troubleshooting & FAQ
@@ -48,6 +48,31 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 - Vela doesn't notify you about the conversation you're looking at while Vela is in front.
 - Muted channels only notify you when someone mentions you.
 
+## Spelling or autocorrect doesn't behave as expected {#typing}
+
+- **Check Settings → Messages → Typing.** Autocorrect, text replacements, and smart quotes and dashes follow your Mac's keyboard settings until you change them in Vela (or in the **Edit** menu, or by right-clicking the message field). After that, they stay the way you set them. Click **Use macOS Setting** to follow macOS again.
+- **Some words are never corrected on purpose:** commands, nicks of people in the conversation, `#channels`, links, `:emoji:` codes and `` `code` ``. See [What's never corrected](/guide/sending-messages#irc-safe).
+
+## Catch me up doesn't appear {#catch-me-up}
+
+- **Is Apple Intelligence ready?** The box at the top of **Settings → Apple Intelligence** says. Catch me up needs a Mac with Apple silicon, Apple Intelligence turned on in System Settings, its model downloaded, and a supported language. See [What you need](/guide/apple-intelligence#requirements).
+- **Are enough messages new?** The button waits for 25 new messages by default (**Show the button after**). To catch up on fewer, right-click the channel and choose **Catch Me Up**.
+- **Is Offer Catch me up in busy channels on?** It controls only the button; the right-click menu and the command palette work either way.
+- **Is anything new?** The button sits on the **New** marker, so it only appears in a channel with messages you haven't read.
+
+If a summary looks wrong, click a topic to read the messages behind it, or click **Regenerate**. Summaries can contain mistakes.
+
+## Translate isn't offered {#translate}
+
+- **It's for other people's messages** in a language other than the one in **Settings → Apple Intelligence → Translate into**.
+- **The message needs enough words** for its language to be clear. Short replies, emoji and bare links aren't offered.
+- **macOS must be able to translate between the two languages.**
+- **A declined download** stops automatic translation from that language. Choose **Translate** on one of its messages to be asked again.
+
+## Siri or Shortcuts doesn't find Vela {#siri}
+
+Open Vela once, so macOS registers its actions. If Vela's actions still don't appear, check that there's **only one copy of Vela.app** on your Mac (an old copy in Downloads, or one you built yourself, confuses macOS about which to use), delete the others, and open Vela from Applications. See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts#troubleshooting).
+
 ## macOS asks about the Keychain
 
 Vela keeps passwords, channel keys and client certificates in your login keychain. If macOS asks whether Vela may use confidential information stored in "io.github.r3volution11.Vela", enter your Mac password and click **Always Allow**. This can happen after Vela is updated (or when you build it yourself), because macOS checks which app is asking. If you click **Deny**, Vela can't read the password and logging in fails until you allow it.
@@ -86,7 +111,11 @@ To reset a single setting, delete its line from `settings.json`.
 
 ### Which macOS versions does Vela support?
 
-macOS 26 Tahoe or later, on Apple silicon and Intel Macs.
+macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writing Tools need Apple Intelligence, which needs Apple silicon; [translation](/guide/apple-intelligence#translate-messages) doesn't. On macOS 27, [Siri can do more](/guide/siri-shortcuts#macos-27) with Vela.
+
+### Does Vela send my messages to an AI service?
+
+No. [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
 
 ### Is Vela free?
 

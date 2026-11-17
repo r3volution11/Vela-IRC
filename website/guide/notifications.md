@@ -27,6 +27,8 @@ You don't get notified about the conversation you're looking at while Vela is in
 
 Turn either kind off, or turn off the sound, in **Settings → Notifications**. Banner style, lock screen previews and Focus filters are up to macOS: click **Open Notification Settings…** to change them.
 
+On macOS 27, you can ask Siri to "reply to this" while a notification from Vela is showing. See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts#macos-27).
+
 ## Muting a channel
 
 Right-click a channel or conversation and choose **Mute**. A muted channel:
@@ -41,6 +43,7 @@ Choose **Unmute** to undo it.
 - The sidebar and tabs show how many messages you haven't read in each channel, and a separate accent-colored badge for mentions and private messages.
 - The Dock icon shows the total number of mentions and private messages waiting for you.
 - **Mark as Read** (right-click a channel) or **Mark All as Read** (in the **Go** menu) clears them.
+- Ask Siri "Check my Vela mentions" to hear where you're mentioned, or run **Check Mentions** in [Shortcuts](/guide/siri-shortcuts#shortcuts).
 - <kbd>⌥⇧⌘↓</kbd> jumps to the next channel with unread messages, and <kbd>⌥⇧⌘↑</kbd> to the previous one.
 
 Prefer a calmer sidebar? Turn off **Settings → Layout → Unread counts** and channels show a small dot instead of a number (accent-colored for mentions).

@@ -29,6 +29,28 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
   - The most specific rule wins, so a rule for `i.example.com` beats one for `example.com`. A video site's rule covers its short links and thumbnails: a `youtube.com` rule covers `youtu.be`.
   - Right-click any preview for **Block Previews from ‹site›** or **Previews from ‹site›** (Default, Everything, Text Only, Nothing).
 - **Blur images until clicked**, everywhere (Settings → Media → Restrictions) or per channel or network (right-click it and choose **Blur Images**). Images, link preview images, video thumbnails and video stills show "Click to show"; right-click revealed media to **Blur Again**. New settings: `media.blurImages` and `media.blurredBuffers`; palette commands **Media: Blur Images Until Clicked** and **Buffer: Blur Images**.
+- **Catch me up.** Back in a busy channel, a **Catch me up** button on the New marker summarizes what you missed with Apple Intelligence, on your Mac: an overview, the topics with who took part (click one to jump to where it starts), and where you were mentioned. Copy, regenerate or dismiss the summary from its card. New settings: `intelligence.catchUp` and `intelligence.catchUpThreshold`.
+  - The button appears after 25 new messages; choose 10, 25, 50 or 100 in Settings → Apple Intelligence.
+  - For any number of new messages, right-click a channel or conversation and choose **Catch Me Up**, or run **Buffer: Catch Me Up** from the command palette.
+  - Covers the latest 600 messages and takes from about 10 seconds to a minute. Summaries can contain mistakes.
+  - Needs a Mac with Apple silicon, with Apple Intelligence turned on.
+- **Translate messages**, on your Mac. Right-click a message in another language (or click **…**) and choose **Translate**; the translation appears under it, with **Translate Again** and **Hide Translation** in its caption. New settings: `translation.language` and `translation.autoTranslate`.
+  - **Translate Messages Automatically**, in a channel's, conversation's or network's right-click menu (and the palette, as **Buffer: Translate Messages Automatically**), translates lines in other languages as they scroll into view.
+  - **Translate into** follows your Mac's language unless you choose another.
+  - Doesn't need Apple Intelligence. macOS downloads each language from Apple, once, after asking.
+- **Siri, Shortcuts and Spotlight.** Ask Siri "Catch me up in Vela", "Check my Vela mentions", "Message #vela in Vela", "Open #vela in Vela" or "Set me away in Vela", with no setup. New setting: `intelligence.spotlightChannels`.
+  - Shortcuts actions: Open Channel, Send Message, Join Channel, Check Mentions, Catch Me Up, Set Away, Set Back, Mark All as Read, Connect Network and Disconnect Network.
+  - Your channels and conversations appear in Spotlight: names only, never messages.
+  - On macOS 27, Siri can also send and draft messages, mark messages as read, and knows which channel is open, so "reply to this" and "summarize this" work.
+- **Settings → Apple Intelligence**, a new pane for Catch me up, translation, Writing Tools, and Siri & Shortcuts, with a status box that says whether Apple Intelligence is ready.
+- **Typing options** in Settings → Messages → **Typing**: check spelling, check grammar, correct spelling automatically, use text replacements, smart quotes and dashes, and Writing Tools. New settings: `input.grammarCheck`, `input.autocorrect`, `input.textReplacements`, `input.smartPunctuation` and `input.writingTools`.
+  - Autocorrect, text replacements, and smart quotes and dashes follow System Settings → Keyboard until you change them in Vela; **Use macOS Setting** follows macOS again.
+  - Commands, `/msg` targets, nicks, channel names, links, `:emoji:` codes and code are never corrected or underlined, and text Vela fills in (history, Tab completion, drafts) is never autocorrected.
+  - **Edit → Spelling and Grammar** and **Edit → Substitutions**, and the message field's right-click menu, change the same settings, so your choice sticks in every channel. Palette commands are under **Typing:**.
+  - **Writing Tools** proofreads and rewrites your message where Apple Intelligence is available. Its changes are one undo step, and Return doesn't send while it works.
+- **Accent colors.** Settings → Appearance → **Accent color** switches the theme's accent to one of its own colors (from its nick and mIRC colors). Buttons, selection, links, mentions and everything else in the accent follow, text stays readable, and colors with a meaning (errors, joins and parts) never change. Each theme keeps its own choice.
+  - Saved in the theme's scope in `appearance.colorCustomizations`, with `"$accentPicker"` listing what the picker wrote; your own overrides there always win.
+  - Palette: **Theme: Next Accent Color** and **Theme: Reset Accent Color**.
 
 ### Changed
 
@@ -40,6 +62,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Link previews are Standard size by default**, smaller than the old full card. Choose **Large** in Settings → Media for the old look.
 - **Presets set the new media settings.** Classic IRC: Minimal links, Compact videos and Thumbnail images, so videos get a one-line row with ▶ instead of a title line. Modern Chat and Tabbed: Standard, Player and Full size. Focus: Minimal, Player and Thumbnail, so videos now get a full player.
 - In the command palette, **Toggle Inline Images** is now **Load Previews Automatically**, which is what it always did. **Use Full Previews** and **Use Compact Previews** are replaced by the size commands above.
+- **Send typing indicators** and **Check spelling while typing** moved from Settings → Advanced to Settings → Messages → Typing. Their settings.json keys (`input.sendTypingIndicators`, `input.spellCheck`) haven't changed.
 - **Nick colors stay apart.** People talking in the same channel get different colors while the theme's palette has room; before, two nicks whose names hashed alike shared a color. Colors that merely look alike (orange beside red) are kept apart too, using the nearest clearly different color from the theme's palette, but only when a clearly different one is free. A nick keeps its color once given and usually has the same one everywhere. Palette colors too close to the message text (or under 3:1 against the background) are no longer used, so a colored nick never reads as plain text.
 
 ### Fixed

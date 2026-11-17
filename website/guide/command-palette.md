@@ -35,14 +35,15 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Chat** | Toggle Timestamps, Toggle Monospace Font, Toggle Nick Colors, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages |
 | **Media** | Load Previews Automatically, Toggle Link Previews, Minimal / Standard / Large Link Previews, Play Videos Inline, Compact Videos, Videos as Links, Full-Size Images, Image Thumbnails, Hide Adult Site Previews, Blur Images Until Clicked |
 | **Text** | Bigger, Smaller, Actual Size |
-| **Theme** | Select Theme…, Toggle Match System Appearance, Open Theme Editor, Import Theme…, Reveal Themes Folder |
+| **Typing** | Check Spelling While Typing, Check Grammar, Correct Spelling Automatically, Use Text Replacements, Use Smart Quotes and Dashes, Use Writing Tools |
+| **Theme** | Select Theme…, Toggle Match System Appearance, Next Accent Color, Reset Accent Color, Open Theme Editor, Import Theme…, Reveal Themes Folder |
 | **Settings** | Open Settings, Open settings.json |
 | **Go** | Go to Conversation…, Previous / Next Conversation, Previous / Next Unread, Focus Input |
-| **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Close |
+| **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Translate Messages Automatically, Catch Me Up, Close |
 | **Channel** | Join…, Leave _#channel_ |
 | **Network** | Add Network…, Sort Channels A–Z (for the network you're in), and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |
 
-Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, "nsfw" finds Hide Adult Site Previews, and "alphabetical" finds Sort Channels A–Z.
+Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, "nsfw" finds Hide Adult Site Previews, "alphabetical" finds Sort Channels A–Z, "summary" finds Catch Me Up, and "autocorrect" finds Correct Spelling Automatically.
 
 ## Select a theme
 

@@ -11,6 +11,7 @@ description: Download Vela for macOS, install it from the disk image, and keep i
 
 - **macOS 26 Tahoe or later.**
 - **Apple silicon or Intel.** Vela is a universal app, so the same download runs natively on both.
+- **For Catch me up and Writing Tools,** a Mac with Apple silicon and Apple Intelligence turned on. Everything else, translation included, works without it. See [Apple Intelligence & translation](/guide/apple-intelligence#requirements).
 
 ## Install from the disk image
 

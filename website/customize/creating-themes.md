@@ -104,6 +104,8 @@ Includes can chain up to 8 levels. To customize a built-in in place, name your f
   "ircColors": { "1": "#1B1E2B", "2": "#6C8EEF", "4": "#FF5370" }
   ```
 
+Both palettes also feed the **accent color** picker in Settings → Appearance: it offers the nick colors and mIRC colors 0–15 that work as an accent, so a theme with a few clear, distinct hues gives people more to choose from. See [Accent color](/customize/themes#accent-color).
+
 ## Checking contrast
 
 Vela's theme editor flags tokens with **contrast issues**. Every built-in theme meets these targets:

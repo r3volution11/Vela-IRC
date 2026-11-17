@@ -59,7 +59,7 @@ Channels you join later are remembered too: Vela rejoins the channels you had op
 
 ## Perform on connect
 
-Commands to run after connecting, one per line, exactly as you'd type them in the message field. For example:
+Commands to run after connecting, one per line, exactly as you'd type them in the message field. The box never checks spelling, autocorrects or substitutes anything, so what you type is what's sent. For example:
 
 ```text
 /mode doug +x

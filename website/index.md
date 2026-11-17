@@ -117,16 +117,33 @@ Prefer less? Switch to **compact** previews, turn media off for a channel, or al
 </ShowcaseRow>
 
 <ShowcaseRow
+  eyebrow="Apple Intelligence"
+  title="See what you missed"
+  src="/screenshots/ai-catch-up.webp"
+  alt="A Catch me up card in #swift: an overview of four new messages, a topic with who took part, and a note that it was summarized on this Mac"
+  link="/guide/apple-intelligence"
+  linkText="Apple Intelligence & translation"
+  reverse
+>
+
+Back to a busy channel? **Catch me up** summarizes what you missed, topic by topic, with Apple Intelligence on your Mac.
+
+- **Translate** messages from other languages, one at a time or a whole channel as they arrive.
+- **Writing Tools** proofreads your message without touching commands, nicks or links.
+- **Siri and Shortcuts** can catch you up, check your mentions or set you away, and your channels are in Spotlight.
+
+</ShowcaseRow>
+
+<ShowcaseRow
   eyebrow="Private by design"
   title="Your chats stay between you and your servers"
   src="/screenshots/media-compact.webp"
   alt="Compact link previews: one-line titles with small thumbnails"
   link="/help/privacy"
   linkText="How Vela handles your data"
-  reverse
 >
 
-Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add and, if you let it, to the sites behind the links people post.
+Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add and, if you let it, to the sites behind the links people post. Summaries and translations are made on your Mac.
 
 Link previews tell those sites your IP address, so you decide: automatic, click-to-load, per channel, or only from an allow list. Vela never fetches previews from addresses on your local network.
 

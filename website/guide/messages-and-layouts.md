@@ -68,9 +68,9 @@ The same choices are in **View → Message Layout**.
 ## Reading a conversation
 
 - **Day dividers** ("Today", "Yesterday", "Monday, November 10") separate days.
-- A **New** marker shows where you stopped reading.
+- A **New** marker shows where you stopped reading. In a busy channel, it offers **Catch me up**, an Apple Intelligence summary of what you missed. See [Catch me up](/guide/apple-intelligence#catch-me-up).
 - When you scroll up, **Jump to present** brings you back to the newest messages, with a count of what arrived meanwhile.
-- **Right-click** a message (or hover it and click **…**) to copy its text, link or the sender's nick, message or `/whois` them, or [react and reply](/guide/reactions-replies-typing). You can also select text in a message to copy part of it.
+- **Right-click** a message (or hover it and click **…**) to copy its text, link or the sender's nick, message or `/whois` them, [translate it](/guide/apple-intelligence#translate-messages), or [react and reply](/guide/reactions-replies-typing). You can also select text in a message to copy part of it.
 
 ## Scrollback and history
 

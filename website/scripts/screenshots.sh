@@ -1,6 +1,6 @@
 #!/bin/zsh
-# Regenerates every screenshot on velairc.app from Vela's demo mode, plus the
-# social card. Shots render offscreen (no screen-recording permission) with
+# Regenerates every screenshot on velairc.app from Vela's demo mode (the main
+# window, or a Settings pane), plus the social card. Shots render offscreen (no screen-recording permission) with
 # scripts/demo-screenshot.sh, then are downscaled with sips and encoded as WebP.
 #
 #   website/scripts/screenshots.sh                  # build Release, then shoot everything
@@ -88,7 +88,30 @@ shot media-videos-compact 1280x800 1400 --theme Palenight --preset modern --sele
   --set media.videos=compact
 shot media-restrictions   1280x800 1400 --theme Palenight --preset modern --select "#media" \
   --set media.blurImages=true
-shot media-blur           1280x800 1400 --theme Palenight --preset modern --select "#vela-offtopic"
+shot media-blur           1280x800 1400 --theme Palenight --preset modern --select "#vela-offtopic" \
+  --set 'translation.autoTranslate=[]'
+
+# Apple Intelligence: a Catch me up card (the demo's summaries are canned)
+# and #vela-offtopic's Spanish, Japanese and German lines, translated.
+shot ai-catch-up  1280x800 1400 --theme Palenight --preset modern --select "#swift" \
+  --set intelligence.catchUpThreshold=1 --catch-up
+shot ai-translate 1280x800 1400 --theme Palenight --preset modern --select "#vela-offtopic"
+
+# A theme accent other than the default, in the main window.
+shot accent-cyan  1280x800 1400 --theme Palenight --preset modern --accent Cyan
+
+# Settings panes, 820 points wide; the heights crop each shot to whole
+# sections. --settings-scroll scrolls the pane down first, and a large number
+# scrolls to the end.
+pane() {
+  local name=$1 size=$2 pane=$3
+  shift 3
+  shot "$name" "$size" 1200 --theme Palenight --preset modern --settings-pane "$pane" "$@"
+}
+pane settings-intelligence 820x530 intelligence
+pane settings-siri         820x620 intelligence --settings-scroll 9999
+pane settings-typing       820x600 messages --settings-scroll 9999
+pane settings-accent       820x600 appearance --accent Cyan
 
 # One shot per built-in theme, for the theme gallery.
 themes=(

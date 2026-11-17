@@ -138,7 +138,7 @@ extension SettingKey where Value == Bool {
 extension SettingKey where Value == [String: JSONValue] {
     public static var appearanceColorCustomizations: SettingKey<[String: JSONValue]> {
         .init("appearance.colorCustomizations", default: [:],
-              summary: "Overrides for theme color tokens, e.g. {\"chat.background\": \"#1e1e2e\"}.")
+              summary: "Overrides for theme color tokens, for every theme or for one (\"[Palenight]\": {…}), e.g. {\"chat.background\": \"#1e1e2e\"}. The accent color picker in Settings → Appearance saves its choice here too.")
     }
 }
 
@@ -400,7 +400,7 @@ extension SettingKey where Value == Bool {
     }
     public static var intelligenceSpotlightChannels: SettingKey<Bool> {
         .init("intelligence.spotlightChannels", default: true,
-              summary: "Show your channels and conversations (names only, never messages) in Spotlight and to Siri.")
+              summary: "List your channels and conversations in Spotlight. Names only, never messages.")
     }
 }
 

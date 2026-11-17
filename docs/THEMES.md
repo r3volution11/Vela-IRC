@@ -209,6 +209,16 @@ and listed in Settings → Appearance. Customizations apply to the active theme
 and to the previews in the theme picker, but not to the theme editor's draft,
 so the editor always shows the theme exactly as written.
 
+The **Accent color** picker in Settings → Appearance writes here too. It
+offers a theme's own `nickColors` and `ircColors` 0–15 that work as an accent
+(not grey, clear of the text color, 3:1 against the window and sidebar, and
+distinct from each other; at most ten), and switching to one recolors every
+token the theme draws in its accent, keeping text readable. It writes into the
+theme's own scope and lists the keys it wrote under `"$accentPicker"`, so
+choosing Default removes exactly those; entries written by hand always win
+(except `accent` itself). See
+[settings.json → Accent colors](https://velairc.app/customize/settings-json#accent-colors).
+
 ## Choosing themes and following the system
 
 Vela can follow the macOS light/dark setting (including automatic switching)
