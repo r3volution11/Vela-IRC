@@ -58,18 +58,21 @@ The **Catch me up** button shows when all of these are true:
 - **Offer Catch me up in busy channels** is on in **Settings → Apple Intelligence**. It's on by default.
 - Apple Intelligence is ready.
 - At least **25** messages are new. Change the number with **Show the button after**: 10, 25, 50 or 100 new messages.
+- The **New** line is showing. The button sits on it, so with **Show the New line** turned off in **Settings → Messages → Unread messages** (as the Classic IRC preset does), there's no button. See [Unread messages](/guide/messages-and-layouts#unread-messages).
 
-You can also catch up whenever something's unread, however little, even with the button turned off:
+You can also catch up whenever something's unread, however little, even with the button or the New line turned off:
 
 - Right-click a channel or conversation (in the sidebar, the rail or the tabs) and choose **Catch Me Up**.
 - Run **Buffer: Catch Me Up** from the [command palette](/guide/command-palette).
 - Ask Siri, "Catch me up in Vela". See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts).
 
+Without the New line, the card opens where the new messages start, just above the first one.
+
 In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#intelligence.catchUp) and the number is [`intelligence.catchUpThreshold`](/reference/settings#intelligence.catchUpThreshold), which takes any number.
 
 ### What it reads, and how long it takes {#catch-up-limits}
 
-- **The new messages, actions and notices** after the New marker. Joins, parts, other events and deleted messages are left out, and links are reduced to the site they point to.
+- **The new messages, actions and notices** after the New marker (or where it would be, with the New line off). Joins, parts, other events and deleted messages are left out, and links are reduced to the site they point to.
 - **At most the latest 600.** For a longer stretch, the card says "Covers the latest 600 messages."
 - **It takes a moment.** About 10 seconds for a few dozen messages, and up to about a minute for 600. Until the first words arrive, the card says "Reading 250 messages…".
 - **A summary is kept until new messages arrive**, so opening the card again shows it straight away. **Regenerate** writes a fresh one.

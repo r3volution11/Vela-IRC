@@ -5,7 +5,7 @@ description: Connect Vela to a ZNC or soju IRC bouncer, including the ZNC passwo
 
 # Connecting through a bouncer
 
-A bouncer stays connected to IRC for you, so you keep receiving messages while your Mac is asleep. Vela has first-class support for the two most popular ones, **ZNC** and **soju**.
+A bouncer stays connected to IRC for you, so you keep receiving messages while your Mac is asleep. Vela has first-class support for the two most popular ones, **[ZNC](https://znc.in)** and **[soju](https://soju.im)**.
 
 Add the bouncer like any other network (<kbd>⇧⌘N</kbd>), with your bouncer's address and port, and set **Bouncer → Type** to ZNC or soju.
 

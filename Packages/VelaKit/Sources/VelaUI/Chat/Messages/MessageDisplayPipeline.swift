@@ -71,10 +71,15 @@ nonisolated struct MessageDisplayOptions: Equatable, Sendable {
     var joinPart: JoinPartDisplay = .collapse
     var groupingInterval: TimeInterval = 300
     var unreadMarkerAfter: Date?
+    /// Draw the New line at `unreadMarkerAfter` (`chat.showUnreadMarker`).
+    /// Off, lines run on as they came in: no row, and groups and
+    /// membership runs aren't broken where the unread lines start.
+    var showsUnreadMarker = true
     /// Show the Catch me up card before the first line newer than this
     /// (`CatchUpCard.anchor`); nil while no card is open.
     /// Independent of `unreadMarkerAfter`, which moves or goes when the
     /// window loses focus; when both mark the same line, the marker comes first.
+    /// Placed whether or not the marker is drawn.
     var catchUpCardAfter: Date?
     var calendar: Calendar = .current
 }
@@ -128,7 +133,7 @@ nonisolated struct MessageDisplayBuilder: Sendable {
             groupAnchor = nil
         }
 
-        if !markerPlaced, let marker = options.unreadMarkerAfter, line.time > marker {
+        if !markerPlaced, options.showsUnreadMarker, let marker = options.unreadMarkerAfter, line.time > marker {
             markerPlaced = true
             flushRun()
             items.append(.unreadMarker)
@@ -234,6 +239,25 @@ nonisolated struct DisplayItems: RandomAccessCollection, Sendable {
     }
 
     var lastID: DisplayItemID? { last?.id }
+
+    /// The first row holding a line newer than `date`: a line, or a
+    /// collapsed run that ends after it. Where the unread lines start when
+    /// the New line isn't drawn. Searches back from the end, since unread
+    /// lines are the newest.
+    func firstItem(after date: Date) -> DisplayItemID? {
+        var found: DisplayItemID?
+        for item in reversed() {
+            let newest: Date
+            switch item {
+            case .line(let lineItem): newest = lineItem.line.time
+            case .membershipRun(let run): newest = run.lines[run.lines.count - 1].time
+            case .dayDivider, .unreadMarker, .catchUpCard: continue
+            }
+            guard newest > date else { break }
+            found = item.id
+        }
+        return found
+    }
 }
 
 /// Memoizes the builder between body evaluations. Appends extend the

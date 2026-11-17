@@ -1,10 +1,21 @@
 # Theming Vela
 
 Everything in Vela's window is drawn from a theme: the sidebar, the conversation,
-the composer, the member list, link previews, badges, even the nickname and mIRC
+the composer, the member list, link previews, badges, even the nickname and [mIRC](https://www.mirc.com)
 color palettes. Themes are plain JSON files of named color **tokens**, modeled on
-VS Code color themes, so if you've ever tweaked `workbench.colorCustomizations`
+[VS Code](https://code.visualstudio.com) color themes, so if you've ever tweaked `workbench.colorCustomizations`
 you already know how this works.
+
+**Themes are colors, and only colors.** A Vela theme sets colors (plus,
+optionally, whether the window is see-through) and nothing else. Unlike themes
+for some IRC clients or browsers, it can't change the layout, fonts, text size,
+spacing or behavior: those are settings and presets, so every theme works with
+every layout, and switching themes never loses your setup. Theme files have no
+keys for anything else; Vela ignores any it doesn't know.
+
+The step-by-step guide to making a theme is on the website:
+[Creating themes](https://velairc.app/customize/creating-themes). This file is
+the reference that lives with the source.
 
 - [Quick start](#quick-start)
 - [Where themes live](#where-themes-live)
@@ -22,26 +33,29 @@ you already know how this works.
 
 ## Quick start
 
-1. Open the Themes folder (see below) and create `my-theme.json`.
-2. Paste this, save, and pick **My Theme** in Settings → Appearance:
+1. Open the Themes folder (see below) and create `harbor.json`.
+2. Paste this, save, and pick **Harbor** in Settings → Appearance:
 
    ```jsonc
    {
      "$schema": "https://raw.githubusercontent.com/r3volution11/Vela-IRC/main/schemas/vela-theme.schema.json",
-     "name": "My Theme",
+     "name": "Harbor",
      "type": "dark",
-     "include": "Palenight",
      "colors": {
-       "accent": "#FF8A65",
-       "chat.background": "#1E2030"
+       "window.background": "#1D2733",
+       "window.foreground": "#D3DCE6",
+       "accent": "#F2A65A"
      }
    }
    ```
 
+   Every other color is derived from these three (see
+   [How defaults and fallbacks work](#how-defaults-and-fallbacks-work)).
+
 3. Keep the file open in your editor. Every time you save, Vela reloads it
    instantly — no restart.
 
-Because of `"$schema"`, editors such as VS Code, Zed and Nova autocomplete
+Because of `"$schema"`, editors such as VS Code, [Zed](https://zed.dev) and [Nova](https://nova.app) autocomplete
 every token name, show its description and default, and flag typos and
 malformed colors as you type.
 
@@ -78,11 +92,11 @@ commas are allowed.
 | `name` | yes | Display name. Must be unique among your themes. |
 | `type` | yes | `"dark"` or `"light"`. Picks the token defaults and the appearance of system UI (see [Limits](#limits)). |
 | `include` | no | Name or id of another theme to start from. |
-| `author`, `description` | no | Shown in the theme picker. |
+| `author`, `description` | no | About the theme. Not shown in the app; a built-in theme's description appears on the website's built-in themes page. |
 | `colors` | no | Token → color. Anything you leave out is derived. |
 | `nickColors` | no | Array of colors used for nicknames. |
 | `ircColors` | no | mIRC color index (`"0"`–`"98"`) → color. |
-| `vibrancy` | no | `"none"` (default), `"sidebar"` or `"window"`: let the sidebar or the whole window use the system's translucent materials (Liquid Glass) instead of opaque colors. |
+| `vibrancy` | no | `"none"` (default), `"window"` or `"sidebar"`. `"window"` drops the window's solid backing, so transparent background colors show what's behind the window; `"sidebar"` is reserved and currently draws like `"none"`. The only key that isn't a color. |
 
 Colors are hex strings: `#RGB`, `#RGBA`, `#RRGGBB` or `#RRGGBBAA`. Alpha is
 honored everywhere, which is how hover and selection highlights stay subtle
@@ -146,15 +160,26 @@ Two tokens deserve a note:
   "name": "Palenight Midnight",
   "type": "dark",
   "include": "Palenight",
-  "colors": { "chat.background": "#1B1E2B", "window.background": "#1B1E2B" }
+  "colors": {
+    "window.background": "#1B1E2B",
+    "titleBar.background": "#1B1E2B",
+    "chat.background": "#1B1E2B",
+    "input.containerBackground": "#1B1E2B",
+    "settings.background": "#1B1E2B"
+  }
 }
 ```
 
 The included theme's colors and IRC colors are merged key by key under yours;
 its `nickColors` and `vibrancy` are used unless you set your own. Includes can
 chain (up to 8 levels); loops are reported as errors. The value is a theme name
-or id; a value ending in `.json` is read as a path relative to the Themes
-folder.
+or id; a value ending in `.json` or `.jsonc` is read as a path relative to the
+Themes folder.
+
+Included colors count as explicitly set, so they don't follow your base
+colors. Built-in themes set most tokens themselves (Palenight sets the title
+bar, chat, input bar and Settings backgrounds to its background color one by
+one), which is why the example above sets all five.
 
 ## Nick colors and IRC colors
 
@@ -244,7 +269,9 @@ Settings → Appearance → **Import Theme…** accepts:
   with names taken from the extension (including localized names), and `include`d
   base files followed.
 
-Vela files are recognized and copied as they are. Imports are written into your
+Vela files are recognized and saved in Vela's own format (comments and
+formatting aren't kept; copy the file into the Themes folder yourself to keep
+them). Imports are written into your
 Themes folder as ordinary Vela themes, so you can edit them afterwards; a name
 that clashes with an existing theme gets an “(Imported)” suffix.
 
@@ -312,10 +339,12 @@ them.
 - Standard macOS controls in Settings (switches, pop-up buttons, steppers)
   take the theme's `accent` where macOS allows tinting, and otherwise look
   native.
-- `vibrancy` asks macOS for its translucent materials; how much of your colors
-  show through is up to the system and the wallpaper. With `"none"` (the
-  default) every surface is exactly the color you set.
-- Fonts and sizes aren't part of themes; they're regular settings.
+- With `vibrancy` `"none"` (the default) every surface is exactly the color
+  you set. `"window"` makes the window non-opaque, so transparent background
+  colors show the desktop behind it (without blur); `"sidebar"` currently
+  draws like `"none"`.
+- Layout, fonts, sizes and spacing aren't part of themes; they're regular
+  settings and presets.
 
 ## Built-in themes
 

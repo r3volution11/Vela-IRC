@@ -2,20 +2,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-// Lays out a full-bleed icon render (from ictool) for a specific use, in sRGB.
+// Lays out a full-bleed icon render (from ictool), or renders an SVG, for a
+// specific use, in sRGB.
 //
-//   swift scripts/icon-compose.swift <full-bleed.png> <out.png> <size> <padded|tight|opaque>
+//   swift scripts/icon-compose.swift <full-bleed.png or .svg> <out.png> <size> <padded|tight|opaque>
 //
 //   padded  macOS icon grid: the body is 824/1024 of the canvas, with a soft
 //           drop shadow, like the icon in Finder and the Dock.
-//   tight   The squircle fills the canvas. Used for favicons.
+//   tight   The image fills the canvas. Used for the PNG favicons, from the
+//           favicon's SVG.
 //   opaque  A full square with no transparency (apple-touch-icon). iOS
 //           rounds the corners itself.
 import AppKit
 
 let args = CommandLine.arguments
 guard args.count == 5, let source = NSImage(contentsOfFile: args[1]), let size = Int(args[3]) else {
-    FileHandle.standardError.write(Data("usage: icon-compose.swift <in.png> <out.png> <size> <padded|tight|opaque>\n".utf8))
+    FileHandle.standardError.write(Data("usage: icon-compose.swift <in.png or .svg> <out.png> <size> <padded|tight|opaque>\n".utf8))
     exit(1)
 }
 let mode = args[4]

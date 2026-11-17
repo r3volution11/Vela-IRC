@@ -5,7 +5,7 @@ description: Search, filter and change every Vela setting in Settings → Advanc
 
 # Settings editor
 
-**Settings → Advanced** is Vela's settings editor, modeled on VS Code's. It lists every setting Vela has, including the ones that don't have a control on another pane, each with the right control for its type. Switch to the **JSON** view to edit [settings.json](/customize/settings-json) itself, with suggestions, inline problems and docs on hover.
+**Settings → Advanced** is Vela's settings editor, modeled on [VS Code](https://code.visualstudio.com)'s. It lists every setting Vela has, including the ones that don't have a control on another pane, each with the right control for its type. Switch to the **JSON** view to edit [settings.json](/customize/settings-json) itself, with suggestions, inline problems and docs on hover.
 
 <Screenshot src="/screenshots/settings-editor.webp" alt="Settings → Advanced in the UI view: a search field with a Modified button, category chips, then the Appearance settings, each titled like “Appearance: Theme” with its description and a control" caption="The settings editor's UI view." />
 
@@ -80,7 +80,7 @@ Changes apply immediately. Setting something back to its default removes it from
 - **Each override** has its token, a color well, a hex field (`#RGB`, `#RRGGBB` or `#RRGGBBAA`) and a remove button. Hover a token to read what it colors. Tokens set by the [accent color](/customize/themes#accent-color) picker are labeled **Accent picker**; change one here and it becomes yours, so picking **Default** in Settings → Appearance leaves it alone.
 - **Add Override** suggests [theme tokens](/reference/theme-tokens) and starts from the theme's current color.
 - **Add Overrides for a Theme…** adds a group for a theme name or a pattern such as `Catppuccin *`.
-- **Nick colors and mIRC colors** (`nickColors`, `ircColors`) show as swatches, with an **Edit** link to change them in settings.json. **Vibrancy** is a pop-up menu.
+- **Nick colors and [mIRC](https://www.mirc.com) colors** (`nickColors`, `ircColors`) show as swatches, with an **Edit** link to change them in settings.json. **Vibrancy** is a pop-up menu.
 - **Edit in settings.json** opens the JSON view at the whole setting.
 
 ### Unknown settings {#unknown}

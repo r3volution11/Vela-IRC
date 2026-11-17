@@ -23,7 +23,7 @@ The field has a quiet border that stays the same while you type. To remove it, c
 
 Press <kbd>Tab</kbd> after typing the start of a word:
 
-- **Nicknames.** People who spoke most recently come first. At the start of a line Vela adds `: ` (`wren: `), the IRC way of addressing someone. A leading `@`, a habit from Slack and Discord, is dropped.
+- **Nicknames.** People who spoke most recently come first. At the start of a line Vela adds `: ` (`wren: `), the IRC way of addressing someone. A leading `@`, a habit from [Slack](https://slack.com) and [Discord](https://discord.com), is dropped.
 - **Channels.** Words starting with `#` complete channels on this network, joined ones first.
 - **Commands.** `/jo` at the start of a line completes to `/join `.
 - **Emoji.** `:thu` completes to 👍. Typing a whole shortcode such as `:tada:` turns it into 🎉 as you type. Vela knows the common Slack, GitHub and Discord names.

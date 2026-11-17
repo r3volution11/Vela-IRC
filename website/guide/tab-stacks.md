@@ -5,7 +5,7 @@ description: Use Vivaldi-style two-level tab stacks in Vela instead of the sideb
 
 # Tab stacks
 
-Instead of a sidebar, Vela can show your networks and channels as **two rows of tabs**, like Vivaldi's tab stacks: one row for your networks, and below it the selected network's console, channels and private conversations.
+Instead of a sidebar, Vela can show your networks and channels as **two rows of tabs**, like [Vivaldi](https://vivaldi.com)'s tab stacks: one row for your networks, and below it the selected network's console, channels and private conversations.
 
 <Screenshot src="/screenshots/preset-tabbed.webp" alt="Tab stacks at the top of the window: a row of networks above a row of channels, with the selected tab merging into the conversation" caption="Tabs at the top, with the Tabbed preset." eager />
 

@@ -94,9 +94,9 @@ enum NavigationSettingsCatalog {
 
 // MARK: Presets
 
-/// A one-click configuration of navigation, message layout, density and media.
-/// Presets never change the theme; they only write the keys they list, so
-/// anything else the user customized is kept.
+/// A one-click configuration of navigation, message layout, density, media
+/// and how unread messages show. Presets never change the theme; they only
+/// write the keys they list, so anything else the user customized is kept.
 public struct SettingsPreset: Identifiable, Hashable, Sendable {
     public let id: String
     public let name: String
@@ -115,7 +115,7 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
     public static let classic = SettingsPreset(
         id: "classic",
         name: "Classic IRC",
-        summary: "Sidebar tree, one-line messages in a monospace font, dense spacing and compact link titles. Feels like Textual or irssi.",
+        summary: "Sidebar tree, one-line messages in a monospace font, dense spacing and compact link titles. Channels open at the newest messages, with no New line. Feels like Textual or irssi.",
         systemImage: "terminal",
         values: [
             "navigation.style": "sidebar",
@@ -126,6 +126,8 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "chat.messageSpacing": 2,
             "chat.showAvatars": false,
             "chat.showJoinPart": "show",
+            "chat.openAt": "newest",
+            "chat.showUnreadMarker": false,
             "chat.showTimestamps": true,
             "sidebar.rowHeight": 20,
             "sidebar.fontSize": 12,
@@ -150,6 +152,8 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "chat.messageSpacing": 6,
             "chat.showAvatars": false,
             "chat.showJoinPart": "collapse",
+            "chat.openAt": "firstUnread",
+            "chat.showUnreadMarker": true,
             "chat.showTimestamps": true,
             "sidebar.rowHeight": 22,
             "sidebar.fontSize": 12,
@@ -177,6 +181,8 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "chat.messageSpacing": 8,
             "chat.showAvatars": false,
             "chat.showJoinPart": "collapse",
+            "chat.openAt": "firstUnread",
+            "chat.showUnreadMarker": true,
             "memberList.visible": false,
             "media.linkPreviewSize": "standard",
             "media.videos": "player",
@@ -201,6 +207,8 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
             "chat.messageSpacing": 3,
             "chat.showAvatars": false,
             "chat.showJoinPart": "hide",
+            "chat.openAt": "firstUnread",
+            "chat.showUnreadMarker": true,
             "memberList.visible": false,
             "media.linkPreviewSize": "minimal",
             "media.videos": "player",

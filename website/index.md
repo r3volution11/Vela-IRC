@@ -7,10 +7,10 @@ description: Vela is a free, open-source IRC client for macOS with 21 built-in t
 hero:
   name: Vela
   text: A modern, deeply themable IRC client for macOS
-  tagline: Native SwiftUI, IRCv3, inline media and VS Code-style themes. Make IRC look and work the way you want.
+  tagline: A native Mac IRC client with IRCv3, inline media, on-device Apple Intelligence and VS Code-style themes. Make IRC look and work the way you want.
   image:
     src: /vela-icon.webp
-    alt: The Vela app icon, a sailboat under a starry sky
+    alt: The Vela app icon, a glowing V with a small star in its notch
   actions:
     - theme: brand
       text: Download for macOS
@@ -47,7 +47,7 @@ The title bar, sidebar, tabs, chat, input, member list, link previews and even n
 
 - **21 built-in themes**, from Palenight and Lighter to Dracula, Nord, Catppuccin and Tokyo Night.
 - **Select Theme** (<kbd>⌃⌘T</kbd>) previews each one live as you arrow through the list.
-- **Import any VS Code theme** from a `.json` file or a whole `.vsix` extension.
+- **Import any [VS Code](https://code.visualstudio.com) theme** from a `.json` file or a whole `.vsix` extension.
 - A **theme editor** with contrast warnings, and `settings.json` overrides for any color.
 
 </ShowcaseRow>
@@ -62,7 +62,7 @@ The title bar, sidebar, tabs, chat, input, member list, link previews and even n
   reverse
 >
 
-Pick a message layout: Classic `[12:01] <nick> text`, Modern grouped like Slack or Discord, or Compact columns like irssi and WeeChat.
+Pick a message layout: Classic `[12:01] <nick> text`, Modern grouped like [Slack](https://slack.com) or [Discord](https://discord.com), or Compact columns like [irssi](https://irssi.org) and [WeeChat](https://weechat.org).
 
 Or start from a preset. **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** each set up navigation, layout, density and media in one click, and your theme is never changed. Fine-tune anything afterwards, down to every setting in a searchable, VS Code-style [settings editor](/customize/settings-editor).
 
@@ -79,7 +79,7 @@ Or start from a preset. **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus
 
 On a lot of networks? Use the compact sidebar, which folds into a thin rail when you want more room.
 
-On just a few? Switch to **Vivaldi-style tab stacks**: networks in one row, that network's channels in the next. Put them at the top, in the title bar or above the message field, with corners anywhere from square to pill.
+On just a few? Switch to **[Vivaldi](https://vivaldi.com)-style tab stacks**: networks in one row, that network's channels in the next. Put them at the top, in the title bar or above the message field, with corners anywhere from square to pill.
 
 </ShowcaseRow>
 
@@ -112,7 +112,7 @@ Prefer less? Switch to **compact** previews, turn media off for a channel, or al
 - **Reactions, replies, typing indicators** and message deletion where the server supports them.
 - **`server-time`, `chathistory`, `echo-message`** and the rest of the modern basics, plus STS upgrades.
 - **SASL PLAIN and EXTERNAL**, client certificates and TLS, with secrets in your Keychain.
-- **ZNC and soju**: playback and self-message for ZNC, automatic network discovery and history for soju.
+- **[ZNC](https://znc.in) and [soju](https://soju.im)**: playback and self-message for ZNC, automatic network discovery and history for soju.
 
 </ShowcaseRow>
 
@@ -152,7 +152,7 @@ Link previews tell those sites your IP address, so you decide: automatic, click-
 <div class="home-cta">
   <img src="/vela-icon.webp" alt="" width="96" height="96">
   <h2>Free and open source</h2>
-  <p>Vela is built in the open under the Mozilla Public License 2.0. Native Swift, no web views except the video players.</p>
+  <p>Vela is written in Swift and SwiftUI, with no web views except the video players, and built in the open under the Mozilla Public License 2.0. <a href="/help/license">See the credits</a>.</p>
   <div class="home-cta__actions">
     <a class="vela-button vela-button--brand no-icon" href="https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg">Download for macOS</a>
     <a class="vela-button vela-button--alt" href="/guide/install">Read the guide</a>

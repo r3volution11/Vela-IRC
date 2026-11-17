@@ -14,7 +14,7 @@ Vela's window has up to three panes: **navigation** on the left (or tabs along t
 Choose how you move between networks and channels in **Settings → Layout**, or with **View → Navigation**:
 
 - **Sidebar** (the default) suits many networks and channels.
-- **Tabs** gives you Vivaldi-style [tab stacks](/guide/tab-stacks), great for one network and a few channels.
+- **Tabs** gives you [Vivaldi](https://vivaldi.com)-style [tab stacks](/guide/tab-stacks), great for one network and a few channels.
 
 ## The sidebar
 

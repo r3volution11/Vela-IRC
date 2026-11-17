@@ -43,7 +43,7 @@ They need the server to support **IRCv3 message tags** (and, for deletion, `draf
 Support varies by network and server software: [Ergo](https://ergo.chat) supports all of them, and many older networks don't yet.
 
 ::: info Bouncers
-A bouncer sits between you and the network, so it must support message tags too. **soju** does. **Older ZNC versions don't pass them through**, so on those connections reactions, replies and typing indicators are unavailable even if the network supports them.
+A bouncer sits between you and the network, so it must support message tags too. **[soju](https://soju.im)** does. **Older [ZNC](https://znc.in) versions don't pass them through**, so on those connections reactions, replies and typing indicators are unavailable even if the network supports them.
 :::
 
 See the full [IRCv3 support](/reference/ircv3) list for everything else Vela speaks.

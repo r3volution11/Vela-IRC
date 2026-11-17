@@ -112,6 +112,9 @@ pane settings-intelligence 820x530 intelligence
 pane settings-siri         820x620 intelligence --settings-scroll 9999
 pane settings-typing       820x716 messages --settings-scroll 9999
 pane settings-accent       820x705 appearance --accent Cyan
+# The last two rows of theme cards, drawn from each theme's colors, down to
+# the end of "Make your own".
+pane settings-themes       820x736 appearance --settings-scroll 1375
 pane settings-app-icon     820x600 appearance --settings-scroll 9999 --set appearance.appIcon=sunrise
 
 # The settings editor (Settings → Advanced): the UI view, filtered to

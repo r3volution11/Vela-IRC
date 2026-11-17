@@ -7,6 +7,8 @@ description: Pick one of Vela's 21 built-in themes or your own, preview themes l
 
 Everything in Vela's window is drawn from a theme: the title bar, sidebar, tabs, conversation, message field, member list, link previews, badges and even the colors of nicknames. Vela comes with [21 built-in themes](/reference/built-in-themes), and you can [import](/customize/vs-code-themes), [edit](/customize/theme-editor) or [write](/customize/creating-themes) your own.
 
+**A theme is only colors.** It never changes your layout, fonts, sizes or spacing, so any theme works with any layout and preset, and switching themes keeps your setup. See [Colors only, by design](/customize/creating-themes#colors-only).
+
 <Screenshot src="/screenshots/theme-tokyo-night.webp" alt="Vela in the Tokyo Night theme" caption="Tokyo Night, one of the 21 built-in themes." />
 
 ## Light and dark
@@ -34,7 +36,7 @@ With **Match System Appearance** on, the theme you pick becomes the theme for th
 
 Every theme has an **accent color**, used for buttons, the selected channel, links, mention highlights, focus rings and more. To use a different one, pick it from **Accent color** at the top of **Settings → Appearance → Theme**.
 
-- **The choices come from the theme itself:** its nick colors and its mIRC colors 0–15, keeping up to ten that work as an accent. A color makes the list if it isn't grey or too close to the text color, stands out against the window and sidebar, and looks different from the others. **Default**, the theme's own accent, always comes first.
+- **The choices come from the theme itself:** its nick colors and its [mIRC](https://www.mirc.com) colors 0–15, keeping up to ten that work as an accent. A color makes the list if it isn't grey or too close to the text color, stands out against the window and sidebar, and looks different from the others. **Default**, the theme's own accent, always comes first.
 - **Hover a swatch** for its name, such as "Cyan" or "Default (Purple)". A ring marks the one in use.
 - **Everything the theme draws in its accent switches over:** buttons, selection, links, mention highlights, the sidebar selection, focus rings and so on. Text in the new accent is lightened or darkened as needed to stay readable (4.5:1).
 - **Colors with a meaning never change.** Errors, warnings, success, and joins, parts and quits keep their colors, even if they matched the old accent.
@@ -89,9 +91,9 @@ To change just a color or two, add `appearance.colorCustomizations` to [settings
 
 ## Translucency
 
-Most themes are opaque, so every color is exactly as designed. A theme can instead ask macOS to draw the sidebar, or the whole window, with its translucent Liquid Glass materials by setting `"vibrancy"` to `"sidebar"` or `"window"`. **Settings → Appearance → Translucency** shows what the current theme uses.
+Every built-in theme is opaque, so every color is exactly as designed. A theme can set `"vibrancy"` to `"window"` to let what's behind the window show through wherever its background colors are transparent. **Settings → Appearance → Details → Translucency** shows what the current theme uses. See [Translucency](/customize/creating-themes#translucency).
 
 ## What themes don't change
 
+- **Layout, fonts, sizes and spacing** aren't part of themes. Set them in **Settings → Layout** and **Settings → Messages**, or all at once with a [preset](/guide/presets).
 - **Menus, context menus, alerts and file pickers** are drawn by macOS. They follow the theme's light or dark type, not its colors.
-- **Fonts and sizes** aren't part of themes; set them in **Settings → Messages**.

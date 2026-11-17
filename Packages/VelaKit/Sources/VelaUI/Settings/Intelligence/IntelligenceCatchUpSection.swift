@@ -20,10 +20,7 @@ struct IntelligenceCatchUpSection: View {
     var body: some View {
         @Bindable var settings = app.settings
         let available = intelligence.availability.status.isAvailable
-        SettingsSection(
-            "Catch me up",
-            footer: "A button on the New marker summarizes what you missed. Summaries are made on this Mac and can contain mistakes."
-        ) {
+        SettingsSection("Catch me up", footer: Self.footer(showsNewLine: settings[.chatShowUnreadMarker])) {
             SettingsToggle("Offer Catch me up in busy channels", isOn: $settings[.intelligenceCatchUp])
             SettingsMenuRow(
                 title: "Show the button after",
@@ -35,6 +32,16 @@ struct IntelligenceCatchUpSection: View {
         }
         .disabled(!available)
         .opacity(available ? 1 : 0.55)
+    }
+
+    /// The button lives on the New line; with the line turned off
+    /// (`chat.showUnreadMarker`), say where Catch me up is instead.
+    static func footer(showsNewLine: Bool) -> String {
+        let privacy = "Summaries are made on this Mac and can contain mistakes."
+        guard showsNewLine else {
+            return "The New line is off in Settings → Messages, so the button doesn't show. Right-click a channel or use the command palette to catch up. \(privacy)"
+        }
+        return "A button on the New line summarizes what you missed. \(privacy)"
     }
 
     /// 10, 25, 50 and 100 new messages, plus `current` when it's something

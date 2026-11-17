@@ -11,7 +11,7 @@ The first time you open Vela, the window says **Welcome to Vela** and offers one
 
 Click **Add Network…** (or press <kbd>⇧⌘N</kbd>). Choose a well-known network such as Libera.Chat or OFTC from the **Presets** menu, check the nickname (Vela suggests one from your Mac user name), and click **Add Network**. Vela connects right away.
 
-[Adding a network](/guide/adding-a-network) explains every field, and [Connecting through a bouncer](/guide/bouncers) covers ZNC and soju.
+[Adding a network](/guide/adding-a-network) explains every field, and [Connecting through a bouncer](/guide/bouncers) covers [ZNC](https://znc.in) and [soju](https://soju.im).
 
 ## 2. Join some channels
 

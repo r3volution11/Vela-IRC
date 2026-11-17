@@ -17,6 +17,12 @@
 #
 #   python3 -I concepts.py --icon <letter> <colourway> <out.icon>
 #
+# Or the website's favicon, Glint's V and star without the tile
+# (scripts/export-icon.sh writes website/public/favicon.svg this way, and
+# rasterizes the flat version into the PNG and ICO favicons):
+#
+#   python3 -I concepts.py --favicon <favicon.svg> <flat.svg>
+#
 # Canvas: the 1024-point icon body (Icon Composer's canvas), y grows down.
 import json
 import math
@@ -453,6 +459,52 @@ def write_flat_svg(path, concept, cw, title):
             f'{mb}\n{acc}\n</g>')
     open(path, "w").write(svg_doc(body, "".join(defs)))
 
+# --------------------------------------------------------------------------
+# Website favicon: Glint's V and star with no tile, on the browser's own tab
+# colour. Bolder than the icon so it holds up at 16 px: a thicker stroke and a
+# bigger, fuller star, which still clears the arms. The box puts the V's top
+# edge on a whole pixel at 16 and 32 px, and the V is 15/16 of the width.
+# --------------------------------------------------------------------------
+FAVICON = dict(
+    stroke=150, star_r=64, star_waist=0.28, star_stretch=1.15,
+    # (V point, V top, star)
+    light=("#1A6FB8", "#0A3E7A", "#1A6FB8"),   # Paper's deep blues, for light tabs
+    dark=("#B4FAF4", "#34C6E6", "#FFFFFF"),    # the Vela V and star, for dark tabs
+    # PNG and ICO can't follow the browser's appearance: one mid blue from
+    # both ramps, about 3:1 or better against white and dark-grey tabs.
+    flat=("#2296DA", "#1D7FC8", "#2296DA"),
+)
+
+def favicon_svg(adaptive):
+    fv = FAVICON
+    v = concept_glint(t=fv["stroke"])["pieces"][0][1]
+    nums = [float(n) for n in v.replace("M", " ").replace("L", " ").replace("Z", " ").split()]
+    xs, ys = nums[0::2], nums[1::2]
+    side = (max(xs) - min(xs)) * 16 / 15
+    x0, y0 = C - side / 2, min(ys) - side / 16
+    r, stretch = fv["star_r"], fv["star_stretch"]
+    star = star_path(C, max(292.0, y0 + r * stretch + 0.5), r, fv["star_waist"], stretch)
+
+    def grad(gid, pair):
+        return lin(gid, 512, max(ys), 512, min(ys), [(0, pair[0]), (1, pair[1])])
+    if adaptive:
+        light, dark = fv["light"], fv["dark"]
+        defs = grad("l", light) + grad("d", dark)
+        style = (f'<style>.v{{fill:url(#l)}}.s{{fill:{light[2]}}}'
+                 f'@media (prefers-color-scheme:dark){{.v{{fill:url(#d)}}.s{{fill:{dark[2]}}}}}</style>')
+        paths = f'<path class="v" d="{v}"/><path class="s" d="{star}"/>'
+    else:
+        flat = fv["flat"]
+        defs, style = grad("f", flat), ""
+        paths = f'<path d="{v}" fill="url(#f)"/><path d="{star}" fill="{flat[2]}"/>'
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{x0:.2f} {y0:.2f} {side:.2f} {side:.2f}">'
+            f'{style}<defs>{defs}</defs>{paths}</svg>\n')
+
+def write_favicon(path, flat_path):
+    """favicon.svg follows the browser's light or dark mode; flat_path is for rasterizing."""
+    open(path, "w").write(favicon_svg(True))
+    open(flat_path, "w").write(favicon_svg(False))
+
 def main():
     only = os.environ.get("ONLY")
     manifest = []
@@ -495,5 +547,7 @@ def write_one(letter, cwkey, path):
 if __name__ == "__main__":
     if len(sys.argv) == 5 and sys.argv[1] == "--icon":
         write_one(sys.argv[2], sys.argv[3], sys.argv[4])
+    elif len(sys.argv) == 4 and sys.argv[1] == "--favicon":
+        write_favicon(sys.argv[2], sys.argv[3])
     else:
         main()

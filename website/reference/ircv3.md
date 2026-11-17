@@ -43,8 +43,8 @@ These ride on `message-tags`. Vela respects the server's `CLIENTTAGDENY`, so a f
 
 | Capability | What Vela does with it |
 | --- | --- |
-| `soju.im/bouncer-networks`, `soju.im/bouncer-networks-notify` | Lists the networks on your soju bouncer, adds each one to the sidebar, and keeps the list in sync. |
-| `znc.in/playback` | Asks ZNC only for messages Vela hasn't stored yet. |
+| `soju.im/bouncer-networks`, `soju.im/bouncer-networks-notify` | Lists the networks on your [soju](https://soju.im) bouncer, adds each one to the sidebar, and keeps the list in sync. |
+| `znc.in/playback` | Asks [ZNC](https://znc.in) only for messages Vela hasn't stored yet. |
 | `znc.in/self-message` | Shows messages you sent from your other clients. |
 | `znc.in/server-time-iso`, `znc.in/batch` | ZNC's older names for `server-time` and `batch`. |
 
@@ -55,7 +55,7 @@ See [Connecting through a bouncer](/guide/bouncers).
 - **TLS** with certificate validation, an opt-in **Allow invalid certificates** for self-signed bouncers, and **client certificates** (CertFP).
 - **`ISUPPORT`**: the network name, channel types, member prefixes, case mapping (so `Nick[a]` and `nick{a}` are the same person), history limits and `CLIENTTAGDENY`.
 - **CTCP**: `ACTION` (`/me`), and automatic replies to `VERSION`, `PING`, `TIME` and `CLIENTINFO`.
-- **mIRC formatting**: bold, italic, underline, strikethrough, monospace, colors 0–98, hex colors and reverse.
+- **[mIRC](https://www.mirc.com) formatting**: bold, italic, underline, strikethrough, monospace, colors 0–98, hex colors and reverse.
 - **Reconnection** with backoff, after a dropped connection, a network change, or your Mac waking up.
 
 ## Requested, not used yet

@@ -66,6 +66,20 @@ struct CatchUpUITests {
         #expect(builder.result.catchUpCardScrollTarget == .unreadMarker)
     }
 
+    /// With the New line turned off, the card still opens where the unread
+    /// lines start, just without the line above it.
+    @Test func theCardSitsAtTheFirstUnreadLineWhenTheMarkerIsHidden() {
+        let lines = [line(0), line(1), line(2)]
+        var options = MessageDisplayOptions(unreadMarkerAfter: start.addingTimeInterval(30), showsUnreadMarker: false)
+        options.catchUpCardAfter = start.addingTimeInterval(30)
+        var builder = MessageDisplayBuilder(options: options)
+        builder.append(contentsOf: lines)
+        let ids = Array(builder.result).map(\.id)
+        #expect(!ids.contains(.unreadMarker))
+        #expect(ids.dropFirst() == [.line(lines[0].id), .catchUpCard, .line(lines[1].id), .line(lines[2].id)])
+        #expect(builder.result.catchUpCardScrollTarget == .catchUpCard)
+    }
+
     /// Losing focus marks everything read, so the live marker goes: the
     /// card stays where its stretch starts.
     @Test func theCardStaysWhenTheMarkerGoes() {
@@ -174,5 +188,15 @@ struct CatchUpUITests {
         #expect(IntelligenceCatchUpSection.options(including: 25).map(\.value) == [10, 25, 50, 100])
         #expect(IntelligenceCatchUpSection.options(including: 1).map(\.label) == ["1 new message", "10 new messages", "25 new messages", "50 new messages", "100 new messages"])
         #expect(IntelligenceCatchUpSection.options(including: 40).map(\.value) == [10, 25, 40, 50, 100])
+    }
+
+    /// The button lives on the New line; with the line off, the footer
+    /// says where Catch me up is instead.
+    @Test func settingsFooterFollowsTheNewLine() {
+        #expect(IntelligenceCatchUpSection.footer(showsNewLine: true).hasPrefix("A button on the New line"))
+        let off = IntelligenceCatchUpSection.footer(showsNewLine: false)
+        #expect(off.contains("New line is off"))
+        #expect(off.contains("Right-click a channel"))
+        #expect(off.contains("command palette"))
     }
 }

@@ -6,7 +6,7 @@
 
 <p align="center">
   A modern, deeply themable IRC client for macOS.<br>
-  Native SwiftUI · IRCv3 · inline media · VS Code-style themes
+  IRCv3 · inline media · on-device Apple Intelligence · VS Code-style themes
 </p>
 
 <p align="center">
@@ -69,8 +69,8 @@ The full user guide is at **[velairc.app](https://velairc.app)**.
 
 IRC is simple, open and everywhere, but IRC clients on the Mac have stood still. Vela pairs IRC's simplicity with what people now expect from chat: inline media, reactions, replies and a polished native interface. It is built around one idea: **make Vela work the way you want.**
 
-- **Every pixel is themable.** You can import VS Code themes, edit themes live and override any color from `settings.json`.
-- **Navigation is your choice.** Use a sidebar (or a thin rail) if you're on many networks, or Vivaldi-style tab stacks if you're on a few.
+- **Every pixel is themable.** You can import [VS Code](https://code.visualstudio.com) themes, edit themes live and override any color from `settings.json`.
+- **Navigation is your choice.** Use a sidebar (or a thin rail) if you're on many networks, or [Vivaldi](https://vivaldi.com)-style tab stacks if you're on a few.
 - **Three message layouts.** Pick Classic one-line, Modern grouped, or Compact columns.
 - **Presets get you started.** Each preset sets up a whole style in one click, so you don't have to get into the weeds.
 
@@ -82,7 +82,7 @@ IRC is simple, open and everywhere, but IRC clients on the Mac have stood still.
 - **21 built-in themes:**
   - Material-inspired: Palenight (default dark), Lighter (default light), Oceanic, Darker, Ocean, Deepforest, Volcano and Sandy Beach.
   - Vela originals: Vela Graphite, Vela Paper and Vela Mist.
-  - Ports of popular editor themes: Dracula, Nord, Catppuccin Latte and Mocha, Tokyo Night, One Dark, Gruvbox Dark, Solarized Dark and Light, and Rosé Pine.
+  - Ports of popular editor themes: [Dracula](https://draculatheme.com), [Nord](https://www.nordtheme.com), [Catppuccin](https://catppuccin.com) Latte and Mocha, [Tokyo Night](https://github.com/tokyo-night/tokyo-night-vscode-theme), [One Dark](https://binaryify.github.io/OneDark-Pro/), [Gruvbox](https://github.com/morhetz/gruvbox) Dark, [Solarized](https://ethanschoonover.com/solarized/) Dark and Light, and [Rosé Pine](https://rosepinetheme.com).
 - **Select Theme** in the command palette previews each theme live as you move through the list.
 - **Accent colors:** switch a theme's accent to one of its own colors in Settings → Appearance. Each theme keeps its own choice, and text stays readable.
 - **Follows macOS** light and dark appearance, using a preferred theme for each.
@@ -122,7 +122,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **Video players** for YouTube, Vimeo, Twitch and Streamable. The player loads only when you press play, and you can expand it to fill the window.
 - **Your choice of size:** Minimal, Standard or Large link previews, full or compact videos, and full-size or thumbnail images.
 - **Site rules and an adult-site filter:** show everything, text only or nothing per site. Adult sites' previews are hidden by default, checked on your Mac against a list bundled with Vela. Images can stay blurred until clicked.
-- **mIRC formatting:** bold, italic, underline, strikethrough, monospace, colors (including hex) and reverse.
+- **[mIRC](https://www.mirc.com) formatting:** bold, italic, underline, strikethrough, monospace, colors (including hex) and reverse.
 - **Reactions, replies, typing indicators and message deletion,** where the server supports IRCv3 message tags.
 - **Day dividers, a "New" marker** at your last read position, and a "Jump to present" button.
 
@@ -143,8 +143,8 @@ One click sets navigation, layout, density and media together. Presets never tou
   - `setname`, `chghost`, `invite-notify`, `cap-notify`, STS, `message-redaction`
 - **Reconnection:** automatic, with backoff, including after sleep/wake and network changes.
 - **Bouncers:**
-  - **ZNC:** server-password login, `self-message`, `playback`, server-time.
-  - **soju:** your bouncer's networks appear automatically, and history comes from `chathistory`.
+  - **[ZNC](https://znc.in):** server-password login, `self-message`, `playback`, server-time.
+  - **[soju](https://soju.im):** your bouncer's networks appear automatically, and history comes from `chathistory`.
 - **Scrollback:** stored locally in SQLite with full-text indexing. Older history is paged in from disk, then from the server.
 
 ### Fast to drive
@@ -278,3 +278,17 @@ Vela is licensed under the [Mozilla Public License 2.0](LICENSE):
 - Changes to Vela's own source files must stay open.
 
 Third-party components and ported themes keep their own licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [docs/THEME-CREDITS.md](docs/THEME-CREDITS.md). The Material-inspired themes are original designs inspired by the classic Material Theme palettes; Vela is not affiliated with Material Theme or Vira Software.
+
+### Acknowledgements
+
+Vela builds on a lot of other people's work. Thank you to:
+
+- **Apple's platform:** Vela is written in [Swift](https://www.swift.org) with [SwiftUI](https://developer.apple.com/swiftui/) and AppKit, and uses Network, WebKit, AVKit, Foundation Models, Translation, Natural Language, App Intents, Core Spotlight and more. It's built in [Xcode](https://developer.apple.com/xcode/) and tested with Swift Testing, and the icon was made in [Icon Composer](https://developer.apple.com/icon-composer/).
+- **Libraries:** [GRDB.swift](https://github.com/groue/GRDB.swift) (MIT) on macOS's [SQLite](https://www.sqlite.org) for the message database, and [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT) for `.vsix` theme import.
+- **Data:** [Sinfonietta/hostfiles](https://github.com/Sinfonietta/hostfiles) (MIT) for the adult-site filter's domain list.
+- **IRC documentation:** the [Modern IRC Client Protocol](https://modern.ircdocs.horse/) and its formatting and CTCP specs, the [IRCv3 specifications](https://ircv3.net/irc/), and RFC 1459 and 2812.
+- **Theme palettes:** Dracula, Nord, Catppuccin, Tokyo Night, One Dark Pro, Gruvbox, Solarized and Rosé Pine, with the Material Theme and [Bear](https://bear.app) as inspiration ([details](docs/THEME-CREDITS.md)).
+- **The website:** [VitePress](https://vitepress.dev), Vue, Vite, Shiki and MiniSearch.
+- **Screenshot media:** *Big Buck Bunny* (© 2008 Blender Foundation, CC BY 3.0), an ESO image (ESO/VVVX survey, CC BY 4.0), a rotating-Earth GIF by Marvel (CC BY-SA 3.0), and public-domain photos from NASA, ESA and the U.S. Air Force, via Wikimedia Commons.
+
+The full list, with links and licenses, is at **[velairc.app/help/license](https://velairc.app/help/license)**.

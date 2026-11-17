@@ -210,7 +210,7 @@ import VelaFoundation
 @Suite struct SettingsCatalogTests {
     @Test func catalogIsCompleteAndUnique() {
         let keys = SettingKey.allKnownKeys.map(\.key)
-        #expect(keys.count == 71)
+        #expect(keys.count == 73)
         #expect(Set(keys).count == keys.count)
         #expect(keys.allSatisfy { $0.contains(".") })
         #expect(SettingKey.allKnownKeys.allSatisfy { !$0.summary.isEmpty })
@@ -295,6 +295,35 @@ import VelaFoundation
             #expect(preset.values["media.presentation"] == nil)
             #expect(preset.values["media.loadVideoEmbeds"] == nil)
         }
+    }
+
+    /// Classic IRC shows everything as it came in; the others keep the
+    /// defaults. Every preset lists both, so switching presets resets them.
+    @Test func presetsSetHowUnreadMessagesShow() {
+        let expected: [String: [String: JSONValue]] = [
+            "classic": ["chat.openAt": "newest", "chat.showUnreadMarker": false],
+            "modern": ["chat.openAt": "firstUnread", "chat.showUnreadMarker": true],
+            "tabbed": ["chat.openAt": "firstUnread", "chat.showUnreadMarker": true],
+            "focus": ["chat.openAt": "firstUnread", "chat.showUnreadMarker": true],
+        ]
+        #expect(Set(SettingsPreset.all.map(\.id)) == Set(expected.keys))
+        for preset in SettingsPreset.all {
+            let reading = preset.values.filter { ["chat.openAt", "chat.showUnreadMarker"].contains($0.key) }
+            #expect(reading == expected[preset.id], "\(preset.id)")
+        }
+    }
+
+    @Test func applyingClassicThenModernRestoresTheUnreadDefaults() throws {
+        let directory = try TemporaryDirectory()
+        defer { directory.cleanup() }
+        let store = SettingsStore(fileURL: directory.file("settings.json"), watchForChanges: false)
+        store.apply(.classic)
+        #expect(store[.chatOpenAt] == .newest)
+        #expect(!store[.chatShowUnreadMarker])
+        store.apply(.modern)
+        #expect(store[.chatOpenAt] == .firstUnread)
+        #expect(store[.chatShowUnreadMarker])
+        #expect(store.matchingPreset()?.id == "modern")
     }
 
     @Test func defaultsMatchModern() throws {

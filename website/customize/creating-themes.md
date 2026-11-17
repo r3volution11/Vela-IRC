@@ -1,39 +1,85 @@
 ---
 title: Creating themes
-description: Write your own Vela theme as a JSON file of color tokens, with live reload, editor autocomplete from the JSON Schema, derived defaults, include, nick colors and mIRC colors.
+description: A step-by-step guide to making Vela themes, in the theme editor or as a JSON file of color tokens. Themes set colors only, never layout, and Vela draws their previews for you.
 ---
 
 # Creating themes
 
-A Vela theme is a JSON file of named color **tokens**, modeled on VS Code color themes. If you've ever tweaked `workbench.colorCustomizations`, you already know how it works. You can build one in the [theme editor](/customize/theme-editor), or write it by hand as described here.
+A Vela theme is a small JSON file that gives a color to each part of the window. You can make one in the [theme editor](/customize/theme-editor) without seeing any JSON, or write the file yourself in any text editor. This guide covers both, step by step, from a three-color theme to one ready to share.
 
-::: info The full guide
-This page is a summary. The complete theme authoring guide, [THEMES.md](https://github.com/r3volution11/Vela-IRC/blob/main/docs/THEMES.md), lives with Vela's source. Every token is listed in the [theme token reference](/reference/theme-tokens).
+::: tip Themes are colors, and only colors
+A Vela theme changes **colors** (plus, optionally, whether the window is see-through) and nothing else. Unlike themes for some IRC clients or browsers, a Vela theme can't change the layout, fonts, text size, spacing, icons or how anything behaves. Those are your [settings](/customize/settings-json) and [presets](/guide/presets), so **every theme works with every layout**, and you can switch themes as often as you like without losing your setup.
 :::
 
-## Quick start
+## Colors only, by design {#colors-only}
 
-1. Choose **Theme → Reveal Themes Folder** and create a file called `my-theme.json`.
-2. Paste this and save:
+How Vela looks is split between the theme and your settings:
+
+| A theme decides | Your settings decide |
+| --- | --- |
+| Every color: backgrounds, text, borders, badges, buttons, highlights, link previews, the Settings window | [Sidebar or tab stacks](/guide/the-window#sidebar-or-tabs), tab placement and roundness |
+| The palette nicknames are colored from | The [message layout](/guide/messages-and-layouts): Classic, Modern grouped or Compact columns |
+| The 99 [mIRC](https://www.mirc.com) colors other people's colored text uses | Fonts, text size, line spacing and density |
+| Whether it's a dark or a light theme, which macOS follows for menus and alerts | Avatars, timestamps and their format, and whether nicks are colored at all |
+| Translucency (`vibrancy`) | The member list, link previews, images and videos |
+
+So a theme you design with the Modern Chat preset also looks right in Classic IRC, Tabbed or Focus, and trying a new theme never resets your fonts or layout. Think of a Vela theme as a palette: your settings decide the shape of the window, the theme decides its colors.
+
+Theme files have no keys for anything else. If a file has one anyway (say, `"font": "Menlo"`), Vela loads the theme and ignores that key. To change layout or type, use **Settings** (<kbd>⌘,</kbd>), the [settings reference](/reference/settings) or a [preset](/guide/presets).
+
+## Quick start {#quick-start}
+
+There are two ways to start. Both end with an ordinary theme file in your Themes folder, so you can move between the theme editor and a text editor at any time. (Saving from the theme editor writes the file in Vela's own format, without comments.)
+
+### Start from a theme in the theme editor {#start-in-the-editor}
+
+The quickest way to a polished theme is to start from one you like:
+
+1. Open **Settings → Appearance** (<kbd>⌘,</kbd>). Right-click the theme you want to start from in the gallery and choose **Customize in Theme Editor…**.
+
+   (**Theme → Theme Editor…** and **Settings → Appearance → Customize…** open the editor on the theme you're using now.)
+2. The editor opens a copy. A built-in theme's copy is named after it, such as "Nord Custom", so the original is never changed. Type your own name in **Name**, and leave **Dark** or **Light** as it is unless you're changing the backgrounds from dark to light or back.
+3. Change colors. Pick a group on the left (**Window**, **Sidebar**, **Chat** and so on) or type in **Search tokens**, then click a color well or type a hex value. Every Vela window, including the editor itself, shows the change as you make it.
+4. Press **Save** (<kbd>⌘S</kbd>). Vela writes the theme to your Themes folder as a file named after it (`nord-custom.json`), switches to it, and the status bar says "Saved “Nord Custom” to your Themes folder and made it your theme." With **Match System Appearance** on, it becomes your Dark Mode or Light Mode theme, depending on its type.
+5. The theme now has a card in the gallery, marked **Yours**. To keep refining it in a text editor, right-click the card and choose **Show in Finder**.
+
+::: warning Changing a base color may not change much
+A built-in theme sets nearly every color itself, and the copy keeps all of them. So changing, say, `accent` changes only the colors that still follow it, which in a copy of a built-in theme is very few. To recolor everything that uses the accent, change those tokens too. (To switch to another of the theme's own colors without making a theme, the [accent color](/customize/themes#accent-color) picker in Settings does all of that for you.) In the editor, a token marked **Set** keeps its own color; one marked **Inherited** follows the others. See [How defaults work](#how-defaults-work).
+:::
+
+### Write a theme file from scratch {#start-from-a-file}
+
+A theme file can be tiny, because Vela works out every color you leave out:
+
+1. Open the Themes folder: **Settings → Appearance → Reveal Themes Folder**, or **Theme → Reveal Themes Folder**. Finder shows the folder, creating it if needed.
+2. In a code editor ([VS Code](https://code.visualstudio.com), [Zed](https://zed.dev), [Nova](https://nova.app), [BBEdit](https://www.barebones.com/products/bbedit/) and so on), create a file called `harbor.json` in that folder with this in it:
 
    ```jsonc
    {
      "$schema": "https://raw.githubusercontent.com/r3volution11/Vela-IRC/main/schemas/vela-theme.schema.json",
-     "name": "My Theme",
+     "name": "Harbor",
      "type": "dark",
-     "include": "Palenight",
      "colors": {
-       "accent": "#FF8A65",
-       "chat.background": "#1E2030"
+       "window.background": "#1D2733",
+       "window.foreground": "#D3DCE6",
+       "accent": "#F2A65A"
      }
    }
    ```
 
-3. Pick **My Theme** with <kbd>⌃⌘T</kbd>. Keep the file open in your editor: every time you save, Vela reloads it instantly.
+3. Save it. **Harbor** appears in the **Settings → Appearance** gallery right away, marked **Dark · Yours**, with a preview card drawn in its colors. There's no need to restart Vela.
+4. Click its card to use it, or press <kbd>⌃⌘T</kbd>, type "harbor" and press <kbd>Return</kbd>.
+5. Keep the file open. Every time you save it, Vela reloads the theme and the whole window updates.
 
-Thanks to `"$schema"`, editors such as VS Code, Zed and Nova autocomplete every token name, show its description and default, and flag typos and malformed colors as you type.
+Those three colors are enough for a complete, readable theme: the sidebar, member list, text shades, links, badges and buttons are all worked out from them. The smallest valid theme is just a name and a type, `{ "name": "Bare", "type": "dark" }`, which gets every color from Vela's defaults.
 
-## Where themes live
+::: tip Use a code editor
+macOS may ask whether your editor can access data from other apps the first time it opens the Themes folder, because the folder is inside Vela's container; allow it. Avoid TextEdit if you can: it saves rich text and turns straight quotes into curly ones, which aren't valid JSON. If you do use it, choose **Format → Make Plain Text** and turn off **Edit → Substitutions → Smart Quotes**.
+:::
+
+You can also write a theme anywhere and bring it in with **Theme → Import Theme…**. Import rewrites the file in Vela's own format, so comments aren't kept; to keep them, put the file in the Themes folder yourself.
+
+### Where your themes live {#where-themes-live}
 
 Vela is sandboxed, so the Themes folder is inside its container:
 
@@ -41,81 +87,454 @@ Vela is sandboxed, so the Themes folder is inside its container:
 ~/Library/Containers/io.github.r3volution11.Vela/Data/Library/Application Support/Vela/Themes
 ```
 
-Every `.json` or `.jsonc` file in it is a theme. Its **id** is the file name without the extension (`my-theme`) and its **name** is the `name` field; settings accept either, in any case. If you save a file with a mistake in it, Vela keeps the last version that worked and reports the problem in **Settings → Appearance**.
+- **Every `.json` or `.jsonc` file directly in this folder is a theme.** Files in subfolders and hidden files (names starting with a dot) are ignored.
+- **A theme's id is its file name** without the extension (`harbor`), and its **name** is the `name` in the file ("Harbor"). Settings accept either, in any case. Give each theme a name no other theme uses.
+- **Vela watches the folder.** Adding, changing, renaming or deleting a file updates the gallery, and the window if it's the theme in use, within a moment.
+- **A mistake never breaks the window.** If you save a file with an error in it, Vela keeps using the last version that worked and explains the problem in **Settings → Appearance**. See [Troubleshooting](#troubleshooting).
+- **Replacing a built-in theme:** a file named like a built-in theme (for example `nord.json`) takes that theme's place in the gallery. It can still start from the original with `"include": "Nord"`.
 
-## The theme file
+## Anatomy of a theme file {#the-theme-file}
 
-Comments (`//` and `/* */`) and trailing commas are allowed.
+Here's a theme with every key filled in. Only `name` and `type` are required.
 
-| Field | Required | Meaning |
+```jsonc
+{
+  // Lets your editor autocomplete and check the file. Optional.
+  "$schema": "https://raw.githubusercontent.com/r3volution11/Vela-IRC/main/schemas/vela-theme.schema.json",
+
+  // Required.
+  "name": "Harbor",
+  "type": "dark",
+
+  // Optional details about the theme.
+  "author": "Your Name",
+  "description": "Blue-grey surfaces with a warm amber accent.",
+
+  // Optional. Uncomment to start from another theme instead of the defaults.
+  // "include": "Palenight",
+
+  // Token → color. Anything you leave out is worked out from the rest.
+  "colors": {
+    "window.background": "#1D2733",
+    "window.foreground": "#D3DCE6",
+    "accent": "#F2A65A",
+    "chat.link": "#7FB8E6",
+  },
+
+  // The palette nicknames are colored from.
+  "nickColors": ["#F28C8C", "#F2A65A", "#E8D27A", "#A6D98C", "#7FD1C2", "#7FB8E6", "#A99BF0", "#E39BD9"],
+
+  // mIRC colors by number; list only the ones you change.
+  "ircColors": { "1": "#141B24", "2": "#5B8FD6", "4": "#F07B7B" },
+
+  // "none" (the default), "window" or "sidebar".
+  "vibrancy": "none",
+}
+```
+
+Theme files are JSON with comments: `//` and `/* */` comments and trailing commas are fine.
+
+| Key | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `$schema` | String | No | The address of Vela's theme schema, so your editor can autocomplete and check the file. See [below](#schema). |
+| `name` | String | **Yes** | The name shown in the gallery and in Select Theme. Settings refer to the theme by this name or by its file name. Can't be empty. |
+| `type` | `"dark"` or `"light"` | **Yes** | Picks the defaults for colors you don't set, and whether macOS draws menus and alerts light or dark. See [Light and dark](#light-and-dark). VS Code's `"vs-dark"`, `"vs"`, `"hc-black"` and `"hc-light"` work too. |
+| `author` | String | No | Who made the theme. |
+| `description` | String | No | One sentence about the theme. Vela doesn't show `author` or `description` in the app, but they travel with the file, and for built-in themes the description appears on the [Built-in themes](/reference/built-in-themes) page. |
+| `include` | String | No | Another theme to start from, by name or id: `"Palenight"`. See [Building on another theme](#building-on-another-theme). |
+| `colors` | Object | No | Token name → color: `"chat.background": "#1E2030"`. Anything you leave out is [worked out from the rest](#how-defaults-work). See [Color tokens](#tokens). |
+| `nickColors` | Array of colors | No | The palette for nicknames: `["#F28C8C", "#A6D98C", …]`. Replaces the default palette. See [Nick colors](#nick-colors). |
+| `ircColors` | Object | No | mIRC color number (`"0"` to `"98"`) → color: `{ "4": "#F07B7B" }`. Only the numbers you list change. See [mIRC colors](#irc-colors). |
+| `vibrancy` | `"none"`, `"window"` or `"sidebar"` | No | Whether the window can be see-through. Defaults to `"none"`. See [Translucency](#translucency). |
+
+There are no other keys. In particular, there's nothing for fonts, sizes, spacing, layout or images: see [Colors only, by design](#colors-only).
+
+### Writing colors {#color-values}
+
+Colors are hex strings in one of four forms, with or without capitals:
+
+| Form | Example | Meaning |
 | --- | --- | --- |
-| `$schema` | no | Schema URL, for autocomplete and validation in your editor. |
-| `name` | yes | Display name. Must be unique among your themes. |
-| `type` | yes | `"dark"` or `"light"`. Picks the token defaults and how macOS draws menus and alerts. |
-| `include` | no | Name or id of another theme to start from. |
-| `author`, `description` | no | Shown in the theme picker. |
-| `colors` | no | Token → color. Anything you leave out is derived. |
-| `nickColors` | no | Array of colors used for nicknames. |
-| `ircColors` | no | mIRC color index (`"0"`–`"98"`) → color. |
-| `vibrancy` | no | `"none"` (default), `"sidebar"` or `"window"`, to let macOS draw translucent Liquid Glass materials. |
+| `#RGB` | `"#F80"` | Short for `#FF8800`. |
+| `#RRGGBB` | `"#FF8800"` | An opaque color. |
+| `#RGBA` | `"#F808"` | Short for `#FF880088`. |
+| `#RRGGBBAA` | `"#FF880033"` | A color with transparency: `00` is invisible, `FF` is opaque. |
 
-Colors are hex strings: `#RGB`, `#RGBA`, `#RRGGBB` or `#RRGGBBAA`. Transparency works everywhere, which keeps hover and selection highlights subtle on any background (`"chat.hoverBackground": "#FFFFFF0A"`).
+Transparency works for every token. It's the easiest way to make hover and selection highlights that look right on any background: `"chat.hoverBackground": "#FFFFFF0A"` is a 4% white wash, whatever the conversation's color.
+
+### Autocomplete with `$schema` {#schema}
+
+The `"$schema"` line points to Vela's [theme schema](https://github.com/r3volution11/Vela-IRC/blob/main/schemas/vela-theme.schema.json), which lists every key and token. Editors that understand JSON Schema, including VS Code, Zed and Nova, then:
+
+- autocomplete token names as you type inside `colors`,
+- show each token's description and default when you hover it,
+- underline typos, unknown keys and malformed colors.
+
+In VS Code, a `.json` file with comments shows "Comments are not permitted in JSON". Name the file `.jsonc` instead (Vela reads both), or click **JSON** in the status bar and choose **JSON with Comments**.
+
+## Color tokens {#tokens}
+
+Each color in a theme belongs to a **token**: a name for one part of the window, such as `sidebar.background` (the sidebar's background) or `chat.timestamp` (the timestamps on messages). Vela has 129 tokens in 13 groups, each named after the part of the window it colors:
+
+| Group | Tokens | Colors |
+| --- | --- | --- |
+| [Window](/reference/theme-tokens#window) | 4 | The base background and text colors most other tokens are worked out from, and dividers. |
+| [Title bar](/reference/theme-tokens#title-bar) | 4 | The bar above the conversation: channel name, topic and buttons. |
+| [Sidebar](/reference/theme-tokens#sidebar) | 15 | The list of networks and channels: selected, unread and mentioned channels, badges, disconnected networks. |
+| [Rail](/reference/theme-tokens#rail) | 8 | The collapsed, icon-only sidebar. |
+| [Tabs](/reference/theme-tokens#tabs) | 16 | Tab stacks, when you use tabs instead of the sidebar. |
+| [Chat](/reference/theme-tokens#chat) | 29 | The conversation: message text, timestamps, links, your nick, mentions, joins and parts, notices, errors, day dividers, the New line, selection and code. |
+| [Input](/reference/theme-tokens#input) | 7 | The message field and the bar around it. |
+| [Member list](/reference/theme-tokens#member-list) | 7 | The channel's member list. |
+| [Embeds](/reference/theme-tokens#embeds) | 7 | Link previews and media cards. |
+| [Reactions, replies & typing](/reference/theme-tokens#reactions-replies-typing) | 9 | Reactions, reply quotes and "is typing" lines. |
+| [Controls](/reference/theme-tokens#controls) | 14 | The accent, buttons, focus rings and popovers such as the command palette. |
+| [Status](/reference/theme-tokens#status) | 3 | Success, warning and error colors, such as connection states. |
+| [Settings window](/reference/theme-tokens#settings-window) | 6 | The Settings window and the theme editor. |
+
+Token names follow a pattern: the part of the window, a dot, then the role. The common roles are:
+
+- `background` and `foreground` (text and icons), plus `secondaryForeground` for quieter text and `border`;
+- states: `hover…` (under the pointer), `active…` (selected), `unread…` (has new messages), `highlight…` (mentions you), `disconnected…` and `inactive…`;
+- `badge…` for count badges, and `chat.event.join`, `chat.event.part` and so on for each kind of event line.
+
+The [theme token reference](/reference/theme-tokens) lists every token in a table with four columns: the **token** name to use in `colors`, a **description** of what it colors, and its **dark default** and **light default**, the value it gets when you don't set it (see [How defaults work](#how-defaults-work)). The theme editor shows the same descriptions and defaults, and you can search them there.
+
+### Where to start {#where-to-start}
+
+You don't need to set all 129. A good order:
+
+1. **The base:** `window.background`, `window.foreground` and `accent`. That's already a complete theme.
+2. **Surfaces:** `sidebar.background`, `chat.background` and `memberList.background`, if they should differ from what's worked out.
+3. **Text shades:** `chat.secondaryForeground`, `chat.timestamp`, `sidebar.foreground` and `sidebar.secondaryForeground`.
+4. **You and mentions:** `accentText`, `chat.link`, `chat.selfNick`, `chat.mention`, `chat.highlightBackground` and `chat.highlightBorder`.
+5. **Meaning:** the `chat.event.*` colors, `chat.notice`, `chat.error` and the `status.*` colors.
+6. **Palettes:** `nickColors` and `ircColors` 0–15.
+7. **The rest**, if you use them: embeds, reactions, tabs, the rail and the Settings window.
+
+### The accent tokens {#accent-tokens}
+
+Three tokens work together:
+
+- **`accent`** is the theme's signature color, used for **fills**: the selected channel, mention badges, buttons, focus rings and the active tab.
+- **`accentText`** is the accent used **as text** on the conversation's background: links, your nick and mentions. Dark themes use `accent` itself; light themes default to a darker shade, because a bright accent that works as a fill is often too light to read as text. Set it when your accent is too light or too dark to read.
+- **`accentForeground`** is text drawn **on** the accent, such as the number on a mention badge. By default, Vela picks white or a dark shade of the accent, whichever reads better.
 
 ## How defaults work {#how-defaults-work}
 
-Most token defaults are **formulas over other tokens**, so a convincing theme can start with three colors:
-
-```jsonc
-{ "name": "Three Colors", "type": "dark",
-  "colors": { "window.background": "#20242C", "window.foreground": "#D8DEE9", "accent": "#E5A050" } }
-```
-
-Everything else follows: the sidebar is a slightly darker tint of the window, the member list matches the sidebar, links and your own nick use the accent, and badges use the accent with readable text. Set a more specific token to break the chain:
+Every token has a default for dark themes and one for light themes, and most defaults are **worked out from other tokens**. That's why a three-color theme looks complete. For example, in a dark theme:
 
 ```text
 memberList.background → sidebar.background → mix(window.background, #000000, 16%)
 ```
 
-Setting `sidebar.background` moves the member list with it; setting `memberList.background` changes only the member list.
+The member list uses the sidebar's background, and the sidebar's background is the window's background mixed 16% of the way toward black. So with only `window.background` set, the sidebar and member list come out a little darker than the conversation, in the same hue.
 
-Two tokens deserve a note: `accent` is the theme's signature color for **fills** (selection, badges, buttons), while `accentText` is the accent used **as text** (links, your nick, mentions). Set `accentText` when your accent is too light or too dark to read as text. `accentForeground` is text drawn **on** the accent.
+Set a token and it **breaks the chain** at that point. This version of Harbor gives the sidebar a lighter blue of its own, and the member list follows it, because it still uses the sidebar's color:
 
-## Building on another theme
+```jsonc
+{
+  "name": "Harbor",
+  "type": "dark",
+  "colors": {
+    "window.background": "#1D2733",
+    "window.foreground": "#D3DCE6",
+    "accent": "#F2A65A",
+    "sidebar.background": "#263445"
+  }
+}
+```
 
-`include` starts from another theme, and your `colors` win:
+Set `memberList.background` too, and only the member list changes.
+
+Defaults in the [token reference](/reference/theme-tokens) are written as expressions:
+
+| Expression | Meaning |
+| --- | --- |
+| `#RRGGBB` | A fixed color. |
+| `token.name` | The same color as another token. |
+| `mix(a, b, 30%)` | `a` blended 30% of the way toward `b`. |
+| `transparent(a, 20%)` | `a` with its opacity multiplied by 20%. |
+| `contrast(a)` | White, or a near-black tinted with `a`'s hue, whichever reads better on `a`. |
+
+Where a color comes from, from lowest to highest priority:
+
+1. the token's default for the theme's `type`,
+2. the [included](#building-on-another-theme) theme or themes, deepest first,
+3. the theme's own `colors`,
+4. `appearance.colorCustomizations` in [settings.json](/customize/settings-json#color-customizations) for every theme,
+5. `appearance.colorCustomizations` for this theme, in a `"[Theme Name]"` block.
+
+Steps 4 and 5 are your own overrides, including the accent and message box border colors you pick in Settings. They apply on top of any theme, without changing its file.
+
+::: tip Set means fixed, inherited means it follows
+A color that's set (by you, or by a theme you start from) stays put when you change the colors it would otherwise follow. The theme editor marks each token **Set** or **Inherited**, and shows the default of every inherited one. To make a set token follow the others again, click its reset arrow, or delete it from `colors`.
+:::
+
+## Nick colors and mIRC colors {#nick-colors-and-mirc-colors}
+
+Besides tokens, a theme has two palettes.
+
+### Nick colors {#nick-colors}
+
+`nickColors` is the list of colors nicknames are drawn in, when **Colored nicknames** is on in **Settings → Messages**. Your own nick isn't from the palette; it uses `chat.selfNick`.
+
+```jsonc
+"nickColors": ["#F28C8C", "#F2A65A", "#E8D27A", "#A6D98C", "#7FD1C2", "#7FB8E6", "#A99BF0", "#E39BD9"]
+```
+
+- **How many:** aim for 8 to 12 clearly different hues. Vela's own palettes have 12. More colors means fewer people share one.
+- **How they're handed out:** each nick starts from the color its name points to, so it usually keeps the same color in every channel. People talking in the same conversation get different colors while the palette has room, and someone whose color would look like the person they're talking with gets the nearest color that's clearly different. See [Colors and formatting](/guide/messages-and-layouts#colors-and-formatting).
+- **The readability filter:** Vela skips a palette color that would read as plain text (the same as, or a grey close to, `chat.foreground`) or that's below **3:1** contrast against `chat.background`. If skipping would leave too few colors to tell people apart (fewer than four), it uses your palette as written.
+- **Aim higher than the minimum:** 4.5:1 against `chat.background` keeps nicks easy to read. The theme editor marks a color under 3:1 with a dot; hover it for the ratio.
+- **Leave it out** and the theme gets Vela's default palette for its type. An empty list does the same. Setting `nickColors` replaces the whole default palette.
+
+### mIRC colors {#irc-colors}
+
+`ircColors` are the colors behind mIRC formatting codes, which other IRC clients use to send colored text (when **mIRC formatting** is on in **Settings → Messages**). They're numbered from 0 to 98:
+
+- **0 to 15** are the classic colors: white, black, blue, green, red, brown, magenta, orange, yellow, light green, cyan, light cyan, light blue, pink, grey and light grey. These are worth tuning so they read well on your background.
+- **16 to 98** are the standard extended palette. They rarely need changing.
+
+List only the numbers you change, as strings:
+
+```jsonc
+"ircColors": { "1": "#141B24", "2": "#5B8FD6", "4": "#F07B7B" }
+```
+
+mIRC colors are used for backgrounds too (white text on black, say), so keep 0 light and 1 dark. The theme editor shows 0–15 under **mIRC colors 0–15**.
+
+Both palettes also feed the [accent color](/customize/themes#accent-color) picker in **Settings → Appearance**, which offers the nick colors and mIRC colors 0–15 that work as an accent. A theme with a few clear, distinct hues gives people more to choose from.
+
+## Translucency {#translucency}
+
+`vibrancy` is the one key in a theme that isn't a color. It chooses how the window's surfaces are drawn, and like the rest of a theme it only changes how things look:
+
+| Value | Effect |
+| --- | --- |
+| `"none"` (default) | Every surface is painted in exactly the colors in your theme. All the built-in themes use this. |
+| `"window"` | Vela draws the window without its solid backing, so wherever your background colors are transparent (`#RRGGBBAA`), whatever is behind the window shows through. Opaque colors look the same as with `"none"`. |
+| `"sidebar"` | Reserved for a translucent sidebar. In this version of Vela, it looks the same as `"none"`. |
+
+**Settings → Appearance → Details → Translucency** shows what the current theme uses. To try it on a theme without editing the file, add `"vibrancy"` for that theme in [`appearance.colorCustomizations`](/customize/settings-json#color-customizations).
+
+::: warning
+Text on a see-through background can be hard to read, and Vela's contrast checks can't know what's behind your window. Keep text on opaque, or nearly opaque, backgrounds.
+:::
+
+## Building on another theme {#building-on-another-theme}
+
+`include` starts your theme from another one, so your file holds only what's different. The value is a theme's name or id: a built-in theme or one of yours.
 
 ```jsonc
 {
   "name": "Palenight Midnight",
   "type": "dark",
   "include": "Palenight",
-  "colors": { "chat.background": "#1B1E2B", "window.background": "#1B1E2B" }
+  "colors": {
+    "window.background": "#1B1E2B",
+    "titleBar.background": "#1B1E2B",
+    "chat.background": "#1B1E2B",
+    "input.containerBackground": "#1B1E2B",
+    "settings.background": "#1B1E2B"
+  }
 }
 ```
 
-Includes can chain up to 8 levels. To customize a built-in in place, name your file after it (for example `nord.json`) and `"include": "Nord"`.
+Here's what you get from the included theme:
 
-## Nick colors and mIRC colors
+| Key | From the included theme |
+| --- | --- |
+| `colors` | Every color it sets, merged with yours. Yours win. |
+| `ircColors` | Every mIRC color it sets, merged with yours. Yours win. |
+| `nickColors` | Its palette, unless you set your own. |
+| `vibrancy` | Its setting, unless you set your own. |
+| `name`, `type`, `author`, `description` | Nothing. These always come from your file, so `name` and `type` are still required. |
 
-- **`nickColors`** is the palette nicknames are drawn from. Each nick starts from a stable entry, and people talking in the same conversation get different entries while the palette has room. Aim for 8–12 clearly different hues with at least 3:1 contrast (ideally 4.5:1) against `chat.background`; entries that would read as plain text (a grey close to `chat.foreground`) or fall under 3:1 aren't used.
-- **`ircColors`** are the colors behind mIRC formatting codes. Colors 0–15 (white, black, blue, green, red, brown, magenta, orange, yellow, light green, cyan, light cyan, light blue, pink, grey, light grey) are worth tuning for your background; list only the ones you change:
+::: warning The included theme's colors are all set
+Colors from the included theme count as set, so they don't follow your base colors. Palenight sets the title bar, conversation, message bar and Settings window to its background color one by one, so Palenight Midnight above sets all of them; with only `window.background`, just the window's own background would change. To see which tokens a theme sets, open it in the [theme editor](/customize/theme-editor) and look for **Set**, or read its file in [BuiltInThemes](https://github.com/r3volution11/Vela-IRC/tree/main/Packages/VelaKit/Sources/VelaTheme/BuiltInThemes) on GitHub.
+:::
 
-  ```jsonc
-  "ircColors": { "1": "#1B1E2B", "2": "#6C8EEF", "4": "#FF5370" }
-  ```
+- **Chains work:** a theme can include a theme that includes another, up to 8 levels. Themes that include each other in a loop get an error.
+- **Paths work too:** a value ending in `.json` or `.jsonc` is read as a file path, relative to your Themes folder.
+- **Changing a built-in theme in place:** name your file after the built-in (for example `nord.json`), add `"include": "Nord"` and set only what you want to change. Your theme takes the built-in's place in the gallery.
+- **The theme editor merges includes.** When it opens a theme that uses `include`, it copies in the included colors, so a theme you save from the editor or export from it stands on its own.
 
-Both palettes also feed the **accent color** picker in Settings → Appearance: it offers the nick colors and mIRC colors 0–15 that work as an accent, so a theme with a few clear, distinct hues gives people more to choose from. See [Accent color](/customize/themes#accent-color).
+## Light and dark {#light-and-dark}
 
-## Checking contrast
+Every theme is either `"dark"` or `"light"`. The `type`:
 
-Vela's theme editor flags tokens with **contrast issues**. Every built-in theme meets these targets:
+- **picks the defaults** for every color you don't set, and the default nick palette (bright colors for dark backgrounds, deeper ones for light);
+- **tells macOS** whether to draw the menu bar menus, context menus, alerts, sheets, file pickers and the font and color panels light or dark. These are drawn by macOS and don't take the theme's colors;
+- **sorts the theme** into the **Dark** or **Light** filter of the gallery and the **Dark Mode theme** or **Light Mode theme** picker.
 
-- **4.5:1** for message text and other body text,
-- **3:1** for secondary text, events, badges and nick colors,
-- **2.5:1** for timestamps, placeholders and away members.
+Set it to match your backgrounds. A dark theme marked `"light"` gets light menus and defaults meant for light backgrounds.
 
-If you build Vela from source, `swift run vela-theme-tool check my-theme.json` reports the same checks from the command line.
+### Making a pair {#pairs}
 
-## Sharing your theme
+To follow your Mac between Dark Mode and Light Mode, make two themes: one of each type. For example, a light partner for Harbor:
 
-Use **Export…** in the theme editor, or just share the file. To propose a theme for Vela's built-in collection, open a [theme submission](https://github.com/r3volution11/Vela-IRC/issues/new?template=theme_submission.yml) with screenshots of all three message layouts, or send a pull request. Ports of other themes need a compatible license and attribution; see [CONTRIBUTING.md](https://github.com/r3volution11/Vela-IRC/blob/main/CONTRIBUTING.md).
+```jsonc
+{
+  "$schema": "https://raw.githubusercontent.com/r3volution11/Vela-IRC/main/schemas/vela-theme.schema.json",
+  "name": "Harbor Light",
+  "type": "light",
+  "colors": {
+    "window.background": "#F4F6F8",
+    "window.foreground": "#2B3A48",
+    "accent": "#C7701E"
+  }
+}
+```
+
+Then turn on **Match System Appearance** (in the **Theme** menu or **Settings → Appearance → System appearance**) and choose **Harbor** as the **Dark Mode theme** and **Harbor Light** as the **Light Mode theme**. You can also right-click each card in the gallery and choose **Use in Dark Mode** or **Use in Light Mode**. In settings.json, that's:
+
+```jsonc
+"appearance.followSystem": true,
+"appearance.preferredDarkTheme": "Harbor",
+"appearance.preferredLightTheme": "Harbor Light"
+```
+
+Tips for a pair:
+
+- **Keep the same hues, at different strengths.** The light theme's accent and nick colors need to be deeper to read on a light background. Vela's default light nick palette, in the [token reference](/reference/theme-tokens#nick-colors), is a good model.
+- **Start the light theme from a light theme.** `include` copies the included theme's colors, so including your dark theme in a light one brings its dark colors along. Start from Lighter or Vela Paper in the theme editor instead.
+
+## Checking contrast {#checking-contrast}
+
+The theme editor checks your theme's text against its backgrounds as you edit, using the WCAG contrast ratio (from 1:1, no contrast, to 21:1, black on white). There are three levels:
+
+| Minimum | For |
+| --- | --- |
+| **4.5:1** | Message text (also on mention and your own messages' backgrounds), links, your nick, mentions, notices, actions, errors and code; the title, sidebar, member list, message field, link preview titles and descriptions, reactions, buttons, popovers and Settings text; text on the accent. |
+| **3:1** | Secondary text: hostnames, topics, server names, section headers, events such as joins and parts, server messages, day dividers, badges, the rail, reply quotes, typing lines, link preview site names, Settings captions and every nick color. |
+| **2.5:1** | Timestamps, the message field's placeholder and members who are away. |
+
+In the [theme editor](/customize/theme-editor):
+
+- **Contrast issues** in the left column, with a count, lists every token involved in a failing check.
+- **Each failing token says what's wrong.** On a text color: "3.9:1 on chat.background, needs 4.5:1". On a background: "chat.foreground on this is 3.9:1, needs 4.5:1". Fix either color.
+- **A nick color under 3:1** gets a dot under its well; hover it for the ratio.
+
+These are warnings: a theme with contrast issues still loads and works. Every built-in theme passes every check, and a theme submitted for the built-in collection has to as well.
+
+Tips:
+
+- **Body text matters most.** `chat.foreground` on `chat.background` should be well above 4.5:1; check it on `chat.highlightBackground` (mentions) and `chat.selfMessageBackground` too.
+- **Translucent colors are measured over what's under them:** a translucent sidebar color over the sidebar, a highlight over the conversation, and so on.
+- **Watch the accent as text** on light themes, and set `accentText` to a deeper shade if links and mentions fail.
+- **Don't rely on color alone.** Vela already adds arrows to joins and parts, and bars and tints to mentions; keep those colors distinct, but not too faint.
+
+If you build Vela from source, `vela-theme-tool` runs the same checks from the command line:
+
+```sh
+cd Packages/VelaKit
+swift run vela-theme-tool check path/to/harbor.json             # failing checks only; exits 1 on failures
+swift run vela-theme-tool check --verbose path/to/harbor.json   # every check
+swift run vela-theme-tool preview path/to/harbor.json harbor.png  # render a mock window
+```
+
+## Previews are drawn for you {#previews}
+
+Vela draws your theme's preview card for you from its colors; there's nothing to make. A theme has no thumbnail or screenshot to provide, and no key for one.
+
+<Screenshot src="/screenshots/settings-themes.webp" alt="Settings → Appearance: two rows of theme cards (Solarized Light, Tokyo Night and Vela Graphite, then Vela Mist, Vela Paper and Volcano), each a miniature window in its own colors, then the System appearance section and the Make your own section with Customize…, Import Theme… and Reveal Themes Folder" caption="Every card is drawn from the theme's own colors." />
+
+Each card in **Settings → Appearance** is a miniature of Vela's window, drawn live in that theme:
+
+- **The surfaces:** the window, sidebar, title bar, conversation, message bar and field, and member list, with the dividers between them.
+- **Text, drawn as bars** in the theme's text colors: channel names (a selected channel, unread ones with a badge, and the rest), the channel name and topic, message text, timestamps, join and part lines, the message field's placeholder, and member names, including a prefix and someone away.
+- **Nicknames** in the theme's nick colors, after the readability filter.
+- **The window buttons** in the theme's error, warning and success colors.
+- **Tab stacks** in the accent, if you use tabs.
+
+**The card shows your own layout:** sidebar or tabs, your message layout, avatars, timestamps, colored nicks, the member list, the monospace font and the message box border. In other words, it's your Vela in that theme. It includes your [color overrides](/customize/settings-json#color-customizations) for the theme, such as a picked accent, and it's redrawn the moment you save the file.
+
+The same drawing is the **Live preview** in the theme editor. **Select Theme** (<kbd>⌃⌘T</kbd>) shows a strip of swatches instead: the sidebar, the conversation, the accent and the first three nick colors.
+
+A card is a summary. It doesn't show translucency, mention highlights, links, selections, link previews, the Settings window's colors or mIRC colors, so check those in the app; see [Testing your theme](#testing). If Vela can't draw a theme at all (because the theme it includes is missing, say), its card shows a warning sign instead.
+
+## Testing your theme {#testing}
+
+A theme has to work with every layout, so try yours in more than one. With your theme in use and the file open in your editor:
+
+1. **All three message layouts.** Switch between **Classic**, **Modern grouped** and **Compact columns** in **View → Message Layout**. Also try **Use a monospace font** in **Settings → Messages**, which many people pair with Classic.
+2. **The presets.** Apply **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** from **View → Presets**. Tabbed is the easiest way to check the `tab.*` colors. A preset changes your layout settings (never your theme), so if you've arranged yours by hand, keep a copy of your [settings.json](/customize/settings-json) to go back to.
+3. **The sidebar's other forms.** Collapse the sidebar to the rail with <kbd>⌃⌘S</kbd>, and try tab stacks at the top, in the title bar and at the bottom (**Settings → Layout**).
+4. **Light and dark.** If you made a pair, switch macOS between Dark Mode and Light Mode, and check that menus and alerts match each theme.
+5. **States.** Look at the selected channel, unread and mention badges, a disconnected network, a message that mentions you, your own messages, the New line, day dividers, notices, `/me` actions and errors.
+6. **Selection and hover.** Select text in a message, and hover messages and sidebar rows.
+7. **Media and IRCv3.** Look at link previews, images and videos, and, on a network that supports them, reactions, replies and typing lines.
+8. **Popovers.** Open the command palette (<kbd>⇧⌘P</kbd>) and the emoji picker.
+9. **The Settings window.** It uses the `settings.*` colors; open a few panes, including **Advanced**.
+10. **Contrast.** In the theme editor, check that **Contrast issues** is empty, or that you're happy with what's left.
+
+Layouts and presets never change your theme, and themes never change your layout, so whatever you test with, the theme file stays the same.
+
+## Importing a VS Code theme {#vs-code}
+
+Vela's themes are modeled on VS Code's, so you can also start from any VS Code color theme: choose **Theme → Import Theme…** and pick its `.json` file or a whole `.vsix` extension. Vela turns it into an ordinary theme file in your Themes folder, which you can then edit like any other.
+
+- **What carries over:** the workbench colors (editor, side bar, activity bar, title bar, inputs, buttons, badges, widgets, links and selection) become Vela's tokens, and the terminal colors become mIRC colors 0–15 and the nick palette.
+- **What doesn't:** syntax highlighting, font styles such as bold and italic, and icon themes have no place in Vela; syntax colors are only used to fill out the nick palette when the terminal colors are too few. A single `.json` file that builds on another file in its extension can't find it, so import the `.vsix` instead.
+- **Readability comes first:** faint text colors are dropped, so Vela works out readable ones, and accent-colored text is adjusted to 4.5:1.
+
+The full mapping is in [Importing VS Code themes](/customize/vs-code-themes). After importing, check **Contrast issues** in the theme editor.
+
+## Sharing and submitting {#sharing-your-theme}
+
+### Sharing a theme
+
+- **Export it** from the theme editor with **Export…**. You get a `.json` file that stands on its own, with any included theme merged in.
+- **Or share the file** from your Themes folder: right-click its card and choose **Show in Finder**. If it uses `include` with another theme of yours, share that one too, or export it from the theme editor instead.
+- **To install a theme** someone sent you, choose **Theme → Import Theme…**, or drop the file in your Themes folder. Import never replaces a theme: if you already have one with that name, the new one is named "Harbor (Imported)". To update a theme you already have, replace its file in the Themes folder.
+
+### Proposing a built-in theme
+
+To propose a theme for Vela's built-in collection, open a [theme submission](https://github.com/r3volution11/Vela-IRC/issues/new?template=theme_submission.yml) with the theme's JSON, or send a pull request. A built-in theme needs:
+
+1. **No contrast issues.** Every built-in theme passes every [check](#checking-contrast).
+2. **An `author` and a one-sentence `description`**, which appears on the [Built-in themes](/reference/built-in-themes) page.
+3. **Screenshots** of all three message layouts: Classic, Modern grouped and Compact columns.
+4. **For a port of someone else's theme, a license that allows it**, and attribution in [THEME-CREDITS.md](https://github.com/r3volution11/Vela-IRC/blob/main/docs/THEME-CREDITS.md).
+
+A pull request adds the file to `Packages/VelaKit/Sources/VelaTheme/BuiltInThemes/` and a row to the built-in themes table in [THEMES.md](https://github.com/r3volution11/Vela-IRC/blob/main/docs/THEMES.md#built-in-themes). See [CONTRIBUTING.md](https://github.com/r3volution11/Vela-IRC/blob/main/CONTRIBUTING.md).
+
+## Troubleshooting {#troubleshooting}
+
+### My theme doesn't appear {#not-in-the-gallery}
+
+- **Is it in the right folder?** Open it with **Settings → Appearance → Reveal Themes Folder**. The file has to be directly in that folder, not in a subfolder.
+- **Does it end in `.json` or `.jsonc`?** TextEdit may add `.rtf` or `.txt`. Also check that the name doesn't start with a dot.
+- **Is there an error message?** A new file with a mistake doesn't appear until it's fixed; look for "Couldn't load …" in **Settings → Appearance**.
+- **Is the gallery filtered?** Choose **All** above the gallery.
+- **Did it take a built-in's place?** A file named like a built-in theme (`nord.json`) appears under its own `name`, in place of the built-in.
+
+### Settings → Appearance says "Couldn't load my-theme.json" {#error-messages}
+
+Vela explains what's wrong, and keeps using the last version of the file that worked until you fix it. **Show in Finder** shows you the file. Common messages:
+
+| Message | Fix |
+| --- | --- |
+| The file isn't valid JSON: … around line 4, column 5. | A missing comma or quote near that spot, or curly quotes from TextEdit. |
+| The required field “type” is missing. | Add `"type": "dark"` or `"type": "light"` (and `"name"` if that's missing). |
+| “colors.accent”: “#GGG” is not a hex color (use #RGB, #RGBA, #RRGGBB or #RRGGBBAA). | Fix the color. See [Writing colors](#color-values). |
+| “type”: “dim” is not a theme type; use "dark" or "light". | Use `"dark"` or `"light"`. |
+| “ircColors.99”: IRC color indexes run from 0 to 98. | Use mIRC color numbers from 0 to 98. |
+| The included theme “Nope” wasn't found. | Check the name or id in `include`. Until then, the theme's card shows a warning sign, and if it's the theme in use, Vela shows Palenight (or Lighter, for a light theme) instead. |
+| The themes include each other in a loop: A → B → A. | Remove one of the `include`s. |
+
+A `vibrancy` value other than `"none"`, `"window"` or `"sidebar"` is an error too.
+
+### A color doesn't change {#color-doesnt-change}
+
+- **An override in settings.json wins.** Colors in [`appearance.colorCustomizations`](/customize/settings-json#color-customizations) apply on top of the theme, and so do the [accent color](/customize/themes#accent-color) and [message box border color](/customize/themes#message-box-border) you pick in **Settings → Appearance**, which are saved there. **Settings → Appearance → Details → Color overrides** counts the ones you wrote yourself. The theme editor leaves all overrides out, so a theme can look right in the editor and different after you save it. Choose **Default** in the accent and border color pickers, or remove the entries from settings.json.
+- **The token name has a typo.** Vela ignores names it doesn't know, without an error. The `$schema` line makes your editor underline them, and the [token reference](/reference/theme-tokens) has the right spelling.
+- **A more specific token is set.** If the theme, or the theme it includes, sets `chat.background`, changing `window.background` doesn't move it. Set that token too, or remove it so it follows again. See [How defaults work](#how-defaults-work).
+- **You're editing a different theme.** With **Match System Appearance** on, the theme in use depends on whether your Mac is in Dark Mode or Light Mode.
+- **Vela doesn't draw that part yet.** `window.border`, `button.hoverBackground`, `scrollbar.thumb`, `scrollbar.thumbHover` and `chat.findMatchBackground` are in the reference, but this version of Vela doesn't use them. Setting them does no harm.
+- **It's drawn by macOS.** Menus, alerts and file pickers follow only the theme's `type`.
+
+### The fonts, sizes or layout didn't change
+
+That's by design: a theme only sets colors. Change fonts and text size in **Settings → Messages**, the layout in **Settings → Layout**, or everything at once with a [preset](/guide/presets). See [Colors only, by design](#colors-only).

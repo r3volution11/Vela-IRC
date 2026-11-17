@@ -51,8 +51,9 @@ enum CatchUpActions {
         return buffer.unreadCount > 0
     }
 
-    /// Shows `buffer`'s card under its New marker and summarizes what's
-    /// new. Selects the buffer first when it isn't on screen.
+    /// Shows `buffer`'s card under its New marker (where the unread lines
+    /// start, when the marker is hidden) and summarizes what's new. Selects
+    /// the buffer first when it isn't on screen.
     static func open(_ buffer: BufferModel, session: NetworkSession, app: AppModel, store: CatchUpStore) {
         // Build the request before selecting: selecting marks the buffer
         // read, but the New marker it places covers the same lines.

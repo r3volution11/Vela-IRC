@@ -94,9 +94,15 @@ export default defineConfig({
   transformHead: (context) => buildPageHead(context, sidebar),
 
   head: [
-    ['link', { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
+    // The favicon is Glint's V and star with no tile (scripts/export-icon.sh).
+    // The SVG switches between deep blue and cyan with the browser's light or
+    // dark mode, so it comes first; the PNGs and ICO are one mid blue for
+    // browsers without SVG favicons. Each fallback states its sizes: without
+    // them, Chrome can pick the ICO over the SVG. The touch icon is the tile.
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' }],
     ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' }],
+    ['link', { rel: 'icon', type: 'image/x-icon', sizes: '16x16 32x32 48x48', href: '/favicon.ico' }],
     ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }],
     ['meta', { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#292D3E' }],
     ['meta', { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#FAFAFA' }],

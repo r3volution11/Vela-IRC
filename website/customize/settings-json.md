@@ -5,7 +5,7 @@ description: Configure Vela with a VS Code-style settings.json that keeps your c
 
 # settings.json
 
-Everything you can set in Vela's Settings window, and a little more, lives in one plain-text file, `settings.json`, just like VS Code's user settings. Edit it in any text editor and Vela applies your changes the moment you save.
+Everything you can set in Vela's Settings window, and a little more, lives in one plain-text file, `settings.json`, just like [VS Code](https://code.visualstudio.com)'s user settings. Edit it in any text editor and Vela applies your changes the moment you save.
 
 You can also edit it without leaving Vela: the [settings editor](/customize/settings-editor) in **Settings → Advanced** lists every setting with a control for each, and its **JSON** view edits the file itself, with suggestions and checks as you type.
 

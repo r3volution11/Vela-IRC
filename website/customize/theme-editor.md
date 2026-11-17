@@ -30,7 +30,7 @@ Each token shows:
 
 You only need to set a few colors. Leave a token alone and it's derived from the others: set `window.background`, `window.foreground` and `accent`, and the sidebar, member list, badges and links follow. See [How defaults and fallbacks work](/customize/creating-themes#how-defaults-work).
 
-Below the tokens are the **nick colors** (the palette nicknames are drawn from; add, remove or reset colors) and the **mIRC colors 0–15** used by colored text from other IRC clients. Right-click a color to reset it.
+Below the tokens are the **nick colors** (the palette nicknames are drawn from; add, remove or reset colors) and the **[mIRC](https://www.mirc.com) colors 0–15** used by colored text from other IRC clients. Right-click a color to reset it.
 
 ## Preview, save, export
 

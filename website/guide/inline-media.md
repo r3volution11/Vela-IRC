@@ -28,7 +28,7 @@ Pick how much a link preview shows in **Settings → Media → Link previews**:
 | --- | --- |
 | **Minimal** | One line: the site, the title and a tiny thumbnail. |
 | **Standard** (default) | The title and two lines of description beside a thumbnail. In a narrow window the thumbnail drops out rather than squeezing the text. |
-| **Large** | A full card with a longer description and a large image underneath, like Discord or Slack. |
+| **Large** | A full card with a longer description and a large image underneath, like [Discord](https://discord.com) or [Slack](https://slack.com). |
 
 <Screenshot src="/screenshots/media-link-large.webp" alt="A Large link preview: a full card with the page's image underneath" caption="Large link previews." />
 

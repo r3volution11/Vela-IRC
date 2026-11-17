@@ -137,6 +137,23 @@ struct MessagesPane: View {
                 SettingsToggle("Large emoji", detail: "Show messages that are only emoji bigger.", isOn: $settings[.chatLargeEmoji])
             }
 
+            SettingsSection(
+                "Unread messages",
+                footer: "Show newest also applies when you come back to Vela. Unread counts in the sidebar and on tabs work the same either way."
+            ) {
+                SettingsSegmentedRow(
+                    title: "When you open a channel",
+                    detail: "Where you stopped reading, or the newest messages with nothing to scroll down to.",
+                    selection: $settings[.chatOpenAt],
+                    options: [(.firstUnread, "Jump to first unread"), (.newest, "Show newest")]
+                )
+                SettingsToggle(
+                    "Show the New line",
+                    detail: "A line above the first message you haven't read. Off, messages appear just as they came in.",
+                    isOn: $settings[.chatShowUnreadMarker]
+                )
+            }
+
             typingSection
 
             SettingsSection("Memory", footer: "Older messages stay on disk and load as you scroll up.") {

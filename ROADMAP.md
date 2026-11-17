@@ -14,7 +14,7 @@
   - [x] STS
 - [x] **Storage**
   - [x] SQLite scrollback with FTS5
-  - [x] VS Code-style `settings.json` with live reload
+  - [x] [VS Code](https://code.visualstudio.com)-style `settings.json` with live reload
   - [x] Comment- and format-preserving writes to `settings.json`, with validation (unknown keys, types, ranges)
   - [x] Network configs
   - [x] Keychain secrets
@@ -29,12 +29,12 @@
 - [x] **Window**
   - [x] Fully themed custom 3-pane window shell
   - [x] Compact sidebar that collapses to a rail
-  - [x] Vivaldi-style two-level tab stacks (top / title bar / bottom, square-to-pill corners)
+  - [x] [Vivaldi](https://vivaldi.com)-style two-level tab stacks (top / title bar / bottom, square-to-pill corners)
   - [x] Member list
 - [x] **Presets:** Classic IRC, Modern Chat, Tabbed, Focus
 - [x] **Message layouts:** Classic, Modern grouped, Compact columns
 - [x] **Chat rendering**
-  - [x] mIRC formatting and colors
+  - [x] [mIRC](https://www.mirc.com) formatting and colors
   - [x] Nick colors
   - [x] Collapsed join/part
   - [x] Unread markers and day separators
@@ -48,7 +48,7 @@
 - [x] **IRCv3 chat**
   - [x] Reactions, replies, typing indicators, redaction
   - [x] `chathistory` paging
-- [ ] **Bouncers:** soju (`bouncer-networks`) and ZNC (`playback`, `self-message`)
+- [ ] **Bouncers:** [soju](https://soju.im) (`bouncer-networks`) and [ZNC](https://znc.in) (`playback`, `self-message`)
 - [x] **Settings window**
   - [x] Theme gallery
   - [x] Network editor with SASL and certificates

@@ -11,7 +11,7 @@ Start with the network's **server console**: click the network's name in the sid
 
 **TLS turned on for a plain-text port, or off for a TLS port.** This is the most common cause. Most networks use **6697 with TLS** and **6667 without**. Bouncers use whatever port their listener was configured with, and some listeners have TLS turned off. If the connection hangs and times out, try toggling **Use TLS** in the network's settings (right-click it → **Edit Network…**).
 
-**"The server's TLS certificate was rejected".** The server's certificate couldn't be verified. Check the address for typos first: certificates only match the right host name. If it's your own bouncer with a self-signed certificate (ZNC makes one by default), turn on **Allow invalid certificates** for that network only.
+**"The server's TLS certificate was rejected".** The server's certificate couldn't be verified. Check the address for typos first: certificates only match the right host name. If it's your own bouncer with a self-signed certificate ([ZNC](https://znc.in) makes one by default), turn on **Allow invalid certificates** for that network only.
 
 **ZNC rejects your password.** ZNC needs to know which user and which network you mean. As a server password, use `username/network:password`, for example `doug/libera:hunter2`; with SASL PLAIN, use `username/network` as the account. See [Connecting through a bouncer](/guide/bouncers#znc).
 
@@ -59,6 +59,7 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 - **Are enough messages new?** The button waits for 25 new messages by default (**Show the button after**). To catch up on fewer, right-click the channel and choose **Catch Me Up**.
 - **Is Offer Catch me up in busy channels on?** It controls only the button; the right-click menu and the command palette work either way.
 - **Is anything new?** The button sits on the **New** marker, so it only appears in a channel with messages you haven't read.
+- **Is the New line turned off?** With **Show the New line** off (Settings → Messages → Unread messages, or the Classic IRC preset) there's no button. Right-click the channel and choose **Catch Me Up**, or use the command palette.
 
 If a summary looks wrong, click a topic to read the messages behind it, or click **Regenerate**. Summaries can contain mistakes.
 
@@ -79,7 +80,7 @@ Vela keeps passwords, channel keys and client certificates in your login keychai
 
 ## A theme or settings.json has a mistake
 
-Vela never leaves you with a broken window. If a theme file can't be read, Vela keeps the last version that worked and explains the problem in **Settings → Appearance**.
+Vela never leaves you with a broken window. If a theme file can't be read, Vela keeps the last version that worked and explains the problem in **Settings → Appearance**. [Creating themes → Troubleshooting](/customize/creating-themes#troubleshooting) explains each message.
 
 If `settings.json` can't be read, Vela keeps your last good settings and says where the problem is in **Settings → Advanced** ("settings.json is invalid; keeping previous values. Line 3, column 3: Expected a comma."). It won't write to the file until you fix it, so nothing you typed is lost. Click **Open JSON View** to fix it right there: the [JSON view](/customize/settings-editor#problems) underlines the mistake and lists every problem, and the bottom bar says how many are left.
 

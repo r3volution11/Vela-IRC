@@ -166,6 +166,8 @@ public enum SettingsMetadata {
         "media.blurredBuffers": "Blurred Channels",
         "media.restrictToAllowed": "Only Listed Sites",
         "chat.showJoinPart": "Join/Part Messages",
+        "chat.openAt": "Open Channels At",
+        "chat.showUnreadMarker": "Show New Line",
         "intelligence.catchUp": "Catch Me Up",
         "intelligence.catchUpThreshold": "Catch Me Up After",
         "intelligence.spotlightChannels": "Channels in Spotlight",

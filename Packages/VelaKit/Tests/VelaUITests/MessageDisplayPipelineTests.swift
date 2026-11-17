@@ -32,9 +32,10 @@ struct MessageDisplayPipelineTests {
     }
 
     private func build(_ lines: [ChatLine], joinPart: JoinPartDisplay = .collapse, interval: TimeInterval = 300,
-                       marker: Date? = nil) -> [DisplayItem] {
+                       marker: Date? = nil, showsMarker: Bool = true) -> [DisplayItem] {
         var builder = MessageDisplayBuilder(options: MessageDisplayOptions(
-            joinPart: joinPart, groupingInterval: interval, unreadMarkerAfter: marker, calendar: calendar))
+            joinPart: joinPart, groupingInterval: interval, unreadMarkerAfter: marker,
+            showsUnreadMarker: showsMarker, calendar: calendar))
         builder.append(contentsOf: lines)
         return Array(builder.result)
     }
@@ -67,6 +68,66 @@ struct MessageDisplayPipelineTests {
     @Test func unreadMarkerBreaksGroups() {
         let lines = [message("a", "1", 0), message("a", "2", 1)]
         #expect(lineItems(build(lines, marker: at(0.5))).map(\.isContinuation) == [false, false])
+    }
+
+    /// `chat.showUnreadMarker` off: lines run on as they came in, exactly
+    /// as if nothing were unread.
+    @Test func hiddenMarkerLeavesNoTrace() {
+        let lines = [
+            message("a", "1", 0), message("a", "2", 1),
+            event(.join, "x", 2), event(.join, "y", 3),
+            message("b", "3", 4), message("b", "4", 5),
+        ]
+        for marker in [at(0.5), at(2.5), at(4.5), Date.distantPast] {
+            let hidden = build(lines, marker: marker, showsMarker: false)
+            #expect(!hidden.contains { $0.id == .unreadMarker })
+            #expect(hidden == build(lines), "marker at \(marker)")
+            // Drawn, the same marker splits the group or the run.
+            #expect(build(lines, marker: marker).contains { $0.id == .unreadMarker })
+        }
+        // Grouping isn't broken at the read position.
+        #expect(lineItems(build(lines, marker: at(0.5), showsMarker: false)).map(\.isContinuation) == [false, true, false, true])
+        // A membership run isn't split in two.
+        let runs = build(lines, marker: at(2.5), showsMarker: false).filter { if case .membershipRun = $0 { true } else { false } }
+        #expect(runs.count == 1)
+    }
+
+    @Test func hiddenMarkerAppendsLikeAFullBuild() {
+        let lines = (0..<40).map { message($0 % 3 == 0 ? "a" : "b", "\($0)", Double($0)) }
+        let options = MessageDisplayOptions(unreadMarkerAfter: at(20), showsUnreadMarker: false, calendar: calendar)
+        let cache = MessageDisplayCache()
+        _ = cache.items(for: Array(lines[..<25]), options: options)
+        let appended = Array(cache.items(for: lines, options: options))
+        var builder = MessageDisplayBuilder(options: options)
+        builder.append(contentsOf: lines)
+        #expect(appended == Array(builder.result))
+        #expect(cache.rebuildCount == 1)
+        // Turning the line on is an option change: one rebuild, with the marker.
+        var shown = options
+        shown.showsUnreadMarker = true
+        #expect(cache.items(for: lines, options: shown).contains(id: .unreadMarker))
+        #expect(cache.rebuildCount == 2)
+    }
+
+    /// Where the unread lines start when there's no marker row to land on.
+    @Test func firstItemAfterTheReadPosition() {
+        let lines = [
+            message("a", "1", 0), message("a", "2", 1),
+            event(.join, "x", 2), event(.part, "y", 3),
+            message("b", "3", 4),
+        ]
+        let items = DisplayItems(head: build(lines))
+        #expect(items.firstItem(after: at(0.5)) == .line(lines[1].id))
+        // Inside a collapsed run: the run, which holds the first unread event.
+        #expect(items.firstItem(after: at(2.5)) == .membershipRun(lines[2].id))
+        #expect(items.firstItem(after: at(3.5)) == .line(lines[4].id))
+        #expect(items.firstItem(after: at(4)) == nil)
+        #expect(items.firstItem(after: .distantPast) == .line(lines[0].id))
+        #expect(DisplayItems().firstItem(after: .distantPast) == nil)
+        // A new day: the line, below its divider.
+        let nextDay = [message("a", "1", 0, day: 14), message("a", "2", 0)]
+        let withDivider = DisplayItems(head: build(nextDay))
+        #expect(withDivider.firstItem(after: at(-60)) == .line(nextDay[1].id))
     }
 
     // MARK: Membership events

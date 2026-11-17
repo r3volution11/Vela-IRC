@@ -5,7 +5,7 @@ description: Run any Vela command from the keyboard with the command palette (�
 
 # Command palette & quick switcher
 
-Vela has a VS Code-style palette that floats at the top of the window. It opens in three ways:
+Vela has a [VS Code](https://code.visualstudio.com)-style palette that floats at the top of the window. It opens in three ways:
 
 | Press | To |
 | --- | --- |
@@ -17,7 +17,7 @@ Start typing to filter; matching is fuzzy, so `vl` finds `#vela`. Move with <kbd
 
 ## Go to a conversation
 
-<kbd>⌘P</kbd> (or <kbd>⌘K</kbd>, if your fingers know Slack and Discord) lists every channel, private conversation and network console, with unread and mention badges. With nothing typed, the ones you visited most recently come first.
+<kbd>⌘P</kbd> (or <kbd>⌘K</kbd>, if your fingers know [Slack](https://slack.com) and [Discord](https://discord.com)) lists every channel, private conversation and network console, with unread and mention badges. With nothing typed, the ones you visited most recently come first.
 
 Add the network's name to narrow things down: `vela libera` finds `#vela` on Libera.Chat. Type `>` to switch to commands, and <kbd>Backspace</kbd> in the empty field to switch back.
 
@@ -32,7 +32,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Tabs** | Move to Top, Move to Title Bar, Move to Bottom, Always Show Server Row |
 | **Layout** | Classic, Modern Grouped, Compact Columns |
 | **Preset** | Classic IRC, Modern Chat, Tabbed, Focus |
-| **Chat** | Toggle Timestamps, Toggle Monospace Font, Toggle Nick Colors, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages |
+| **Chat** | Toggle Timestamps, Toggle Monospace Font, Toggle Nick Colors, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages, Open Channels at Newest Messages, Show New Line |
 | **Media** | Load Previews Automatically, Toggle Link Previews, Minimal / Standard / Large Link Previews, Play Videos Inline, Compact Videos, Videos as Links, Full-Size Images, Image Thumbnails, Hide Adult Site Previews, Blur Images Until Clicked |
 | **Text** | Bigger, Smaller, Actual Size |
 | **Typing** | Check Spelling While Typing, Check Grammar, Correct Spelling Automatically, Use Text Replacements, Use Smart Quotes and Dashes, Use Writing Tools, Message Box Border: None / Subtle / Accent When Typing |

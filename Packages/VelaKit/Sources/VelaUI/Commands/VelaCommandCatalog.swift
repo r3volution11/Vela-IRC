@@ -629,6 +629,7 @@ struct VelaCommandCatalog {
         commands += presets
         commands += chatToggles
         commands += joinPartModes
+        commands += unreadCommands
         commands += mediaCommands
         commands += [textBigger, textSmaller, textActualSize]
         commands += [selectTheme, toggleFollowSystem, themeEditor, importTheme, revealThemesFolder]

@@ -41,7 +41,7 @@ Pick a **Method**:
 - **None.** Connect without logging in.
 - **SASL PLAIN (account and password).** Log in to your services account (NickServ) while connecting. Recommended for most networks. **Account** defaults to your nickname.
 - **SASL EXTERNAL (client certificate).** Log in with a TLS client certificate, also called CertFP. Choose a certificate from your Keychain or click **Import .p12…** and enter the file's password. Add the certificate's fingerprint to your services account first, and keep TLS on.
-- **Server password.** Sends a password with `PASS` when connecting. Used by ZNC and some private servers.
+- **Server password.** Sends a password with `PASS` when connecting. Used by [ZNC](https://znc.in) and some private servers.
 
 Passwords, channel keys and certificates are stored in your **macOS Keychain**. Everything else is saved to `networks.json`.
 

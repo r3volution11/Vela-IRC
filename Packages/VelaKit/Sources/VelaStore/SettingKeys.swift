@@ -23,6 +23,14 @@ public enum JoinPartDisplay: String, Codable, Sendable, CaseIterable, SettingVal
     case hide
 }
 
+/// Where a channel opens when it has messages you haven't read.
+public enum ChatOpenPosition: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// At the New line, where you stopped reading.
+    case firstUnread
+    /// At the bottom, with the newest messages in view.
+    case newest
+}
+
 /// Which clock timestamps use, unless `chat.timestampFormat` sets a
 /// custom pattern.
 public enum TimestampClock: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
@@ -203,6 +211,13 @@ extension SettingKey where Value == JoinPartDisplay {
     }
 }
 
+extension SettingKey where Value == ChatOpenPosition {
+    public static var chatOpenAt: SettingKey<ChatOpenPosition> {
+        .init("chat.openAt", default: .firstUnread,
+              summary: "Where channels with unread messages open: firstUnread (at the New line, where you stopped reading) or newest (at the bottom, so there's nothing to scroll down to). With newest, coming back to Vela also shows the newest messages.")
+    }
+}
+
 extension SettingKey where Value == TimestampClock {
     public static var chatClock: SettingKey<TimestampClock> {
         .init("chat.clock", default: .system,
@@ -264,6 +279,10 @@ extension SettingKey where Value == Bool {
     }
     public static var chatLargeEmoji: SettingKey<Bool> {
         .init("chat.largeEmoji", default: true, summary: "Show emoji-only messages larger.")
+    }
+    public static var chatShowUnreadMarker: SettingKey<Bool> {
+        .init("chat.showUnreadMarker", default: true,
+              summary: "Draw the New line above the first message you haven't read. Off shows messages just as they came in. Unread counts still work, and Catch me up is still in a channel's right-click menu and the command palette.")
     }
 }
 
@@ -506,6 +525,8 @@ public enum SettingsCatalog {
             SettingKey.chatColumnsNickWidth.descriptor,
             SettingKey.chatRenderFormatting.descriptor,
             SettingKey.chatLargeEmoji.descriptor,
+            SettingKey.chatOpenAt.descriptor,
+            SettingKey.chatShowUnreadMarker.descriptor,
             SettingKey.chatScrollbackInMemory.descriptor,
 
             SettingKey.sidebarCollapsed.descriptor,

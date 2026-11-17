@@ -18,10 +18,11 @@ import VelaTheme
 /// are built.
 ///
 /// Scrolling follows `ScrollPinning`: the list opens at the bottom (or at
-/// the unread marker) and stays pinned there — through new lines, media that
-/// loads late, reactions, resizes and style changes — until the reader
-/// scrolls up. Then nothing moves them and a "Jump to present" pill counts
-/// what's new. Sending a message always returns to the bottom.
+/// the unread marker, per `chat.openAt`; see `ListLanding`) and stays pinned
+/// there — through new lines, media that loads late, reactions, resizes and
+/// style changes — until the reader scrolls up. Then nothing moves them and
+/// a "Jump to present" pill counts what's new. Sending a message always
+/// returns to the bottom.
 ///
 /// The typing line floats over the bottom of the list; the space under the
 /// last row grows to fit it only while someone is typing (`ListEndSpacing`).
@@ -53,6 +54,7 @@ struct MessageListView: View {
             joinPart: style.joinPart,
             groupingInterval: style.groupingInterval,
             unreadMarkerAfter: buffer.unreadMarkerAfter,
+            showsUnreadMarker: style.showUnreadMarker,
             catchUpCardAfter: intelligence.catchUp.cards[buffer.id]?.anchor
         )
         let items = controller.displayCache.items(for: buffer.lines, options: options)
@@ -123,14 +125,10 @@ struct MessageListView: View {
             }
         }
         .onAppear {
-            guard items.contains(id: .unreadMarker), uiState.scrollTarget == nil else { return }
-            if let reveal = intelligence.catchUp.reveal, reveal.bufferID == buffer.id {
-                // Opened from a context menu or the palette.
-                intelligence.catchUp.revealHandled(reveal)
-                revealCatchUpCard()
-            } else {
-                landAtUnreadMarker()
-            }
+            listOpened(items)
+        }
+        .onChange(of: app.isWindowActive) { _, active in
+            if active { windowActivated() }
         }
         .overlay(alignment: .bottom) {
             // Rises from the list's bottom edge with the conversation, so
@@ -291,30 +289,70 @@ struct MessageListView: View {
         }
     }
 
-    /// Opens a buffer with unread lines at the "New" marker, a little below
-    /// the top. When everything new fits on screen this lands at the bottom
-    /// and the list stays pinned.
-    private func landAtUnreadMarker() {
+    /// The list appeared: land where `chat.openAt` says (see `ListLanding`).
+    /// It starts at the bottom, pinned.
+    private func listOpened(_ items: DisplayItems) {
+        // A jump asked for from elsewhere (a search result, a reply) wins.
+        guard uiState.scrollTarget == nil else { return }
+        let reveal = intelligence.catchUp.reveal.flatMap { $0.bufferID == buffer.id ? $0 : nil }
+        let landing = ListLanding.onOpen(
+            openAt: style.openAt,
+            revealsCatchUpCard: reveal != nil,
+            unreadTarget: ListLanding.unreadTarget(in: items, after: buffer.unreadMarkerAfter)
+        )
+        switch landing {
+        case .catchUpCard:
+            // Opened from a context menu or the palette.
+            if let reveal { intelligence.catchUp.revealHandled(reveal) }
+            revealCatchUpCard()
+        case .unread(let target):
+            landAtUnread(target)
+        case .bottom:
+            scrollToBottom()
+        case .stay:
+            break
+        }
+    }
+
+    /// Coming back to Vela: with Show newest, settle on the newest line
+    /// unless the reader scrolled up.
+    private func windowActivated() {
+        let landing = ListLanding.onWindowActivated(
+            openAt: style.openAt,
+            isPinned: controller.isPinnedToBottom,
+            isUserScrolling: controller.isUserScrolling
+        )
+        guard landing == .bottom else { return }
+        markAllSeen()
+        updatePill()
+        scrollToBottom()
+    }
+
+    /// Opens a buffer with unread lines at the "New" marker (or, with the
+    /// marker hidden, the first unread row), a little below the top. When
+    /// everything new fits on screen this lands at the bottom and the list
+    /// stays pinned.
+    private func landAtUnread(_ target: DisplayItemID) {
         controller.unpin()
         controller.beginProgrammaticScroll(for: 0.4) { follow in
             if follow { scrollToBottom() }
             updatePill()
         }
-        position.scrollTo(id: DisplayItemID.unreadMarker, anchor: UnitPoint(x: 0.5, y: 0.2))
+        position.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: 0.2))
         Task {
             // Rows above were estimated: correct once they're measured.
             // (An equal ScrollPosition is ignored, hence the nudged anchors.)
             for nudge in [0.2001, 0.2] {
                 try? await Task.sleep(for: .milliseconds(60))
                 guard !controller.isUserScrolling else { return }
-                position.scrollTo(id: DisplayItemID.unreadMarker, anchor: UnitPoint(x: 0.5, y: nudge))
+                position.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: nudge))
             }
         }
     }
 
     /// Brings the Catch me up card into view: the New marker above it (or
-    /// the card, once the marker has moved on) near the top, so the card has
-    /// room to grow beneath it.
+    /// the card, once the marker has moved on or when it's hidden) near the
+    /// top, so the card has room to grow beneath it.
     private func revealCatchUpCard() {
         guard let target = controller.displayCache.items.catchUpCardScrollTarget else { return }
         controller.unpin()

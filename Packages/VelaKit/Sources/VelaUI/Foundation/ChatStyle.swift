@@ -35,6 +35,10 @@ public struct ChatStyle: Equatable {
     public var sidebarShowUnreadCounts = true
     /// Render chat text in the monospace font (Classic preset).
     public var monospace = false
+    /// Where a channel with unread messages opens (`chat.openAt`).
+    public var openAt: ChatOpenPosition = .firstUnread
+    /// Draw the New line above the first unread message (`chat.showUnreadMarker`).
+    public var showUnreadMarker = true
 
     // Navigation
     public var navigationStyle: NavigationStyle = .sidebar
@@ -82,6 +86,8 @@ public struct ChatStyle: Equatable {
         sidebarFontSize = settings[.sidebarFontSize]
         sidebarShowUnreadCounts = settings[.sidebarShowUnreadCounts]
         monospace = settings[.chatMonospace]
+        openAt = settings[.chatOpenAt]
+        showUnreadMarker = settings[.chatShowUnreadMarker]
         navigationStyle = settings[.navigationStyle]
         tabPlacement = settings[.tabsPlacement]
         tabRoundness = settings[.tabsRoundness]

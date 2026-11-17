@@ -1,6 +1,6 @@
 ---
 title: Messages & layouts
-description: Vela's three message layouts (Classic, Modern grouped and Compact columns), fonts and spacing, timestamps, join/part display, nick colors, avatars, mIRC formatting and scrollback.
+description: Vela's three message layouts (Classic, Modern grouped and Compact columns), fonts and spacing, timestamps, join/part display, nick colors, mIRC formatting, unread messages and scrollback.
 ---
 
 # Messages & layouts
@@ -11,7 +11,7 @@ Vela can lay out a conversation three ways. Switch in **Settings → Messages**,
 
 <Screenshot src="/screenshots/layout-classic.webp" alt="The Classic layout: each message on one line, with the time and the nick in angle brackets before the text" />
 
-One line per message, `[12:01] <nick> text`, like Textual or irssi. Long messages wrap and hang under the text, clear of the timestamp column. Actions read `* nick waves`.
+One line per message, `[12:01] <nick> text`, like [Textual](https://www.textualapp.com) or [irssi](https://irssi.org). Long messages wrap and hang under the text, clear of the timestamp column. Actions read `* nick waves`.
 
 Pair it with **Monospace** (below) for a terminal feel; the **Classic IRC** [preset](/guide/presets) does exactly that.
 
@@ -19,7 +19,7 @@ Pair it with **Monospace** (below) for a terminal feel; the **Classic IRC** [pre
 
 <Screenshot src="/screenshots/preset-modern.webp" alt="The Modern grouped layout: a name and time header over consecutive messages from the same person" />
 
-Like Slack or Discord: consecutive messages from one person share a single header with their name and the time. Hover a follow-up message to see its time in the margin.
+Like [Slack](https://slack.com) or [Discord](https://discord.com): consecutive messages from one person share a single header with their name and the time. Hover a follow-up message to see its time in the margin.
 
 Messages are grouped when they arrive within **5 minutes** of each other (**Group messages within** in Settings, `chat.groupingInterval` in settings.json). Turn on **Avatars** to show initials next to each group; they're off by default.
 
@@ -27,7 +27,7 @@ Messages are grouped when they arrive within **5 minutes** of each other (**Grou
 
 <Screenshot src="/screenshots/layout-columns.webp" alt="The Compact columns layout: time, a right-aligned nick column and the message text in aligned columns" />
 
-Like WeeChat: time, a right-aligned nick, then the text, in tidy columns divided by a thin rule. Adjust the **Name column width** to fit the nicks you see most.
+Like [WeeChat](https://weechat.org): time, a right-aligned nick, then the text, in tidy columns divided by a thin rule. Adjust the **Name column width** to fit the nicks you see most.
 
 ## Text and spacing
 
@@ -61,16 +61,33 @@ The same choices are in **View → Message Layout**.
 ## Colors and formatting
 
 - **Colored nicknames** gives everyone a color from your theme's nick palette. People talking in the same channel get different colors while the palette has room, so two nicks never look alike just because their names hash alike. When someone's usual color would look like the color of a person they're talking with (orange beside red, say), they get the nearest color from the palette that's clearly different; otherwise everyone keeps their usual color. Each nick keeps its color once given, and usually has the same one in every channel. Palette colors that would read as plain text are skipped.
-- **mIRC formatting** shows bold, italic, underline, strikethrough, monospace, colors (including hex colors) and reverse text sent by other clients. Turn it off to see plain text.
+- **[mIRC](https://www.mirc.com) formatting** shows bold, italic, underline, strikethrough, monospace, colors (including hex colors) and reverse text sent by other clients. Turn it off to see plain text.
 - **Large emoji** shows messages that are only emoji at a bigger size.
 - Messages that **mention you** get a tinted background and an accent bar. See [Notifications & highlights](/guide/notifications).
 
 ## Reading a conversation
 
 - **Day dividers** ("Today", "Yesterday", "Monday, November 10") separate days.
-- A **New** marker shows where you stopped reading. In a busy channel, it offers **Catch me up**, an Apple Intelligence summary of what you missed. See [Catch me up](/guide/apple-intelligence#catch-me-up).
+- A **New** line shows where you stopped reading. In a busy channel, it offers **Catch me up**, an Apple Intelligence summary of what you missed. See [Catch me up](/guide/apple-intelligence#catch-me-up). You can turn the line off; see [Unread messages](#unread-messages).
 - When you scroll up, **Jump to present** brings you back to the newest messages, with a count of what arrived meanwhile.
 - **Right-click** a message (or hover it and click **…**) to copy its text, link or the sender's nick, message or `/whois` them, [translate it](/guide/apple-intelligence#translate-messages), or [react and reply](/guide/reactions-replies-typing). You can also select text in a message to copy part of it.
+
+## Unread messages
+
+**Settings → Messages → Unread messages** sets where channels open and whether new messages are marked.
+
+**When you open a channel**:
+
+- **Jump to first unread** (the default) opens a channel with unread messages at the New line, so you pick up where you stopped. **Jump to present** takes you down to the newest messages.
+- **Show newest** opens every channel at the bottom, with the newest messages in view: no **Jump to present** button, nothing to scroll down to. Coming back to Vela from another app also shows the newest messages, and the conversation stays at the bottom as messages arrive. If you scroll up yourself, Vela leaves you there, and **Jump to present** counts what's arriving below, like irssi's `-- more --`.
+
+**Show the New line** is on by default. Turn it off and messages appear just as they came in, with nothing marking which are new. With **Jump to first unread**, channels still open at the first message you haven't read; it just isn't marked.
+
+Either way, unread counts in the sidebar, the rail and on tabs work as usual. Without the New line, the **Catch me up** button isn't offered, because it sits on the line; right-click the channel and choose **Catch Me Up**, or use the [command palette](/guide/command-palette), instead. See [Catch me up](/guide/apple-intelligence#catch-me-up).
+
+For a classic IRC feel, where everything is simply there as it came in, choose **Show newest** and turn off the New line. The **Classic IRC** [preset](/guide/presets) does both.
+
+In settings.json these are [`chat.openAt`](/reference/settings#chat.openAt) (`"firstUnread"` or `"newest"`) and [`chat.showUnreadMarker`](/reference/settings#chat.showUnreadMarker). In the command palette, they're **Chat: Open Channels at Newest Messages** and **Chat: Show New Line**.
 
 ## Scrollback and history
 
