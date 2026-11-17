@@ -29,6 +29,8 @@ struct BufferContextMenuItems: View {
                 app.setMediaEnabled(!mediaOn, for: buffer.id)
             }
             CommandMenuToggle(VelaCommandCatalog.blurCommand(app: app, bufferID: buffer.id))
+            TranslationBufferMenuItems(buffer: buffer)
+            CatchUpBufferMenuItems(buffer: buffer, session: session)
             Divider()
             if buffer.kind == .channel {
                 if buffer.isJoined {
@@ -74,6 +76,7 @@ struct ServerContextMenuItems: View {
             app.setMediaEnabled(!mediaOn, forNetwork: session.id)
         }
         CommandMenuToggle(VelaCommandCatalog.networkBlurCommand(app: app, networkID: session.id))
+        TranslationNetworkMenuItems(session: session)
         Divider()
         Button("Edit Network…") {
             uiState.networkEditor = .existing(session.config.parentNetworkID ?? session.id)

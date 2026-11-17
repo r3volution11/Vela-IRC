@@ -119,6 +119,8 @@ function settingDefault({ rawDefault, type }) {
 const escapeHTML = (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\{\{/g, '{&#123;')
 
 function settingType({ type }) {
+  // Stored as true/false; a missing key or "system" follows macOS.
+  if (type === 'SystemFollowingBool') return 'Boolean, or <code>"system"</code> to follow macOS'
   if (enums.has(type)) return `One of ${enums.get(type).map((value) => `<code>"${value}"</code>`).join(', ')}`
   return {
     String: 'String',
@@ -149,6 +151,8 @@ const categoryNames = {
   history: 'History',
   navigation: 'Navigation',
   tabs: 'Tabs',
+  intelligence: 'Apple Intelligence',
+  translation: 'Translation',
 }
 
 /** Links other settings mentioned in a summary to their rows. */

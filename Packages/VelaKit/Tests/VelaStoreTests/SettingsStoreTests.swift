@@ -212,7 +212,7 @@ import VelaFoundation
 @Suite struct SettingsCatalogTests {
     @Test func catalogIsCompleteAndUnique() {
         let keys = SettingKey.allKnownKeys.map(\.key)
-        #expect(keys.count == 59)
+        #expect(keys.count == 69)
         #expect(Set(keys).count == keys.count)
         #expect(keys.allSatisfy { $0.contains(".") })
         #expect(SettingKey.allKnownKeys.allSatisfy { !$0.summary.isEmpty })
@@ -341,5 +341,34 @@ import VelaFoundation
         store.apply(.classic)
         #expect(store.matchingPreset()?.id == "classic")
         #expect(store[.chatMonospace])
+    }
+}
+
+@Suite("Settings that follow macOS")
+struct SystemFollowingBoolTests {
+    @Test func decodesBooleansAndSystem() {
+        #expect(SystemFollowingBool(settingJSON: .bool(true)) == .on)
+        #expect(SystemFollowingBool(settingJSON: .bool(false)) == .off)
+        #expect(SystemFollowingBool(settingJSON: .string("system")) == .system)
+        #expect(SystemFollowingBool(settingJSON: .string("on")) == nil)
+        #expect(SystemFollowingBool(settingJSON: .number(1)) == nil)
+    }
+
+    @Test func encodesAsBooleans() {
+        #expect(SystemFollowingBool.on.settingJSON == .bool(true))
+        #expect(SystemFollowingBool.off.settingJSON == .bool(false))
+        #expect(SystemFollowingBool.system.settingJSON == .string("system"))
+    }
+
+    @Test func resolvesAgainstMacOS() {
+        #expect(SystemFollowingBool.system.resolved(system: true))
+        #expect(!SystemFollowingBool.system.resolved(system: false))
+        #expect(SystemFollowingBool.on.resolved(system: false))
+        #expect(!SystemFollowingBool.off.resolved(system: true))
+    }
+
+    @Test func missingKeyFollowsMacOS() {
+        #expect(SettingKey.inputAutocorrect.value(from: nil) == .system)
+        #expect(SettingKey.inputAutocorrect.value(from: .string("nonsense")) == .system)
     }
 }

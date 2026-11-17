@@ -619,6 +619,10 @@ struct VelaCommandCatalog {
         commands += [previousBuffer, nextBuffer, previousUnread, nextUnread, focusInput]
         commands.append(markAllAsRead)
         commands += selectedBufferCommands
+        commands += typingCommands
+        commands += catchUpCommands
+        commands += translationCommands
+        commands += accentCommands
         commands += [addNetwork, joinChannel, sortChannels]
         for session in app.sessions {
             commands += networkCommands(for: session)

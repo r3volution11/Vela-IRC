@@ -46,6 +46,7 @@ struct VelaCommand: Identifiable {
         case tabs = "Tabs"
         case text = "Text"
         case theme = "Theme"
+        case typing = "Typing"
         case view = "View"
     }
 

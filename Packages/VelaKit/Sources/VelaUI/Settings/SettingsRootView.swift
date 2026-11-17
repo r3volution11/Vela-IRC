@@ -15,6 +15,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
     case media
     case networks
     case notifications
+    case intelligence
     case advanced
 
     var id: String { rawValue }
@@ -28,6 +29,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
         case .media: "Media"
         case .networks: "Networks"
         case .notifications: "Notifications"
+        case .intelligence: "Apple Intelligence"
         case .advanced: "Advanced"
         }
     }
@@ -41,6 +43,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
         case .media: "photo.on.rectangle.angled"
         case .networks: "network"
         case .notifications: "bell.badge"
+        case .intelligence: "apple.intelligence"
         case .advanced: "gearshape.2"
         }
     }
@@ -49,7 +52,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
     static let groups: [[SettingsPane]] = [
         [.presets],
         [.appearance, .layout, .messages, .media],
-        [.networks, .notifications],
+        [.networks, .notifications, .intelligence],
         [.advanced],
     ]
 }
@@ -97,6 +100,7 @@ struct SettingsRootView: View {
         case .media: MediaPane()
         case .networks: NetworksPane()
         case .notifications: NotificationsPane()
+        case .intelligence: IntelligencePane(navigate: navigate)
         case .advanced: AdvancedPane()
         }
     }

@@ -25,6 +25,18 @@ nonisolated public struct BufferID: Hashable, Sendable, Codable, CustomStringCon
 
     /// `"<network-uuid>/<folded-name>"`, used by settings such as `media.disabledBuffers`.
     public var description: String { "\(networkID.uuidString)/\(foldedName)" }
+
+    /// Parses ``description``. The UUID is case-insensitive; the name is
+    /// everything after the first `/` (it may contain `/` itself) and must
+    /// not be empty.
+    public init?(string: String) {
+        guard let slash = string.firstIndex(of: "/"),
+              let networkID = UUID(uuidString: String(string[..<slash]))
+        else { return nil }
+        let name = String(string[string.index(after: slash)...])
+        guard !name.isEmpty else { return nil }
+        self.init(networkID: networkID, foldedName: name)
+    }
 }
 
 nonisolated public enum BufferKind: String, Sendable, Codable {

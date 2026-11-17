@@ -37,6 +37,13 @@ public final class AppModel: SessionHost {
     public private(set) var sessions: [NetworkSession] = []
     public private(set) var selectedBufferID: BufferID?
     public private(set) var lastError: String?
+    /// True once ``start()`` has restored saved networks and buffers (at
+    /// once in demo mode). Siri and Shortcuts wait for it with ``ready()``.
+    public private(set) var isReady = false
+    /// The latest request to bring a buffer on screen from outside the
+    /// window (Siri, Shortcuts, Spotlight). The scene layer selects it,
+    /// activates Vela and reopens the main window if it was closed.
+    public private(set) var showRequest: ShowRequest?
 
     /// Whether the main window is key; drives unread counting.
     public var isWindowActive = true {
@@ -54,6 +61,7 @@ public final class AppModel: SessionHost {
     @ObservationIgnored private var workspaceObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var sessionsConnectedBeforeSleep: Set<UUID> = []
     @ObservationIgnored private var started = false
+    @ObservationIgnored private var readyWaiters: [CheckedContinuation<Void, Never>] = []
     /// `siteRules` parsed from the settings value it was parsed from.
     @ObservationIgnored private var siteRulesCache: (source: [String: JSONValue], rules: SiteRules)?
 
@@ -122,7 +130,10 @@ public final class AppModel: SessionHost {
         if settings[.mediaFilterAdultSites] {
             Task.detached(priority: .utility) { AdultSiteList.warmUp() }
         }
-        guard !isDemo else { return }
+        guard !isDemo else {
+            markReady()
+            return
+        }
 
         for config in networkStore.networks {
             let session = makeSession(for: config)
@@ -131,6 +142,7 @@ public final class AppModel: SessionHost {
         Task {
             for session in sessions { await session.restoreBuffers() }
             restoreSelection()
+            markReady()
             for session in sessions where session.config.autoConnect && !isOrphanedChild(session) {
                 session.connect()
             }
@@ -138,6 +150,29 @@ public final class AppModel: SessionHost {
         observeSystem()
         pruneHistoryIfNeeded()
         prunePreviewCache()
+    }
+
+    /// Starts Vela if it hasn't been (Siri and Shortcuts can run before the
+    /// main window appears) and waits until saved networks and buffers are
+    /// restored. Connections may still be in progress.
+    public func ready() async {
+        start()
+        guard !isReady else { return }
+        await withCheckedContinuation { readyWaiters.append($0) }
+    }
+
+    private func markReady() {
+        guard !isReady else { return }
+        isReady = true
+        let waiters = readyWaiters
+        readyWaiters.removeAll()
+        for waiter in waiters { waiter.resume() }
+    }
+
+    /// Asks the scene layer to show `bufferID`: select it, activate Vela,
+    /// and open the main window if it's closed.
+    public func requestShow(_ bufferID: BufferID) {
+        showRequest = ShowRequest(bufferID: bufferID)
     }
 
     // MARK: SessionHost
@@ -606,6 +641,27 @@ public final class AppModel: SessionHost {
         updateBufferScopeList(.mediaBlurredBuffers) { $0.set(blurred, forNetwork: networkID) }
     }
 
+    // MARK: Translation per buffer
+
+    /// Whether messages in `bufferID` (or its network) are translated
+    /// automatically (`translation.autoTranslate`).
+    public func isAutoTranslated(_ bufferID: BufferID) -> Bool {
+        BufferScopeList(settings[.translationAutoTranslate]).contains(bufferID)
+    }
+
+    public func isAutoTranslated(network networkID: UUID) -> Bool {
+        BufferScopeList(settings[.translationAutoTranslate]).containsNetwork(networkID)
+    }
+
+    /// A buffer stays translated while its whole network is.
+    public func setAutoTranslated(_ enabled: Bool, for bufferID: BufferID) {
+        updateBufferScopeList(.translationAutoTranslate) { $0.set(enabled, for: bufferID) }
+    }
+
+    public func setAutoTranslated(_ enabled: Bool, network networkID: UUID) {
+        updateBufferScopeList(.translationAutoTranslate) { $0.set(enabled, forNetwork: networkID) }
+    }
+
     private func updateBufferScopeList(_ key: SettingKey<[String]>, _ update: (inout BufferScopeList) -> Void) {
         var list = BufferScopeList(settings[key])
         update(&list)
@@ -719,4 +775,11 @@ nonisolated struct DatabasePreviewCache: LinkPreviewCache {
         guard let data = try? encoder.encode(preview) else { return }
         try? await database.storePreviewJSON(data, url: preview.url.absoluteString)
     }
+}
+
+/// A request to bring a buffer on screen; see ``AppModel/requestShow(_:)``.
+/// Each request is distinct, so asking twice for the same buffer still fires.
+nonisolated public struct ShowRequest: Equatable, Sendable {
+    public let id = UUID()
+    public let bufferID: BufferID
 }

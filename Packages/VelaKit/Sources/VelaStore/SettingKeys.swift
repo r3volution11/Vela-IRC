@@ -60,6 +60,57 @@ public enum InlineImageSize: String, Codable, Sendable, CaseIterable, SettingVal
     case thumbnail
 }
 
+/// A switch that follows a macOS setting until it's changed in Vela, such
+/// as autocorrect following System Settings → Keyboard → Text Input.
+///
+/// In settings.json it's `true` or `false` once set; a missing key (or
+/// `"system"`) follows macOS. `on`/`off` never appear in the file.
+public enum SystemFollowingBool: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// Follow the macOS setting.
+    case system
+    case on
+    case off
+
+    public init?(settingJSON: JSONValue) {
+        if let value = settingJSON.boolValue {
+            self = value ? .on : .off
+        } else if settingJSON.stringValue == Self.system.rawValue {
+            self = .system
+        } else {
+            return nil
+        }
+    }
+
+    public var settingJSON: JSONValue {
+        switch self {
+        case .system: .string(Self.system.rawValue)
+        case .on: .bool(true)
+        case .off: .bool(false)
+        }
+    }
+
+    public static var settingSchema: JSONValue {
+        .object(["oneOf": .array([
+            .object(["type": "boolean"]),
+            .object(["type": "string", "enum": .array([.string(Self.system.rawValue)])]),
+        ])])
+    }
+
+    /// The effective value, given what macOS currently says.
+    public func resolved(system: Bool) -> Bool {
+        switch self {
+        case .system: system
+        case .on: true
+        case .off: false
+        }
+    }
+
+    /// The explicit value for `enabled`.
+    public init(_ enabled: Bool) {
+        self = enabled ? .on : .off
+    }
+}
+
 // MARK: Appearance
 
 extension SettingKey where Value == String {
@@ -297,6 +348,13 @@ extension SettingKey where Value == Bool {
     public static var inputSpellCheck: SettingKey<Bool> {
         .init("input.spellCheck", default: true, summary: "Check spelling while typing.")
     }
+    public static var inputGrammarCheck: SettingKey<Bool> {
+        .init("input.grammarCheck", default: false, summary: "Check grammar while typing (underlines only; nothing is changed for you).")
+    }
+    public static var inputWritingTools: SettingKey<Bool> {
+        .init("input.writingTools", default: true,
+              summary: "Offer Apple Intelligence Writing Tools (Proofread, Rewrite) in the message box, where Apple Intelligence is available.")
+    }
     public static var connectionAutoReconnect: SettingKey<Bool> {
         .init("connection.autoReconnect", default: true, summary: "Reconnect automatically after a dropped connection.")
     }
@@ -313,6 +371,57 @@ extension SettingKey where Value == Int {
     public static var historyRetentionDays: SettingKey<Int> {
         .init("history.retentionDays", default: 0,
               summary: "Delete stored messages older than this many days. 0 keeps history forever.")
+    }
+}
+
+// MARK: Typing (follow macOS)
+
+extension SettingKey where Value == SystemFollowingBool {
+    public static var inputAutocorrect: SettingKey<SystemFollowingBool> {
+        .init("input.autocorrect", default: .system,
+              summary: "Correct spelling automatically. true or false, or \"system\" to follow System Settings → Keyboard. Commands, nicks, channel names, links and code are never changed.")
+    }
+    public static var inputTextReplacements: SettingKey<SystemFollowingBool> {
+        .init("input.textReplacements", default: .system,
+              summary: "Use your macOS text replacements. true or false, or \"system\" to follow System Settings → Keyboard.")
+    }
+    public static var inputSmartPunctuation: SettingKey<SystemFollowingBool> {
+        .init("input.smartPunctuation", default: .system,
+              summary: "Use smart quotes and dashes. true or false, or \"system\" to follow System Settings → Keyboard. Commands and code are never changed.")
+    }
+}
+
+// MARK: Apple Intelligence & translation
+
+extension SettingKey where Value == Bool {
+    public static var intelligenceCatchUp: SettingKey<Bool> {
+        .init("intelligence.catchUp", default: true,
+              summary: "Offer \"Catch me up\": an on-device Apple Intelligence summary of what you missed in a busy channel.")
+    }
+    public static var intelligenceSpotlightChannels: SettingKey<Bool> {
+        .init("intelligence.spotlightChannels", default: true,
+              summary: "Show your channels and conversations (names only, never messages) in Spotlight and to Siri.")
+    }
+}
+
+extension SettingKey where Value == Int {
+    public static var intelligenceCatchUpThreshold: SettingKey<Int> {
+        .init("intelligence.catchUpThreshold", default: 25,
+              summary: "Show the Catch me up button when a channel has at least this many new messages.")
+    }
+}
+
+extension SettingKey where Value == String {
+    public static var translationLanguage: SettingKey<String> {
+        .init("translation.language", default: "",
+              summary: "Language to translate messages into, as a language code such as \"en\" or \"pt-BR\". Empty uses your Mac's language.")
+    }
+}
+
+extension SettingKey where Value == [String] {
+    public static var translationAutoTranslate: SettingKey<[String]> {
+        .init("translation.autoTranslate", default: [],
+              summary: "Buffers whose messages in other languages are translated automatically: \"<networkUUID>/<foldedName>\" or \"<networkUUID>/*\".")
     }
 }
 
@@ -380,8 +489,19 @@ public enum SettingsCatalog {
             SettingKey.highlightWords.descriptor,
             SettingKey.inputSendTypingIndicators.descriptor,
             SettingKey.inputSpellCheck.descriptor,
+            SettingKey.inputGrammarCheck.descriptor,
+            SettingKey.inputAutocorrect.descriptor,
+            SettingKey.inputTextReplacements.descriptor,
+            SettingKey.inputSmartPunctuation.descriptor,
+            SettingKey.inputWritingTools.descriptor,
             SettingKey.connectionAutoReconnect.descriptor,
             SettingKey.historyRetentionDays.descriptor,
+
+            SettingKey.intelligenceCatchUp.descriptor,
+            SettingKey.intelligenceCatchUpThreshold.descriptor,
+            SettingKey.intelligenceSpotlightChannels.descriptor,
+            SettingKey.translationLanguage.descriptor,
+            SettingKey.translationAutoTranslate.descriptor,
         ] + NavigationSettingsCatalog.descriptors
     }
 

@@ -24,23 +24,23 @@ enum SnapshotSupport {
 
     private static var window: NSWindow?
 
-    static func scheduleOffscreenCapture(app: AppModel, themeStore: ThemeStore, uiState: UIState) {
+    static func scheduleOffscreenCapture(app: AppModel, themeStore: ThemeStore, uiState: UIState, services: SceneServices) {
         NotificationCenter.default.addObserver(
             forName: NSApplication.didFinishLaunchingNotification,
             object: nil,
             queue: .main
         ) { _ in
             MainActor.assumeIsolated {
-                run(app: app, themeStore: themeStore, uiState: uiState)
+                run(app: app, themeStore: themeStore, uiState: uiState, services: services)
             }
         }
     }
 
-    private static func run(app: AppModel, themeStore: ThemeStore, uiState: UIState) {
+    private static func run(app: AppModel, themeStore: ThemeStore, uiState: UIState, services: SceneServices) {
         guard let path = outputPath else { return }
         let size = value(after: "--size").flatMap(parseSize) ?? CGSize(width: 1280, height: 800)
         let root = MainWindowView()
-            .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, isPrimary: true)
+            .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: true)
             .frame(width: size.width, height: size.height)
         let hosting = NSHostingView(rootView: AnyView(root))
         let window = NSWindow(

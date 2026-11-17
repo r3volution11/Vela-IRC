@@ -20,6 +20,8 @@ let package = Package(
         .library(name: "VelaTheme", targets: ["VelaTheme"]),
         .library(name: "VelaMedia", targets: ["VelaMedia"]),
         .library(name: "VelaStore", targets: ["VelaStore"]),
+        .library(name: "VelaIntelligence", targets: ["VelaIntelligence"]),
+        .library(name: "VelaIntents", targets: ["VelaIntents"]),
         .executable(name: "vela-theme-tool", targets: ["VelaThemeTool"]),
     ],
     dependencies: [
@@ -65,10 +67,25 @@ let package = Package(
             swiftSettings: mainActorByDefault
         ),
 
+        // Apple Intelligence on this Mac: Catch me up summaries (Foundation
+        // Models), message translation (Translation, NaturalLanguage).
+        .target(
+            name: "VelaIntelligence",
+            dependencies: ["VelaCore", "VelaIRC", "VelaStore", "VelaFoundation"],
+            swiftSettings: mainActorByDefault
+        ),
+
+        // Siri, Shortcuts and Spotlight: App Intents and entities.
+        .target(
+            name: "VelaIntents",
+            dependencies: ["VelaCore", "VelaIntelligence", "VelaStore"],
+            swiftSettings: mainActorByDefault
+        ),
+
         // SwiftUI views and scenes.
         .target(
             name: "VelaUI",
-            dependencies: ["VelaCore", "VelaTheme", "VelaMedia", "VelaIRC", "VelaStore"],
+            dependencies: ["VelaCore", "VelaTheme", "VelaMedia", "VelaIRC", "VelaStore", "VelaIntelligence", "VelaIntents"],
             swiftSettings: mainActorByDefault
         ),
 
@@ -89,6 +106,16 @@ let package = Package(
             resources: [.copy("Fixtures")]
         ),
         .testTarget(name: "VelaCoreTests", dependencies: ["VelaCore", "VelaIRC"]),
+        .testTarget(
+            name: "VelaIntelligenceTests",
+            dependencies: ["VelaIntelligence", "VelaCore"],
+            swiftSettings: mainActorByDefault
+        ),
+        .testTarget(
+            name: "VelaIntentsTests",
+            dependencies: ["VelaIntents", "VelaCore", "VelaStore"],
+            swiftSettings: mainActorByDefault
+        ),
         .testTarget(
             name: "VelaUITests",
             dependencies: ["VelaUI", "VelaCore", "VelaStore", "VelaTheme", "VelaIRC"],

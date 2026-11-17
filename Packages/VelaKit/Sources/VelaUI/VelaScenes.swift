@@ -2,9 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import AppIntents
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaStore
 import VelaTheme
 
@@ -13,6 +15,7 @@ public struct VelaScenes: Scene {
     @State private var app: AppModel
     @State private var themeStore: ThemeStore
     @State private var uiState: UIState
+    @State private var services: SceneServices
 
     public init() {
         // Vela opens no documents. Without this, AppKit treats launch
@@ -28,18 +31,24 @@ public struct VelaScenes: Scene {
         }
         let themeStore = ThemeStore(userThemesDirectory: AppPaths.themesDirectory)
         let uiState = UIState()
+        let services = SceneServices(intelligence: demo ? .demo() : .live())
+        // Siri, Shortcuts and Spotlight run App Intents in this process;
+        // they reach the same model and services through dependencies.
+        AppDependencyManager.shared.add(dependency: app)
+        AppDependencyManager.shared.add(dependency: services.intelligence)
         if SnapshotSupport.isActive {
-            SnapshotSupport.scheduleOffscreenCapture(app: app, themeStore: themeStore, uiState: uiState)
+            SnapshotSupport.scheduleOffscreenCapture(app: app, themeStore: themeStore, uiState: uiState, services: services)
         }
         _app = State(initialValue: app)
         _themeStore = State(initialValue: themeStore)
         _uiState = State(initialValue: uiState)
+        _services = State(initialValue: services)
     }
 
     public var body: some Scene {
         Window("Vela", id: WindowID.main) {
             MainWindowView()
-                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, isPrimary: true)
+                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: true)
         }
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified(showsTitle: false))
@@ -55,14 +64,14 @@ public struct VelaScenes: Scene {
 
         Settings {
             SettingsRootView()
-                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, isPrimary: false)
+                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
         }
         .defaultSize(width: 820, height: 600)
         .windowResizability(.contentMinSize)
 
         Window("Theme Editor", id: WindowID.themeEditor) {
             ThemeEditorView()
-                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, isPrimary: false)
+                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
         }
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified(showsTitle: false))
@@ -79,8 +88,19 @@ public enum WindowID {
 
 extension View {
     /// Injects the shared models, the resolved theme and the chat style.
-    func velaEnvironment(app: AppModel, themeStore: ThemeStore, uiState: UIState, isPrimary: Bool) -> some View {
-        modifier(VelaEnvironmentModifier(app: app, themeStore: themeStore, uiState: uiState, isPrimary: isPrimary))
+    func velaEnvironment(app: AppModel, themeStore: ThemeStore, uiState: UIState, services: SceneServices, isPrimary: Bool) -> some View {
+        modifier(VelaEnvironmentModifier(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: isPrimary))
+    }
+}
+
+/// App-wide services shared by every scene, beyond the core models.
+@MainActor
+final class SceneServices {
+    let intelligence: IntelligenceServices
+    let translations = TranslationStore()
+
+    init(intelligence: IntelligenceServices) {
+        self.intelligence = intelligence
     }
 }
 
@@ -88,6 +108,7 @@ private struct VelaEnvironmentModifier: ViewModifier {
     let app: AppModel
     let themeStore: ThemeStore
     let uiState: UIState
+    let services: SceneServices
     let isPrimary: Bool
 
     /// Bumped when macOS's locale changes (such as the 24-hour time switch
@@ -101,6 +122,8 @@ private struct VelaEnvironmentModifier: ViewModifier {
             .environment(app)
             .environment(themeStore)
             .environment(uiState)
+            .environment(services.intelligence)
+            .environment(services.translations)
             .environment(\.theme, theme)
             .environment(\.chatStyle, ChatStyle(settings: app.settings))
             .onReceive(
