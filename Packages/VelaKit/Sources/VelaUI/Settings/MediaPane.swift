@@ -96,7 +96,7 @@ struct MediaPane: View {
                 )
                 .disabled(showsThumbnails)
                 .opacity(showsThumbnails ? 0.5 : 1)
-                SettingsRow("Largest image to load automatically", detail: "Bigger images show a placeholder you can click.", labelsControl: true) {
+                SettingsRow("Largest image to load automatically", detail: "Bigger images show a link to open them in your browser instead.", labelsControl: true) {
                     HStack(spacing: 6) {
                         Stepper(value: $settings[.mediaMaxImageSizeMB], in: 1...100, step: 1) {
                             Text("\(Int(settings[.mediaMaxImageSizeMB])) MB")

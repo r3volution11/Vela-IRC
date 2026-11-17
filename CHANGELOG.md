@@ -15,9 +15,31 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **12-hour or 24-hour timestamps.** Settings → Messages → Timestamps has a **Clock** choice (System, 12-hour, 24-hour) and a **Show seconds** switch; a custom Unicode date pattern is still available under **Custom format**. New settings: `chat.clock` and `chat.timestampSeconds`.
   - System is the default and follows your Mac's 24-hour time setting, even when you change it while Vela is running. Timestamps were always 24-hour before, so on a Mac set to 12-hour time they now read like 2:47 PM.
   - `chat.timestampFormat` is now empty by default and only holds a custom pattern. A format chosen in 0.1.0 is kept as your custom format.
+- **Videos you can expand.** Settings → Media → **Videos** chooses how YouTube, Vimeo, Twitch and Streamable links and video files show: **Player** (the default: a large thumbnail whose player loads in place when you press ▶), **Compact** (one line; ▶ opens the player underneath) or **Off** (a link preview). New setting: `media.videos`.
+  - **Expand** a playing video to fill the window. It keeps playing; Esc, a click outside it or **Return** puts it back. The player's own full-screen button still works.
+  - One video plays at a time. Videos pause when you scroll them out of view or switch conversations, and stay where they were; press play to resume.
+  - Players are bigger: up to 560 points wide (was 480).
+  - Command palette: **Media: Play Videos Inline**, **Compact Videos** and **Videos as Links**.
+- **Link previews in three sizes:** **Minimal** (one line), **Standard** (the new default: the title and two lines of description beside a thumbnail) and **Large** (the full card). Images get their own **Full size** or **Thumbnail** choice. New settings: `media.linkPreviewSize` and `media.imageSize`; palette commands **Media: Minimal / Standard / Large Link Previews**, **Full-Size Images** and **Image Thumbnails**.
+- **Hide previews of adult sites**, on by default. Links stay clickable, but Vela fetches nothing from the site. New setting: `media.filterAdultSites`; palette command **Media: Hide Adult Site Previews**.
+  - Sites are checked on your Mac, never online, against a list of about 42,000 domains bundled with Vela (from [Sinfonietta/hostfiles](https://github.com/Sinfonietta/hostfiles), MIT license) and refreshed with each release, plus the `.xxx`, `.porn`, `.adult` and `.sex` domains.
+  - Pages that label themselves adult (the RTA label or a `rating` meta tag) are caught too, as are links that redirect to a listed site.
+- **Blocked previews explain themselves.** A quiet chip says why ("Adult site · preview blocked", "Blocked site", "Not on your allowed sites") and offers **Show once** and **Always allow**, or **Unblock** for a site you blocked.
+- **Site rules.** Settings → Media → **Site rules** sets a site to **Everything**, **Text only** (titles and descriptions, no images or players) or **Nothing** (Vela never contacts it). New setting: `media.siteRules`.
+  - The most specific rule wins, so a rule for `i.example.com` beats one for `example.com`. A video site's rule covers its short links and thumbnails: a `youtube.com` rule covers `youtu.be`.
+  - Right-click any preview for **Block Previews from ‹site›** or **Previews from ‹site›** (Default, Everything, Text Only, Nothing).
+- **Blur images until clicked**, everywhere (Settings → Media → Restrictions) or per channel or network (right-click it and choose **Blur Images**). Images, link preview images, video thumbnails and video stills show "Click to show"; right-click revealed media to **Blur Again**. New settings: `media.blurImages` and `media.blurredBuffers`; palette commands **Media: Blur Images Until Clicked** and **Buffer: Blur Images**.
 
 ### Changed
 
+- **Media settings changed, and yours are upgraded automatically** the first time the new version starts:
+  - `media.presentation` and `media.loadVideoEmbeds` are replaced by `media.linkPreviewSize`, `media.videos` and `media.imageSize`. `"compact"` becomes Minimal links, Compact videos and Thumbnail images, and `media.loadVideoEmbeds: false` becomes `media.videos: "off"`.
+  - `media.blockedDomains` and `media.allowedDomains` become `media.siteRules` entries: blocked domains are set to Nothing and allowed domains to Everything. **Allowed sites now also get past the adult-site filter.**
+  - `media.restrictToAllowed` (**Only load previews from sites listed here**) now lets through sites set to Everything or Text only.
+  - If you used the Classic IRC or Focus preset, you keep it, with its new media settings.
+- **Link previews are Standard size by default**, smaller than the old full card. Choose **Large** in Settings → Media for the old look.
+- **Presets set the new media settings.** Classic IRC: Minimal links, Compact videos and Thumbnail images, so videos get a one-line row with ▶ instead of a title line. Modern Chat and Tabbed: Standard, Player and Full size. Focus: Minimal, Player and Thumbnail, so videos now get a full player.
+- In the command palette, **Toggle Inline Images** is now **Load Previews Automatically**, which is what it always did. **Use Full Previews** and **Use Compact Previews** are replaced by the size commands above.
 - **Nick colors stay apart.** People talking in the same channel get different colors while the theme's palette has room; before, two nicks whose names hashed alike shared a color. Colors that merely look alike (orange beside red) are kept apart too, using the nearest clearly different color from the theme's palette, but only when a clearly different one is free. A nick keeps its color once given and usually has the same one everywhere. Palette colors too close to the message text (or under 3:1 against the background) are no longer used, so a colored nick never reads as plain text.
 
 ### Fixed
@@ -25,6 +47,10 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - The **New** unread marker now appears while the window is in the background, and messages you've already seen no longer appear below it.
 - Messages no longer appear twice after reconnecting to a ZNC bouncer. ZNC replays its buffer without message IDs, and those copies were shown and stored next to the originals; copies already stored are removed on first launch.
 - Dragging a tab in the title bar no longer starts moving the window partway through.
+- With **Load previews automatically** off, previews no longer appear without a click.
+- Unblocking a site takes effect immediately, instead of after up to 15 minutes.
+- Cached link previews older than 30 days are deleted when Vela starts, so the cache no longer grows forever.
+- A playing video no longer reloads when its message is redrawn (it keeps playing) or when you scroll it away and back (it waits, paused, where you left it).
 
 ## 0.1.0 - 2026-11-16
 

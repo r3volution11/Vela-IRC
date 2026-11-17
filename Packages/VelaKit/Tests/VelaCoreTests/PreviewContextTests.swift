@@ -104,6 +104,25 @@ struct PreviewContextTests {
         #expect(try makeApp().previewContext(for: nil).policy.extraAdultDomains.isEmpty)
     }
 
+    /// The demo's #media links to an adult and a blocked site, and
+    /// #vela-offtopic is blurred (for the website's screenshots).
+    @Test func demoShowsEachRestriction() throws {
+        let app = AppModel.demo()
+        let libera = try #require(app.sessions.first)
+        let media = try #require(libera.buffer(named: "#media"))
+        let offtopic = try #require(libera.buffer(named: "#vela-offtopic"))
+        let vela = try #require(libera.buffer(named: "#vela"))
+        #expect(app.previewContext(for: offtopic.id).blurImages)
+        #expect(!app.previewContext(for: media.id).blurImages)
+        #expect(!app.previewContext(for: vela.id).blurImages)
+
+        let policy = app.previewContext(for: media.id).policy
+        let blocked = try #require(URL(string: "https://blocked.example/free-gift-card"))
+        let adult = try #require(URL(string: "https://nsfw.example/gallery/2291"))
+        #expect(policy.verdict(for: blocked) == .blocked(SiteBlock(reason: .userBlocked, domain: "blocked.example")))
+        #expect(policy.verdict(for: adult) == .blocked(SiteBlock(reason: .adultSite, domain: "nsfw.example")))
+    }
+
     @Test func disabledBufferTurnsAutoLoadOff() throws {
         let app = try makeApp()
         let other = BufferID(networkID: UUID(), foldedName: "#vela")

@@ -10,7 +10,9 @@ import VelaTheme
 /// An image posted in chat, sized to fit the column and
 /// `chatStyle.maxImageHeight` (or an ~80 pt thumbnail in compact mode).
 /// Animated GIF/APNG/WebP play inline; with Reduce Motion they show the first
-/// frame and a play button. Clicking opens the full-size viewer.
+/// frame and a play button. Clicking opens the full-size viewer. An image
+/// over `media.maxImageSizeMB` (or one that fails) shows a chip saying so,
+/// e.g. "Image larger than 10 MB", that opens the link in the browser.
 ///
 /// While the link is blurred (`\.embedBlur`) only the image's size is read,
 /// for its frame; it is decoded (and animated) once the user reveals it.
@@ -43,7 +45,8 @@ struct InlineImageView: View {
 
     @State private var still: CGImage?
     @State private var pixelSize: CGSize?
-    @State private var failed: Bool
+    /// Why the image shows a chip instead (too large, or it didn't load).
+    @State private var failure: ImageLoadFailure?
     @State private var isAnimated = false
     @State private var player = AnimatedImagePlayer()
     @State private var hovering = false
@@ -71,7 +74,10 @@ struct InlineImageView: View {
         self.onHide = onHide
         let memory = EmbedMemory.shared
         _pixelSize = State(initialValue: memory.pixelSize(for: imageURL, policy: policy))
-        _failed = State(initialValue: memory.failedImages.value(for: imageURL) ?? false)
+        // A too-large image gets another try once the size limit is raised.
+        _failure = State(initialValue: memory.failedImages.value(for: imageURL).flatMap {
+            $0.persists(under: policy) ? $0 : nil
+        })
         _still = State(initialValue: EmbedImagePipeline.memoizedStill(
             imageURL, maxPixelSize: Self.pixelBudget(compact: compact, maxImageHeight: maxImageHeight), policy: policy
         ))
@@ -94,7 +100,7 @@ struct InlineImageView: View {
     private var cornerRadius: CGFloat { compact ? 6 : 8 }
 
     private var shouldAnimate: Bool {
-        guard isAnimated, !failed, !blur.isBlurred else { return false }
+        guard isAnimated, failure == nil, !blur.isBlurred else { return false }
         if let userPlayback { return userPlayback }
         if reduceMotion { return false }
         return compact ? hovering : true
@@ -102,12 +108,14 @@ struct InlineImageView: View {
 
     var body: some View {
         Group {
-            if failed {
+            if let failure {
+                // "Image larger than 10 MB · upload.wikimedia.org · Open"
                 EmbedChip(
-                    systemImage: "exclamationmark.triangle.fill",
-                    title: "Couldn't load image",
+                    systemImage: failure.systemImage,
+                    title: failure.title,
                     detail: EmbedActions.displayHost(linkURL),
-                    isError: true,
+                    isError: failure.isError,
+                    actionTitle: "Open",
                     help: "Open \(linkURL.absoluteString) in your browser"
                 ) {
                     EmbedActions.open(linkURL)
@@ -229,7 +237,10 @@ struct InlineImageView: View {
     }
 
     private func load() async {
-        guard !failed else { return }
+        if let failure {
+            guard !failure.persists(under: policy) else { return }
+            self.failure = nil
+        }
         let hadStill = still != nil
         do {
             if blur.isBlurred {
@@ -261,8 +272,9 @@ struct InlineImageView: View {
             onBlocked?(block)
         } catch {
             guard !Task.isCancelled, !(error is CancellationError) else { return }
-            EmbedMemory.shared.failedImages.insert(true, for: imageURL)
-            failed = true
+            let failure = ImageLoadFailure(error, limitBytes: policy.maxImageBytes)
+            EmbedMemory.shared.failedImages.insert(failure, for: imageURL)
+            self.failure = failure
         }
     }
 

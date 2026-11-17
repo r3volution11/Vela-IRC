@@ -35,7 +35,7 @@ Settings (<kbd>⌘,</kbd>) has eight panes:
 | **Appearance** | The theme gallery, light/dark matching, the theme editor and theme import. |
 | **Layout** | Sidebar or tabs, tab placement and roundness, sidebar and member list sizes. |
 | **Messages** | Message layout, fonts, spacing, timestamps, join/part display, nick colors and avatars. |
-| **Media** | Inline images, link cards, video players, size limits and domain lists. |
+| **Media** | Link preview size, video players, images, the adult-site filter, blurring and site rules. |
 | **Networks** | Add, edit, connect and remove networks and bouncers. |
 | **Notifications** | Highlights, private messages, sounds and your highlight words. |
 | **Advanced** | Typing indicators, spell checking, reconnecting, history, and every setting in one searchable list. |

@@ -8,8 +8,8 @@
 #   website/scripts/screenshots.sh build/Vela.app theme-nord home-palenight
 #                                                   # only the named shots
 #
-# Needs cwebp (`brew install webp`) and network access: the demo's #vela
-# channel shows a GIF and a link card that load from the web.
+# Needs cwebp (`brew install webp`) and network access: the demo's #vela and
+# #media channels show images, videos and link cards that load from the web.
 set -euo pipefail
 
 root="${0:A:h:h:h}"          # repository root
@@ -39,13 +39,16 @@ app="${app:A}"
 mkdir -p "$out"
 
 # shot <name> <window size> <output width> [demo args…]
-# Remote media in the demo needs a few seconds, hence --snapshot-delay 8.
+# Shows #vela unless the demo args --select another buffer. Remote media in
+# the demo needs a few seconds, hence --snapshot-delay 8.
 shot() {
   local name=$1 size=$2 width=$3
   shift 3
   if (( ${#only} )) && (( ! ${only[(Ie)$name]} )); then return; fi
+  local select=(--select "#vela")
+  (( ${argv[(Ie)--select]} )) && select=()
   "$root/scripts/demo-screenshot.sh" "$app" "$work/$name.png" \
-    --size "$size" --snapshot-delay 8 --select "#vela" "$@" >/dev/null
+    --size "$size" --snapshot-delay 8 "${select[@]}" "$@" >/dev/null
   sips -Z "$width" "$work/$name.png" >/dev/null
   cwebp -quiet -q 82 -m 6 -sharp_yuv "$work/$name.png" -o "$out/$name.webp"
   printf '%-28s %s\n' "$name.webp" "$(du -h "$out/$name.webp" | cut -f1)"
@@ -70,9 +73,22 @@ shot tabs-bottom    1280x800 1400 --theme Palenight --preset tabbed --set tabs.p
 shot tabs-square    1280x800 1400 --theme Palenight --preset tabbed --set tabs.roundness=0
 shot tabs-pill      1280x800 1400 --theme Palenight --preset tabbed --set tabs.roundness=1
 
-# The collapsed sidebar (rail) and compact media.
+# The collapsed sidebar (rail).
 shot sidebar-rail   1280x800 1400 --theme Palenight --preset modern --set sidebar.collapsed=true
-shot media-compact  1280x800 1400 --theme Palenight --preset modern --set media.presentation=compact
+
+# Inline media. media-compact is #vela with every preview at its smallest;
+# the rest show the demo's #media channel (a Vimeo video, an ESO article and
+# links to an adult and a blocked site) or its blurred #vela-offtopic.
+shot media-compact        1280x800 1400 --theme Palenight --preset modern \
+  --set media.linkPreviewSize=minimal --set media.videos=compact --set media.imageSize=thumbnail
+shot media-link-standard  1280x800 1400 --theme Palenight --preset modern --select "#media"
+shot media-link-large     1280x800 1400 --theme Palenight --preset modern --select "#media" \
+  --set media.linkPreviewSize=large
+shot media-videos-compact 1280x800 1400 --theme Palenight --preset modern --select "#media" \
+  --set media.videos=compact
+shot media-restrictions   1280x800 1400 --theme Palenight --preset modern --select "#media" \
+  --set media.blurImages=true
+shot media-blur           1280x800 1400 --theme Palenight --preset modern --select "#vela-offtopic"
 
 # One shot per built-in theme, for the theme gallery.
 themes=(

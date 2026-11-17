@@ -28,8 +28,9 @@ Start with the network's **server console**: click the network's name in the sid
 Check these, roughly in order:
 
 - **Is media off for this channel?** Look at the picture icon in the channel header, or right-click the channel. See [Inline media & privacy](/guide/inline-media#per-channel).
-- **Settings → Media.** Is **Load previews automatically** on? If it's off, click a link's **Load preview** button instead. **Link cards** and **Video players** can also be off on their own.
-- **Domain lists.** Is the site in **Blocked domains**, or is **Only load media from allowed domains** on?
+- **Settings → Media.** Is **Load previews automatically** on? If it's off, click a link's **Load preview** button instead. **Show link previews** can also be off on its own, and with **Videos** set to **Off** there's no player.
+- **A blocked preview.** A small chip such as "Adult site · preview blocked" or "Blocked site" says why; click **Show once** or **Always allow**. See [Blocked previews](/guide/inline-media#blocked-previews).
+- **Site rules.** Does **Settings → Media → Site rules** set the site to **Nothing** or **Text only**, or is **Only load previews from sites listed here** on? See [Site rules](/guide/inline-media#site-rules).
 - **Image size.** Images larger than the limit (10 MB by default) show a placeholder you can click.
 - **Local addresses.** Vela never previews links to `localhost`, private IP addresses or `.local` names.
 - **The site itself.** Some sites block automated requests or need a login, so there's nothing to show. A failed preview is retried after a while.

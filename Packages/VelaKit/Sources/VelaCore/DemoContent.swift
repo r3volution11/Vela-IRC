@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import Foundation
+import VelaFoundation
 import VelaIRC
 import VelaStore
 
@@ -20,6 +21,19 @@ enum DemoContent {
         oftc.connectionState = .disconnected
 
         app.installDemoSessions([libera, oftc, soju])
+        applyDemoMediaSettings(app, libera: libera)
+    }
+
+    /// Demo-only media settings (written to the demo's throwaway settings
+    /// file; `--set` can still override them): a site rule that blocks
+    /// `blocked.example`, linked in #media, and #vela-offtopic blurred.
+    /// `nsfw.example`, also linked in #media, is a demo-only adult domain
+    /// (`AppModel.previewContext(for:)`).
+    private static func applyDemoMediaSettings(_ app: AppModel, libera: NetworkSession) {
+        app.settings[.mediaSiteRules] = ["blocked.example": .string("block")]
+        if let offtopic = libera.buffer(named: "#vela-offtopic") {
+            app.settings[.mediaBlurredBuffers] = [offtopic.id.description]
+        }
     }
 
     private static func makeSession(name: String, host: String, nick: String) -> NetworkSession {
@@ -143,6 +157,8 @@ enum DemoContent {
         macdev.unreadCount = 2
         macdev.highlightCount = 0
 
+        populateMedia(session)
+
         let query = session.ensureBuffer(name: "marisol", kind: .query, persist: false)
         query.insertSorted([
             say("marisol", "hey! do you have a minute to look at the theme credits doc?", 15),
@@ -151,6 +167,49 @@ enum DemoContent {
         ])
         query.unreadCount = 1
         query.highlightCount = 1
+    }
+
+    /// #media shows each kind of preview: a video player, an adult site's
+    /// chip, a blocked site's chip (`applyDemoMediaSettings`) and, last so
+    /// it's in view, a link card.
+    /// #vela-offtopic is blurred, so its photo shows blurred until clicked.
+    /// The video, article and photo are real and load when shown.
+    private static func populateMedia(_ session: NetworkSession) {
+        let media = session.ensureBuffer(name: "#media", kind: .channel, persist: false)
+        media.topic = "Inline media testing · cards, players, site rules · keep it SFW"
+        media.topicSetBy = "kenji"
+        members([
+            ("~", "doug"), ("@", "kenji"), ("+", "ada"), ("+", "theo"),
+            ("", "marisol"), ("", "nadia"), ("", "wren"),
+        ], in: media, session: session)
+        media.insertSorted([
+            event(.join, "nadia", "nadia (nadia@user/nadia) joined #media", 75),
+            say("kenji", "preview sizes are split up now: links, videos and images each get their own setting", 52),
+            say("ada", "same bunny as in #vela, but on Vimeo this time https://vimeo.com/1084537", 48, msgid: "demo-media-vimeo"),
+            say("kenji", "▶ swaps the player in right there, and Expand fills the window", 47),
+            say("wren", "a random nick just PMed me this, no idea what it is https://nsfw.example/gallery/2291", 30),
+            say("doug", "the adult filter caught it before anything was fetched 👌", 29, isSelf: true),
+            say("kenji", "and the spam domain from yesterday is back https://blocked.example/free-gift-card", 14),
+            say("doug", "I added a site rule for that one, so it stays a chip", 13, isSelf: true),
+            say("theo", "something nicer: ESO imaged a star cluster in Vela, so obviously I have to post it https://www.eso.org/public/news/eso2503/", 6, msgid: "demo-media-eso"),
+            say("marisol", "link cards come in Minimal, Standard and Large now. Standard is the new default", 5),
+        ])
+        media.setReaction(msgid: "demo-media-eso", nick: "nadia", emoji: "🔭", active: true)
+        media.setReaction(msgid: "demo-media-eso", nick: "ada", emoji: "🔭", active: true)
+        media.setReaction(msgid: "demo-media-vimeo", nick: "wren", emoji: "🐰", active: true)
+
+        let offtopic = session.ensureBuffer(name: "#vela-offtopic", kind: .channel, persist: false)
+        offtopic.topic = "Off-topic chat for #vela · be nice"
+        members([("@", "marisol"), ("", "doug"), ("", "lukas"), ("", "priya"), ("", "wren")], in: offtopic, session: session)
+        offtopic.insertSorted([
+            event(.join, "lukas", "lukas (lukas@user/lukas) joined #vela-offtopic", 70),
+            say("wren", "is it just me or is everyone in #vela talking about themes today", 66),
+            say("marisol", "it's theme week, every week", 65),
+            say("priya", "anyone else up late for the geomagnetic storm alerts?", 54),
+            say("lukas", "clouds here. found this on Commons instead https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Aurora_borealis_over_Eielson_Air_Force_Base%2C_Alaska.jpg/1280px-Aurora_borealis_over_Eielson_Air_Force_Base%2C_Alaska.jpg", 52),
+            say("wren", "ok I need to move north", 50),
+            say("priya", "the colours on that one 😍", 49),
+        ])
     }
 
     private static func populateOFTC(_ session: NetworkSession) {

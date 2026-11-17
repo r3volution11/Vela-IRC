@@ -13,25 +13,25 @@ Apply one from **Settings → Presets**, the **View → Presets** menu, or the [
 
 <Screenshot src="/screenshots/preset-classic.webp" alt="The Classic IRC preset: a sidebar and one-line monospace messages" />
 
-Sidebar tree, one-line messages in a monospace font, dense spacing and compact link titles. Feels like Textual or irssi. Join and part messages are shown individually, and video links show a title line instead of a player.
+Sidebar tree, one-line messages in a monospace font, dense spacing, minimal link previews and image thumbnails. Feels like Textual or irssi. Join and part messages are shown individually, and videos get a one-line row whose player opens underneath when you press ▶.
 
 ## Modern Chat
 
 <Screenshot src="/screenshots/preset-modern.webp" alt="The Modern Chat preset: a sidebar, grouped messages and full inline media" />
 
-Sidebar with grouped messages (one name header per run of messages) and full inline media: large images, link cards and video players. Joins and parts are collapsed into one line.
+Sidebar with grouped messages (one name header per run of messages) and full inline media: full-size images, standard link previews and video players. Joins and parts are collapsed into one line.
 
 ## Tabbed
 
 <Screenshot src="/screenshots/preset-tabbed.webp" alt="The Tabbed preset: rounded tab stacks across the top instead of a sidebar" />
 
-[Tab stacks](/guide/tab-stacks) across the top instead of a sidebar, grouped messages and rounded tabs, with the member list hidden. Great for one network and a few channels.
+[Tab stacks](/guide/tab-stacks) across the top instead of a sidebar, grouped messages and rounded tabs, with the member list hidden and the same media as Modern Chat. Great for one network and a few channels.
 
 ## Focus
 
 <Screenshot src="/screenshots/preset-focus.webp" alt="The Focus preset: pill tabs in the title bar and compact columns" />
 
-Pill tabs in the title bar, compact columns, no avatars or join/part noise, the member list hidden and compact previews. Maximum text, minimum chrome.
+Pill tabs in the title bar, compact columns, no avatars or join/part noise, and the member list hidden. Link previews are minimal and images are thumbnails, but videos still get a full player. Maximum text, minimum chrome.
 
 ## What each preset sets
 

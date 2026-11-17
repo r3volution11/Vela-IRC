@@ -140,6 +140,8 @@ struct BlurCommandTests {
 
     @Test func bufferCommandTogglesThatBuffer() {
         let app = AppModel.demo()
+        // The demo blurs #vela-offtopic; start from an empty list.
+        app.settings[.mediaBlurredBuffers] = []
         let network = UUID()
         let channel = BufferID(networkID: network, foldedName: "#vela")
         let command = VelaCommandCatalog.blurCommand(app: app, bufferID: channel)

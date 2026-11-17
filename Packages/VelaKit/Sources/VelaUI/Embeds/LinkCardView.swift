@@ -54,9 +54,12 @@ struct LinkCardView: View {
         self.animateAppearance = animateAppearance
         self.onHide = onHide
         let imageURL = Self.imageURL(of: preview, policy: policy, showsImages: showsImages)
-        let known = imageURL.flatMap { preview.imageSize ?? EmbedMemory.shared.pixelSize(for: $0, policy: policy) }
+        let known = imageURL.flatMap { url in
+            (preview.imageSize ?? EmbedMemory.shared.pixelSize(for: url, policy: policy))
+                .map { LetterboxedThumbnail.pictureSize(url: url, pixelSize: $0) }
+        }
         _imagePixelSize = State(initialValue: known)
-        _thumbnailFailed = State(initialValue: imageURL.flatMap { EmbedMemory.shared.failedImages.peek($0) } ?? false)
+        _thumbnailFailed = State(initialValue: imageURL.flatMap { EmbedMemory.shared.failedImages.peek($0) } != nil)
     }
 
     /// The page image, unless images are off for this link or its host
@@ -102,14 +105,16 @@ struct LinkCardView: View {
             // Learn the image's shape when the page didn't declare it (or
             // images just became allowed for a card that had none). Only the
             // Large card lays out by it.
+            // A video thumbnail's baked-in black bars don't count: the card
+            // draws the picture without them (`RemoteImageView`).
             guard imagePixelSize == nil, size == .large, let url = imageURL else { return }
             if let declared = preview.imageSize {
-                imagePixelSize = declared
+                imagePixelSize = LetterboxedThumbnail.pictureSize(url: url, pixelSize: declared)
                 return
             }
             guard let loaded = try? await ImageLoader.shared.load(url, policy: policy) else { return }
             EmbedMemory.shared.remember(pixelSize: loaded.pixelSize, for: url)
-            imagePixelSize = loaded.pixelSize
+            imagePixelSize = LetterboxedThumbnail.pictureSize(url: url, pixelSize: loaded.pixelSize)
         }
     }
 
@@ -160,7 +165,7 @@ struct LinkCardView: View {
             maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: StandardCardLayout.thumbnailSize.width * 2),
             policy: policy,
             onFailure: {
-                EmbedMemory.shared.failedImages.insert(true, for: url)
+                EmbedMemory.shared.failedImages.insert(.unavailable, for: url)
                 thumbnailFailed = true
             }
         ) {

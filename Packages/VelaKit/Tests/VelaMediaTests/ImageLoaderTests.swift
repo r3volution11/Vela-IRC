@@ -238,11 +238,11 @@ import UniformTypeIdentifiers
     @Test func inspectEnforcesPixelBudgets() throws {
         // Scaled-down stand-ins for decompression bombs: small files, many pixels.
         let still = try TestImages.png(width: 100, height: 100)
-        #expect(throws: MediaError.tooLarge) { try ImageLoader.inspect(still, maxPixelArea: 9_999) }
+        #expect(throws: MediaError.tooManyPixels) { try ImageLoader.inspect(still, maxPixelArea: 9_999) }
         #expect(try ImageLoader.inspect(still, maxPixelArea: 10_000).frameCount == 1)
 
         let animated = try TestImages.animatedGIF(width: 50, height: 50)
-        #expect(throws: MediaError.tooLarge) {
+        #expect(throws: MediaError.tooManyPixels) {
             try ImageLoader.inspect(animated, maxPixelArea: 1_000_000, maxAnimatedPixelArea: 2_000)
         }
         #expect(ImageLoader.maxAnimatedPixelArea < ImageLoader.maxPixelArea)

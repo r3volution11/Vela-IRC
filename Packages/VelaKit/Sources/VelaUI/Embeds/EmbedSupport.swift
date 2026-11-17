@@ -81,9 +81,9 @@ final class EmbedMemory {
     private var stills = MemoCache<StillImageKey, CGImage>(countLimit: 400, costLimit: 96 * 1024 * 1024)
     /// Pixel sizes of images seen so far, to reserve their space up front.
     private var pixelSizes = MemoCache<URL, CGSize>(countLimit: 2_000)
-    /// Images that failed to load, so a re-created row shows its error chip
-    /// immediately instead of flashing a placeholder.
-    var failedImages = MemoCache<URL, Bool>(countLimit: 500)
+    /// Images that failed to load, and why, so a re-created row shows its
+    /// chip immediately instead of flashing a placeholder.
+    var failedImages = MemoCache<URL, ImageLoadFailure>(countLimit: 500)
     /// The site block a link's last fetch failed with (a redirect into a
     /// blocked site), so a re-created row shows its chip on the first frame.
     /// `PreviewDecider` ignores it once the block is lifted.
@@ -150,6 +150,15 @@ enum EmbedImagePipeline {
         EmbedMemory.shared.still(StillImageKey(url: url, maxPixelSize: maxPixelSize), policy: policy)
     }
 
+    /// `image` (decoded from `url`) without the black bars baked into
+    /// letterboxed video thumbnails (`LetterboxedThumbnail`), for views that
+    /// fill or fit a frame with it. Other images are returned as they are.
+    static func trimmingLetterbox(_ image: CGImage, of url: URL) -> CGImage {
+        guard let rect = LetterboxedThumbnail.pictureRect(url: url, pixelWidth: image.width, pixelHeight: image.height)
+        else { return image }
+        return image.cropping(to: rect) ?? image
+    }
+
     /// Pixel budget for an image drawn at most `points` wide/high on a Retina display.
     static func pixelBudget(forPoints points: CGFloat) -> Int {
         Int((points * 2).rounded(.up))
@@ -157,7 +166,8 @@ enum EmbedImagePipeline {
 }
 
 /// A remote image (thumbnail, favicon) loaded through `ImageLoader` with the
-/// media policy, drawn with `placeholder` until it arrives.
+/// media policy, drawn with `placeholder` until it arrives. A video
+/// thumbnail with black bars baked in is drawn without them.
 struct RemoteImageView<Placeholder: View>: View {
     let url: URL
     let maxPixelSize: Int
@@ -187,7 +197,8 @@ struct RemoteImageView<Placeholder: View>: View {
         self.onLoad = onLoad
         self.onFailure = onFailure
         self.placeholder = placeholder
-        _image = State(initialValue: EmbedImagePipeline.memoizedStill(url, maxPixelSize: maxPixelSize, policy: policy))
+        _image = State(initialValue: EmbedImagePipeline.memoizedStill(url, maxPixelSize: maxPixelSize, policy: policy)
+            .map { EmbedImagePipeline.trimmingLetterbox($0, of: url) })
     }
 
     private struct LoadKey: Equatable {
@@ -223,8 +234,8 @@ struct RemoteImageView<Placeholder: View>: View {
             // Failures keep the placeholder; thumbnails and favicons are optional.
             do {
                 let result = try await EmbedImagePipeline.still(url, maxPixelSize: maxPixelSize, policy: policy)
-                image = result.image
-                onLoad?(result.info.pixelSize)
+                image = EmbedImagePipeline.trimmingLetterbox(result.image, of: url)
+                onLoad?(LetterboxedThumbnail.pictureSize(url: url, pixelSize: result.info.pixelSize))
             } catch {
                 guard !Task.isCancelled, !(error is CancellationError) else { return }
                 onFailure?()
@@ -434,6 +445,8 @@ struct EmbedChip: View {
     let title: String
     var detail: String?
     var isError = false
+    /// What clicking does, shown last like a link (e.g. "Open").
+    var actionTitle: String?
     var help: String?
     let action: () -> Void
 
@@ -445,13 +458,26 @@ struct EmbedChip: View {
                 Image(systemName: systemImage)
                     .font(.system(size: max(9, style.fontSize - 3), weight: .semibold))
                     .foregroundStyle(theme[isError ? ThemeKey.chatError : ThemeKey.embedSiteName])
+                // With an action word, the title only states what happened
+                // (like `BlockedPreviewChip`); the action stands out instead.
                 Text(title)
-                    .foregroundStyle(theme[isError ? ThemeKey.chatError : ThemeKey.embedTitle])
+                    .foregroundStyle(theme[
+                        isError ? ThemeKey.chatError : actionTitle == nil ? ThemeKey.embedTitle : ThemeKey.embedDescription
+                    ])
                 if let detail {
                     Text(detail)
                         .foregroundStyle(theme[ThemeKey.embedSiteName])
                         .lineLimit(1)
                         .truncationMode(.middle)
+                }
+                if let actionTitle {
+                    Text(actionTitle)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(theme[ThemeKey.embedTitle])
+                        .underline(hovering)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.leading, 4)
                 }
             }
             .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
@@ -467,6 +493,54 @@ struct EmbedChip: View {
         .onHover { hovering = $0 }
         .help(help ?? title)
         .accessibilityLabel(detail.map { "\(title), \($0)" } ?? title)
+        .accessibilityHint(actionTitle != nil ? help ?? "" : "")
+    }
+}
+
+/// Why an image couldn't be shown, as its chip says.
+enum ImageLoadFailure: Hashable {
+    /// Bigger than the `media.maxImageSizeMB` limit it was loaded under.
+    case tooLarge(limitBytes: Int)
+    /// More pixels than Vela decodes, however small the file.
+    case tooManyPixels
+    /// It couldn't be downloaded or decoded.
+    case unavailable
+
+    /// The failure `error` means for an image loaded with a `limitBytes` cap.
+    init(_ error: any Error, limitBytes: Int) {
+        switch error as? MediaError {
+        case .tooLarge: self = .tooLarge(limitBytes: limitBytes)
+        case .tooManyPixels: self = .tooManyPixels
+        default: self = .unavailable
+        }
+    }
+
+    /// Whether loading under `policy` would fail the same way. A raised
+    /// size limit gives a too-large image another try.
+    func persists(under policy: MediaPolicy) -> Bool {
+        if case .tooLarge(let limit) = self { return policy.maxImageBytes <= limit }
+        return true
+    }
+
+    var title: String {
+        switch self {
+        case .tooLarge(let limit): "Image larger than \(Self.megabytes(limit))"
+        case .tooManyPixels: "Image too large to show inline"
+        case .unavailable: "Couldn't load image"
+        }
+    }
+
+    var systemImage: String {
+        self == .unavailable ? "exclamationmark.triangle.fill" : "photo"
+    }
+
+    var isError: Bool { self == .unavailable }
+
+    /// `bytes` in (binary) megabytes as the setting shows them: "10 MB", "2.5 MB".
+    static func megabytes(_ bytes: Int) -> String {
+        let value = Double(bytes) / (1024 * 1024)
+        if abs(value - value.rounded()) < 0.05 { return "\(Int(value.rounded())) MB" }
+        return String(format: "%.1f MB", value)
     }
 }
 

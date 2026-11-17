@@ -188,7 +188,8 @@ nonisolated enum BlurredMedia {
     /// is decoded) and softens it.
     @MainActor static func standIn(for url: URL, policy: MediaPolicy) async throws -> CGImage? {
         if let memoized = memoized(url, policy: policy) { return memoized }
-        let tiny = try await EmbedImagePipeline.still(url, maxPixelSize: pixelSize, policy: policy).image
+        let still = try await EmbedImagePipeline.still(url, maxPixelSize: pixelSize, policy: policy).image
+        let tiny = EmbedImagePipeline.trimmingLetterbox(still, of: url)
         guard let softened = await soften(tiny) else { return nil }
         memo.insert(softened, for: url)
         return softened

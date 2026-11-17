@@ -33,16 +33,16 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Layout** | Classic, Modern Grouped, Compact Columns |
 | **Preset** | Classic IRC, Modern Chat, Tabbed, Focus |
 | **Chat** | Toggle Timestamps, Toggle Monospace Font, Toggle Nick Colors, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages |
-| **Media** | Toggle Inline Images, Toggle Link Previews, Use Full Previews, Use Compact Previews |
+| **Media** | Load Previews Automatically, Toggle Link Previews, Minimal / Standard / Large Link Previews, Play Videos Inline, Compact Videos, Videos as Links, Full-Size Images, Image Thumbnails, Hide Adult Site Previews, Blur Images Until Clicked |
 | **Text** | Bigger, Smaller, Actual Size |
 | **Theme** | Select Theme…, Toggle Match System Appearance, Open Theme Editor, Import Theme…, Reveal Themes Folder |
 | **Settings** | Open Settings, Open settings.json |
 | **Go** | Go to Conversation…, Previous / Next Conversation, Previous / Next Unread, Focus Input |
-| **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Close |
+| **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Close |
 | **Channel** | Join…, Leave _#channel_ |
 | **Network** | Add Network…, Sort Channels A–Z (for the network you're in), and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |
 
-Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, and "alphabetical" finds Sort Channels A–Z.
+Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, "nsfw" finds Hide Adult Site Previews, and "alphabetical" finds Sort Channels A–Z.
 
 ## Select a theme
 

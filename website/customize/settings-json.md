@@ -26,6 +26,7 @@ It opens in your default editor for JSON files. The file is at:
 - **Changes in either direction are live.** Saving the file updates Vela immediately, and changes you make in Settings are written back to the file.
 - **Mistakes are safe.** If the file doesn't parse (say, a missing comma), Vela keeps your last good settings, shows the problem in **Settings → Advanced**, and won't overwrite the file until you fix it.
 - **Unknown keys are kept**, so a setting from a newer version of Vela survives a trip through an older one.
+- **Replaced settings are upgraded.** When a newer Vela replaces a setting (`media.blockedDomains` became `media.siteRules`, for example), it converts your value when it starts and removes the old key.
 
 ::: warning Comments are not preserved
 When Vela writes the file (after you change something in Settings), it rewrites it neatly formatted with sorted keys, and **comments are dropped**. Keep notes elsewhere if they matter to you.
@@ -52,8 +53,11 @@ When Vela writes the file (after you change something in Settings), it rewrites 
   "chat.clock": "24h",
   "chat.timestampSeconds": true,
 
-  // No media from this site
-  "media.blockedDomains": ["example.com"]
+  // Previews per site: "block" (nothing), "textOnly" or "allow" (everything)
+  "media.siteRules": {
+    "example.com": "block",
+    "news.example": "textOnly"
+  }
 }
 ```
 

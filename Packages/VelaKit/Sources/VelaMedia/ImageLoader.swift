@@ -96,8 +96,9 @@ public actor ImageLoader {
     /// Downloads (or returns from memory) the image at `url`.
     ///
     /// Throws `MediaError.tooLarge` if the body exceeds `maxBytes` (checked
-    /// against Content-Length up front and while streaming) or the pixel
-    /// budget, `MediaError.unsupportedContent` if ImageIO cannot read it.
+    /// against Content-Length up front and while streaming),
+    /// `MediaError.tooManyPixels` if the image exceeds the pixel budget, and
+    /// `MediaError.unsupportedContent` if ImageIO cannot read it.
     /// The caller is responsible for checking `MediaPolicy.allowsImage(_:)`,
     /// or can use `load(_:policy:)`.
     public func load(_ url: URL, maxBytes: Int) async throws -> LoadedImage {
@@ -249,7 +250,7 @@ public actor ImageLoader {
 
         let area = width.multipliedReportingOverflow(by: height)
         let limit = frameCount > 1 ? maxAnimatedPixelArea : maxPixelArea
-        guard !area.overflow, area.partialValue <= limit else { throw MediaError.tooLarge }
+        guard !area.overflow, area.partialValue <= limit else { throw MediaError.tooManyPixels }
 
         // EXIF orientations 5–8 rotate by 90°.
         let orientation = (properties[kCGImagePropertyOrientation] as? NSNumber)?.intValue ?? 1

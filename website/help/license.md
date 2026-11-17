@@ -21,6 +21,7 @@ The source code is at [github.com/r3volution11/Vela-IRC](https://github.com/r3vo
 | --- | --- |
 | [GRDB.swift](https://github.com/groue/GRDB.swift), for the local message database | MIT |
 | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation), for importing `.vsix` theme extensions | MIT |
+| [Sinfonietta/hostfiles](https://github.com/Sinfonietta/hostfiles) `pornography-hosts`, the bundled list behind [Hide previews of adult sites](/guide/inline-media#adult-sites) | MIT |
 
 ## Theme credits {#theme-credits}
 

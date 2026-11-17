@@ -19,7 +19,7 @@ Vela only makes connections for things you've set up or turned on:
 
 Vela never fetches previews from your local network (`localhost`, private IP addresses, `.local` names), so a link in a channel can't make your Mac probe your router or other devices.
 
-**You're in control of previews.** Turn them off, make them click-to-load, disable them per channel, or allow only domains you trust. See [Inline media & privacy](/guide/inline-media#controlling-media).
+**You're in control of previews.** Turn them off, make them click-to-load, disable them per channel, hide adult sites, blur images until clicked, or set rules for individual sites. See [Inline media & privacy](/guide/inline-media#controlling-media).
 
 ## What other IRC users can see
 
@@ -34,7 +34,7 @@ This is how IRC works in any client, but it's worth knowing:
 Everything stays on your Mac, inside Vela's sandbox container:
 
 - **Message history** in a local database, kept forever unless you set **Settings → Advanced → Keep messages**.
-- **Link previews** you've loaded, cached for a week.
+- **Link previews** you've loaded. Page previews are refreshed after a week, and cached previews older than 30 days are deleted when Vela starts.
 - **Settings, networks and themes** as plain files you can read.
 - **Passwords, channel keys and client certificates** in your macOS Keychain, never in plain files.
 

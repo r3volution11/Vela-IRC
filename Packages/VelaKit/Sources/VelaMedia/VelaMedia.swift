@@ -27,8 +27,12 @@ public enum MediaError: Error, Sendable, Hashable {
     case blockedByPolicy
     /// The URL (or a redirect target) is on a site the `MediaPolicy` blocks.
     case siteBlocked(SiteBlock)
-    /// The response is larger than the allowed byte or pixel budget.
+    /// The response is larger than the allowed byte budget
+    /// (`MediaPolicy.maxImageBytes` for images).
     case tooLarge
+    /// The image has more pixels than Vela decodes (`ImageLoader.maxPixelArea`,
+    /// `maxAnimatedPixelArea`), however small the file.
+    case tooManyPixels
     /// The response is not something that can be previewed (e.g. a PDF,
     /// or bytes that ImageIO cannot decode).
     case unsupportedContent

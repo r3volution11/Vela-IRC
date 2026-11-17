@@ -109,7 +109,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 | Preset | What you get |
 |---|---|
-| **Classic IRC** | Sidebar, one-line monospace messages, dense spacing, compact link titles |
+| **Classic IRC** | Sidebar, one-line monospace messages, dense spacing, minimal link previews |
 | **Modern Chat** | Sidebar, grouped messages, full inline media |
 | **Tabbed** | Tab stacks at the top, grouped messages, rounded tabs |
 | **Focus** | Pill tabs in the title bar, compact columns, no join/part noise, member list hidden |
@@ -117,9 +117,10 @@ One click sets navigation, layout, density and media together. Presets never tou
 ### Messages and media
 
 - **Inline images and animated GIFs.** Click one to view it full size.
-- **Link cards** with the page title, description, site name and thumbnail, accented with the page's own theme color.
-- **Video players** for YouTube, Vimeo, Twitch and Streamable. Nothing loads until you press play.
-- **Compact presentation:** one-line titles and small thumbnails, if you prefer less.
+- **Link previews** with the page title, description, site name and thumbnail, accented with the page's own theme color.
+- **Video players** for YouTube, Vimeo, Twitch and Streamable. The player loads only when you press play, and you can expand it to fill the window.
+- **Your choice of size:** Minimal, Standard or Large link previews, full or compact videos, and full-size or thumbnail images.
+- **Site rules and an adult-site filter:** show everything, text only or nothing per site. Adult sites' previews are hidden by default, checked on your Mac against a list bundled with Vela. Images can stay blurred until clicked.
 - **mIRC formatting:** bold, italic, underline, strikethrough, monospace, colors (including hex) and reverse.
 - **Reactions, replies, typing indicators and message deletion,** where the server supports IRCv3 message tags.
 - **Day dividers, a "New" marker** at your last read position, and a "Jump to present" button.
@@ -195,7 +196,7 @@ One click sets navigation, layout, density and media together. Presets never tou
     "tabs.roundness": 1,
     "chat.layout": "columns",
     "chat.showJoinPart": "hide",
-    "media.blockedDomains": ["example.com"]
+    "media.siteRules": { "example.com": "block", "news.example": "textOnly" }
   }
   ```
 
@@ -207,7 +208,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **Link previews** fetch the linked page or image, which reveals your IP address to that site. You can control this:
   - Turn previews off entirely, or switch to click-to-load.
   - Disable media for a network or channel.
-  - Block or allow specific domains.
+  - Set per-site rules: everything, text only or nothing.
 - **No previews from your local network.** Vela never fetches previews from private, local or LAN addresses.
 - **Passwords and certificates** are stored in the macOS Keychain. Vela is sandboxed.
 

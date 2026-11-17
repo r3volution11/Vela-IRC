@@ -38,9 +38,11 @@
   - [x] Unread markers and day separators
 - [x] **Inline media**
   - [x] Images and animated GIF/WebP
-  - [x] Link cards
-  - [x] YouTube/Vimeo/Twitch/Streamable players
-  - [x] Media policy: per network/channel, domain lists, size limits
+  - [x] Link previews in three sizes (Minimal, Standard, Large)
+  - [x] YouTube/Vimeo/Twitch/Streamable players: compact or full, expand to fill the window, one at a time, pause when out of view
+  - [x] Media policy: per network/channel, per-site rules (everything / text only / nothing), size limits
+  - [x] Adult-site filter with a bundled, on-device list and RTA label detection
+  - [x] Blur images until clicked, everywhere or per channel
 - [x] **IRCv3 chat**
   - [x] Reactions, replies, typing indicators, redaction
   - [x] `chathistory` paging
