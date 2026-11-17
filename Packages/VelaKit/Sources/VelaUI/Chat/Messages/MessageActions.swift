@@ -131,6 +131,7 @@ struct MessageMenuItems: View {
         if includesReactions, controller.canReact(to: line) || controller.canReply(to: line) {
             Divider()
         }
+        TranslationMessageMenuItems(line: line)
         if !line.isRedacted {
             Button {
                 controller.copyText(of: line)

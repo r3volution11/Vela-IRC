@@ -17,6 +17,8 @@ public protocol SessionHost: AnyObject {
     func session(_ session: NetworkSession, didUpdateBouncerNetworks networks: [BouncerNetwork])
     func sessionDidChangeConfig(_ session: NetworkSession)
     func sessionDidChangeUnreadCounts(_ session: NetworkSession)
+    /// You sent a message from the composer (not a command). Optional.
+    func session(_ session: NetworkSession, didSendComposerMessageIn buffer: BufferModel)
     var behavior: SessionBehavior { get }
 }
 
@@ -933,6 +935,9 @@ public final class NetworkSession: Identifiable {
     public func submit(_ input: String, in buffer: BufferModel, replyTo: ChatLine? = nil) {
         guard let command = InputCommand.parse(input) else { return }
         perform(command, in: buffer, replyTo: replyTo)
+        if case .say = command, buffer.kind != .server, isConnected {
+            host?.session(self, didSendComposerMessageIn: buffer)
+        }
     }
 
     func perform(_ command: InputCommand, in buffer: BufferModel, replyTo: ChatLine?) {

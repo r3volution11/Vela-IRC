@@ -81,9 +81,22 @@ struct InputBar: View {
             caretColor: theme.color(ThemeKey.inputForeground).nsColor,
             selectionColor: theme.color(ThemeKey.chatSelectionBackground).nsColor,
             placeholder: placeholder,
-            spellCheck: app.settings[.inputSpellCheck],
+            textChecking: TextCheckingOptions(settings: app.settings, system: SystemTextSettings.shared.values),
             accessibilityLabel: buffer.kind == .server ? "Command for \(session.displayName)" : "Message \(buffer.name)"
         )
+    }
+
+    /// Words text checking leaves alone: everyone here (and you) and the
+    /// network's channel prefixes. Read when text is checked, so the bar
+    /// doesn't redraw on every join and part.
+    private static func textContext(buffer: BufferModel, session: NetworkSession) -> ComposerTextContext {
+        let nicks: [String] = switch buffer.kind {
+        case .channel: buffer.members.map(\.nick)
+        case .query: [buffer.name, session.nick]
+        case .server: [session.nick]
+        }
+        let channelTypes = session.isupport.channelTypes
+        return ComposerTextContext(nicks: nicks, channelTypes: channelTypes.isEmpty ? ["#", "&"] : channelTypes)
     }
 
     // MARK: Body
@@ -116,6 +129,11 @@ struct InputBar: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: replyTarget?.id)
         .onAppear(perform: restoreDraft)
         .onChange(of: text) { _, newValue in saveDraft(newValue) }
+        // A draft put in from outside (Siri's "draft a message") while this
+        // channel is already open.
+        .onChange(of: uiState.drafts[buffer.id]) { _, draft in
+            if let draft, draft != text { text = draft }
+        }
     }
 
     private var barTransition: AnyTransition {
@@ -225,6 +243,12 @@ struct InputBar: View {
             },
             completions: { word, atLineStart in
                 TabCompletion.candidates(for: word, atLineStart: atLineStart, buffer: buffer, session: session)
+            },
+            textCheckingToggled: { [settings = app.settings] toggle, isOn in
+                toggle.write(isOn, to: settings)
+            },
+            textContext: { [buffer, session] in
+                Self.textContext(buffer: buffer, session: session)
             }
         )
     }

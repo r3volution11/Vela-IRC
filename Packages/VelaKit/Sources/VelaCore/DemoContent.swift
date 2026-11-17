@@ -33,6 +33,8 @@ enum DemoContent {
         app.settings[.mediaSiteRules] = ["blocked.example": .string("block")]
         if let offtopic = libera.buffer(named: "#vela-offtopic") {
             app.settings[.mediaBlurredBuffers] = [offtopic.id.description]
+            // Its Spanish, Japanese and German lines show translations.
+            app.settings[.translationAutoTranslate] = [offtopic.id.description]
         }
     }
 
@@ -200,7 +202,10 @@ enum DemoContent {
 
         let offtopic = session.ensureBuffer(name: "#vela-offtopic", kind: .channel, persist: false)
         offtopic.topic = "Off-topic chat for #vela · be nice"
-        members([("@", "marisol"), ("", "doug"), ("", "lukas"), ("", "priya"), ("", "wren")], in: offtopic, session: session)
+        members([("@", "marisol"), ("", "doug"), ("", "kenji"), ("", "lukas"), ("", "priya"), ("", "wren")], in: offtopic, session: session)
+        // The Spanish, Japanese and German lines are translated automatically
+        // (`applyDemoMediaSettings`), with canned translations
+        // (`CannedTranslator.demo()`, which must match them exactly).
         offtopic.insertSorted([
             event(.join, "lukas", "lukas (lukas@user/lukas) joined #vela-offtopic", 70),
             say("wren", "is it just me or is everyone in #vela talking about themes today", 66),
@@ -209,6 +214,10 @@ enum DemoContent {
             say("lukas", "clouds here. found this on Commons instead https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Aurora_borealis_over_Eielson_Air_Force_Base%2C_Alaska.jpg/1280px-Aurora_borealis_over_Eielson_Air_Force_Base%2C_Alaska.jpg", 52),
             say("wren", "ok I need to move north", 50),
             say("priya", "the colours on that one 😍", 49),
+            say("marisol", "¡Qué envidia! Aquí en Madrid el cielo estaba despejado, pero no se veía nada.", 46),
+            say("kenji", "北海道でもオーロラが見えたらしいよ。写真を撮りに行けばよかったな。", 44),
+            say("lukas", "Bei uns in Hamburg war es leider die ganze Nacht bewölkt.", 41),
+            say("wren", "this channel went international overnight 🌍", 38),
         ])
     }
 

@@ -13,15 +13,26 @@ struct ComposerAppearance: Equatable {
     var caretColor: NSColor
     var selectionColor: NSColor
     var placeholder: String
-    var spellCheck: Bool
+    /// Spelling, autocorrect, substitutions and Writing Tools.
+    var textChecking: TextCheckingOptions
     var accessibilityLabel: String
+}
+
+/// What text checking needs to know about the conversation: words it must
+/// leave alone.
+struct ComposerTextContext {
+    /// Members (or the other person in a query), plus your own nick.
+    var nicks: [String]
+    /// Characters that start a channel name on this network.
+    var channelTypes: Set<Character>
 }
 
 /// What the composer asks of its owner.
 struct ComposerActions {
     /// Return was pressed (without ⇧/⌥).
     var submit: () -> Void
-    /// The user changed the text (typing, pasting, completing) — not programmatic updates.
+    /// The user changed the text (typing, pasting, completing) — not
+    /// programmatic updates, and not edits made while Writing Tools works.
     var userEdited: (String) -> Void
     /// ↑ on the first line. Return true if a history entry was recalled.
     var historyPrevious: () -> Bool
@@ -33,6 +44,11 @@ struct ComposerActions {
     var interceptPaste: (String) -> Bool
     /// Tab-completion candidates for the word before the caret.
     var completions: (_ word: String, _ atLineStart: Bool) -> [String]
+    /// A spelling or substitution switch was flipped in the Edit menu or
+    /// the right-click menu; save it so it sticks.
+    var textCheckingToggled: (TextCheckingToggle, Bool) -> Void = { _, _ in }
+    /// Nicks and channel types, read when text is checked.
+    var textContext: () -> ComposerTextContext = { ComposerTextContext(nicks: [], channelTypes: ["#", "&"]) }
 }
 
 /// Text to insert at the caret, delivered once per `id`.
@@ -45,6 +61,13 @@ struct ComposerInsertion: Equatable {
 /// to `maxLines` and then scrolls, with chat key handling (Return sends,
 /// ⇧Return/⌥Return insert a newline, Tab completes, ↑/↓ walk history,
 /// Escape dismisses) and `:shortcode:` emoji replacement.
+///
+/// macOS text checking (spelling, grammar, autocorrect, text replacements,
+/// smart quotes and dashes) follows ``ComposerAppearance/textChecking`` and
+/// never changes IRC syntax (``ProtectedTextRanges``) or text Vela put
+/// there itself. Writing Tools gets the panel experience (the view stays
+/// on TextKit 1); while it works, Return doesn't send and typing
+/// indicators and emoji replacement pause.
 struct ComposerTextView: NSViewRepresentable {
     @Binding var text: String
     @Binding var height: CGFloat
@@ -91,30 +114,34 @@ struct ComposerTextView: NSViewRepresentable {
         textView.allowsUndo = true
         textView.usesFindBar = false
         textView.usesFontPanel = false
-        textView.isAutomaticQuoteSubstitutionEnabled = false
-        textView.isAutomaticDashSubstitutionEnabled = false
-        textView.isAutomaticTextReplacementEnabled = false
-        textView.isAutomaticSpellingCorrectionEnabled = false
+        // Spelling, grammar, autocorrect, text replacements, smart quotes and
+        // dashes and Writing Tools come from the appearance (see apply).
+        // These stay off: they'd change what's sent.
         textView.isAutomaticLinkDetectionEnabled = false
         textView.isAutomaticDataDetectionEnabled = false
         textView.isAutomaticTextCompletionEnabled = false
-        textView.isGrammarCheckingEnabled = false
         textView.smartInsertDeleteEnabled = false
+        textView.allowedWritingToolsResultOptions = .plainText
         textView.focusRingType = .none
         textView.setAccessibilityRole(.textArea)
 
         textView.delegate = coordinator
+        textView.textStorage?.delegate = coordinator
         textView.onPaste = { [weak coordinator] text in coordinator?.parent.actions.interceptPaste(text) ?? false }
         textView.onFocusChange = { [weak coordinator] focused in coordinator?.focusChanged(focused) }
         textView.onWidthChange = { [weak coordinator] in coordinator?.updateHeight(deferred: true) }
         textView.onAttachedToWindow = { [weak coordinator] in coordinator?.focus(force: false) }
+        textView.onTextCheckingToggle = { [weak coordinator] toggle, isOn in coordinator?.textCheckingToggled(toggle, isOn: isOn) }
+        textView.onWillCheckText = { [weak coordinator] in coordinator?.refreshIgnoredWords() }
+        textView.textCheckingFilter = { [weak coordinator] results in coordinator?.filter(results) ?? results }
+        textView.onWillChangeText = { [weak coordinator] in coordinator?.willChangeText() }
 
         scrollView.documentView = textView
         coordinator.textView = textView
         coordinator.scrollView = scrollView
         coordinator.apply(appearance)
         coordinator.lastFocusRequest = focusRequest
-        textView.string = text
+        coordinator.setInitialText(text)
         coordinator.updateHeight(deferred: true)
         return scrollView
     }
@@ -128,12 +155,13 @@ struct ComposerTextView: NSViewRepresentable {
             coordinator.apply(appearance)
             coordinator.updateHeight(deferred: true)
         }
-        if textView.string != text, !textView.hasMarkedText() {
+        // Writing Tools owns the text until it's done.
+        if textView.string != text, !textView.hasMarkedText(), !coordinator.isWritingToolsActive {
             coordinator.replaceAll(with: text)
         }
         if let insertion, insertion.id != coordinator.lastInsertionID {
             coordinator.lastInsertionID = insertion.id
-            textView.insertText(insertion.text, replacementRange: textView.selectedRange())
+            coordinator.insert(insertion.text)
         }
         if focusRequest != coordinator.lastFocusRequest {
             coordinator.lastFocusRequest = focusRequest
@@ -141,9 +169,13 @@ struct ComposerTextView: NSViewRepresentable {
         }
     }
 
+    static func dismantleNSView(_ scrollView: NSScrollView, coordinator: Coordinator) {
+        coordinator.endWritingToolsUndoGroup()
+    }
+
     // MARK: Coordinator
 
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextViewDelegate, @preconcurrency NSTextStorageDelegate {
         var parent: ComposerTextView
         weak var textView: ComposerNSTextView?
         weak var scrollView: NSScrollView?
@@ -154,7 +186,24 @@ struct ComposerTextView: NSViewRepresentable {
         private var reportedFocus = false
         private var isProgrammaticChange = false
         private var isApplyingCompletion = false
+        /// Inserting text for the user (an edited paste): a user edit, but
+        /// never autocorrected.
+        private var isInserting = false
         private var completion: CompletionState?
+
+        /// Text Vela put in itself, which autocorrect leaves alone.
+        private(set) var insertedRanges = InsertedTextRanges()
+        /// Nicks last given to the spell checker to ignore.
+        private var ignoredNicks: Set<String> = []
+        private var lastNicks: [String]?
+        private var nickSet = NickSet([String]())
+
+        // Writing Tools
+        private var isWritingToolsSession = false
+        private var textBeforeWritingTools: String?
+        /// The undo manager holding Writing Tools' open undo group, if any
+        /// (kept, since the view may have left its window when it closes).
+        private weak var writingToolsUndoManager: UndoManager?
 
         private struct CompletionState {
             var range: NSRange
@@ -174,13 +223,158 @@ struct ComposerTextView: NSViewRepresentable {
             textView.insertionPointColor = appearance.caretColor
             textView.typingAttributes = [.font: appearance.font, .foregroundColor: appearance.textColor]
             textView.selectedTextAttributes = [.backgroundColor: appearance.selectionColor, .foregroundColor: appearance.textColor]
-            textView.isContinuousSpellCheckingEnabled = appearance.spellCheck
+            applyTextChecking(appearance.textChecking)
             textView.placeholder = NSAttributedString(
                 string: appearance.placeholder,
                 attributes: [.font: appearance.font, .foregroundColor: appearance.placeholderColor]
             )
             textView.setAccessibilityLabel(appearance.accessibilityLabel)
             textView.setAccessibilityPlaceholderValue(appearance.placeholder)
+        }
+
+        /// Sets only what changed, so a pending check isn't restarted for nothing.
+        private func applyTextChecking(_ options: TextCheckingOptions) {
+            guard let textView else { return }
+            if textView.isContinuousSpellCheckingEnabled != options.spelling {
+                textView.isContinuousSpellCheckingEnabled = options.spelling
+            }
+            if textView.isGrammarCheckingEnabled != options.grammar {
+                textView.isGrammarCheckingEnabled = options.grammar
+            }
+            if textView.isAutomaticSpellingCorrectionEnabled != options.autocorrect {
+                textView.isAutomaticSpellingCorrectionEnabled = options.autocorrect
+            }
+            if textView.isAutomaticTextReplacementEnabled != options.textReplacements {
+                textView.isAutomaticTextReplacementEnabled = options.textReplacements
+            }
+            if textView.isAutomaticQuoteSubstitutionEnabled != options.smartQuotes {
+                textView.isAutomaticQuoteSubstitutionEnabled = options.smartQuotes
+            }
+            if textView.isAutomaticDashSubstitutionEnabled != options.smartDashes {
+                textView.isAutomaticDashSubstitutionEnabled = options.smartDashes
+            }
+            let behavior: NSWritingToolsBehavior = options.writingTools ? .default : .none
+            if textView.writingToolsBehavior != behavior {
+                textView.writingToolsBehavior = behavior
+            }
+        }
+
+        // MARK: Text checking
+
+        /// The Edit menu or right-click menu flipped a switch on the text
+        /// view; save it as a setting (which re-applies it here).
+        func textCheckingToggled(_ toggle: TextCheckingToggle, isOn: Bool) {
+            parent.actions.textCheckingToggled(toggle, isOn)
+        }
+
+        /// Keeps the conversation's nicks out of the spell checker's
+        /// complaints. Called before each check; cheap when nothing changed.
+        func refreshIgnoredWords() {
+            guard let textView, textView.isContinuousSpellCheckingEnabled else { return }
+            let wanted = Set(currentContext().nicks)
+            guard wanted != ignoredNicks else { return }
+            let checker = NSSpellChecker.shared
+            let tag = textView.spellCheckerDocumentTag
+            // Keep words the user chose to ignore with "Ignore Spelling".
+            var words = Set(checker.ignoredWords(inSpellDocumentWithTag: tag) ?? [])
+            words.subtract(ignoredNicks)
+            words.formUnion(wanted)
+            ignoredNicks = wanted
+            checker.setIgnoredWords(Array(words), inSpellDocumentWithTag: tag)
+        }
+
+        /// The conversation's nicks and channel types, with ``nickSet`` kept
+        /// in step.
+        private func currentContext() -> ComposerTextContext {
+            let context = parent.actions.textContext()
+            if context.nicks != lastNicks {
+                lastNicks = context.nicks
+                nickSet = NickSet(context.nicks)
+            }
+            return context
+        }
+
+        func protectedRanges(for text: String) -> ProtectedTextRanges {
+            let context = currentContext()
+            return ProtectedTextRanges.compute(text: text, nicks: nickSet, channelTypes: context.channelTypes)
+        }
+
+        /// Drops corrections that would touch IRC syntax or text Vela put
+        /// there, and spelling underlines on nicks, channels, links and code.
+        func filter(_ results: [NSTextCheckingResult]) -> [NSTextCheckingResult] {
+            guard let textView, !results.isEmpty else { return results }
+            let text = textView.string
+            return TextCheckingFilter.filter(
+                results,
+                textLength: (text as NSString).length,
+                protected: protectedRanges(for: text),
+                inserted: insertedRanges.ranges,
+                allowsSubstitutions: !isWritingToolsActive
+            )
+        }
+
+        func textStorage(
+            _ textStorage: NSTextStorage,
+            didProcessEditing editedMask: NSTextStorageEditActions,
+            range editedRange: NSRange,
+            changeInLength delta: Int
+        ) {
+            guard editedMask.contains(.editedCharacters) else { return }
+            insertedRanges.record(
+                editedRange: editedRange,
+                changeInLength: delta,
+                inserted: isProgrammaticChange || isApplyingCompletion || isInserting || isWritingToolsActive
+            )
+        }
+
+        // MARK: Writing Tools
+
+        var isWritingToolsActive: Bool {
+            isWritingToolsSession || (textView?.isWritingToolsActive ?? false)
+        }
+
+        func textViewWritingToolsWillBegin(_ textView: NSTextView) {
+            isWritingToolsSession = true
+            textBeforeWritingTools = textView.string
+            // The result is its own undo step, apart from what was typed.
+            textView.breakUndoCoalescing()
+            completion = nil
+        }
+
+        func textViewWritingToolsDidEnd(_ textView: NSTextView) {
+            endWritingToolsUndoGroup()
+            isWritingToolsSession = false
+            textView.breakUndoCoalescing()
+            let value = textView.string
+            if parent.text != value { parent.text = value }
+            if let before = textBeforeWritingTools, before != value {
+                parent.actions.userEdited(value)
+            }
+            textBeforeWritingTools = nil
+            updateHeight(deferred: true)
+        }
+
+        func textView(_ textView: NSTextView, writingToolsIgnoredRangesInEnclosingRange enclosingRange: NSRange) -> [NSValue] {
+            protectedRanges(for: textView.string)
+                .ranges(in: enclosingRange)
+                .map { NSValue(range: $0) }
+        }
+
+        /// Called before every text change. Writing Tools' edits are grouped
+        /// into one undo step, opened lazily so a session that changes
+        /// nothing leaves no empty step behind.
+        func willChangeText() {
+            guard isWritingToolsActive, writingToolsUndoManager == nil, let undoManager = textView?.undoManager else { return }
+            undoManager.beginUndoGrouping()
+            writingToolsUndoManager = undoManager
+        }
+
+        func endWritingToolsUndoGroup() {
+            guard let undoManager = writingToolsUndoManager else { return }
+            writingToolsUndoManager = nil
+            if undoManager.groupingLevel > 0 {
+                undoManager.endUndoGrouping()
+            }
         }
 
         // MARK: Focus
@@ -214,6 +408,8 @@ struct ComposerTextView: NSViewRepresentable {
             // binding, which may not have caught up yet.
             guard reportedFocus != focused else { return }
             reportedFocus = focused
+            // Also before each check; this covers a draft checked on focus.
+            if focused { refreshIgnoredWords() }
             let binding = parent.$isFocused
             Task { @MainActor in binding.wrappedValue = focused }
         }
@@ -225,6 +421,8 @@ struct ComposerTextView: NSViewRepresentable {
         func replaceAll(with newText: String) {
             guard let textView else { return }
             let full = NSRange(location: 0, length: (textView.string as NSString).length)
+            // A correction offered for the old text has nothing left to correct.
+            NSSpellChecker.shared.dismissCorrectionIndicator(for: textView)
             isProgrammaticChange = true
             if textView.shouldChangeText(in: full, replacementString: newText) {
                 textView.replaceCharacters(in: full, with: newText)
@@ -238,18 +436,52 @@ struct ComposerTextView: NSViewRepresentable {
             textView.scrollRangeToVisible(textView.selectedRange())
         }
 
+        /// The text the view starts with (a restored draft): not undoable,
+        /// and never autocorrected.
+        func setInitialText(_ initial: String) {
+            guard let textView else { return }
+            isProgrammaticChange = true
+            textView.string = initial
+            isProgrammaticChange = false
+        }
+
+        /// Inserts `string` at the selection as a user edit (it's reported
+        /// and undoable) that autocorrect leaves alone.
+        func insert(_ string: String) {
+            guard let textView else { return }
+            let range = textView.selectedRange()
+            isInserting = true
+            if textView.shouldChangeText(in: range, replacementString: string) {
+                textView.replaceCharacters(in: range, with: string)
+                // Caret after the text before reporting, as typing would
+                // (emoji replacement looks just before it).
+                textView.setSelectedRange(NSRange(location: range.location + (string as NSString).length, length: 0))
+                textView.didChangeText()
+            }
+            isInserting = false
+            textView.scrollRangeToVisible(textView.selectedRange())
+        }
+
         func textDidChange(_ notification: Notification) {
             guard let textView else { return }
             textView.needsDisplay = true
             if !isApplyingCompletion { completion = nil }
             updateHeight(deferred: false)
             guard !isProgrammaticChange else { return }
+            let value = textView.string
+            if isWritingToolsActive {
+                // Keep the binding (and the draft) current, but it's not
+                // typing: no indicator, no emoji replacement. Reported once
+                // when Writing Tools is done.
+                if parent.text != value { parent.text = value }
+                return
+            }
             if !isApplyingCompletion, !textView.hasMarkedText() {
                 replaceEmojiShortcodeBeforeCaret()
             }
-            let value = textView.string
-            if parent.text != value { parent.text = value }
-            parent.actions.userEdited(value)
+            let current = textView.string
+            if parent.text != current { parent.text = current }
+            parent.actions.userEdited(current)
         }
 
         func textViewDidChangeSelection(_ notification: Notification) {
@@ -257,6 +489,18 @@ struct ComposerTextView: NSViewRepresentable {
         }
 
         func textView(_ textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            if isWritingToolsActive {
+                switch selector {
+                // Return doesn't send, Tab doesn't complete and ↑/↓ only
+                // move the caret: nothing replaces text Writing Tools is
+                // working on.
+                case #selector(NSResponder.insertNewline(_:)), #selector(NSResponder.insertTab(_:)),
+                     #selector(NSResponder.insertBacktab(_:)), #selector(NSResponder.cancelOperation(_:)):
+                    return true
+                default:
+                    return false
+                }
+            }
             switch selector {
             case #selector(NSResponder.insertNewline(_:)):
                 let flags = NSApp.currentEvent?.modifierFlags ?? []
@@ -442,6 +686,8 @@ struct ComposerTextView: NSViewRepresentable {
 
 /// The text view behind the composer: draws its placeholder, reports focus,
 /// width changes and pastes, and can take focus as soon as it's in a window.
+/// Reports the Edit menu's spelling and substitution switches so they're
+/// saved, and filters text checking so IRC syntax isn't corrected.
 final class ComposerNSTextView: NSTextView {
     var placeholder: NSAttributedString? {
         didSet { needsDisplay = true }
@@ -450,7 +696,77 @@ final class ComposerNSTextView: NSTextView {
     var onFocusChange: ((Bool) -> Void)?
     var onWidthChange: (() -> Void)?
     var onAttachedToWindow: (() -> Void)?
+    /// A spelling or substitution switch was flipped; reports its new state.
+    var onTextCheckingToggle: ((TextCheckingToggle, Bool) -> Void)?
+    /// Text is about to be checked.
+    var onWillCheckText: (() -> Void)?
+    /// Removes results that must not be applied.
+    var textCheckingFilter: (([NSTextCheckingResult]) -> [NSTextCheckingResult])?
+    /// Text is about to change.
+    var onWillChangeText: (() -> Void)?
     var wantsFocusOnAttach = true
+
+    // MARK: Text checking
+
+    override func toggleContinuousSpellChecking(_ sender: Any?) {
+        super.toggleContinuousSpellChecking(sender)
+        onTextCheckingToggle?(.spelling, isContinuousSpellCheckingEnabled)
+    }
+
+    override func toggleGrammarChecking(_ sender: Any?) {
+        super.toggleGrammarChecking(sender)
+        onTextCheckingToggle?(.grammar, isGrammarCheckingEnabled)
+    }
+
+    override func toggleAutomaticSpellingCorrection(_ sender: Any?) {
+        super.toggleAutomaticSpellingCorrection(sender)
+        onTextCheckingToggle?(.autocorrect, isAutomaticSpellingCorrectionEnabled)
+    }
+
+    override func toggleAutomaticTextReplacement(_ sender: Any?) {
+        super.toggleAutomaticTextReplacement(sender)
+        onTextCheckingToggle?(.textReplacements, isAutomaticTextReplacementEnabled)
+    }
+
+    override func toggleAutomaticQuoteSubstitution(_ sender: Any?) {
+        super.toggleAutomaticQuoteSubstitution(sender)
+        onTextCheckingToggle?(.smartQuotes, isAutomaticQuoteSubstitutionEnabled)
+    }
+
+    override func toggleAutomaticDashSubstitution(_ sender: Any?) {
+        super.toggleAutomaticDashSubstitution(sender)
+        onTextCheckingToggle?(.smartDashes, isAutomaticDashSubstitutionEnabled)
+    }
+
+    override func checkText(in range: NSRange, types checkingTypes: NSTextCheckingTypes, options: [NSSpellChecker.OptionKey: Any] = [:]) {
+        onWillCheckText?()
+        super.checkText(in: range, types: checkingTypes, options: options)
+    }
+
+    override func handleTextCheckingResults(
+        _ results: [NSTextCheckingResult],
+        forRange range: NSRange,
+        types checkingTypes: NSTextCheckingTypes,
+        options: [NSSpellChecker.OptionKey: Any] = [:],
+        orthography: NSOrthography,
+        wordCount: Int
+    ) {
+        let kept = textCheckingFilter?(results) ?? results
+        super.handleTextCheckingResults(
+            kept, forRange: range, types: checkingTypes, options: options, orthography: orthography, wordCount: wordCount
+        )
+    }
+
+    // Both, in case one doesn't go through the other. Reporting twice is harmless.
+    override func shouldChangeText(inRanges affectedRanges: [NSValue], replacementStrings: [String]?) -> Bool {
+        onWillChangeText?()
+        return super.shouldChangeText(inRanges: affectedRanges, replacementStrings: replacementStrings)
+    }
+
+    override func shouldChangeText(in affectedCharRange: NSRange, replacementString: String?) -> Bool {
+        onWillChangeText?()
+        return super.shouldChangeText(in: affectedCharRange, replacementString: replacementString)
+    }
 
     override func becomeFirstResponder() -> Bool {
         let accepted = super.becomeFirstResponder()

@@ -67,6 +67,11 @@ public enum ThemeSchema {
         properties["nickColors"] = nickColorsSchema()
         properties["ircColors"] = ircColorsSchema()
         properties["vibrancy"] = vibrancySchema()
+        properties[AccentCustomizations.markerKey] = .object([
+            "type": "array",
+            "items": .object(["type": "string"]),
+            "description": "Written by Settings → Appearance → Accent color: the tokens it set in this theme's scope. Choosing Default removes exactly these and keeps the rest.",
+        ])
         return ["type": "object", "properties": .object(properties)]
     }
 

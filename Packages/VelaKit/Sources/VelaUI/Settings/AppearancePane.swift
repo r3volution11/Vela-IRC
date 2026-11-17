@@ -56,6 +56,13 @@ struct AppearancePane: View {
                     ? "Choosing a theme here turns off Match System Appearance. Right-click a theme to use it for Dark or Light Mode instead."
                     : nil
             ) {
+                // The accent rows come first so they're visible without
+                // scrolling past the whole gallery.
+                ForEach(accentThemes) { entry in
+                    if let palette = AccentActions.palette(for: entry.info, themeStore: themeStore) {
+                        AccentRow(palette: palette, mode: entry.mode)
+                    }
+                }
                 gallery
             } accessory: {
                 Picker("Show", selection: $filter) {
@@ -106,7 +113,7 @@ struct AppearancePane: View {
             problems
 
             SettingsSection("Details") {
-                let overrides = settings[.appearanceColorCustomizations].count
+                let overrides = AccentCustomizations.handWrittenCount(in: settings[.appearanceColorCustomizations])
                 SettingsRow(
                     "Color overrides",
                     detail: overrides == 0
@@ -186,6 +193,30 @@ struct AppearancePane: View {
         var config = LayoutSchematicConfig(settings: app.settings)
         config.showMedia = false
         return config
+    }
+
+    /// A theme whose accent row shows under the gallery.
+    private struct AccentTarget: Identifiable {
+        let info: ThemeInfo
+        /// "Dark Mode" or "Light Mode" when both preferred themes are shown.
+        let mode: String?
+        var id: String { info.id }
+    }
+
+    /// The themes whose accent rows show under the gallery: the theme in use,
+    /// or with Match System Appearance on, the Dark and Light Mode themes.
+    private var accentThemes: [AccentTarget] {
+        let settings = app.settings
+        guard settings[.appearanceFollowSystem] else {
+            return themeStore.info(for: settings[.appearanceTheme]).map { [AccentTarget(info: $0, mode: nil)] } ?? []
+        }
+        let dark = themeStore.info(for: settings[.appearancePreferredDarkTheme])
+        let light = themeStore.info(for: settings[.appearancePreferredLightTheme])
+        if let dark, let light, dark.id == light.id { return [AccentTarget(info: dark, mode: nil)] }
+        return [
+            dark.map { AccentTarget(info: $0, mode: "Dark Mode") },
+            light.map { AccentTarget(info: $0, mode: "Light Mode") },
+        ].compactMap { $0 }
     }
 
     private func roles(for info: ThemeInfo) -> [String] {
@@ -410,6 +441,80 @@ private struct ThemeCard: View {
         .accessibilityLabel("\(info.name), \(info.kind == .dark ? "dark" : "light") theme\(info.source == .user ? ", yours" : "")")
         .accessibilityValue(([isCurrent ? "In use" : nil] + roles.map { "Used in \($0)" }).compactMap { $0 }.joined(separator: ", "))
         .accessibilityAddTraits(isCurrent ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+/// A theme's accent choices: its own accent ("Default") and the other colors
+/// it ships, as round swatches. Picking one recolors everything that uses
+/// the accent in that theme only.
+private struct AccentRow: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.theme) private var theme
+    let palette: AccentPalette
+    /// "Dark Mode" or "Light Mode" when both preferred themes are shown.
+    let mode: String?
+
+    var body: some View {
+        let choice = AccentActions.choice(in: palette, settings: app.settings)
+        SettingsRow(mode.map { "\($0) accent" } ?? "Accent color", detail: detail(for: choice)) {
+            HStack(spacing: 2) {
+                ForEach(palette.swatches) { swatch in
+                    AccentSwatchButton(swatch: swatch, isSelected: choice.swatch == swatch) {
+                        AccentActions.select(swatch, in: palette, settings: app.settings)
+                    }
+                    if swatch.isDefault, palette.swatches.count > 1 {
+                        SettingsHairline(vertical: true)
+                            .frame(height: 16)
+                            .padding(.horizontal, 4)
+                    }
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("\(palette.themeName) accent color")
+        }
+    }
+
+    private func detail(for choice: AccentChoice) -> String {
+        if case .custom = choice {
+            return "settings.json sets a different accent for \(palette.themeName)."
+        }
+        if palette.swatches.count < 2 {
+            return "\(palette.themeName) has no other colors that work as an accent."
+        }
+        return "Choose from \(palette.themeName)'s own colors."
+    }
+}
+
+/// One round accent swatch, ringed when selected.
+private struct AccentSwatchButton: View {
+    @Environment(\.theme) private var theme
+    let swatch: AccentSwatch
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .strokeBorder(
+                        isSelected ? theme[ThemeKey.settingsForeground] : (isHovered ? theme[ThemeKey.settingsSecondaryForeground].opacity(0.5) : .clear),
+                        lineWidth: 2
+                    )
+                Circle()
+                    .fill(swatch.color.color)
+                    .overlay(Circle().strokeBorder(theme[ThemeKey.settingsBorder], lineWidth: 1))
+                    .padding(4)
+            }
+            .frame(width: 26, height: 26)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .help(swatch.title)
+        .accessibilityLabel(swatch.accessibilityLabel)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 

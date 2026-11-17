@@ -13,6 +13,8 @@ nonisolated enum DisplayItemID: Hashable, Sendable {
     /// A day divider, keyed by `year * 10_000 + month * 100 + day`.
     case day(Int)
     case unreadMarker
+    /// The Catch me up card, right under the unread marker.
+    case catchUpCard
     case line(UUID)
     /// A collapsed membership run, keyed by its first line.
     case membershipRun(UUID)
@@ -46,6 +48,8 @@ nonisolated enum DisplayItem: Identifiable, Hashable, Sendable {
     /// The first moment of a calendar day.
     case dayDivider(Date, key: Int)
     case unreadMarker
+    /// The Catch me up summary, right after the unread marker while it's open.
+    case catchUpCard
     case line(LineItem)
     case membershipRun(MembershipRun)
 
@@ -53,6 +57,7 @@ nonisolated enum DisplayItem: Identifiable, Hashable, Sendable {
         switch self {
         case .dayDivider(_, let key): .day(key)
         case .unreadMarker: .unreadMarker
+        case .catchUpCard: .catchUpCard
         case .line(let item): .line(item.line.id)
         case .membershipRun(let run): .membershipRun(run.id)
         }
@@ -64,6 +69,8 @@ nonisolated struct MessageDisplayOptions: Equatable, Sendable {
     var joinPart: JoinPartDisplay = .collapse
     var groupingInterval: TimeInterval = 300
     var unreadMarkerAfter: Date?
+    /// Show the Catch me up card under the unread marker.
+    var showsCatchUpCard = false
     var calendar: Calendar = .current
 }
 
@@ -119,6 +126,7 @@ nonisolated struct MessageDisplayBuilder: Sendable {
             markerPlaced = true
             flushRun()
             items.append(.unreadMarker)
+            if options.showsCatchUpCard { items.append(.catchUpCard) }
             groupAnchor = nil
         }
 

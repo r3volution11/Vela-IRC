@@ -8,6 +8,6 @@ import VelaUI
 @main
 struct VelaApp: App {
     var body: some Scene {
-        VelaScenes()
+        VelaScenes(appShortcuts: VelaShortcuts.self)
     }
 }

@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaStore
 import VelaTheme
 
@@ -16,6 +17,9 @@ struct VelaCommandContext {
     let uiState: UIState
     let openWindow: OpenWindowAction
     let openSettings: OpenSettingsAction
+    /// Apple Intelligence (Catch me up), where the builder has it: the
+    /// palette does, the menu bar doesn't.
+    var intelligence: IntelligenceServices? = nil
 }
 
 /// Every command Vela offers, built from the current state. Menus pick the

@@ -20,6 +20,8 @@ struct DisplayItemRow: View, Equatable {
             DayDividerRow(date: date)
         case .unreadMarker:
             UnreadMarkerRow()
+        case .catchUpCard:
+            CatchUpCardRow()
         case .line(let lineItem):
             if lineItem.line.kind.isConversation {
                 MessageRow(item: lineItem)
@@ -80,6 +82,7 @@ struct MessageRow: View {
             .contextMenu {
                 MessageMenuItems(line: line, links: links)
             }
+            .autoTranslation(for: line)
             .accessibilityElement(children: .contain)
     }
 
@@ -159,6 +162,7 @@ struct ClassicMessageContent: View {
                 VStack(alignment: .leading, spacing: 2) {
                     MessageBodyText(line: line, rendered: rendered, prefix: prefix(for: line))
                         .messageAccessibility(line: line, rendered: rendered)
+                    MessageTranslationView(line: line)
                     MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
                 }
             }
@@ -230,6 +234,7 @@ struct GroupedMessageContent: View {
                         MessageBodyText(line: line, rendered: rendered)
                     }
                     .messageAccessibility(line: line, rendered: rendered)
+                    MessageTranslationView(line: line)
                     MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
                 }
             }
@@ -322,6 +327,7 @@ struct ColumnsMessageContent: View {
                 VStack(alignment: .leading, spacing: 2) {
                     MessageBodyText(line: line, rendered: rendered, prefix: actionPrefix(for: line))
                         .messageAccessibility(line: line, rendered: rendered)
+                    MessageTranslationView(line: line)
                     MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
                 }
             }
@@ -493,6 +499,7 @@ private struct MessageAccessibilityModifier: ViewModifier {
                 if !line.isRedacted {
                     Button("Copy Text") { controller.copyText(of: line) }
                 }
+                TranslationAccessibilityActions(line: line)
                 if let link = rendered?.links.first {
                     Button("Open Link") { NSWorkspace.shared.open(link) }
                 }

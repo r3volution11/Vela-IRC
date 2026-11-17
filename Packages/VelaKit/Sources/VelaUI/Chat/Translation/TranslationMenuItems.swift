@@ -7,18 +7,22 @@ import VelaCore
 
 /// Translation items in a channel's or conversation's context menu.
 struct TranslationBufferMenuItems: View {
+    @Environment(AppModel.self) private var app
     let buffer: BufferModel
 
     var body: some View {
-        EmptyView()
+        if buffer.kind != .server {
+            CommandMenuToggle(VelaCommandCatalog.autoTranslateCommand(app: app, bufferID: buffer.id))
+        }
     }
 }
 
 /// Translation items in a network's context menu.
 struct TranslationNetworkMenuItems: View {
+    @Environment(AppModel.self) private var app
     let session: NetworkSession
 
     var body: some View {
-        EmptyView()
+        CommandMenuToggle(VelaCommandCatalog.networkAutoTranslateCommand(app: app, networkID: session.id))
     }
 }

@@ -4,6 +4,7 @@
 
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaIRC
 import VelaStore
 import VelaTheme
@@ -26,6 +27,7 @@ struct MessageListView: View {
     @Environment(\.chatStyle) private var style
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
+    @Environment(IntelligenceServices.self) private var intelligence
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let buffer: BufferModel
     let session: NetworkSession
@@ -43,7 +45,8 @@ struct MessageListView: View {
         let options = MessageDisplayOptions(
             joinPart: style.joinPart,
             groupingInterval: style.groupingInterval,
-            unreadMarkerAfter: buffer.unreadMarkerAfter
+            unreadMarkerAfter: buffer.unreadMarkerAfter,
+            showsCatchUpCard: intelligence.catchUp.cards[buffer.id] != nil
         )
         let items = controller.displayCache.items(for: buffer.lines, options: options)
         let _ = controller.textCache.prepare(
@@ -105,8 +108,28 @@ struct MessageListView: View {
         .onChange(of: uiState.scrollTarget, initial: true) { _, target in
             if let target { scroll(toLine: target) }
         }
+        .onChange(of: intelligence.catchUp.reveal) { _, reveal in
+            if let reveal, reveal.bufferID == buffer.id {
+                intelligence.catchUp.revealHandled(reveal)
+                revealCatchUpCard()
+            }
+        }
+        .onChange(of: buffer.unreadMarkerAfter, initial: true) { _, marker in
+            // A card belongs to the stretch under its marker; once that
+            // marker is gone or moved, so is the card.
+            if let card = intelligence.catchUp.card(for: buffer.id), card.marker != marker {
+                intelligence.catchUp.dismiss(buffer.id)
+            }
+        }
         .onAppear {
-            if items.contains(id: .unreadMarker), uiState.scrollTarget == nil { landAtUnreadMarker() }
+            guard items.contains(id: .unreadMarker), uiState.scrollTarget == nil else { return }
+            if let reveal = intelligence.catchUp.reveal, reveal.bufferID == buffer.id {
+                // Opened from a context menu or the palette.
+                intelligence.catchUp.revealHandled(reveal)
+                revealCatchUpCard()
+            } else {
+                landAtUnreadMarker()
+            }
         }
         .overlay(alignment: .bottom) {
             ZStack {
@@ -252,6 +275,27 @@ struct MessageListView: View {
             // (An equal ScrollPosition is ignored, hence the nudged anchors.)
             for nudge in [0.2001, 0.2] {
                 try? await Task.sleep(for: .milliseconds(60))
+                guard !controller.isUserScrolling else { return }
+                position.scrollTo(id: DisplayItemID.unreadMarker, anchor: UnitPoint(x: 0.5, y: nudge))
+            }
+        }
+    }
+
+    /// Brings the Catch me up card into view: the New marker near the top,
+    /// so the card has room to grow beneath it.
+    private func revealCatchUpCard() {
+        guard controller.displayCache.items.contains(id: .catchUpCard) else { return }
+        controller.unpin()
+        controller.beginProgrammaticScroll(for: 0.4) { _ in updatePill() }
+        let anchor = UnitPoint(x: 0.5, y: 0.08)
+        withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) {
+            position.scrollTo(id: DisplayItemID.unreadMarker, anchor: anchor)
+        }
+        Task {
+            // Rows above were estimated: correct once they're measured.
+            // (An equal ScrollPosition is ignored, hence the nudged anchors.)
+            for nudge in [0.0801, 0.08] {
+                try? await Task.sleep(for: .milliseconds(80))
                 guard !controller.isUserScrolling else { return }
                 position.scrollTo(id: DisplayItemID.unreadMarker, anchor: UnitPoint(x: 0.5, y: nudge))
             }

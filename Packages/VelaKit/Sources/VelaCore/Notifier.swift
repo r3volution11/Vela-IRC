@@ -7,18 +7,23 @@ import UserNotifications
 
 /// Posts user-visible notifications for highlights and private messages.
 public protocol Notifier: AnyObject {
-    func post(title: String, subtitle: String, body: String, bufferID: BufferID, playSound: Bool)
+    /// `lineID` is the message's `ChatLine.id`, when it's about one.
+    func post(title: String, subtitle: String, body: String, bufferID: BufferID, lineID: UUID?, playSound: Bool)
 }
 
 /// Does nothing (demo mode, tests).
 public final class SilentNotifier: Notifier {
     public init() {}
-    public func post(title: String, subtitle: String, body: String, bufferID: BufferID, playSound: Bool) {}
+    public func post(title: String, subtitle: String, body: String, bufferID: BufferID, lineID: UUID?, playSound: Bool) {}
 }
 
 /// macOS Notification Center delivery. Clicking a notification selects its buffer.
 public final class UserNotificationNotifier: NSObject, Notifier, UNUserNotificationCenterDelegate {
     public var onActivate: ((BufferID) -> Void)?
+    /// Adds to each notification before it's posted: the app sets this to
+    /// attach the channel's and message's App Intents entities
+    /// (`appEntityIdentifiers`), so Siri can act on "reply to this".
+    public static var decorateContent: ((UNMutableNotificationContent, BufferID, UUID?) -> Void)?
     private var authorizationRequested = false
     private var authorized = false
 
@@ -27,7 +32,7 @@ public final class UserNotificationNotifier: NSObject, Notifier, UNUserNotificat
         UNUserNotificationCenter.current().delegate = self
     }
 
-    public func post(title: String, subtitle: String, body: String, bufferID: BufferID, playSound: Bool) {
+    public func post(title: String, subtitle: String, body: String, bufferID: BufferID, lineID: UUID?, playSound: Bool) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.subtitle = subtitle
@@ -35,6 +40,7 @@ public final class UserNotificationNotifier: NSObject, Notifier, UNUserNotificat
         content.threadIdentifier = bufferID.description
         content.userInfo = ["networkID": bufferID.networkID.uuidString, "buffer": bufferID.foldedName]
         if playSound { content.sound = .default }
+        Self.decorateContent?(content, bufferID, lineID)
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
 
         if authorized {

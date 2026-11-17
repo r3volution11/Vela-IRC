@@ -12,10 +12,14 @@ import Observation
 public final class IntelligenceServices {
     public let availability: IntelligenceAvailability
     @ObservationIgnored public let summarizer: any ConversationSummarizer
+    /// Catch me up cards and cached summaries, shared by the message list
+    /// and the Siri / Shortcuts intent.
+    @ObservationIgnored public let catchUp: CatchUpStore
 
     public init(availability: IntelligenceAvailability, summarizer: any ConversationSummarizer) {
         self.availability = availability
         self.summarizer = summarizer
+        self.catchUp = CatchUpStore(summarizer: summarizer)
     }
 
     /// The real on-device model.

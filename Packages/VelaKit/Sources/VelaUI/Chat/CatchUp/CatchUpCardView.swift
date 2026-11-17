@@ -1,0 +1,374 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import AppKit
+import SwiftUI
+import VelaCore
+import VelaIntelligence
+import VelaStore
+import VelaTheme
+
+/// The message list's row for the open Catch me up card, under the New
+/// marker, lined up with the message text.
+struct CatchUpCardRow: View {
+    @Environment(\.chatStyle) private var style
+    @Environment(IntelligenceServices.self) private var intelligence
+    @Environment(MessageListController.self) private var controller
+
+    var body: some View {
+        if let card = intelligence.catchUp.cards[controller.buffer.id] {
+            CatchUpCardView(card: card)
+                .padding(.leading, leadingInset)
+                .padding(.trailing, style.rowHorizontalPadding)
+                .padding(.top, 2)
+                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var leadingInset: CGFloat {
+        switch style.layout {
+        case .grouped: GroupedMetrics(style: style).textX
+        case .columns: ColumnsMetrics(style: style).textX
+        case .classic: style.rowHorizontalPadding
+        }
+    }
+}
+
+/// "While you were away · N messages": the streamed overview, the topics
+/// (each jumps to where it starts), notes on where you were mentioned, and
+/// Copy / Regenerate / Dismiss. Drawn like a link card.
+struct CatchUpCardView: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(IntelligenceServices.self) private var intelligence
+    @Environment(MessageListController.self) private var controller
+    @Environment(UIState.self) private var uiState
+    let card: CatchUpCard
+
+    static let maxWidth: CGFloat = 560
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            header
+            switch card.phase {
+            case .running(let partial):
+                if let partial, !partial.overview.isEmpty {
+                    content(partial)
+                } else {
+                    loading
+                }
+            case .done(let summary):
+                content(summary)
+            case .failed(let error):
+                failure(error)
+            }
+            if !isFailed { footer }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .embedCard(accent: theme[ThemeKey.accent])
+        .frame(maxWidth: Self.maxWidth, alignment: .leading)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: layoutKey)
+        .onChange(of: isDone) { _, done in
+            if done { AccessibilityNotification.Announcement("Summary ready").post() }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Catch me up")
+    }
+
+    // MARK: Header and footer
+
+    private var header: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "apple.intelligence")
+                .font(.system(size: max(10, style.fontSize - 2), weight: .semibold))
+                .foregroundStyle(theme[ThemeKey.accentText])
+                .accessibilityHidden(true)
+            Text("While you were away · \(CatchUpActions.messagesLabel(card.messageCount))")
+                .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
+                .foregroundStyle(theme[ThemeKey.embedSiteName])
+                .lineLimit(1)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 8)
+            if case .running(let partial?) = card.phase, !partial.overview.isEmpty {
+                // Still writing; before the first words the body has its own spinner.
+                ProgressView()
+                    .controlSize(.mini)
+                    .accessibilityLabel("Summarizing")
+            }
+            CatchUpCardButton(systemImage: "doc.on.doc", label: "Copy Summary") { copy() }
+                .disabled(!isDone)
+            CatchUpCardButton(systemImage: "arrow.clockwise", label: "Regenerate") { regenerate() }
+                .disabled(card.isRunning)
+            CatchUpCardButton(systemImage: "xmark", label: "Dismiss") { dismiss() }
+        }
+    }
+
+    private var footer: some View {
+        Text(footerText)
+            .font(style.font(size: max(9, style.fontSize - 3)))
+            .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var footerText: String {
+        let note = "Summarized on this Mac by Apple Intelligence. May contain mistakes."
+        guard let summary = card.summary, summary.messageCount < card.messageCount,
+              summary.messageCount >= CatchUpRequest.maximumLines
+        else { return note }
+        return "Covers the latest \(CatchUpActions.messagesLabel(summary.messageCount)). " + note
+    }
+
+    // MARK: States
+
+    private var loading: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+                .accessibilityHidden(true)
+            Text("Reading \(CatchUpActions.messagesLabel(card.messageCount))…")
+                .font(style.font(size: max(10, style.fontSize - 1)))
+                .foregroundStyle(theme[ThemeKey.embedDescription])
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func content(_ summary: CatchUpSummary) -> some View {
+        Text(summary.overview)
+            .font(style.font(size: style.fontSize))
+            .foregroundStyle(theme[ThemeKey.chatForeground])
+            .lineSpacing(style.lineSpacing)
+            .fixedSize(horizontal: false, vertical: true)
+            .textSelection(.enabled)
+
+        if !summary.topics.isEmpty {
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(summary.topics) { topic in
+                    CatchUpTopicRow(topic: topic) { jump(to: topic) }
+                        .transition(.opacity)
+                }
+            }
+            .padding(.horizontal, -8)
+        }
+
+        if !summary.addressedToYou.isEmpty {
+            VStack(alignment: .leading, spacing: 3) {
+                Label("You were mentioned", systemImage: "at")
+                    .font(style.font(size: max(9, style.fontSize - 2), weight: .semibold))
+                    .foregroundStyle(theme[ThemeKey.chatMention])
+                    .accessibilityAddTraits(.isHeader)
+                ForEach(summary.addressedToYou, id: \.self) { note in
+                    Text(note)
+                        .font(style.font(size: max(10, style.fontSize - 1)))
+                        .foregroundStyle(theme[ThemeKey.chatForeground])
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                }
+            }
+            .padding(.top, 1)
+            .transition(.opacity)
+        }
+    }
+
+    private func failure(_ error: CatchUpError) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.system(size: max(10, style.fontSize - 1), weight: .semibold))
+                    .foregroundStyle(theme[ThemeKey.embedSiteName])
+                    .accessibilityHidden(true)
+                Text(error.errorDescription ?? "Apple Intelligence couldn't summarize this conversation.")
+                    .font(style.font(size: max(10, style.fontSize - 1)))
+                    .foregroundStyle(theme[ThemeKey.chatForeground])
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 8) {
+                Button("Try Again") { regenerate() }
+                    .buttonStyle(CatchUpCapsuleButtonStyle())
+                if case .unavailable(let status) = error, let url = status.settingsURL {
+                    Button("Open System Settings") { NSWorkspace.shared.open(url) }
+                        .buttonStyle(CatchUpCapsuleButtonStyle())
+                }
+            }
+        }
+    }
+
+    // MARK: Actions
+
+    private var isDone: Bool {
+        if case .done = card.phase { true } else { false }
+    }
+
+    private var isFailed: Bool {
+        if case .failed = card.phase { true } else { false }
+    }
+
+    /// Changes that resize the card, for its animation.
+    private var layoutKey: [Int] {
+        switch card.phase {
+        case .running(let partial): [0, partial?.topics.count ?? -1, partial?.addressedToYou.count ?? 0, partial?.overview.isEmpty == false ? 1 : 0]
+        case .done(let summary): [1, summary.topics.count, summary.addressedToYou.count]
+        case .failed: [2]
+        }
+    }
+
+    private func copy() {
+        guard let summary = card.summary else { return }
+        CatchUpActions.copy(summary, bufferName: controller.buffer.name, messageCount: card.messageCount)
+    }
+
+    private func regenerate() {
+        CatchUpActions.regenerate(card, buffer: controller.buffer, session: controller.session, store: intelligence.catchUp)
+    }
+
+    private func dismiss() {
+        withAnimation(reduceMotion ? nil : .smooth(duration: 0.2)) {
+            intelligence.catchUp.dismiss(controller.buffer.id)
+        }
+    }
+
+    private func jump(to topic: CatchUpTopic) {
+        guard let lineID = topic.firstLineID else { return }
+        uiState.scrollTarget = lineID
+    }
+}
+
+/// One topic: its title, who took part and a chevron, with its one-line
+/// summary underneath. Clicking it scrolls to where it starts.
+private struct CatchUpTopicRow: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    let topic: CatchUpTopic
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    private var canJump: Bool { topic.firstLineID != nil }
+
+    var body: some View {
+        if canJump {
+            Button(action: action) { content }
+                .buttonStyle(.plain)
+                .onHover { hovering = $0 }
+                .help("Show where this starts")
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(accessibilityText)
+                .accessibilityHint("Scrolls to where this topic starts")
+                .accessibilityAddTraits(.isButton)
+        } else {
+            content
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(accessibilityText)
+        }
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(topic.title)
+                    .font(style.font(size: max(10, style.fontSize - 1), weight: .semibold))
+                    .foregroundStyle(theme[ThemeKey.embedTitle])
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                if !topic.participants.isEmpty {
+                    Text(CatchUpActions.participantsLabel(topic.participants))
+                        .font(style.font(size: max(9, style.fontSize - 2)))
+                        .foregroundStyle(theme[ThemeKey.embedSiteName])
+                        .lineLimit(1)
+                }
+                if canJump {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: max(8, style.fontSize - 4), weight: .bold))
+                        .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
+                        .opacity(hovering ? 1 : 0.6)
+                }
+            }
+            if !topic.summary.isEmpty {
+                Text(topic.summary)
+                    .font(style.font(size: max(10, style.fontSize - 1)))
+                    .foregroundStyle(theme[ThemeKey.embedDescription])
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(hovering ? theme[ThemeKey.chatHoverBackground] : .clear)
+        )
+        .contentShape(Rectangle())
+    }
+
+    private var accessibilityText: String {
+        var parts = [topic.title]
+        if !topic.summary.isEmpty { parts.append(topic.summary) }
+        if !topic.participants.isEmpty { parts.append("With \(CatchUpActions.participantsLabel(topic.participants))") }
+        return parts.joined(separator: ". ")
+    }
+}
+
+/// A small borderless icon button in the card's header.
+private struct CatchUpCardButton: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    @Environment(\.isEnabled) private var isEnabled
+    let systemImage: String
+    let label: String
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: max(9, style.fontSize - 3), weight: .semibold))
+                .foregroundStyle(theme[ThemeKey.embedSiteName])
+                .frame(width: 22, height: 20)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(hovering && isEnabled ? theme[ThemeKey.chatHoverBackground] : .clear)
+                )
+                .opacity(isEnabled ? 1 : 0.4)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(label)
+        .accessibilityLabel(label)
+    }
+}
+
+/// The accent capsule used by "Catch me up" and the card's inline buttons.
+struct CatchUpCapsuleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        CatchUpCapsuleBody(configuration: configuration)
+    }
+}
+
+private struct CatchUpCapsuleBody: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    let configuration: ButtonStyleConfiguration
+
+    @State private var hovering = false
+
+    var body: some View {
+        configuration.label
+            .font(.system(size: max(10, style.fontSize - 2), weight: .semibold))
+            .foregroundStyle(theme[ThemeKey.accentText])
+            .padding(.horizontal, 9)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(theme[ThemeKey.accent].opacity(configuration.isPressed ? 0.28 : hovering ? 0.2 : 0.12)))
+            .contentShape(Capsule())
+            .fixedSize()
+            .onHover { hovering = $0 }
+    }
+}

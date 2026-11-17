@@ -226,27 +226,33 @@ struct DayDividerRow: View {
     }
 }
 
+/// The "New" line above the first unread message, with "Catch me up" at
+/// its end when a summary is on offer (`CatchUpMarkerButton`).
 struct UnreadMarkerRow: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
 
     var body: some View {
-        HStack(spacing: 6) {
-            Rectangle()
-                .fill(theme[ThemeKey.chatUnreadMarker])
-                .frame(height: 1)
-            Text("New")
-                .font(.system(size: max(9, style.fontSize - 3), weight: .bold))
-                .textCase(.uppercase)
-                .kerning(0.4)
-                .foregroundStyle(theme[ThemeKey.chatUnreadMarker])
-                .fixedSize()
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Rectangle()
+                    .fill(theme[ThemeKey.chatUnreadMarker])
+                    .frame(height: 1)
+                Text("New")
+                    .font(.system(size: max(9, style.fontSize - 3), weight: .bold))
+                    .textCase(.uppercase)
+                    .kerning(0.4)
+                    .foregroundStyle(theme[ThemeKey.chatUnreadMarker])
+                    .fixedSize()
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("New messages")
+            .accessibilityAddTraits(.isHeader)
+            CatchUpMarkerButton()
         }
         .padding(.horizontal, style.rowHorizontalPadding)
         .padding(.vertical, 5)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("New messages")
-        .accessibilityAddTraits(.isHeader)
+        .accessibilityElement(children: .contain)
     }
 }
 

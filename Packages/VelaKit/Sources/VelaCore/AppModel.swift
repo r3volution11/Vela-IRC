@@ -44,6 +44,9 @@ public final class AppModel: SessionHost {
     /// window (Siri, Shortcuts, Spotlight). The scene layer selects it,
     /// activates Vela and reopens the main window if it was closed.
     public private(set) var showRequest: ShowRequest?
+    /// Called when you send a message from the composer (not a command).
+    /// The scene layer donates it to Siri so it learns where you talk.
+    @ObservationIgnored public var onComposerMessage: ((BufferModel, NetworkSession) -> Void)?
 
     /// Whether the main window is key; drives unread counting.
     public var isWindowActive = true {
@@ -170,9 +173,10 @@ public final class AppModel: SessionHost {
     }
 
     /// Asks the scene layer to show `bufferID`: select it, activate Vela,
-    /// and open the main window if it's closed.
-    public func requestShow(_ bufferID: BufferID) {
-        showRequest = ShowRequest(bufferID: bufferID)
+    /// and open the main window if it's closed. A `draft` replaces the
+    /// buffer's unsent text (Siri's "draft a message").
+    public func requestShow(_ bufferID: BufferID, draft: String? = nil) {
+        showRequest = ShowRequest(bufferID: bufferID, draft: draft)
     }
 
     // MARK: SessionHost
@@ -241,6 +245,7 @@ public final class AppModel: SessionHost {
             subtitle: session.displayName,
             body: IRCFormatting.strip(body),
             bufferID: buffer.id,
+            lineID: line.id,
             playSound: settings[.notifySound]
         )
     }
@@ -782,4 +787,6 @@ nonisolated struct DatabasePreviewCache: LinkPreviewCache {
 nonisolated public struct ShowRequest: Equatable, Sendable {
     public let id = UUID()
     public let bufferID: BufferID
+    /// Text to put in the buffer's composer.
+    public var draft: String?
 }

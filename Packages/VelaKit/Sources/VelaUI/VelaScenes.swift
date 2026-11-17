@@ -7,6 +7,7 @@ import AppKit
 import SwiftUI
 import VelaCore
 import VelaIntelligence
+import VelaIntents
 import VelaStore
 import VelaTheme
 
@@ -16,8 +17,11 @@ public struct VelaScenes: Scene {
     @State private var themeStore: ThemeStore
     @State private var uiState: UIState
     @State private var services: SceneServices
+    @State private var siri: SiriSceneSupport
 
-    public init() {
+    /// - Parameter appShortcuts: The app's App Shortcuts, refreshed when
+    ///   channels change so phrases like "Open #vela in Vela" stay current.
+    public init(appShortcuts: (any AppShortcutsProvider.Type)? = nil) {
         // Vela opens no documents. Without this, AppKit treats launch
         // arguments such as the "Lighter" in `--theme Lighter` as files to
         // open, and a launch that opens files skips the main window.
@@ -43,6 +47,7 @@ public struct VelaScenes: Scene {
         _themeStore = State(initialValue: themeStore)
         _uiState = State(initialValue: uiState)
         _services = State(initialValue: services)
+        _siri = State(initialValue: SiriSceneSupport(app: app, uiState: uiState, appShortcuts: appShortcuts))
     }
 
     public var body: some Scene {
@@ -60,6 +65,7 @@ public struct VelaScenes: Scene {
         .restorationBehavior(.disabled)
         .commands {
             VelaCommands(app: app, themeStore: themeStore, uiState: uiState)
+            ShowRequestCommands(router: siri.showRequests)
         }
 
         Settings {
@@ -114,6 +120,7 @@ private struct VelaEnvironmentModifier: ViewModifier {
     /// Bumped when macOS's locale changes (such as the 24-hour time switch
     /// in System Settings), so the chat style re-resolves a System clock.
     @State private var localeRevision = 0
+    @Environment(\.openWindow) private var openWindow
 
     func body(content: Content) -> some View {
         let theme = themeStore.current
@@ -141,10 +148,120 @@ private struct VelaEnvironmentModifier: ViewModifier {
                 guard isPrimary else { return }
                 themeStore.start()
                 app.start()
+                ShowRequestRouter.shared?.installIfNeeded(openWindow)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
                 guard isPrimary else { return }
                 app.prepareForTermination()
             }
+    }
+}
+
+// MARK: - Siri, Shortcuts and Spotlight
+
+/// Siri, Shortcuts and Spotlight support for the app's lifetime.
+@MainActor
+final class SiriSceneSupport {
+    let showRequests: ShowRequestRouter
+    let integration: SiriIntegration
+
+    /// `VelaScenes.init` can run more than once; only the first instance
+    /// (the one SwiftUI keeps) starts.
+    private static var started = false
+
+    /// Refreshes the parameters (channel names) of `provider`'s phrases.
+    private static func refresher<Provider: AppShortcutsProvider>(for provider: Provider.Type) -> @MainActor () -> Void {
+        { Provider.updateAppShortcutParameters() }
+    }
+
+    init(app: AppModel, uiState: UIState, appShortcuts: (any AppShortcutsProvider.Type)?) {
+        showRequests = ShowRequestRouter(app: app, uiState: uiState)
+        integration = SiriIntegration(app: app, refreshAppShortcuts: appShortcuts.map { Self.refresher(for: $0) })
+        guard !Self.started else { return }
+        Self.started = true
+        ShowRequestRouter.shared = showRequests
+        showRequests.start()
+        integration.start()
+    }
+}
+
+/// Brings a buffer on screen when Siri, Shortcuts or Spotlight ask
+/// (`AppModel.showRequest`): selects it, puts any draft in its composer,
+/// activates Vela and opens the main window if it was closed. Lives as long
+/// as the app, so it works with no window open.
+@MainActor
+final class ShowRequestRouter {
+    private let app: AppModel
+    private let uiState: UIState
+    private var openWindow: OpenWindowAction?
+    private var handled: UUID?
+
+    /// The router of the running app.
+    static weak var shared: ShowRequestRouter?
+
+    init(app: AppModel, uiState: UIState) {
+        self.app = app
+        self.uiState = uiState
+    }
+
+    func start() {
+        observe()
+    }
+
+    /// Captured from an environment that outlives the main window (the
+    /// menu bar's commands).
+    func install(_ action: OpenWindowAction) {
+        openWindow = action
+    }
+
+    /// A fallback from the main window, if the menu bar's hasn't arrived.
+    func installIfNeeded(_ action: OpenWindowAction) {
+        if openWindow == nil { openWindow = action }
+    }
+
+    private func observe() {
+        withObservationTracking {
+            _ = app.showRequest
+        } onChange: { [weak self] in
+            // Runs before the change lands; act on it right after.
+            Task { @MainActor in
+                self?.handle()
+                self?.observe()
+            }
+        }
+    }
+
+    private func handle() {
+        guard let request = app.showRequest, request.id != handled else { return }
+        handled = request.id
+        if let draft = request.draft { uiState.drafts[request.bufferID] = draft }
+        // Select first: the window shows the selection when it opens.
+        app.select(bufferID: request.bufferID)
+        NSApp.activate()
+        // Opens the main window, or brings it forward if it's open.
+        openWindow?(id: WindowID.main)
+        uiState.focusInput()
+    }
+}
+
+/// Hands the menu bar's `openWindow` to the show-request router. The menu
+/// bar exists even when every window is closed.
+private struct ShowRequestCommands: Commands {
+    let router: ShowRequestRouter
+
+    var body: some Commands {
+        CommandGroup(after: .windowArrangement) {
+            OpenWindowBridge(router: router)
+        }
+    }
+}
+
+private struct OpenWindowBridge: View {
+    @Environment(\.openWindow) private var openWindow
+    let router: ShowRequestRouter
+
+    var body: some View {
+        let _ = router.install(openWindow)
+        EmptyView()
     }
 }

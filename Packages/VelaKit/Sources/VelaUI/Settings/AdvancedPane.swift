@@ -22,12 +22,6 @@ struct AdvancedPane: View {
         SettingsPage("Advanced", subtitle: "Behavior, history and the files behind it all. Everything here also lives in settings.json.") {
             SettingsSection("Behavior") {
                 SettingsToggle(
-                    "Send typing indicators",
-                    detail: "Let others see when you're typing, on servers that support it.",
-                    isOn: $settings[.inputSendTypingIndicators]
-                )
-                SettingsToggle("Check spelling while typing", isOn: $settings[.inputSpellCheck])
-                SettingsToggle(
                     "Reconnect automatically",
                     detail: "Retry after a dropped connection, and after your Mac wakes.",
                     isOn: $settings[.connectionAutoReconnect]

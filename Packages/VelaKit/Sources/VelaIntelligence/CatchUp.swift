@@ -79,6 +79,12 @@ extension CatchUpRequest {
     }
 }
 
+extension CatchUpRequest {
+    /// Summaries cover at most this many of the newest lines; older ones
+    /// in a longer stretch are left out.
+    nonisolated public static let maximumLines = 600
+}
+
 /// One thread of conversation in a summary.
 nonisolated public struct CatchUpTopic: Sendable, Hashable, Identifiable {
     public var id: UUID

@@ -245,7 +245,7 @@ nonisolated enum BlurredMedia {
     }
 
     /// CIContext is thread-safe and costly to make; one is shared.
-    nonisolated(unsafe) private static let ciContext = CIContext(options: [.cacheIntermediates: false])
+    nonisolated private static let ciContext = CIContext(options: [.cacheIntermediates: false])
 }
 
 // MARK: - Stand-in

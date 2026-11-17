@@ -42,7 +42,8 @@ public struct ThemeOverrides: Sendable, Hashable {
     ///
     /// Values: token keys map to hex strings; `"nickColors"` to an array of
     /// hex strings; `"ircColors"` to an object of index → hex; `"vibrancy"`
-    /// to `"none"`, `"sidebar"` or `"window"`.
+    /// to `"none"`, `"sidebar"` or `"window"`. `"$accentPicker"` (the keys
+    /// the accent picker wrote, see `AccentCustomizations`) is skipped.
     public init(customizations: [String: JSONValue], themeName: String, themeID: String) {
         self.init()
         apply(customizations)
@@ -74,6 +75,8 @@ public struct ThemeOverrides: Sendable, Hashable {
                 if let raw = value.stringValue, let parsed = ThemeVibrancy(rawValue: raw) {
                     vibrancy = parsed
                 }
+            case AccentCustomizations.markerKey:
+                continue
             default:
                 if let hex = value.stringValue { colors[key] = hex }
             }
@@ -120,6 +123,11 @@ public struct ThemeOverrides: Sendable, Hashable {
                 case "vibrancy":
                     if ThemeVibrancy(rawValue: value.stringValue ?? "") == nil {
                         problems.append("“\(path)” must be \"none\", \"sidebar\" or \"window\".")
+                    }
+                case AccentCustomizations.markerKey:
+                    // Written by the accent picker: the keys it set.
+                    if value.arrayValue?.allSatisfy({ $0.stringValue != nil }) != true {
+                        problems.append("“\(path)” must be a list of token names.")
                     }
                 default:
                     if ThemeRegistry.token(key) == nil {

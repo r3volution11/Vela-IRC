@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaStore
 import VelaTheme
 
@@ -23,6 +24,7 @@ struct CommandPaletteView: View {
     @Environment(AppModel.self) private var app
     @Environment(ThemeStore.self) private var themeStore
     @Environment(UIState.self) private var uiState
+    @Environment(IntelligenceServices.self) private var intelligence
     @Environment(\.theme) private var theme
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
@@ -259,7 +261,8 @@ struct CommandPaletteView: View {
         case .commands:
             let catalog = VelaCommandCatalog(VelaCommandContext(
                 app: app, themeStore: themeStore, uiState: uiState,
-                openWindow: openWindow, openSettings: openSettings
+                openWindow: openWindow, openSettings: openSettings,
+                intelligence: intelligence
             ))
             items = PaletteSource.commandItems(catalog.all, history: PaletteHistory.shared.commandIDs)
         case .themes:

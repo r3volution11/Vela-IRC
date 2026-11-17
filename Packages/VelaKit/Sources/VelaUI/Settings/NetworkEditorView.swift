@@ -387,7 +387,9 @@ struct NetworkEditorView: View {
                 text: $draft.performCommands,
                 placeholder: "/mode \(draft.nick.isEmpty ? "nick" : draft.nick) +x\n/msg ChanServ op #vela",
                 accessibilityName: "Perform commands",
-                minHeight: 74
+                minHeight: 74,
+                // IRC commands: no spelling, autocorrect or smart quotes.
+                checksText: false
             )
             .padding(10)
         }

@@ -5,12 +5,14 @@
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaStore
 import VelaTheme
 
-/// Message layout, typography, timestamps and conversation noise.
+/// Message layout, typography, timestamps, conversation noise and typing.
 struct MessagesPane: View {
     @Environment(AppModel.self) private var app
+    @Environment(IntelligenceServices.self) private var intelligence
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
 
@@ -20,7 +22,7 @@ struct MessagesPane: View {
     var body: some View {
         @Bindable var settings = app.settings
 
-        SettingsPage("Messages", subtitle: "How conversations look: layout, type, timestamps and what counts as noise.") {
+        SettingsPage("Messages", subtitle: "How conversations look and how you type: layout, timestamps, noise and spelling.") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Layout")
                     .font(.system(size: 13, weight: .semibold))
@@ -135,6 +137,8 @@ struct MessagesPane: View {
                 SettingsToggle("Large emoji", detail: "Show messages that are only emoji bigger.", isOn: $settings[.chatLargeEmoji])
             }
 
+            typingSection
+
             SettingsSection("Memory", footer: "Older messages stay on disk and load as you scroll up.") {
                 SettingsMenuRow(
                     title: "Messages kept in memory",
@@ -148,6 +152,69 @@ struct MessagesPane: View {
                 )
             }
         }
+    }
+
+    // MARK: Typing
+
+    /// The message box's spelling, substitutions and Writing Tools. Three
+    /// of them follow macOS until they're changed here.
+    private var typingSection: some View {
+        @Bindable var settings = app.settings
+        let system = SystemTextSettings.shared.values
+
+        return SettingsSection("Typing", footer: "Commands, nicks, channel names, links and code are never corrected.") {
+            SettingsToggle(
+                "Check spelling while typing",
+                detail: "Underline misspelled words in the message box.",
+                isOn: $settings[.inputSpellCheck]
+            )
+            SettingsToggle(
+                "Check grammar",
+                detail: "Underline grammar mistakes along with spelling.",
+                isOn: $settings[.inputGrammarCheck]
+            )
+            SystemFollowingToggleRow(
+                "Correct spelling automatically",
+                detail: "Fix misspelled words as you type.",
+                value: $settings[.inputAutocorrect],
+                system: system.autocorrect,
+                reset: { settings.reset(.inputAutocorrect) }
+            )
+            SystemFollowingToggleRow(
+                "Use text replacements",
+                detail: "Expand the text replacements you set up in macOS.",
+                value: $settings[.inputTextReplacements],
+                system: system.textReplacements,
+                reset: { settings.reset(.inputTextReplacements) }
+            ) {
+                SettingsLinkButton("Edit Text Replacements…") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .help("Open System Settings → Keyboard")
+                .accessibilityHint("Opens Keyboard settings, where text replacements are edited.")
+            }
+            SystemFollowingToggleRow(
+                "Smart quotes and dashes",
+                detail: "Use curly quotes, and turn double hyphens into dashes.",
+                value: $settings[.inputSmartPunctuation],
+                system: system.smartPunctuation,
+                reset: { settings.reset(.inputSmartPunctuation) }
+            )
+            SettingsToggle("Writing Tools", detail: writingToolsDetail, isOn: $settings[.inputWritingTools])
+            SettingsToggle(
+                "Send typing indicators",
+                detail: "Let others see when you're typing, on servers that support it.",
+                isOn: $settings[.inputSendTypingIndicators]
+            )
+        }
+    }
+
+    private var writingToolsDetail: String {
+        let base = "Proofread and rewrite your message with Apple Intelligence."
+        let status = intelligence.availability.status
+        return status.isAvailable ? base : "\(base) \(status.title)."
     }
 
     // MARK: Layout cards
@@ -263,6 +330,81 @@ struct MessagesPane: View {
         }
         let hours = seconds / 3600
         return hours == 1 ? "1 hour" : String(format: "%g hours", hours)
+    }
+}
+
+/// A switch for a setting that follows macOS until it's changed in Vela.
+/// It shows the effective value, with "Same as macOS" under it while it
+/// follows, or a "Use macOS Setting" button once it's been changed.
+private struct SystemFollowingToggleRow<Links: View>: View {
+    @Environment(\.theme) private var theme
+    let title: String
+    let detail: String
+    @Binding var value: SystemFollowingBool
+    /// What macOS says.
+    let system: Bool
+    let reset: () -> Void
+    let links: Links
+
+    init(
+        _ title: String,
+        detail: String,
+        value: Binding<SystemFollowingBool>,
+        system: Bool,
+        reset: @escaping () -> Void,
+        @ViewBuilder links: () -> Links = { EmptyView() }
+    ) {
+        self.title = title
+        self.detail = detail
+        _value = value
+        self.system = system
+        self.reset = reset
+        self.links = links()
+    }
+
+    private var follows: Bool { value == .system }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13))
+                    .foregroundStyle(theme[ThemeKey.settingsForeground])
+                    .accessibilityHidden(true)
+                Text(detail)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
+                HStack(spacing: 12) {
+                    if follows {
+                        Text("Same as macOS")
+                            .font(.system(size: 11.5, weight: .medium))
+                            .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                            .accessibilityHidden(true)
+                    } else {
+                        SettingsLinkButton("Use macOS Setting", action: reset)
+                            .help("Follow System Settings → Keyboard → Text Input (\(system ? "on" : "off") there)")
+                            .accessibilityLabel("Use macOS Setting for \(title)")
+                            .accessibilityHint("macOS has it \(system ? "on" : "off").")
+                    }
+                    links
+                }
+                .padding(.top, 3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Toggle(title, isOn: Binding(
+                get: { value.resolved(system: system) },
+                set: { value = SystemFollowingBool($0) }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+            .controlSize(.small)
+            .accessibilityHint(follows ? "\(detail) Same as macOS." : "\(detail) Changed from the macOS setting.")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .frame(minHeight: 40)
     }
 }
 

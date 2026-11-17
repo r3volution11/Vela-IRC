@@ -382,23 +382,38 @@ struct ThemedTextField: View {
 }
 
 /// A multi-line plain text editor drawn with theme tokens.
+///
+/// With `checksText: false`, macOS leaves the text alone: no spelling
+/// underlines, autocorrect, text replacements, smart quotes or dashes, or
+/// Writing Tools. Use it for text that holds IRC commands or JSON.
 struct ThemedTextEditor: View {
     @Environment(\.theme) private var theme
     @Binding var text: String
     var placeholder: String
     var accessibilityName: String
     var minHeight: CGFloat = 70
+    var checksText = true
 
     @FocusState private var isFocused: Bool
+    /// Focus of the unchecked editor, which SwiftUI's focus doesn't see.
+    @State private var plainEditorFocused = false
 
-    init(text: Binding<String>, placeholder: String, accessibilityName: String, minHeight: CGFloat = 70) {
+    init(
+        text: Binding<String>,
+        placeholder: String,
+        accessibilityName: String,
+        minHeight: CGFloat = 70,
+        checksText: Bool = true
+    ) {
         _text = text
         self.placeholder = placeholder
         self.accessibilityName = accessibilityName
         self.minHeight = minHeight
+        self.checksText = checksText
     }
 
     var body: some View {
+        let focused = checksText ? isFocused : plainEditorFocused
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
                 Text(placeholder)
@@ -409,14 +424,26 @@ struct ThemedTextEditor: View {
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
-            TextEditor(text: $text)
-                .font(.system(size: 12.5, design: .monospaced))
-                .foregroundStyle(theme[ThemeKey.settingsForeground])
-                .scrollContentBackground(.hidden)
-                .focused($isFocused)
+            if checksText {
+                TextEditor(text: $text)
+                    .font(.system(size: 12.5, design: .monospaced))
+                    .foregroundStyle(theme[ThemeKey.settingsForeground])
+                    .scrollContentBackground(.hidden)
+                    .focused($isFocused)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 6)
+                    .accessibilityLabel(accessibilityName)
+            } else {
+                UncheckedTextView(
+                    text: $text,
+                    isFocused: $plainEditorFocused,
+                    font: .monospacedSystemFont(ofSize: 12.5, weight: .regular),
+                    textColor: theme.color(ThemeKey.settingsForeground).nsColor,
+                    accessibilityName: accessibilityName
+                )
                 .padding(.horizontal, 4)
                 .padding(.vertical, 6)
-                .accessibilityLabel(accessibilityName)
+            }
         }
         .frame(minHeight: minHeight)
         .background(
@@ -426,10 +453,127 @@ struct ThemedTextEditor: View {
         .overlay(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .strokeBorder(
-                    isFocused ? theme[ThemeKey.focusBorder] : theme[ThemeKey.settingsBorder],
-                    lineWidth: isFocused ? 1.5 : 1
+                    focused ? theme[ThemeKey.focusBorder] : theme[ThemeKey.settingsBorder],
+                    lineWidth: focused ? 1.5 : 1
                 )
         )
+    }
+}
+
+/// A plain `NSTextView` with every kind of macOS text checking off, for
+/// ``ThemedTextEditor``'s `checksText: false`.
+private struct UncheckedTextView: NSViewRepresentable {
+    @Binding var text: String
+    @Binding var isFocused: Bool
+    let font: NSFont
+    let textColor: NSColor
+    let accessibilityName: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.scrollerStyle = .overlay
+
+        let textView = FocusReportingTextView(usingTextLayoutManager: false)
+        textView.frame = NSRect(origin: .zero, size: scrollView.contentSize)
+        textView.minSize = .zero
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainerInset = NSSize(width: 0, height: 1)
+        textView.drawsBackground = false
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.allowsUndo = true
+        textView.usesFindBar = false
+        textView.usesFontPanel = false
+        textView.isContinuousSpellCheckingEnabled = false
+        textView.isGrammarCheckingEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = false
+        textView.isAutomaticDataDetectionEnabled = false
+        textView.isAutomaticTextCompletionEnabled = false
+        textView.smartInsertDeleteEnabled = false
+        textView.writingToolsBehavior = .none
+        textView.inlinePredictionType = .no
+        textView.focusRingType = .none
+        textView.delegate = context.coordinator
+        textView.onFocusChange = { [weak coordinator = context.coordinator] focused in
+            coordinator?.focusChanged(focused)
+        }
+        scrollView.documentView = textView
+        context.coordinator.textView = textView
+        apply(to: textView)
+        textView.string = text
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        context.coordinator.parent = self
+        guard let textView = context.coordinator.textView else { return }
+        apply(to: textView)
+        if textView.string != text, !textView.hasMarkedText() {
+            textView.string = text
+        }
+    }
+
+    private func apply(to textView: NSTextView) {
+        if textView.font != font { textView.font = font }
+        if textView.textColor != textColor {
+            textView.textColor = textColor
+            textView.insertionPointColor = textColor
+        }
+        textView.typingAttributes = [.font: font, .foregroundColor: textColor]
+        textView.setAccessibilityLabel(accessibilityName)
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: UncheckedTextView
+        weak var textView: NSTextView?
+
+        init(parent: UncheckedTextView) {
+            self.parent = parent
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView else { return }
+            if parent.text != textView.string { parent.text = textView.string }
+        }
+
+        func focusChanged(_ focused: Bool) {
+            let binding = parent.$isFocused
+            // Focus can move during a SwiftUI update.
+            Task { @MainActor in
+                if binding.wrappedValue != focused { binding.wrappedValue = focused }
+            }
+        }
+    }
+
+    final class FocusReportingTextView: NSTextView {
+        var onFocusChange: ((Bool) -> Void)?
+
+        override func becomeFirstResponder() -> Bool {
+            let accepted = super.becomeFirstResponder()
+            if accepted { onFocusChange?(true) }
+            return accepted
+        }
+
+        override func resignFirstResponder() -> Bool {
+            let accepted = super.resignFirstResponder()
+            if accepted { onFocusChange?(false) }
+            return accepted
+        }
     }
 }
 

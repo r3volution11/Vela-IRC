@@ -38,6 +38,13 @@ struct VelaCommands: Commands {
         // (Print… and Page Setup…) for the palette.
         CommandGroup(replacing: .printItem) {}
 
+        // Edit → Spelling and Grammar, Substitutions (typing settings).
+        CommandGroup(replacing: .textEditing) {
+            CommandItems(app: app, themeStore: themeStore, uiState: uiState) { commands in
+                TypingMenuItems(commands: commands)
+            }
+        }
+
         CommandGroup(replacing: .sidebar) {
             CommandItems(app: app, themeStore: themeStore, uiState: uiState) { commands in
                 ViewMenuItems(commands: commands)
