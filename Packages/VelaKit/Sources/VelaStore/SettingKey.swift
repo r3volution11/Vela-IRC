@@ -133,7 +133,15 @@ public struct SettingKey<Value: Sendable>: Sendable, Hashable {
     public var defaultJSONValue: JSONValue { encode(defaultValue) }
 
     public var descriptor: SettingDescriptor {
-        SettingDescriptor(key: key, defaultValue: defaultJSONValue, summary: summary, schema: schema)
+        var schema = schema
+        // Number ranges live in one table (SettingsMetadata) and reach the
+        // JSON schema, the validator and the settings editor from here.
+        if let range = SettingsMetadata.numberRanges[key], case .object(var object) = schema {
+            object["minimum"] = .number(range.lowerBound)
+            object["maximum"] = .number(range.upperBound)
+            schema = .object(object)
+        }
+        return SettingDescriptor(key: key, defaultValue: defaultJSONValue, summary: summary, schema: schema)
     }
 
     public static func == (lhs: SettingKey, rhs: SettingKey) -> Bool { lhs.key == rhs.key }

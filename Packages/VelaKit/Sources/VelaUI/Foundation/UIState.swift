@@ -20,6 +20,10 @@ public final class UIState {
     public var joinChannelNetwork: UUID?
     /// Network awaiting removal confirmation.
     public var networkPendingRemoval: UUID?
+    /// The settings editor in Settings → Advanced: UI or JSON view, search
+    /// query, and keys to reveal. Shared so the sidebar search, the palette and
+    /// "Show in settings editor" links can drive it.
+    public let settingsEditor = SettingsEditorState()
     /// The sidebar rail temporarily expanded by hover.
     public var isRailHoverExpanded = false
     /// Requests the input bar to take focus (incremented to trigger).
