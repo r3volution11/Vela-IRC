@@ -57,7 +57,7 @@ The screenshots in `docs/screenshots/` and `website/public/screenshots/` come fr
 |---|---|---|
 | *Big Buck Bunny* | © copyright 2008, Blender Foundation / www.bigbuckbunny.org (https://peach.blender.org/about/); the YouTube copy is the 2013 4K 60 fps edition, changes by Janus B. Kristensen (CC BY) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
 | Crab Nebula | NASA, ESA, J. Hester and A. Loll (Arizona State University), https://commons.wikimedia.org/wiki/File:Crab_Nebula.jpg | Public domain |
-| Rotating earth (large).gif | Marvel, based on NASA imagery, https://commons.wikimedia.org/wiki/File:Rotating_earth_(large).gif | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| Rotating earth animated.gif | NASA Goddard Space Flight Center (Reto Stöckli, Robert Simmon), GIF by Jahobr, https://commons.wikimedia.org/wiki/File:Rotating_earth_animated.gif | Public domain |
 | Aurora borealis over Eielson Air Force Base, Alaska | U.S. Air Force photo by Senior Airman Joshua Strang, https://commons.wikimedia.org/wiki/File:Aurora_borealis_over_Eielson_Air_Force_Base,_Alaska.jpg | Public domain |
 | RCW 38 star cluster (eso2503a) | ESO/VVVX survey, https://www.eso.org/public/images/eso2503a/ | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 

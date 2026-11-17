@@ -30,7 +30,7 @@ struct CatchUpLiveModelTests {
         ("lukas", "nice, chathistory + reactions are the big ones for me"),
         ("marisol", "has anyone tried the Blender open movie embed? https://www.youtube.com/watch?v=aqz-KE-bpKQ"),
         ("kenji", "plays inline, and the facade means no web view until you click ▶"),
-        ("ada", "spinning earth for no reason https://upload.wikimedia.org/wikipedia/commons/2/2c/Rotating_earth_%28large%29.gif"),
+        ("ada", "spinning earth for no reason https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Rotating_earth_animated.gif/250px-Rotating_earth_animated.gif"),
         ("wren", "doug: can you review the sidebar rail PR when you get a sec?"),
         ("theo", "also the Swift blog has a post on the new concurrency defaults: https://www.swift.org/blog/"),
         ("lukas", "does the rail remember its width per window or globally?"),

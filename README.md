@@ -289,6 +289,6 @@ Vela builds on a lot of other people's work. Thank you to:
 - **IRC documentation:** the [Modern IRC Client Protocol](https://modern.ircdocs.horse/) and its formatting and CTCP specs, the [IRCv3 specifications](https://ircv3.net/irc/), and RFC 1459 and 2812.
 - **Theme palettes:** Dracula, Nord, Catppuccin, Tokyo Night, One Dark Pro, Gruvbox, Solarized and Rosé Pine, with the Material Theme and [Bear](https://bear.app) as inspiration ([details](docs/THEME-CREDITS.md)).
 - **The website:** [VitePress](https://vitepress.dev), Vue, Vite, Shiki and MiniSearch.
-- **Screenshot media:** *Big Buck Bunny* (© 2008 Blender Foundation, CC BY 3.0), an ESO image (ESO/VVVX survey, CC BY 4.0), a rotating-Earth GIF by Marvel (CC BY-SA 3.0), and public-domain photos from NASA, ESA and the U.S. Air Force, via Wikimedia Commons.
+- **Screenshot media:** *Big Buck Bunny* (© 2008 Blender Foundation, CC BY 3.0), an ESO image (ESO/VVVX survey, CC BY 4.0), and public-domain images and animation from NASA, ESA and the U.S. Air Force, via Wikimedia Commons.
 
 The full list, with links and licenses, is at **[velairc.app/help/license](https://velairc.app/help/license)**.

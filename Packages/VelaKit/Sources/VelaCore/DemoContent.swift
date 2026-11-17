@@ -121,7 +121,7 @@ enum DemoContent {
             say("lukas", "nice, chathistory + reactions are the big ones for me", 44),
             say("marisol", "has anyone tried the Blender open movie embed? https://www.youtube.com/watch?v=aqz-KE-bpKQ", 30, msgid: "demo-yt"),
             say("kenji", "plays inline, and the facade means no web view until you click ▶", 29, replyTo: "demo-yt"),
-            say("ada", "spinning earth for no reason https://upload.wikimedia.org/wikipedia/commons/2/2c/Rotating_earth_%28large%29.gif", 20, msgid: "demo-gif"),
+            say("ada", "spinning earth for no reason https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Rotating_earth_animated.gif/250px-Rotating_earth_animated.gif", 20, msgid: "demo-gif"),
             say("nadia", "reads the release notes", 12, kind: .action),
             say("wren", "doug: can you review the sidebar rail PR when you get a sec?", 6, msgid: "demo-highlight", highlight: true),
             say("doug", "on it 👍", 5, isSelf: true),
