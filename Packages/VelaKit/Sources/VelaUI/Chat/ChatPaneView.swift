@@ -39,6 +39,8 @@ struct ChatColumnView: View {
                     .id(buffer.id)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .environment(\.nickColorBuffer, buffer)
+                    .translationHost(buffer: buffer)
+                    .onscreenEntity(buffer: buffer, session: session)
                 TypingIndicatorView(buffer: buffer)
                     .id(buffer.id)
                 if usesTabs && style.tabPlacement == .bottom {
