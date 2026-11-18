@@ -141,7 +141,9 @@ struct MessageMenuItems: View {
         }
         if let link = links.first, !line.isRedacted {
             Button {
-                controller.copyToPasteboard(link.absoluteString)
+                // The link that was right-clicked, else the first.
+                let copied = LinkClickMonitor.shared.contextLink(among: links) ?? link
+                controller.copyToPasteboard(copied.absoluteString)
             } label: {
                 Label("Copy Link", systemImage: "link")
             }

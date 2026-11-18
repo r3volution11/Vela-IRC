@@ -49,13 +49,36 @@ struct LinkPointerTextTests {
 
     // MARK: Regions
 
+    @Test func linksKeepTheirURLsAndText() {
+        let links = LinkRuns.links(in: message("see https://example.com/a and #vela ok"))
+        #expect(links.map(\.url) == [URL(string: "https://example.com/a")!, ChannelLink.url(for: "#vela")!])
+        #expect(links.map(\.title) == ["https://example.com/a", "#vela"])
+    }
+
+    @Test func removingLinksKeepsTheTextAndItsStyle() {
+        let text = message("see \u{02}https://bold\u{02}.example/x and #vela")
+        let plain = LinkRuns.removingLinks(from: text)
+        #expect(LinkRuns.links(in: plain).isEmpty)
+        #expect(String(plain.characters) == String(text.characters))
+        // Everything else, link color and bold included, is untouched.
+        var expected = text
+        for (link, range) in text.runs[\.link] where link != nil {
+            expected[range].link = nil
+        }
+        #expect(plain == expected)
+        #expect(plain.runs.count == text.runs.count)
+    }
+
     @Test func regionsHitTestTheirRects() {
         let regions = LinkRegions()
         #expect(!regions.contains(CGPoint(x: 5, y: 5)))
-        regions.update([CGRect(x: 0, y: 0, width: 10, height: 10), CGRect(x: 20, y: 0, width: 10, height: 10)])
-        #expect(regions.contains(CGPoint(x: 5, y: 5)))
+        regions.update([
+            .init(rect: CGRect(x: 0, y: 0, width: 10, height: 10), link: 0),
+            .init(rect: CGRect(x: 20, y: 0, width: 10, height: 10), link: 1),
+        ])
+        #expect(regions.link(at: CGPoint(x: 5, y: 5)) == 0)
         #expect(!regions.contains(CGPoint(x: 15, y: 5)))
-        #expect(regions.contains(CGPoint(x: 25, y: 9)))
+        #expect(regions.link(at: CGPoint(x: 25, y: 9)) == 1)
         #expect(!regions.contains(CGPoint(x: 25, y: 11)))
         regions.update([])
         #expect(!regions.contains(CGPoint(x: 5, y: 5)))
@@ -76,7 +99,7 @@ struct LinkPointerTextTests {
 
     @Test func outsideAnEventNothingIsClaimed() {
         let regions = LinkRegions()
-        regions.update([CGRect(x: 0, y: 0, width: 100, height: 100)])
+        regions.update([.init(rect: CGRect(x: 0, y: 0, width: 100, height: 100), link: 0)])
         let view = LinkPointerRegionView(regions: regions)
         view.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
         // No pointer event is being handled here.
@@ -85,7 +108,7 @@ struct LinkPointerTextTests {
 
     @Test func hitTestsUseTopLeftCoordinates() {
         let regions = LinkRegions()
-        regions.update([CGRect(x: 0, y: 0, width: 50, height: 20)])
+        regions.update([.init(rect: CGRect(x: 0, y: 0, width: 50, height: 20), link: 0)])
         let container = NSView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
         let view = LinkPointerRegionView(regions: regions)
         view.frame = container.bounds
@@ -115,12 +138,21 @@ struct LinkPointerTextTests {
         }
     }
 
-    private func host(_ text: AttributedString, width: CGFloat, italic: Bool = false, size: CGFloat = 13, lineSpacing: CGFloat = 3) -> Hosted {
-        let view = LinkPointerText(text) { text in
+    /// `plainText` hosts a plain `Text` with its links instead, for
+    /// comparison.
+    private func host(_ text: AttributedString, width: CGFloat, italic: Bool = false, size: CGFloat = 13, lineSpacing: CGFloat = 3, plainText: Bool = false) -> Hosted {
+        let style = { (text: Text) in
             text
                 .font(.system(size: size))
                 .italic(italic)
                 .foregroundStyle(Color.black)
+        }
+        let view = Group {
+            if plainText {
+                style(Text(text))
+            } else {
+                LinkPointerText(text, style: style)
+            }
         }
         .lineSpacing(lineSpacing)
         .tint(Color(nsColor: Self.link))
@@ -196,8 +228,26 @@ struct LinkPointerTextTests {
         }
     }
 
+    @Test func drawsExactlyLikeTextWithItsLinks() {
+        // The visible text has no links (so it selects everywhere) but must
+        // look the same: same color, no underline, same lines.
+        for (text, width) in [
+            (message("see https://example.com/a and #vela ok"), 600.0),
+            (message("see 🙂 https://example.com/a/rather/long/path/that/wraps?q=1 and then #vela ok"), 190.0),
+        ] {
+            let ours = host(text, width: width)
+            let plain = host(text, width: width, plainText: true)
+            #expect(ours.bitmap.pixelsWide == plain.bitmap.pixelsWide)
+            #expect(ours.bitmap.pixelsHigh == plain.bitmap.pixelsHigh)
+            #expect(ours.bitmap.tiffRepresentation == plain.bitmap.tiffRepresentation)
+        }
+    }
+
     @Test func rectsCoverTheLinksOnOneLine() {
-        check(host(message("see https://example.com/a and #vela ok"), width: 600), expectedRects: 2)
+        let hosted = host(message("see https://example.com/a and #vela ok"), width: 600)
+        check(hosted, expectedRects: 2)
+        #expect(hosted.regionView?.regions.regions.map(\.link) == [0, 1])
+        #expect(hosted.regionView?.urls == [URL(string: "https://example.com/a")!, ChannelLink.url(for: "#vela")!])
     }
 
     @Test func rectsFollowALinkOntoTheNextLine() {

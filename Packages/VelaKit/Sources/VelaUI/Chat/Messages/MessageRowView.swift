@@ -508,8 +508,8 @@ private struct MessageAccessibilityModifier: ViewModifier {
                     Button("Copy Text") { controller.copyText(of: line) }
                 }
                 TranslationAccessibilityActions(line: line)
-                if let link = rendered?.links.first {
-                    Button("Open Link") { NSWorkspace.shared.open(link) }
+                if let rendered {
+                    LinkAccessibilityActions(text: rendered.attributed)
                 }
                 if controller.canDelete(line) {
                     Button("Delete Message") { controller.confirmDelete(line) }

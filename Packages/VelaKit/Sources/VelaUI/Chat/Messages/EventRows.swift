@@ -32,6 +32,7 @@ struct EventRow: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(line.time.formatted(date: .omitted, time: .shortened)), \(IRCFormatting.strip(line.text))")
+        .accessibilityActions { LinkAccessibilityActions(text: eventText) }
     }
 
     /// Membership events stay plain (no link-colored channel names); other
