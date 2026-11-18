@@ -24,6 +24,11 @@ struct MediaPane: View {
                     detail: "Show images and link previews as messages arrive. When off, click a link's preview button to load it.",
                     isOn: $settings[.mediaAutoLoad]
                 )
+                SettingsToggle(
+                    "Load previews from sites that need a browser",
+                    detail: "Some sites only show their page to a browser. Vela opens them in a private Safari engine session that's thrown away afterwards; the page's scripts run. It takes a second or two, only for those sites, and the preview is saved.",
+                    isOn: $settings[.mediaBrowserFallback]
+                )
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "hand.raised.fill")
                         .font(.system(size: 13))

@@ -51,6 +51,8 @@ private struct TranslationContent: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityLabel("Translated from \(source.translationDisplayName()): \(text)")
                     .accessibilityActions { TranslationOptions(line: line) }
+                    // Right-clicking it opens the message's menu.
+                    .contextClicksOpenMenu()
                 TranslationCaption(line: line, title: "Translated from \(source.translationDisplayName())", systemImage: "translate")
             }
         case .failed(let reason, let source):

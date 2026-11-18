@@ -21,8 +21,11 @@ import Synchronization
 ///   whose `LinkRegionRecorder` notes where each link landed;
 /// - a transparent AppKit view over the text (`LinkPointerRegionView`) that
 ///   answers hit tests at those spots for pointer movement only, under
-///   `.pointerStyle(.link)`. Clicks, drags, scrolls and right-clicks go to
-///   the text, which selects and shows menus as it does anywhere else;
+///   `.pointerStyle(.link)`. Clicks, drags and scrolls go to the text,
+///   which selects as it does anywhere else. Inside a
+///   `selectableTextContextMenu` (a message), it also takes right-clicks
+///   and Control-clicks anywhere on the text, so they open that menu
+///   rather than the text's own; elsewhere they go to the text too;
 /// - `LinkClickMonitor`, which watches mouse events go by and opens a link
 ///   that was clicked: pressed and released in place, as a single click.
 ///   It opens on the release, at once. A double- or triple-click selects a
@@ -30,9 +33,10 @@ import Synchronization
 ///   open nothing.
 ///
 /// The visible text draws exactly as it would with its links. Text without
-/// links is just that `Text`. Nothing updates view state while the pointer
-/// moves. `linkClickArea(_:)` makes a whole view (a link preview) one link
-/// the same way.
+/// links is just that `Text` (with only the right-click view over it,
+/// inside a `selectableTextContextMenu`). Nothing updates view state while
+/// the pointer moves. `linkClickArea(_:)` makes a whole view (a link
+/// preview) one link the same way.
 struct LinkPointerText: View {
     let text: AttributedString
     /// `Text` modifiers (font, italic, color), applied to the visible text
@@ -48,6 +52,7 @@ struct LinkPointerText: View {
         let links = LinkRuns.links(in: text)
         if links.isEmpty {
             style(Text(text))
+                .contextClicksOpenMenu()
         } else {
             LinkRegionsText(text: LinkRuns.removingLinks(from: text), links: links, style: style)
         }
@@ -55,6 +60,7 @@ struct LinkPointerText: View {
 }
 
 private struct LinkRegionsText: View {
+    @Environment(\.textOpensContextMenu) private var opensContextMenu
     /// The text without its links.
     let text: AttributedString
     let links: [LinkRuns.Link]
@@ -73,7 +79,7 @@ private struct LinkRegionsText: View {
                 .accessibilityHidden(true)
             style(Text(text))
                 .overlay {
-                    LinkPointerRegions(regions: regions, urls: links.map(\.url))
+                    LinkPointerRegions(regions: regions, urls: links.map(\.url), takesContextClicks: opensContextMenu)
                         .pointerStyle(.link)
                         .accessibilityHidden(true)
                 }
@@ -221,6 +227,7 @@ nonisolated struct LinkRegionRecorder: TextRenderer {
 private struct LinkPointerRegions: NSViewRepresentable {
     let regions: LinkRegions
     let urls: [URL]
+    let takesContextClicks: Bool
 
     func makeNSView(context: Context) -> LinkPointerRegionView {
         let view = LinkPointerRegionView(regions: regions)
@@ -231,6 +238,7 @@ private struct LinkPointerRegions: NSViewRepresentable {
     func updateNSView(_ view: LinkPointerRegionView, context: Context) {
         view.regions = regions
         view.urls = urls
+        view.takesContextClicks = takesContextClicks
         // The list's handler joins channels; the rest go to the system.
         let openURL = context.environment.openURL
         view.open = { openURL($0) }
@@ -248,15 +256,29 @@ private struct LinkPointerRegions: NSViewRepresentable {
 /// the context menu around it: selectable text shows only its own text menu
 /// (Cut, Copy, Paste, Font…), never a SwiftUI `.contextMenu`. On text with
 /// a selection, they still reach the text, whose menu copies it.
+///
+/// With `takesContextClicks` (text in a `selectableTextContextMenu`), it
+/// takes right-clicks and Control-clicks anywhere over the text, on
+/// selected text too, and they open the menu around it. On selected text
+/// that menu starts with the selection's items from the text's own menu
+/// (`SelectionMenuItems`).
 final class LinkPointerRegionView: NSView {
     var regions: LinkRegions
     /// The whole view is link 0, apart from `excluded`; `regions` is unused.
     var coversBounds = false
+    /// Right-clicks and Control-clicks anywhere over the view open the
+    /// context menu around it, with the selection's items on top over
+    /// selected text.
+    var takesContextClicks = false
     /// Spots in a whole-view link that aren't part of it (controls of their
     /// own), in this view's coordinates.
     var excluded: [CGRect] = []
     /// Where each link goes, by its index in `regions`.
-    var urls: [URL] = []
+    var urls: [URL] = [] {
+        didSet {
+            if urls.isEmpty != oldValue.isEmpty { updateClickMonitoring() }
+        }
+    }
     /// Opens a clicked link.
     var open: (URL) -> Void = { NSWorkspace.shared.open($0) }
     /// The type of the event being handled (tests stand in their own).
@@ -279,7 +301,13 @@ final class LinkPointerRegionView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window != nil {
+        updateClickMonitoring()
+    }
+
+    /// Only views with links need `LinkClickMonitor` (a view that only takes
+    /// right-clicks doesn't).
+    private func updateClickMonitoring() {
+        if window != nil, !urls.isEmpty {
             LinkClickMonitor.shared.add(self)
         } else {
             LinkClickMonitor.shared.remove(self)
@@ -288,11 +316,19 @@ final class LinkPointerRegionView: NSView {
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard !claimsNothing else { return nil }
+        let local = convert(point, from: superview)
         let eventType = currentEventType()
-        let claims = claimsEverything || Self.claimsPointer(during: eventType)
-        let isContextClick = !claims && coversBounds && Self.isContextClick(eventType, modifiers: currentModifiers())
-        guard claims || isContextClick, linkIndex(at: convert(point, from: superview)) != nil else { return nil }
-        if isContextClick, isOverSelectedText(superview.map { $0.convert(point, to: nil) } ?? point) { return nil }
+        if claimsEverything || Self.claimsPointer(during: eventType) {
+            return linkIndex(at: local) != nil ? self : nil
+        }
+        guard Self.isContextClick(eventType, modifiers: currentModifiers()) else { return nil }
+        if takesContextClicks {
+            // Selected text too: `menu(for:)` adds the selection's items.
+            return bounds.contains(local) ? self : nil
+        }
+        guard coversBounds, linkIndex(at: local) != nil,
+              selectedText(atWindowPoint: superview.map { $0.convert(point, to: nil) } ?? point) == nil
+        else { return nil }
         return self
     }
 
@@ -301,15 +337,39 @@ final class LinkPointerRegionView: NSView {
         eventType == .rightMouseDown || (eventType == .leftMouseDown && modifiers.contains(.control))
     }
 
-    /// Whether the view underneath at a point in the window is text with a
+    /// The view underneath at a point in the window when it's text with a
     /// selection, being the first responder (its selection is the one
     /// shown). Its own menu copies the selection.
-    private func isOverSelectedText(_ point: CGPoint) -> Bool {
-        guard let window, let root = window.contentView?.superview ?? window.contentView else { return false }
+    private func selectedText(atWindowPoint point: CGPoint) -> NSView? {
+        guard let window, let root = window.contentView?.superview ?? window.contentView else { return nil }
         claimsNothing = true
         defer { claimsNothing = false }
-        guard let below = root.hitTest(point), below === window.firstResponder else { return false }
-        return below.accessibilitySelectedTextRange().length > 0
+        guard let below = root.hitTest(point), below === window.firstResponder,
+              below.accessibilitySelectedTextRange().length > 0
+        else { return nil }
+        return below
+    }
+
+    /// With `takesContextClicks`, on selected text: the menu around the text
+    /// (a message's), headed by the selection's items from the text's own
+    /// menu. Otherwise none, so the click goes on up to the menu around.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard takesContextClicks, let text = selectedText(atWindowPoint: event.locationInWindow),
+              let textMenu = text.menu(for: event)
+        else { return super.menu(for: event) }
+        guard let menu = surroundingMenu(for: event) else { return textMenu }
+        SelectionMenuItems.move(from: textMenu, of: text, to: menu)
+        return menu
+    }
+
+    /// The context menu the views around this one show for `event`.
+    private func surroundingMenu(for event: NSEvent) -> NSMenu? {
+        var view = superview
+        while let current = view {
+            if let menu = current.menu(for: event) { return menu }
+            view = current.superview
+        }
+        return nil
     }
 
     /// The link at `point`, in this view's coordinates.

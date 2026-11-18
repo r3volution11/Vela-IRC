@@ -43,6 +43,20 @@ Turn off **Show link previews** to show web pages as plain links. Images and vid
 
 From the command palette: **Media: Minimal Link Previews**, **Standard Link Previews**, **Large Link Previews** and **Toggle Link Previews**.
 
+### Sites that need a browser {#sites-that-need-a-browser}
+
+Some sites, such as [IMDb](/reference/media-sites#link-previews-behind-bot-checks), answer apps with a bot check instead of the page: a "Just a moment…" page, or an empty one that only fills in with JavaScript. A plain request finds nothing to preview there. So for those sites, and only those, Vela loads the page once more in a private Safari engine (WebKit) session, out of sight, and builds the preview from what it finds:
+
+- **The site's own check runs**, as it would in Safari, and then Vela reads the page's title, description and image address. The session is thrown away right after: no cookies, cache or storage are kept, and none are shared with Safari or anything else.
+- **Only what the check needs loads:** the page, its scripts and the check's own servers. Images, video, fonts, style sheets and requests to other sites (ads and analytics, for example) are blocked, and so is your local network. Vela stops the page as soon as its title and description are in. The preview's image then loads like any other, under your image settings and [site rules](#site-rules).
+- **Nothing appears or opens.** The page is never shown, and it can't open windows, start downloads, play sound or ask for your camera or microphone. Nothing is handed to your browser.
+- **Honest.** The site sees WebKit, Safari's engine, because that's what loads the page. Vela never pretends to be another app and never answers a check itself.
+- **A second or two, once.** It happens only for sites that need it, one page at a time, and the preview is saved like any other, so the page isn't loaded again. On IMDb it takes a second or so and moves about 0.7 MB, mostly the check's own script and the page itself; without the blocking it would be nearly 2 MB.
+- **When it doesn't work.** If a check doesn't let the engine through, the link keeps a plain preview with just the site's name (or none), and Vela doesn't try that link again until it restarts.
+- **Never where your settings say no:** blocked sites, adult sites, your local network, or a link waiting for you to click **Load preview**. Sites set to **Text only** work as usual, since only text is read.
+
+Turn it off with **Load previews from sites that need a browser** in **Settings → Media → Loading** ([`media.browserFallback`](/reference/settings#media.browserFallback)). Those sites then show just their name. Right-click a preview that was loaded this way to see **Preview Loaded with Safari's Engine** at the bottom of the menu.
+
 ## Videos
 
 Choose how YouTube, Vimeo, Twitch, Streamable and Reddit links and video files show in **Settings → Media → Videos**:
@@ -116,7 +130,8 @@ To find the GIF behind a page or a short link, Vela fetches the page, as it does
 To build a preview, Vela downloads the linked page or image **from your Mac**. That's how every chat app with link previews works, and it means:
 
 - **The site learns your IP address**, and that someone opened the link at about that time.
-- **Vela sends no cookies** and identifies itself honestly as Vela's link previewer. It never runs the page's scripts; it reads only the page's title, description and image.
+- **Vela sends no cookies** and identifies itself honestly as Vela's link previewer. It doesn't run the page's scripts; it reads only the page's title, description and image.
+- **Except for sites that need a browser.** When a site answers with a bot check instead of the page, Vela loads it in a private Safari engine session where the page's scripts run, as they would in Safari, then throws the session away. Images, other sites and your local network are blocked there. See [Sites that need a browser](#sites-that-need-a-browser), and turn it off with **Load previews from sites that need a browser**.
 - **Video links contact the video site before you press play.** When previews load automatically, Vela fetches the video's title and thumbnail from the video site (from YouTube's, Vimeo's, Streamable's or Reddit's oEmbed service, or from the Twitch page), so that site sees your IP address like any other preview. For a Reddit video, Vela also follows the link to its post and reads the video's playlist, to learn its shape and whether it has sound. The player itself, with its scripts and cookies, loads only when you press **▶**. YouTube plays from `youtube-nocookie.com`, and nothing the player stores is kept after it closes.
 - **GIF links contact the GIF site.** Vela fetches a Tenor page or short link (or a `gph.is` link) to find its GIF, then downloads the GIF's video copy from Tenor, GIPHY or Imgur, with the same size limit and [site rules](#site-rules) as images. Downloaded GIFs are kept in a temporary folder that Vela empties each time it starts.
 - **Your local network is off-limits.** Vela never fetches previews from `localhost`, private and link-local IP addresses, or names like `router.local`, so a link in a channel can't make Vela probe devices on your network.
@@ -129,6 +144,7 @@ If that's more than you want, the rest of this page shows how to turn previews o
 ### Everywhere
 
 - **Load previews automatically.** Turn this off and Vela fetches nothing until you click a link's **Load preview** button. Also in the command palette: **Media: Load Previews Automatically**.
+- **Load previews from sites that need a browser** off keeps Vela from ever running a page's scripts: sites behind a bot check show just their name. See [Sites that need a browser](#sites-that-need-a-browser).
 - **Show link previews** off shows web pages as plain links. With **Videos** set to **Off** as well, video links stay plain links too.
 
 ### Per channel

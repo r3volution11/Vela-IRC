@@ -695,13 +695,16 @@ enum EmbedActions {
 }
 
 /// Context-menu items shared by every embed: open/copy, the link's site
-/// rule, "Blur Again" on revealed media where blurring applies, and hiding
-/// the line's previews.
+/// rule, "Blur Again" on revealed media where blurring applies, hiding
+/// the line's previews, and a note on how the preview was made, if any.
 struct EmbedLinkMenuItems: View {
     @Environment(AppModel.self) private var app
     @Environment(\.embedBlur) private var blur
     let url: URL
     let onHide: () -> Void
+    /// A line of information at the end (disabled), e.g. that the preview
+    /// was read with the browser engine.
+    var note: String? = nil
 
     var body: some View {
         Button("Open Link") { EmbedActions.open(url) }
@@ -715,6 +718,15 @@ struct EmbedLinkMenuItems: View {
             Button("Blur Again") { blur.blurAgain() }
         }
         Button("Hide Previews") { onHide() }
+        if let note {
+            Divider()
+            Text(note)
+        }
+    }
+
+    /// The note for a preview read with the browser engine.
+    static func note(for preview: LinkPreview) -> String? {
+        preview.loadedWithBrowserEngine == true ? "Preview Loaded with Safari's Engine" : nil
     }
 }
 

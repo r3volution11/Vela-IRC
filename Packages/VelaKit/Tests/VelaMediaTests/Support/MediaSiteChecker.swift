@@ -10,7 +10,7 @@ import Foundation
 /// `MediaClassifier`, then `LinkPreviewService` when Vela would fetch a
 /// preview, then `ImageLoader`, `LoopingVideoLoader` or a plain request for
 /// what the preview points at, all with a default `MediaPolicy` and Vela's
-/// own user agent.
+/// own user agent (WebKit's own for pages read with the browser engine).
 ///
 /// Polite by design: samples run one at a time, each with a single chain of
 /// requests and the app's timeouts. A failing sample is tried again after a
@@ -156,10 +156,12 @@ struct MediaSiteChecker: Sendable {
             self.videoDirectory = videoDirectory
         }
 
-        /// The preview `LinkPreviewService` builds, from a fresh service.
+        /// The preview `LinkPreviewService` builds, from a fresh service (and
+        /// browser engine, which would otherwise remember a failed load).
         func preview() async throws -> LinkPreview {
             if let fetchedPreview { return fetchedPreview }
-            let preview = try await LinkPreviewService().preview(for: url, policy: policy)
+            let service = LinkPreviewService(browser: BrowserMetadataFetcher())
+            let preview = try await service.preview(for: url, policy: policy)
             fetchedPreview = preview
             return preview
         }
@@ -209,6 +211,13 @@ struct MediaSiteChecker: Sendable {
                 let found = try await preview().embed?.community
                 guard found == community else { throw CheckFailure("“\(found ?? "nothing")”, not “\(community)”") }
                 return community
+
+            case .browserEngine:
+                let preview = try await preview()
+                guard preview.loadedWithBrowserEngine == true else {
+                    throw CheckFailure("read without the browser engine: no bot check, or the engine didn't get past it")
+                }
+                return "browser engine"
 
             case .landsOn(let prefix):
                 let address = Self.address(try await preview().finalURL)
@@ -347,6 +356,7 @@ extension MediaSite.LiveCheck {
         case .animatedImage: "animated image"
         case .image: "image"
         case .videoFile: "video file"
+        case .browserEngine: "browser engine"
         }
     }
 }

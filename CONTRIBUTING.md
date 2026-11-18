@@ -59,6 +59,7 @@ Thanks for helping build Vela! This guide covers the basics.
 - **On GitHub:** the [Media sites](.github/workflows/media-sites.yml) workflow runs when a push or pull request changes media code, every Monday, and on demand from the Actions tab. GitHub emails the repository owner when a scheduled run fails.
 - **Before every release:** `scripts/release.sh` stops if a site fails (see [docs/RELEASING.md](docs/RELEASING.md#when-the-media-check-fails)).
 - **On your Mac:** `scripts/check-media-sites.sh` prints a report per site and exits with 1 if one failed. It's the same as `VELA_LIVE_MEDIA_TESTS=1 swift test --package-path Packages/VelaKit --filter LiveMediaSiteTests`.
+- **What the browser engine costs:** for sites behind bot checks (`BrowserMetadataFetcher`), `VELA_BROWSER_FALLBACK_MEASURE=1 swift test --package-path Packages/VelaKit --filter LiveBrowserFallbackMeasurement` loads the IMDb sample (or `VELA_BROWSER_FALLBACK_URL`) with and without the content blocking, through a local counting proxy, and prints the time to metadata and the bytes and connections per host.
 - **When you push,** if you install the git hook:
   ```sh
   scripts/install-git-hooks.sh                 # once per clone; --uninstall removes it

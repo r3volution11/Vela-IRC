@@ -53,7 +53,25 @@ struct PreviewContextTests {
         #expect(policy.maxImageBytes == 2 * 1024 * 1024)
         #expect(policy.filterAdultSites)
         #expect(policy.extraAdultDomains.isEmpty)
+        #expect(policy.browserFallback)
         #expect(!app.previewContext(for: nil).blurImages)
+    }
+
+    @Test func browserFallbackFollowsItsSetting() throws {
+        let app = try makeApp(settings: ["media.browserFallback": false])
+        #expect(!app.previewContext(for: nil).policy.browserFallback)
+        #expect(!app.previewContext(for: channel).policy.browserFallback)
+        app.settings[.mediaBrowserFallback] = true
+        #expect(app.previewContext(for: channel).policy.browserFallback)
+
+        // Media off in a channel: nothing loads until Load is clicked, so
+        // nothing reaches the browser engine either.
+        app.setMediaEnabled(false, for: channel)
+        let context = app.previewContext(for: channel)
+        #expect(!context.policy.autoLoad)
+        let page = url("https://www.imdb.com/title/tt8310612/")
+        let decision = PreviewDecider.decide(url: page, classification: MediaClassifier.classify(page), context: context)
+        #expect(!decision.shouldFetch)
     }
 
     // MARK: Layout

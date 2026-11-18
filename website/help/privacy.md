@@ -15,6 +15,7 @@ Vela only makes connections for things you've set up or turned on:
 | --- | --- | --- |
 | **IRC servers and bouncers you add** | While connected, encrypted with TLS by default | What any IRC server sees: your IP address (or your bouncer's), nickname and messages. |
 | **Sites behind links people post** | When a [link preview](/guide/inline-media) loads, unless you turn previews off or limit them | Your IP address and that Vela fetched the page. No cookies are sent. |
+| **Sites that only show their page to a browser** (IMDb, for example) | When a link preview finds a bot check instead of the page, unless you turn off **Load previews from sites that need a browser** | What a visit in Safari tells them: your IP address, and whatever the page's own check script collects. It runs in a private session that's thrown away afterwards, with images, other sites and your local network blocked. See [Sites that need a browser](/guide/inline-media#sites-that-need-a-browser). |
 | **Video providers** (YouTube, Vimeo, Streamable, Twitch) | A video card fetches its title and thumbnail; the player itself loads only when you press play | Your IP address; once you press play, whatever the provider's player collects. YouTube plays from `youtube-nocookie.com`, and the player keeps nothing after it closes. |
 
 Vela never fetches previews from your local network (`localhost`, private IP addresses, `.local` names), so a link in a channel can't make your Mac probe your router or other devices.

@@ -47,6 +47,10 @@ enum HTTPFetcher {
     struct Options: Sendable {
         var maxBytes: Int
         var overflow: Overflow = .fail
+        /// Which statuses count as an answer; any other fails the fetch with
+        /// `MediaError.http`. A bot check's page arrives with 403 or 503, and
+        /// is only told from an error page by reading it.
+        var acceptsStatus: @Sendable (Int) -> Bool = { (200..<300).contains($0) }
         /// Called for each redirect target; returning an error fails the
         /// fetch with it (e.g. `MediaError.siteBlocked` naming the reason).
         var checkRedirect: @Sendable (URL) -> MediaError? = { _ in nil }
@@ -169,7 +173,7 @@ private final class StreamingDelegate: NSObject, URLSessionDataDelegate, @unchec
             completionHandler(.cancel)
             return
         }
-        guard (200..<300).contains(http.statusCode) else {
+        guard options.acceptsStatus(http.statusCode) else {
             finish(.failure(MediaError.http(http.statusCode)))
             completionHandler(.cancel)
             return

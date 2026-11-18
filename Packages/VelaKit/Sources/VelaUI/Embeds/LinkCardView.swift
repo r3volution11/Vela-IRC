@@ -104,7 +104,7 @@ struct LinkCardView: View {
         }
         .embedFadeIn(animateAppearance)
         .contextMenu {
-            EmbedLinkMenuItems(url: preview.url, onHide: onHide)
+            EmbedLinkMenuItems(url: preview.url, onHide: onHide, note: EmbedLinkMenuItems.note(for: preview))
         }
         .task(id: ShapeKey(imageURL: imageURL, size: size, policy: policy)) {
             // Learn the image's shape when the page didn't declare it (or

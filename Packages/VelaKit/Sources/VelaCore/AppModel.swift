@@ -541,6 +541,7 @@ public final class AppModel: SessionHost {
         if isDemo { policy.extraAdultDomains = ["nsfw.example"] }
         policy.restrictToAllowedDomains = settings[.mediaRestrictToAllowed]
         policy.maxImageBytes = Int(settings[.mediaMaxImageSizeMB] * 1024 * 1024)
+        policy.browserFallback = settings[.mediaBrowserFallback]
         if let bufferID, !isMediaEnabled(for: bufferID) { policy.autoLoad = false }
         let blurImages = settings[.mediaBlurImages] || (bufferID.map(isBlurred(for:)) ?? false)
         return PreviewContext(policy: policy, layout: previewLayout, blurImages: blurImages)

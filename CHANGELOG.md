@@ -98,6 +98,12 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
   - Vela can't tell from Reddit's public information whether a post is NSFW, so Reddit videos show no thumbnail or still frame before you press ▶ and never start by themselves. A post that Reddit sends to its age check is blocked as a page marked adult.
   - Links to Reddit posts show a link preview with the post's title, subreddit and author. Their videos don't play from the post link: Reddit only shows apps what a post holds with an account.
 - **[Supported media sites](https://velairc.app/reference/media-sites)**, a new page on the website, lists every site whose links Vela plays or shows inline (YouTube, Vimeo, Twitch, Streamable, Tenor, GIPHY, Imgur, Reddit and GitHub, plus image and video files anywhere), the links it recognizes on each, what it fetches, and the domain to write a site rule for. Sample links for every site are checked against the real sites each week and before every release.
+- **Previews from sites behind bot checks.** Links to sites that only show their page to a browser, such as IMDb, now get a link preview with the page's title, description and image, instead of just the site's name.
+  - When a site answers with a bot check ("Just a moment…", or an empty page that needs JavaScript), Vela loads the page in a private Safari engine (WebKit) session, lets the site's own check run, reads the title, description and image address, and throws the session away. No cookies or cache are kept.
+  - Images, fonts, other sites (ads and analytics included) and your local network are blocked in that session, and nothing is shown or opened in your browser. The preview's image loads like any other, under your image settings and site rules.
+  - It takes a second or two, only for those sites, one page at a time, and the preview is saved. Never for blocked or adult sites, or before you click **Load preview** when previews don't load automatically.
+  - Right-click such a preview to see **Preview Loaded with Safari's Engine**.
+- **Load previews from sites that need a browser**, a new switch in Settings → Media → Loading (on by default), turns that off. New setting: `media.browserFallback`.
 
 ### Changed
 
@@ -122,7 +128,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Nick colors stay apart.** People talking in the same channel get different colors while the theme's palette has room; before, two nicks whose names hashed alike shared a color. Colors that merely look alike (orange beside red) are kept apart too, using the nearest clearly different color from the theme's palette, but only when a clearly different one is free. A nick keeps its color once given and usually has the same one everywhere. Palette colors too close to the message text (or under 3:1 against the background) are no longer used, so a colored nick never reads as plain text.
 - **Imgur `.gifv` links play like GIFs:** inline, looping and silent, without a click. They used to show a still frame and ▶ like a video file.
 - **One site rule covers all of Reddit.** A rule for `reddit.com` now also covers `redd.it` links, `v.redd.it` videos, `i.redd.it` and `preview.redd.it` images and Reddit's other media servers, and right-clicking a Reddit image offers `reddit.com`. Rules for `tenor.com` and `giphy.com` cover their media servers (and `gph.is` links) the same way.
-- Link previews are fetched once more after updating, so links to GIF sites and Reddit that were saved as link previews show the new way.
+- Link previews are fetched once more after updating, so links to GIF sites, Reddit and sites behind bot checks that were saved as link previews show the new way.
 
 ### Fixed
 
@@ -130,6 +136,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - Links in messages, link preview images and preview chips show the pointing-hand cursor when you hover them. The rest of a message keeps the text cursor.
 - You can select and copy the text of links in messages and server lines, as anywhere else in a message: drag from a link, double-click a word in it or triple-click the line. A click still opens the link, right away. Right-clicking a link and choosing **Copy Link** copies that link (it used to copy the message's first), and VoiceOver offers an Open action for every link in a message, not just the first.
 - You can select and copy the text of link previews: the title, description and site name, by dragging, double-clicking a word or triple-clicking a line. A click anywhere on a preview opens the page, and a drag never does. Right-click selected text to copy it, or anywhere else on the preview for its menu. The same goes for a video's title and the line above it, the **via GIPHY** line under a GIF, the text of a compact video's line (where a click still plays it) and a blocked-preview chip's text.
+- Right-clicking (or Control-clicking) the text of a message opens the message's menu, with **Reply**, **Translate**, **Copy Text**, **Copy Link** for the link you clicked and the rest, as anywhere else on the message. It used to show a menu of editing commands (Cut, Paste, Font…) instead. On selected text, the menu also offers **Copy**, **Look Up** and **Share…** for the selection. The same goes for the translation under a message.
 - The **New** unread marker now appears while the window is in the background, and messages you've already seen no longer appear below it.
 - Messages no longer appear twice after reconnecting to a ZNC bouncer. ZNC replays its buffer without message IDs, and those copies were shown and stored next to the originals; copies already stored are removed on first launch.
 - Dragging a tab in the title bar no longer starts moving the window partway through.

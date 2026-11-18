@@ -1,6 +1,6 @@
 ---
 title: Supported media sites
-description: Every site whose links Vela plays or shows inline (YouTube, Vimeo, Twitch, Streamable, Tenor, GIPHY, Imgur, Reddit, GitHub and image and video files), the links it recognizes and what it fetches.
+description: Every site whose links Vela plays or previews (YouTube, Vimeo, Twitch, Tenor, GIPHY, Reddit, IMDb and more, plus image and video files), the links it recognizes and what it fetches.
 ---
 
 # Supported media sites
@@ -78,5 +78,15 @@ A link to an image or video file on any site shows the file itself.
 
 - **GitHub:** Vela loads the file from `raw.githubusercontent.com`, never the `github.com` page. A rule for either domain applies.
 - **Image and video files:** Images load from the link's own site, up to your size limit. For a video file, Vela checks its type and size first and reads only enough for a still frame; the rest streams when you play it.
+
+## Link previews behind bot checks
+
+Some sites answer apps with a bot check (a “Just a moment…” page, or an empty one that needs JavaScript) instead of the page. Vela then opens the page in a private Safari engine session, lets the site's own check run, reads the title, description and image, and throws the session away. It takes a second or two, only for those sites, and the preview is saved. Any site behind such a check works this way; the one below is checked against the real site. **Settings → Media → Load previews from sites that need a browser** turns it off.
+
+| Site | Links | Vela shows | Site rule |
+| --- | --- | --- | --- |
+| [IMDb](https://www.imdb.com) | `imdb.com/title/<id>/` (and any other IMDb page, such as `imdb.com/name/<id>/`) | A link preview with the page's title, description and image. To get it, Vela follows the link, reads the page, then loads it in a private Safari engine session when the site answers with a bot check. | Each domain's own: `imdb.com` (pages) and `media-amazon.com` (posters and icons) |
+
+- **IMDb:** IMDb answers apps with an AWS WAF bot check. Vela loads the page in a private Safari engine session, where the check's script runs (it loads from `awswaf.com`); Vela reads the title, description and poster address and throws the session away. The poster then loads like any preview image.
 
 <!-- END MEDIA SITES -->

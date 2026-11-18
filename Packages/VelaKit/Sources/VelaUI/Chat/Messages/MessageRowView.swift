@@ -80,7 +80,8 @@ struct MessageRow: View {
             .onHover { hovering in
                 withAnimation(reduceMotion ? nil : .easeOut(duration: 0.08)) { isHovered = hovering }
             }
-            .contextMenu {
+            // Right-clicking the message's text opens it too.
+            .selectableTextContextMenu {
                 MessageMenuItems(line: line, links: links)
             }
             .autoTranslation(for: line)

@@ -329,6 +329,10 @@ extension SettingKey where Value == Bool {
         .init("media.autoLoad", default: true,
               summary: "Fetch previews (link cards, images, video thumbnails) automatically. Off shows a button to load each one.")
     }
+    public static var mediaBrowserFallback: SettingKey<Bool> {
+        .init("media.browserFallback", default: true,
+              summary: "When a site answers with a bot check instead of the page, load it in a private Safari engine session (WebKit, thrown away afterwards; the page's scripts run) to read its title, description and image.")
+    }
     public static var mediaShowLinkCards: SettingKey<Bool> {
         .init("media.showLinkCards", default: true, summary: "Show preview cards for links.")
     }
@@ -538,6 +542,7 @@ public enum SettingsCatalog {
             SettingKey.memberListWidth.descriptor,
 
             SettingKey.mediaAutoLoad.descriptor,
+            SettingKey.mediaBrowserFallback.descriptor,
             SettingKey.mediaShowLinkCards.descriptor,
             SettingKey.mediaLinkPreviewSize.descriptor,
             SettingKey.mediaVideos.descriptor,

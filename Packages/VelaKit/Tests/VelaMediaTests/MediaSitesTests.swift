@@ -161,6 +161,15 @@ import Testing
         default:
             require(!steps.contains(.hlsPlaylist), "only native players read an HLS playlist")
         }
+        if steps.contains(.browserEngine) {
+            var ordinaryPage = false
+            if case .page = classification, RedditLinks.post(url) == nil, let host = SiteRules.normalizedHost(url),
+               SiteRules.providerMainDomain(forHost: host) == nil {
+                ordinaryPage = true
+            }
+            require(ordinaryPage, "only ordinary pages are read with the browser engine")
+            require(steps.contains(.pageMetadata), "the browser engine reads a page that was fetched first")
+        }
         return problems
     }
 
@@ -219,6 +228,11 @@ import Testing
         for site in MediaSites.all {
             if let provider = site.embedProvider { #expect(site.category == .videos || site.category == .reddit, "\(provider)") }
             if site.gifProvider != nil { #expect(site.category == .gifs) }
+            // A bot-check site's links are read with the browser engine, and checked that they were.
+            if site.category == .botChecks {
+                #expect(site.forms.allSatisfy { $0.steps.contains(.browserEngine) }, "\(site.name)")
+                #expect(site.liveSamples.allSatisfy { $0.live.contains(.browserEngine) }, "\(site.name)")
+            }
         }
     }
 

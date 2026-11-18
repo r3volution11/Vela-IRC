@@ -51,6 +51,10 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
     /// `og:restrictions:age`, `Rating` header). Nil when no page or header
     /// was inspected.
     public var declaresAdult: Bool?
+    /// True when the page answered Vela's request with a bot check (or an
+    /// empty, script-only page) and its metadata was read with the browser
+    /// engine instead (`BrowserMetadataFetcher`). Nil otherwise.
+    public var loadedWithBrowserEngine: Bool?
     /// The format this preview was built with; persisted previews with an
     /// older (or missing) version are refetched.
     public var formatVersion: Int?
@@ -58,7 +62,8 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
     /// Bumped whenever previews start carrying something old ones lack.
     /// 2: every image URL is kept (policy applies at load time) and `declaresAdult`.
     /// 3: links to GIF sites (Tenor, GIPHY, Imgur `.gifv`) are `.gif`, not page cards.
-    public static let currentFormatVersion = 3
+    /// 4: pages behind bot checks are read with the browser engine.
+    public static let currentFormatVersion = 4
 
     /// Whether this preview was built in the current format.
     public var isCurrentFormat: Bool {
@@ -82,6 +87,7 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
         contentType: String? = nil,
         fetchedAt: Date = Date(),
         declaresAdult: Bool? = nil,
+        loadedWithBrowserEngine: Bool? = nil,
         formatVersion: Int? = LinkPreview.currentFormatVersion
     ) {
         self.url = url
@@ -100,6 +106,7 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
         self.contentType = contentType
         self.fetchedAt = fetchedAt
         self.declaresAdult = declaresAdult
+        self.loadedWithBrowserEngine = loadedWithBrowserEngine
         self.formatVersion = formatVersion
     }
 }

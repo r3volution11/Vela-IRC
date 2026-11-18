@@ -69,7 +69,7 @@ public enum MediaSitesPage {
             return line
         }
 
-        var shows = orderedUnique(site.forms.map(\.shows)).map(\.summary).joined(separator: " ")
+        var shows = orderedUnique(site.forms.map(\.shows)).map { $0.summary(in: site.category) }.joined(separator: " ")
         if let sharedSteps {
             shows += sharedSteps.isEmpty ? " The link names the file, so Vela fetches nothing else." : " To get it, Vela \(phrase(sharedSteps))."
         }
@@ -121,6 +121,7 @@ extension MediaSite.Category {
         case .gifs: "GIFs"
         case .reddit: "Reddit"
         case .files: "Image and video files"
+        case .botChecks: "Link previews behind bot checks"
         }
     }
 
@@ -134,11 +135,21 @@ extension MediaSite.Category {
             "Reddit videos play in Vela's own player, and links to posts get a preview with the post's title, subreddit and author."
         case .files:
             "A link to an image or video file on any site shows the file itself."
+        case .botChecks:
+            "Some sites answer apps with a bot check (a “Just a moment…” page, or an empty one that needs JavaScript) instead of the page. Vela then opens the page in a private Safari engine session, lets the site's own check run, reads the title, description and image, and throws the session away. It takes a second or two, only for those sites, and the preview is saved. Any site behind such a check works this way; the one below is checked against the real site. **Settings → Media → Load previews from sites that need a browser** turns it off."
         }
     }
 }
 
 extension MediaSite.Presentation {
+    /// A sentence for the docs, for a site in `category`.
+    func summary(in category: MediaSite.Category) -> String {
+        if self == .linkPreview, category != .reddit {
+            return "A link preview with the page's title, description and image."
+        }
+        return summary
+    }
+
     /// A sentence for the docs.
     var summary: String {
         switch self {
@@ -162,6 +173,7 @@ extension MediaSite.Step {
         case .oEmbed: "asks the site's oEmbed service"
         case .pageMetadata: "reads the page"
         case .hlsPlaylist: "reads the video's playlist"
+        case .browserEngine: "loads it in a private Safari engine session when the site answers with a bot check"
         }
     }
 }

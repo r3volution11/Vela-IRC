@@ -35,6 +35,15 @@ Check these, roughly in order:
 - **Local addresses.** Vela never previews links to `localhost`, private IP addresses or `.local` names.
 - **The site itself.** Some sites block automated requests or need a login, so there's nothing to show. A failed preview is retried after a while.
 
+### A link shows no preview, or only the site's name {#bot-check}
+
+Some sites, such as IMDb, only show their page to a browser and answer apps with a bot check. Vela gets past most of these by loading the page in a private Safari engine session ([Sites that need a browser](/guide/inline-media#sites-that-need-a-browser)):
+
+- **Is Load previews from sites that need a browser on?** It's in **Settings → Media → Loading**, and on by default. With it off, those sites show only their name.
+- **Wait a moment.** These previews take a second or two longer than others, and Vela loads one such page at a time.
+- **Some checks want a person.** A site that asks you to solve a puzzle, or blocks apps outright, can't be previewed. Vela doesn't try that link again until it restarts.
+- **A site rule, the adult-site filter or Load preview** comes first: Vela never opens a blocked site or your local network in the engine, and loads nothing until you click **Load preview** when previews don't load automatically.
+
 A video card that won't play may be a video its owner doesn't allow to be embedded. Right-click it and choose **Open in Browser**.
 
 ## Reactions, replies or typing indicators are missing

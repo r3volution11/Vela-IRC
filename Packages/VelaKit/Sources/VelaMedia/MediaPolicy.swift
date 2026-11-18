@@ -82,6 +82,10 @@ public struct MediaPolicy: Sendable, Hashable {
     /// single-label or `.local` hosts. Off by default so a link pasted in a
     /// channel cannot make Vela send requests into the user's LAN.
     public var allowPrivateNetworkHosts: Bool = false
+    /// When a page answers with a bot check (or an empty, script-only page),
+    /// load it again in a private WebKit session to read its metadata
+    /// (`BrowserMetadataFetcher`). Never for sites this policy refuses.
+    public var browserFallback: Bool = true
 
     public init(
         autoLoad: Bool = true,
@@ -93,7 +97,8 @@ public struct MediaPolicy: Sendable, Hashable {
         allowedOnce: Set<String> = [],
         restrictToAllowedDomains: Bool = false,
         maxImageBytes: Int = 10 * 1024 * 1024,
-        allowPrivateNetworkHosts: Bool = false
+        allowPrivateNetworkHosts: Bool = false,
+        browserFallback: Bool = true
     ) {
         self.autoLoad = autoLoad
         self.showLinkCards = showLinkCards
@@ -105,6 +110,7 @@ public struct MediaPolicy: Sendable, Hashable {
         self.restrictToAllowedDomains = restrictToAllowedDomains
         self.maxImageBytes = maxImageBytes
         self.allowPrivateNetworkHosts = allowPrivateNetworkHosts
+        self.browserFallback = browserFallback
     }
 
     // MARK: - Verdicts

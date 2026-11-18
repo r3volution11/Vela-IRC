@@ -70,8 +70,8 @@ The same choices are in **View → Message Layout**.
 - **Day dividers** ("Today", "Yesterday", "Monday, November 10") separate days.
 - A **New** line shows where you stopped reading. In a busy channel, it offers **Catch me up**, an Apple Intelligence summary of what you missed. See [Catch me up](/guide/apple-intelligence#catch-me-up). You can turn the line off; see [Unread messages](#unread-messages).
 - When you scroll up, **Jump to present** brings you back to the newest messages, with a count of what arrived meanwhile.
-- **Right-click** a message (or hover it and click **…**) to copy its text, link or the sender's nick, message or `/whois` them, [translate it](/guide/apple-intelligence#translate-messages), or [react and reply](/guide/reactions-replies-typing). Right-click a link to copy that link.
-- **Select text** in a message to copy part of it, links included: drag across it, double-click a word or triple-click the line, then press <kbd>⌘C</kbd>. A click on a link opens it right away; a drag that starts on a link selects text instead. [Link previews](/guide/inline-media#link-previews) work the same way.
+- **Right-click** a message anywhere, its text included, or Control-click it (or hover it and click **…**) to copy its text, link or the sender's nick, message or `/whois` them, [translate it](/guide/apple-intelligence#translate-messages), or [react and reply](/guide/reactions-replies-typing). Right-click a link to copy that link.
+- **Select text** in a message to copy part of it, links included: drag across it, double-click a word or triple-click the line, then press <kbd>⌘C</kbd>, or right-click it for **Copy**, **Look Up** and **Share…** along with the message's own items. A click on a link opens it right away; a drag that starts on a link selects text instead. [Link previews](/guide/inline-media#link-previews) work the same way.
 
 ## Unread messages
 

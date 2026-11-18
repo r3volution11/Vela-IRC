@@ -15,7 +15,7 @@ Reactions appear as chips under the message, each with a count; yours are highli
 
 ## Replies
 
-Hover a message and click the **reply** arrow. A bar above the message field shows who you're replying to (<kbd>Esc</kbd> cancels). Your reply appears with a small quote of the original above it; click the quote to jump to the original message.
+Hover a message and click the **reply** arrow, or right-click the message and choose **Reply**. A bar above the message field shows who you're replying to (<kbd>Esc</kbd> cancels). Your reply appears with a small quote of the original above it; click the quote to jump to the original message.
 
 On servers without reply support, the bar warns that your message will be **sent as a normal message**.
 

@@ -23,6 +23,8 @@ import Foundation
 public struct MediaSite: Sendable, Hashable, Identifiable {
     public enum Category: String, Sendable, Hashable, CaseIterable {
         case videos, gifs, reddit, files
+        /// Pages behind a bot check, read with the browser engine.
+        case botChecks
     }
 
     /// What Vela draws for a link.
@@ -55,6 +57,8 @@ public struct MediaSite: Sendable, Hashable, Identifiable {
         case pageMetadata
         /// The video's HLS playlist, for its shape and whether it has sound.
         case hlsPlaylist
+        /// The page again, in a private WebKit session, when it was a bot check.
+        case browserEngine
     }
 
     /// A domain the site's links, media, player or metadata come from.
@@ -135,6 +139,9 @@ public struct MediaSite: Sendable, Hashable, Identifiable {
         case image(animated: Bool)
         /// The server says it's a video, and its first bytes are a movie file.
         case videoFile
+        /// The site answered with a bot check, and the preview was read with
+        /// the browser engine (`LinkPreview.loadedWithBrowserEngine`).
+        case browserEngine
     }
 
     /// A real link and what it must turn into.
@@ -616,6 +623,30 @@ public enum MediaSites {
                 .init("https://images-assets.nasa.gov/video/GSFC_20150729_Yarkovsky_m11964_Effect/GSFC_20150729_Yarkovsky_m11964_Effect~orig.mov", form: "video", .video,
                       live: [.kind(.video), .videoFile],
                       note: "The same video as a QuickTime movie."),
+            ]
+        ),
+
+        // MARK: - Bot checks
+
+        MediaSite(
+            id: "imdb",
+            name: "IMDb",
+            homepage: "https://www.imdb.com",
+            category: .botChecks,
+            ruleDomain: nil,
+            domains: [
+                .init("imdb.com", "pages"),
+                .init("media-amazon.com", "posters and icons"),
+            ],
+            forms: [
+                .init("title", "imdb.com/title/<id>/", shows: .linkPreview, steps: [.redirect, .pageMetadata, .browserEngine],
+                      note: "and any other IMDb page, such as `imdb.com/name/<id>/`"),
+            ],
+            privacy: "IMDb answers apps with an AWS WAF bot check. Vela loads the page in a private Safari engine session, where the check's script runs (it loads from `awswaf.com`); Vela reads the title, description and poster address and throws the session away. The poster then loads like any preview image.",
+            samples: [
+                .init("https://www.imdb.com/title/tt8310612/", form: "title", .page,
+                      live: [.kind(.page), .browserEngine, .title(containing: "The Other Two"), .thumbnail],
+                      note: "The Other Two (2019–2023)."),
             ]
         ),
     ]

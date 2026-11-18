@@ -26,6 +26,9 @@ public protocol LinkPreviewCache: Sendable {
 ///   every request (including redirect hops and oEmbed endpoints) is checked
 ///   with `MediaPolicy.allows(_:)`. Image, thumbnail and favicon URLs are
 ///   recorded as found; `ImageLoader` checks `allowsImage(_:)` when loading them.
+/// - A page that answers with a bot check (or an empty, script-only page)
+///   is loaded again with `browser` when `MediaPolicy.browserFallback`
+///   allows (see `PreviewFetcher`). The result is cached like any other.
 public actor LinkPreviewService {
     public static let defaultUserAgent = "Vela/0.1 (Macintosh; link preview; +https://github.com/r3volution11/Vela-IRC)"
 
@@ -80,9 +83,10 @@ public actor LinkPreviewService {
         session: URLSession = LinkPreviewService.makeDefaultSession(),
         cache: (any LinkPreviewCache)? = nil,
         userAgent: String = LinkPreviewService.defaultUserAgent,
-        maxCacheAge: TimeInterval = 7 * 24 * 60 * 60
+        maxCacheAge: TimeInterval = 7 * 24 * 60 * 60,
+        browser: (any BrowserMetadataLoading)? = BrowserMetadataFetcher.shared
     ) {
-        self.fetcher = PreviewFetcher(session: session, userAgent: userAgent)
+        self.fetcher = PreviewFetcher(session: session, userAgent: userAgent, browser: browser)
         self.cache = cache
         self.maxCacheAge = maxCacheAge
     }

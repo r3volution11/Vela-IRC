@@ -8,9 +8,11 @@ import Foundation
 /// A fetched preview plus whether the policy refused part of the work.
 struct PreviewFetchResult: Sendable {
     var preview: LinkPreview
-    /// A request (oEmbed, a page for metadata) was refused by the policy, so
-    /// the preview lacks something a more permissive policy would add. Such
-    /// previews are cached in memory only, for the policy that built them.
+    /// A request (oEmbed, a page for metadata) was refused by the policy, or
+    /// the page was a bot check the browser engine wasn't allowed to (or
+    /// couldn't) get past, so the preview lacks something a more permissive
+    /// policy, or another try, would add. Such previews are cached in memory
+    /// only, for the policy that built them.
     var degraded = false
 }
 
@@ -19,9 +21,15 @@ struct PreviewFetchResult: Sendable {
 /// Every request and redirect hop is checked with `MediaPolicy.allows(_:)`;
 /// image, thumbnail and favicon URLs are recorded as found and checked with
 /// `allowsImage(_:)` only when they are loaded.
+///
+/// A page link whose page turns out to be a bot check, or an empty page made
+/// only of scripts (`BotCheckDetector`), is loaded again with `browser`, a
+/// real browser engine, when `allowsBrowserFallback` says so. Embeds, GIF
+/// sites, Reddit and media files never are: they have their own ways in.
 struct PreviewFetcher: Sendable {
     let session: URLSession
     let userAgent: String
+    var browser: (any BrowserMetadataLoading)?
 
     /// At most this much HTML is read; metadata lives in `<head>`.
     static let maxHTMLBytes = 512 * 1024
@@ -212,7 +220,7 @@ struct PreviewFetcher: Sendable {
 
         let fetched = try await fetchPage(url, policy: policy)
         if let preview = gifPagePreview(url, fetched: fetched, info: info) { return preview }
-        return try await pagePreview(url, fetched: fetched, policy: policy)
+        return try await pagePreview(url, fetched: fetched, policy: policy, mayUseBrowser: false)
     }
 
     /// A GIF page, after one same-site `<meta http-equiv="refresh">`: GIPHY
@@ -220,7 +228,7 @@ struct PreviewFetcher: Sendable {
     /// with a page that only redirects to the one with the tags.
     private func fetchGIFPage(_ url: URL, policy: MediaPolicy) async throws -> PageFetch {
         let fetched = try await fetchPage(url, policy: policy)
-        guard case .html(let metadata, let finalURL, _) = fetched, metadata.title == nil,
+        guard case .html(let metadata, let finalURL, _, _) = fetched, metadata.title == nil,
               let target = metadata.refreshURL, target != finalURL,
               SiteRules.normalizedHost(target) == SiteRules.normalizedHost(finalURL), policy.allows(target)
         else { return fetched }
@@ -238,7 +246,7 @@ struct PreviewFetcher: Sendable {
                 mediaURL: url, gif: gif, contentType: contentType, declaresAdult: declaresAdult
             ))
 
-        case .html(let metadata, let finalURL, let contentType):
+        case .html(let metadata, let finalURL, let contentType, _):
             var gif: GIFInfo?
             if info.isResolved {
                 gif = info
@@ -424,20 +432,31 @@ struct PreviewFetcher: Sendable {
     // MARK: - Pages
 
     private enum PageFetch {
-        case html(HTMLMetadata, finalURL: URL, contentType: String?)
+        case html(HTMLMetadata, finalURL: URL, contentType: String?, check: PageCheck?)
         case media(LinkPreview.Kind, finalURL: URL, contentType: String?, declaresAdult: Bool)
 
         var metadata: HTMLMetadata? {
-            if case .html(let metadata, _, _) = self { return metadata }
+            if case .html(let metadata, _, _, _) = self { return metadata }
             return nil
         }
     }
 
-    private func pagePreview(_ url: URL, policy: MediaPolicy) async throws -> PreviewFetchResult {
-        try await pagePreview(url, fetched: try await fetchPage(url, policy: policy), policy: policy)
+    /// A page that was a bot check (or a script-only shell), and the status it came with.
+    private struct PageCheck {
+        var botCheck: BotCheck
+        var status: Int
     }
 
-    private func pagePreview(_ url: URL, fetched: PageFetch, policy: MediaPolicy) async throws -> PreviewFetchResult {
+    /// A page link: the page, and the browser engine if it's a bot check.
+    private func pagePreview(_ url: URL, policy: MediaPolicy) async throws -> PreviewFetchResult {
+        let readsChallenges = browser != nil && policy.browserFallback
+        let fetched = try await fetchPage(url, policy: policy, readsChallenges: readsChallenges)
+        return try await pagePreview(url, fetched: fetched, policy: policy, mayUseBrowser: true)
+    }
+
+    private func pagePreview(
+        _ url: URL, fetched: PageFetch, policy: MediaPolicy, mayUseBrowser: Bool
+    ) async throws -> PreviewFetchResult {
         switch fetched {
         case .media(let kind, let finalURL, let contentType, let declaresAdult):
             return PreviewFetchResult(preview: LinkPreview(
@@ -445,7 +464,7 @@ struct PreviewFetcher: Sendable {
                 declaresAdult: declaresAdult
             ))
 
-        case .html(let metadata, let finalURL, let contentType):
+        case .html(var metadata, var finalURL, let contentType, let check):
             // A shortener or redirect may land on a known video site.
             if finalURL != url, case .embed(let info) = MediaClassifier.classify(finalURL) {
                 return try await embedPreview(url, finalURL: finalURL, info: info, policy: policy, pageMetadata: metadata)
@@ -455,8 +474,24 @@ struct PreviewFetcher: Sendable {
                 return try await redditPostPreview(url, finalURL: finalURL, post: post, policy: policy)
             }
 
-            var metadata = metadata
             var degraded = false
+            var usedBrowser = false
+            if let check, mayUseBrowser {
+                // A bot check or a script-only page: the browser engine sees the real one.
+                if let page = try await browserPage(url, finalURL: finalURL, metadata: metadata, policy: policy) {
+                    let ratedAdult = metadata.declaresAdult
+                    metadata = page.metadata
+                    if ratedAdult { metadata.declaresAdult = true }
+                    finalURL = page.finalURL
+                    usedBrowser = true
+                } else if !(200..<300).contains(check.status) {
+                    // Without it, a check served as an error is the error it was before.
+                    throw MediaError.http(check.status)
+                } else {
+                    // Kept in memory only: another try (or the setting turned on) may do better.
+                    degraded = true
+                }
+            }
             if RedditLinks.isAgeGate(finalURL) { metadata.declaresAdult = true }
             if metadata.title == nil || metadata.imageURL == nil, let endpoint = metadata.oEmbedURL {
                 var oEmbed: OEmbedResponse?
@@ -497,21 +532,76 @@ struct PreviewFetcher: Sendable {
                 faviconURL: favicon,
                 themeColor: metadata.themeColor,
                 contentType: contentType,
-                declaresAdult: metadata.declaresAdult
+                declaresAdult: metadata.declaresAdult,
+                loadedWithBrowserEngine: usedBrowser ? true : nil
             )
             return PreviewFetchResult(preview: preview, degraded: degraded)
         }
     }
 
-    private func fetchPage(_ url: URL, policy: MediaPolicy) async throws -> PageFetch {
+    // MARK: - Browser engine
+
+    /// The page as the browser engine sees it, when the fallback is allowed
+    /// and gets past the check; nil otherwise.
+    private func browserPage(_ url: URL, finalURL: URL, metadata: HTMLMetadata, policy: MediaPolicy) async throws -> BrowserPage? {
+        guard let browser, Self.allowsBrowserFallback(url: url, finalURL: finalURL, metadata: metadata, policy: policy)
+        else { return nil }
+        do {
+            let page = try await browser.load(finalURL, policy: policy)
+            // The engine checks every navigation; this is the last word.
+            return policy.allows(page.finalURL) ? page : nil
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            return nil
+        }
+    }
+
+    /// Whether a page link whose page was a bot check may be loaded in the
+    /// browser engine: the setting is on, the policy lets Vela request both
+    /// the link and where it led (so never a blocked site, an adult-listed
+    /// one, a private network address or a non-web URL), neither belongs to
+    /// a site Vela has a dedicated way into (video and GIF sites, Reddit),
+    /// and the page doesn't label itself adult while adult previews are hidden.
+    ///
+    /// "Text only" sites qualify: the engine never loads images. Auto-load
+    /// and per-channel media need no check here: with either off, nothing is
+    /// fetched until the user clicks Load (`PreviewDecider`).
+    static func allowsBrowserFallback(url: URL, finalURL: URL, metadata: HTMLMetadata, policy: MediaPolicy) -> Bool {
+        guard policy.browserFallback else { return false }
+        if metadata.declaresAdult, policy.filterAdultSites { return false }
+        for target in [url, finalURL] {
+            guard policy.allows(target), case .page = MediaClassifier.classify(target),
+                  RedditLinks.post(target) == nil, !RedditLinks.isAgeGate(target),
+                  let host = SiteRules.normalizedHost(target), SiteRules.providerMainDomain(forHost: host) == nil
+            else { return false }
+        }
+        return true
+    }
+
+    /// Fetches a page's `<head>` (or finds it's an image or video).
+    ///
+    /// With `readsChallenges`, a 403, 405, 429 or 503 answer is read too, to
+    /// tell a bot check from an ordinary error page (which still fails with
+    /// `MediaError.http`). Any page is checked with `BotCheckDetector`.
+    private func fetchPage(_ url: URL, policy: MediaPolicy, readsChallenges: Bool = false) async throws -> PageFetch {
         let maxImageBytes = policy.maxImageBytes
         let options = HTTPFetcher.Options(
             maxBytes: Self.maxHTMLBytes,
             overflow: .truncate,
+            acceptsStatus: { status in
+                (200..<300).contains(status) || (readsChallenges && BotCheckDetector.challengeStatuses.contains(status))
+            },
             checkRedirect: { policy.requestError(for: $0) },
             inspectResponse: { response in
-                guard let mime = response.normalizedMIMEType else { return .read }
-                if Self.isHTML(mime) || mime == "application/octet-stream" { return .read }
+                let isError = !(200..<300).contains(response.statusCode)
+                guard let mime = response.normalizedMIMEType else {
+                    if isError { throw MediaError.http(response.statusCode) }
+                    return .read
+                }
+                if Self.isHTML(mime) { return .read }
+                if isError { throw MediaError.http(response.statusCode) }
+                if mime == "application/octet-stream" { return .read }
                 if mime.hasPrefix("image/") {
                     if response.expectedContentLength > Int64(maxImageBytes) { throw MediaError.tooLarge }
                     return .skip
@@ -549,7 +639,11 @@ struct PreviewFetcher: Sendable {
         )
         var metadata = HTMLMetadataParser.parse(html: html, baseURL: finalURL)
         if ratedAdult { metadata.declaresAdult = true }
-        return .html(metadata, finalURL: finalURL, contentType: mime ?? "text/html")
+        let status = result.response.statusCode
+        let check = BotCheckDetector.assess(result.response, html: html, metadata: metadata)
+            .map { PageCheck(botCheck: $0, status: status) }
+        if !(200..<300).contains(status), check == nil { throw MediaError.http(status) }
+        return .html(metadata, finalURL: finalURL, contentType: mime ?? "text/html", check: check)
     }
 
     // MARK: - Helpers

@@ -87,7 +87,7 @@ A summary can misread a conversation or leave out something that matters. Click 
 
 <Screenshot src="/screenshots/ai-translate.webp" alt="#vela-offtopic with messages in Spanish, Japanese and German, each followed by its English translation and a “Translated from …” caption" caption="Automatic translation in #vela-offtopic." />
 
-When someone writes in another language, right-click the message (or hover it and click **…**) and choose **Translate**. The translation appears under the original, in a quieter color, with a caption such as **Translated from Spanish**. Click the caption for **Translate Again** and **Hide Translation**. **Hide Translation** is in the message's right-click menu too.
+When someone writes in another language, right-click the message (or hover it and click **…**) and choose **Translate**. The translation appears under the original, in a quieter color, with a caption such as **Translated from Spanish**. Click the caption for **Translate Again** and **Hide Translation**. **Hide Translation** is in the message's right-click menu too, which you also get by right-clicking the translation.
 
 **Translate** is offered for other people's messages in a language other than the one you translate into, when macOS can translate between the two. Your own messages are never translated.
 
