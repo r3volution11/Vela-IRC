@@ -41,6 +41,12 @@ final class MessageListController {
     /// New lines and sent messages since the last update.
     @ObservationIgnored var lineTracker: LineTracker
     @ObservationIgnored var topVisibleID: DisplayItemID?
+    /// Where the space after the last row was last laid out, in content
+    /// coordinates.
+    @ObservationIgnored var endFrame: CGRect?
+    /// The checks that a scroll to the bottom got there
+    /// (`MessageListView.scrollToBottom`).
+    @ObservationIgnored var bottomCheck: Task<Void, Never>?
     /// The user is dragging or flinging the list (trackpad or wheel gesture).
     @ObservationIgnored private(set) var isUserScrolling = false
     @ObservationIgnored private var programmaticScrollEnds = Date.distantPast
@@ -64,6 +70,14 @@ final class MessageListController {
     /// Whether content-size changes keep the bottom in place. Observed (the
     /// list's scroll anchor depends on it), so only written when it flips.
     private(set) var anchorsToBottom = true
+
+    /// Where the rows end (`ScrollMetrics.contentEnd`) when the space after
+    /// the last row is laid out in the visible rect of `metrics`; nil when
+    /// it's somewhere else, or nowhere.
+    func contentEnd(in metrics: ScrollMetrics) -> CGFloat? {
+        guard let endFrame, endFrame.maxY > metrics.visibleMinY, endFrame.minY < metrics.visibleMaxY else { return nil }
+        return endFrame.maxY
+    }
 
     /// Feeds new scroll geometry to the pinning logic. Returns true when the
     /// list should scroll to the bottom.
@@ -91,6 +105,8 @@ final class MessageListController {
             guard let self else { return }
             self.followQueued = false
             guard self.isPinnedToBottom, !self.isUserScrolling else { return }
+            // Got there meanwhile (the space after the last row came into view).
+            if let metrics = self.metrics, ScrollPinning.isAtBottom(metrics) { return }
             scrollToBottom()
         }
     }

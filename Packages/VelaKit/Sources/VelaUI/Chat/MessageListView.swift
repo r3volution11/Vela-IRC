@@ -22,7 +22,9 @@ import VelaTheme
 /// there — through new lines, media that loads late, reactions, resizes and
 /// style changes — until the reader scrolls up. Then nothing moves them and
 /// a "Jump to present" pill counts what's new. Sending a message always
-/// returns to the bottom.
+/// returns to the bottom. The bottom is always the space after the last row
+/// (`DisplayItemID.end`), never the content's bottom edge, which is partly
+/// estimated (see `scrollToBottom()`).
 ///
 /// The typing line floats over the bottom of the list; the space under the
 /// last row grows to fit it only while someone is typing (`ListEndSpacing`).
@@ -42,6 +44,9 @@ struct MessageListView: View {
     @State private var typingShown = false
     /// The typing line's measured height.
     @State private var typingLineHeight: CGFloat = 0
+
+    /// The rows' own coordinate space: content coordinates.
+    private static let contentSpace = "MessageListContent"
 
     init(buffer: BufferModel, session: NetworkSession) {
         self.buffer = buffer
@@ -77,13 +82,18 @@ struct MessageListView: View {
                 // Room under the last row (and for the typing line), and the
                 // target for scrolling to the bottom. Inside the stack, so
                 // scrolling here lays out the real last rows rather than
-                // estimated space.
+                // estimated space. Where it ends is where the list ends.
                 Color.clear
                     .frame(height: ListEndSpacing.height(typingLine: shownTypingLineHeight))
+                    .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named(Self.contentSpace)) }) { frame in
+                        controller.endFrame = frame
+                        endChanged()
+                    }
                     .id(DisplayItemID.end)
                     .accessibilityHidden(true)
             }
             .scrollTargetLayout()
+            .coordinateSpace(.named(Self.contentSpace))
             .themedScrollers()
         }
         .scrollPosition($position)
@@ -127,6 +137,9 @@ struct MessageListView: View {
         }
         .onAppear {
             listOpened(items)
+        }
+        .onDisappear {
+            controller.bottomCheck?.cancel()
         }
         .onChange(of: app.isWindowActive) { _, active in
             if active { windowActivated() }
@@ -192,19 +205,38 @@ struct MessageListView: View {
     // MARK: Scrolling
 
     private func scrollMetricsChanged(from old: ScrollMetrics, to new: ScrollMetrics) {
-        if controller.scrollGeometryChanged(new) {
-            controller.queueFollow { scrollToBottom() }
-        }
-        if controller.isPinnedToBottom {
-            markAllSeen()
-        }
-        updatePill()
+        var new = new
+        new.contentEnd = controller.contentEnd(in: new)
+        positionChanged(new)
 
         // Near the top and still scrolling up: fetch older history.
         if new.visibleMinY < 600, new.visibleMinY < old.visibleMinY, new.contentHeight > new.containerHeight,
            buffer.hasMoreHistory, !buffer.isLoadingHistory, !controller.holdsAnchorForHistory {
             loadOlderHistory()
         }
+    }
+
+    /// Feeds where the list is to the pinning logic, which may ask to follow
+    /// the newest line.
+    private func positionChanged(_ metrics: ScrollMetrics) {
+        if controller.scrollGeometryChanged(metrics) {
+            controller.queueFollow { scrollToBottom() }
+        }
+        if controller.isPinnedToBottom {
+            markAllSeen()
+        }
+        updatePill()
+    }
+
+    /// The space after the last row was laid out somewhere else. That can
+    /// happen without the scroll geometry changing (rows above it measured
+    /// at other heights than estimated), so the position is judged again.
+    private func endChanged() {
+        guard var metrics = controller.metrics else { return }
+        let end = controller.contentEnd(in: metrics)
+        guard metrics.contentEnd != end else { return }
+        metrics.contentEnd = end
+        positionChanged(metrics)
     }
 
     private func updatePill() {
@@ -231,23 +263,52 @@ struct MessageListView: View {
         }
     }
 
-    /// Scrolls to the very bottom, in two steps.
+    /// Scrolls to the newest line: the spacer after the last row, by id,
+    /// until it's really there.
     ///
-    /// The bottom *edge* alone is computed from the lazy stack's estimated
-    /// row heights: after a burst of new rows (or from far up) it can land
-    /// in space no row has been laid out for, and the list shows nothing.
-    /// Scrolling to the spacer after the last row by id makes the stack lay
-    /// out the real rows at the end first; a moment later the edge corrects
-    /// whatever the estimates above got wrong. Animated jumps skip the
-    /// second step (it would cut the animation short); their completion
-    /// settles instead.
+    /// Never to the bottom *edge*. That's the end of the lazy stack's
+    /// content height, which counts rows it hasn't laid out at an estimated
+    /// height; in a long channel with video players and link previews among
+    /// one-line messages it can lie a screenful or more below the last row.
+    /// The list then showed nothing, looked to be at the bottom and stayed
+    /// that way until a new message arrived.
+    ///
+    /// A scroll to the spacer can land short of it too, where the stack
+    /// estimates the spacer is, with nothing laid out; so it's checked and
+    /// tried again until the spacer really is at the bottom of the visible
+    /// rect (`BottomSettle`). Animated jumps skip the checks (they'd cut
+    /// the animation short); their completion settles instead.
     private func scrollToBottom(animated: Bool = false) {
         position.scrollTo(id: DisplayItemID.end, anchor: .bottom)
+        controller.bottomCheck?.cancel()
         guard !animated else { return }
-        Task {
-            try? await Task.sleep(for: .milliseconds(20))
-            guard controller.isPinnedToBottom, !controller.isUserScrolling else { return }
-            position.scrollTo(edge: .bottom)
+        controller.bottomCheck = Task { await settleAtBottom() }
+    }
+
+    /// Checks that the list got to the bottom and scrolls there again until
+    /// it does, as `BottomSettle` says.
+    private func settleAtBottom() async {
+        var settle = BottomSettle()
+        var lastCheck = Date()
+        while true {
+            try? await Task.sleep(for: .seconds(settle.wait))
+            guard !Task.isCancelled, controller.isPinnedToBottom, !controller.isUserScrolling else { return }
+            let now = Date()
+            let step = settle.check(
+                waited: now.timeIntervalSince(lastCheck),
+                otherScrollUnderWay: controller.scrollDriver == .programmatic,
+                atBottom: controller.metrics.map(ScrollPinning.isAtBottom) ?? false
+            )
+            lastCheck = now
+            switch step {
+            case .wait:
+                continue
+            case .scroll(let anchor):
+                position.scrollTo(id: DisplayItemID.end, anchor: UnitPoint(x: 0.5, y: anchor))
+            case .done(let settleBack):
+                if settleBack { position.scrollTo(id: DisplayItemID.end, anchor: .bottom) }
+                return
+            }
         }
     }
 
@@ -291,7 +352,8 @@ struct MessageListView: View {
     }
 
     /// The list appeared: land where `chat.openAt` says (see `ListLanding`).
-    /// It starts at the bottom, pinned.
+    /// It starts at the bottom, pinned, as far as the estimated row heights
+    /// tell; every landing scrolls for real.
     private func listOpened(_ items: DisplayItems) {
         // A jump asked for from elsewhere (a search result, a reply) wins.
         guard uiState.scrollTarget == nil else { return }

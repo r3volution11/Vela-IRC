@@ -9,24 +9,46 @@ import VelaCore
 // MARK: Scroll metrics
 
 /// The scroll values the message list reacts to.
+///
+/// The lazy stack's content height is partly an estimate: rows it hasn't
+/// laid out count at an average height. In a long channel whose rows vary
+/// a lot (one-line messages between 315 pt video players) that estimate
+/// can run thousands of points past where the rows really end, and the
+/// bottom *edge* of the content is then empty space. So while the space
+/// after the last row is laid out in view, its bottom (`contentEnd`) is
+/// where the list ends.
 nonisolated struct ScrollMetrics: Equatable, Sendable {
     var visibleMinY: CGFloat
     var visibleMaxY: CGFloat
     var contentHeight: CGFloat
     var containerHeight: CGFloat
+    /// The bottom of the space after the last row (`DisplayItemID.end`), in
+    /// content coordinates, while it's laid out in the visible rect; nil
+    /// otherwise.
+    var contentEnd: CGFloat?
 
-    init(visibleMinY: CGFloat, visibleMaxY: CGFloat, contentHeight: CGFloat, containerHeight: CGFloat) {
+    init(visibleMinY: CGFloat, visibleMaxY: CGFloat, contentHeight: CGFloat, containerHeight: CGFloat, contentEnd: CGFloat? = nil) {
         self.visibleMinY = visibleMinY
         self.visibleMaxY = visibleMaxY
         self.contentHeight = contentHeight
         self.containerHeight = containerHeight
+        self.contentEnd = contentEnd
     }
 
+    /// Where the newest line ends: `contentEnd`, or the (estimated) content
+    /// height while the end isn't laid out.
+    var end: CGFloat { contentEnd ?? contentHeight }
+
     /// How much content lies below the visible rect. Zero when the visible
-    /// rect reaches past the content: LazyVStack re-estimates row heights as
-    /// rows appear, so the reported content height can lag behind the
-    /// visible rect, which then still shows the end.
-    var distanceFromBottom: CGFloat { max(0, contentHeight - visibleMaxY) }
+    /// rect reaches past the end (see `distancePastEnd`).
+    var distanceFromBottom: CGFloat { max(0, end - visibleMaxY) }
+
+    /// How far the visible rect reaches below the last row: space with
+    /// nothing in it. Known only while the end is in view; zero otherwise.
+    var distancePastEnd: CGFloat {
+        guard let contentEnd else { return 0 }
+        return max(0, visibleMaxY - contentEnd)
+    }
 
     var fitsWithoutScrolling: Bool { contentHeight <= containerHeight + 1 }
 }
@@ -39,7 +61,9 @@ nonisolated struct ScrollMetrics: Equatable, Sendable {
 /// `bottomTolerance` of) the bottom. Pinned, every change in size — a new
 /// line, an image or link card finishing loading, a reaction, a window
 /// resize, a font change — keeps the bottom in view, and any drift (lazy
-/// rows being re-measured, SwiftUI correcting its offset) is scrolled back.
+/// rows being re-measured, SwiftUI correcting its offset, the visible rect
+/// left below the last row by a re-estimated content height) is scrolled
+/// back.
 ///
 /// Only the reader unpins the list, by scrolling up past the tolerance in a
 /// gesture. While unpinned nothing scrolls them (except sending a message,
@@ -67,13 +91,20 @@ nonisolated struct ScrollPinning: Sendable {
         self.isPinned = isPinned
     }
 
+    /// Within `bottomTolerance` of the newest line, or past it.
     static func isNearBottom(_ metrics: ScrollMetrics) -> Bool {
         metrics.fitsWithoutScrolling || metrics.distanceFromBottom <= bottomTolerance
     }
 
-    /// Whether the newest content is entirely visible.
+    /// Whether the newest line sits at the bottom of the visible rect: the
+    /// space after it in view there, with nothing below (but the fraction of
+    /// a point the content's height is rounded up by). A visible rect at the
+    /// bottom edge of the (estimated) content without that space in it
+    /// isn't: there may be nothing laid out there at all.
     static func isAtBottom(_ metrics: ScrollMetrics) -> Bool {
-        metrics.fitsWithoutScrolling || metrics.distanceFromBottom <= 0.5
+        if metrics.fitsWithoutScrolling { return true }
+        guard metrics.contentEnd != nil else { return false }
+        return metrics.distanceFromBottom <= 0.5 && metrics.distancePastEnd <= 1
     }
 
     /// Updates the pinned state for new scroll geometry. Returns true when
@@ -127,6 +158,79 @@ nonisolated struct ScrollPinning: Sendable {
         if isPinned { return !Self.isAtBottom(metrics) }
         isPinned = Self.isNearBottom(metrics)
         return false
+    }
+}
+
+// MARK: Settling at the bottom
+
+/// How a scroll to the bottom makes sure it got there
+/// (`MessageListView.scrollToBottom`).
+///
+/// The scroll goes to the space after the last row, by id, but can land
+/// where the lazy stack *estimates* that space is, with nothing laid out:
+/// the list shows nothing. Each try lets the stack measure more rows and
+/// land closer, and the stack also measures rows on its own when the app
+/// has a moment. So the list checks every `interval` and scrolls again
+/// until the space is at the bottom of the visible rect, for `budget`
+/// seconds *and* at least `minimumTries` tries: a busy main actor that
+/// delays the checks can't run the budget out in a few tries, and time
+/// while another scroll or animation is under way doesn't count at all.
+/// Then a few `lateTries`, further apart, in case nothing else moves the
+/// list (it scrolls back on its own after any change in its geometry).
+///
+/// An equal `ScrollPosition` is ignored, so tries cycle through three
+/// anchors a hair apart, each different from the one before, and a list
+/// that got there on one of them settles back on `.bottom`.
+nonisolated struct BottomSettle: Equatable, Sendable {
+    static let interval: TimeInterval = 0.03
+    static let budget: TimeInterval = 2
+    static let minimumTries = 10
+    /// Waits before each try once the budget is spent.
+    static let lateTries: [TimeInterval] = [0.5, 1, 2]
+    /// Anchors the tries cycle through; `1` is `.bottom`.
+    static let anchors: [CGFloat] = [0.9999, 1, 0.99995]
+
+    enum Step: Equatable, Sendable {
+        /// Check again after `wait`.
+        case wait
+        /// Scroll to the space after the last row with this anchor (a
+        /// `UnitPoint` y), then check again after `wait`.
+        case scroll(anchor: CGFloat)
+        /// Stop checking; `settleBack` scrolls to it with `.bottom` once more.
+        case done(settleBack: Bool)
+    }
+
+    /// Checking time spent so far, not counting other scrolls.
+    private(set) var spent: TimeInterval = 0
+    private(set) var tries = 0
+    private(set) var lateTriesMade = 0
+    /// The anchor of the last scroll: the first, `.bottom`, before any try.
+    private(set) var lastAnchor: CGFloat = 1
+
+    init() {}
+
+    private var inBudget: Bool { spent < Self.budget || tries < Self.minimumTries }
+
+    /// How long to wait before the next check.
+    var wait: TimeInterval {
+        inBudget ? Self.interval : Self.lateTries[min(lateTriesMade, Self.lateTries.count - 1)]
+    }
+
+    /// A check, `waited` seconds after the last one.
+    mutating func check(waited: TimeInterval, otherScrollUnderWay: Bool, atBottom: Bool) -> Step {
+        if atBottom { return .done(settleBack: lastAnchor != 1) }
+        if otherScrollUnderWay { return .wait }
+        if inBudget {
+            spent += max(0, waited)
+        } else if lateTriesMade < Self.lateTries.count {
+            lateTriesMade += 1
+        } else {
+            return .done(settleBack: lastAnchor != 1)
+        }
+        tries += 1
+        let anchor = Self.anchors[(tries - 1) % Self.anchors.count]
+        lastAnchor = anchor
+        return .scroll(anchor: anchor)
     }
 }
 

@@ -168,6 +168,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - A playing video no longer reloads when its message is redrawn (it keeps playing) or when you scroll it away and back (it waits, paused, where you left it).
 - Links to Reddit posts showed "Reddit" as their title, with no description. Reddit answers apps with a page that only says "Reddit"; Vela now gets the post's title, subreddit and author from Reddit's oEmbed service, for `redd.it` short links too.
 - Streamable videos show their thumbnail. Streamable gives its thumbnails' addresses without `https:`, and Vela skipped them.
+- A long, busy channel with videos and link previews could look empty when you switched to it, opened it or new messages arrived, until the next message came in. Its messages now always show, at the **New** line or the newest message.
 
 ## 0.1.0 - 2026-11-16
 

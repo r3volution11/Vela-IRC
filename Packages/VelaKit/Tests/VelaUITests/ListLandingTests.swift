@@ -29,16 +29,17 @@ struct ListLandingTests {
         #expect(ListLanding.onOpen(openAt: .firstUnread, revealsCatchUpCard: false, unreadTarget: .unreadMarker) == .unread(.unreadMarker))
         let id = UUID()
         #expect(ListLanding.onOpen(openAt: .firstUnread, revealsCatchUpCard: false, unreadTarget: .line(id)) == .unread(.line(id)))
-        // Nothing unread: where the list starts, at the bottom, as always.
-        #expect(ListLanding.onOpen(openAt: .firstUnread, revealsCatchUpCard: false, unreadTarget: nil) == .stay)
+        // Nothing unread: the newest line, scrolled to for real (the bottom
+        // the list starts at is estimated, and can be past the last row).
+        #expect(ListLanding.onOpen(openAt: .firstUnread, revealsCatchUpCard: false, unreadTarget: nil) == .bottom)
     }
 
     /// Show newest: the bottom, whatever is unread, so no pill appears.
     @Test func newestAlwaysLandsAtTheBottom() {
         #expect(ListLanding.onOpen(openAt: .newest, revealsCatchUpCard: false, unreadTarget: .unreadMarker) == .bottom)
         #expect(ListLanding.onOpen(openAt: .newest, revealsCatchUpCard: false, unreadTarget: .line(UUID())) == .bottom)
-        // Nothing unread: the list already starts there.
-        #expect(ListLanding.onOpen(openAt: .newest, revealsCatchUpCard: false, unreadTarget: nil) == .stay)
+        // Nothing unread: there too.
+        #expect(ListLanding.onOpen(openAt: .newest, revealsCatchUpCard: false, unreadTarget: nil) == .bottom)
     }
 
     /// Catch me up from a context menu or the palette is asked for, so

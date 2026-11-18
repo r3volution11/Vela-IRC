@@ -11,8 +11,9 @@ import VelaStore
 ///
 /// - **First unread** (the default): a list with unread lines opens at the
 ///   New line (or, with the line hidden, at the first unread row) a little
-///   below the top, and "Jump to present" takes the reader down. Coming
-///   back to Vela leaves the list where it is.
+///   below the top, and "Jump to present" takes the reader down; one with
+///   nothing unread opens at the newest line. Coming back to Vela leaves
+///   the list where it is.
 /// - **Newest**: every list opens at the bottom and stays pinned there, so
 ///   there's nothing to scroll down to and no pill. Coming back to Vela
 ///   keeps it at the newest line. A reader who scrolled up themselves keeps
@@ -23,15 +24,15 @@ import VelaStore
 /// palette is brought into view.
 nonisolated enum ListLanding: Equatable, Sendable {
     /// Settle on the newest line, pinned. The bottom the list starts at is
-    /// worked out from estimated row heights, so it's scrolled to for real
-    /// (`MessageListView.scrollToBottom`).
+    /// worked out from estimated row heights, and in a long channel with
+    /// media it can be past the last row, showing nothing; so it's scrolled
+    /// to for real (`MessageListView.scrollToBottom`).
     case bottom
     /// This row (the New line, or the first unread row) near the top.
     case unread(DisplayItemID)
     /// The Catch me up card that was asked for.
     case catchUpCard
-    /// Leave the list where it is: on opening, where it starts (at the
-    /// bottom, pinned), as it always has with nothing unread.
+    /// Leave the list where it is (coming back to Vela).
     case stay
 
     /// Where a list opens: selecting a channel, launching Vela, reopening
@@ -41,10 +42,11 @@ nonisolated enum ListLanding: Equatable, Sendable {
     ///   - revealsCatchUpCard: A Catch me up card for this buffer is waiting
     ///     to be shown (opened from a context menu or the palette).
     ///   - unreadTarget: Where the unread lines start
-    ///     (``unreadTarget(in:after:)``); nil when nothing's unread.
+    ///     (``unreadTarget(in:after:)``); nil when nothing's unread, and the
+    ///     list opens at the newest line.
     static func onOpen(openAt: ChatOpenPosition, revealsCatchUpCard: Bool, unreadTarget: DisplayItemID?) -> ListLanding {
         if revealsCatchUpCard { return .catchUpCard }
-        guard let unreadTarget else { return .stay }
+        guard let unreadTarget else { return .bottom }
         return openAt == .firstUnread ? .unread(unreadTarget) : .bottom
     }
 
