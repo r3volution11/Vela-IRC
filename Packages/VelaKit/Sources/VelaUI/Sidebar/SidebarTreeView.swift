@@ -61,6 +61,7 @@ struct SidebarTreeView: View {
                 .padding(.horizontal, SidebarMetrics.outerInset)
                 .padding(.bottom, 12)
                 .environment(\.isSidebarReordering, isReordering)
+                .themedScrollers()
             }
             .scrollIndicators(.automatic)
             .scrollContentBackground(.hidden)
@@ -68,7 +69,7 @@ struct SidebarTreeView: View {
             footer
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(theme[ThemeKey.sidebarBackground])
+        .surfaceBackground(ThemeKey.sidebarBackground, on: .sidebar, isFloating: isFloating)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sidebar")
         .onChange(of: isReordering) { _, dragging in

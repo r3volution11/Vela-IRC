@@ -84,6 +84,7 @@ struct MessageListView: View {
                     .accessibilityHidden(true)
             }
             .scrollTargetLayout()
+            .themedScrollers()
         }
         .scrollPosition($position)
         .defaultScrollAnchor(.bottom, for: .initialOffset)

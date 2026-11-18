@@ -139,7 +139,7 @@ public enum ThemeSchema {
     private static func vibrancySchema() -> JSONValue {
         .object([
             "enum": .array(["none", "sidebar", "window"]),
-            "description": "Use the system's translucent materials: none (opaque colors), sidebar (sidebar and rail) or window.",
+            "description": "Use macOS's translucent materials: none (opaque colors), sidebar (the sidebar, rail and tab bars) or window (the whole main window). Theme colors tint the material: opaque ones at 70%, ones with alpha as written. Off with Reduce Transparency.",
         ])
     }
 

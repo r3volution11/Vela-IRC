@@ -35,15 +35,18 @@ public enum ThemeKind: String, Codable, Sendable, CaseIterable {
     public var opposite: ThemeKind { self == .dark ? .light : .dark }
 }
 
-/// Lets a theme opt into the system's translucent materials (Liquid Glass /
-/// vibrancy) instead of painting opaque surfaces.
+/// Lets a theme opt into macOS's translucent materials instead of painting
+/// opaque surfaces. See `ThemeVibrancy.material(for:)` for what each value
+/// puts on a material, and `tint(_:)` for how theme colors show over it.
 public enum ThemeVibrancy: String, Codable, Sendable, CaseIterable {
-    /// All surfaces are painted with the theme's opaque colors.
+    /// Every surface is painted in the theme's colors.
     case none
-    /// The sidebar (and collapsed rail) use the system sidebar material,
-    /// tinted by `sidebar.background` if it is translucent.
+    /// The sidebar, the collapsed rail and the tab stacks sit on the system
+    /// sidebar material, tinted by their theme colors.
     case sidebar
-    /// The whole window uses translucent materials where the system allows.
+    /// The sidebar as with `sidebar`, and the rest of the window (title
+    /// strip, tabs, conversation, message bar, member list) on the window
+    /// material, tinted by their theme colors.
     case window
 }
 
@@ -120,7 +123,9 @@ public struct ThemeDefinition: Codable, Sendable, Hashable {
         colors = try container.decodeIfPresent([String: String].self, forKey: .colors) ?? [:]
         nickColors = try container.decodeIfPresent([String].self, forKey: .nickColors)
         ircColors = try container.decodeIfPresent([String: String].self, forKey: .ircColors)
-        vibrancy = try container.decodeIfPresent(ThemeVibrancy.self, forKey: .vibrancy)
+        // A value other than none, sidebar or window is skipped, not fatal:
+        // `ThemeProblems` reports it and the rest of the theme still loads.
+        vibrancy = (try? container.decodeIfPresent(String.self, forKey: .vibrancy)).flatMap { $0.flatMap(ThemeVibrancy.init(rawValue:)) }
     }
 
     /// Checks every color value and IRC index; throws the first problem found.

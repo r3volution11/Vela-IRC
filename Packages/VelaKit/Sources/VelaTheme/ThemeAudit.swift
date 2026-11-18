@@ -83,14 +83,16 @@ public enum ThemeAudit {
     public static let nickMinimum = 3.0
 
     /// Runs every check. Translucent backgrounds are composited over the
-    /// surface they're drawn on (chat, sidebar or member list).
+    /// surface they're drawn on (chat, sidebar or member list). With
+    /// vibrancy, a surface on a material is measured as its tint over
+    /// `ThemeVibrancy.materialStandIn(for:)`, the least favorable desktop.
     public static func audit(_ theme: ResolvedTheme) -> [Finding] {
         var findings = checks.map { check in
             let background = surface(check.background, in: theme)
             let ratio = theme.color(check.foreground).contrastRatio(against: background)
             return Finding(foreground: check.foreground, background: check.background, ratio: ratio, minimum: check.minimum)
         }
-        let chat = theme.color(ThemeKey.chatBackground)
+        let chat = surface(ThemeKey.chatBackground, in: theme)
         for (index, color) in theme.nickColors.enumerated() {
             findings.append(Finding(
                 foreground: "nickColors[\(index)]",
@@ -105,6 +107,12 @@ public enum ThemeAudit {
     /// The opaque color a (possibly translucent) background token produces.
     static func surface(_ key: String, in theme: ResolvedTheme) -> ThemeColor {
         let color = theme.color(key)
+        if let material = materialSurface(key, in: theme) {
+            return material
+        }
+        if let base = ThemeVibrancy.rowTokens[key], let material = materialSurface(base, in: theme) {
+            return ThemeVibrancy.tint(color).composited(over: material)
+        }
         guard color.alpha < 1 else { return color }
         let base: String = switch key {
         case _ where key.hasPrefix("sidebar."): ThemeKey.sidebarBackground
@@ -114,7 +122,20 @@ public enum ThemeAudit {
         case _ where key.hasPrefix("settings."): ThemeKey.settingsBackground
         default: ThemeKey.chatBackground
         }
+        if let material = materialSurface(base, in: theme) {
+            return color.composited(over: material)
+        }
+        let window = theme.color(ThemeKey.windowBackground)
+        // A translucent surface (sidebar.background, say) is drawn over the window.
+        guard base != key else { return color.composited(over: window) }
         let baseColor = theme.color(base)
-        return color.composited(over: baseColor.alpha < 1 ? baseColor.composited(over: theme.color(ThemeKey.windowBackground)) : baseColor)
+        return color.composited(over: baseColor.alpha < 1 ? baseColor.composited(over: window) : baseColor)
+    }
+
+    /// A surface token that the theme's vibrancy puts on a material, as it
+    /// looks over the stand-in for the material; `nil` for anything else.
+    private static func materialSurface(_ key: String, in theme: ResolvedTheme) -> ThemeColor? {
+        guard let surface = ThemeVibrancy.surfaceTokens[key], theme.vibrancy.material(for: surface) != nil else { return nil }
+        return ThemeVibrancy.tint(theme.color(key)).composited(over: ThemeVibrancy.materialStandIn(for: theme.kind))
     }
 }

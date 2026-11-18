@@ -34,6 +34,10 @@ public final class ThemeStore {
     /// Problems in `settings.colorCustomizations` (unknown tokens, bad colors).
     public private(set) var customizationProblems: [String] = []
 
+    /// Typos and skipped values in theme files that loaded (unknown keys and
+    /// tokens, a bad `vibrancy`), by file. See `ThemeProblems`.
+    public private(set) var loadProblems: [URL: [ThemeProblem]] = [:]
+
     /// Why `draft` couldn't be resolved, if it couldn't (e.g. a missing include).
     public private(set) var draftError: String?
 
@@ -71,6 +75,7 @@ public final class ThemeStore {
     @ObservationIgnored private var appearanceObservation: SystemAppearance.Observation?
     @ObservationIgnored private var builtInsLoaded = false
     @ObservationIgnored private var builtInErrors: [URL: String] = [:]
+    @ObservationIgnored private var builtInProblems: [URL: [ThemeProblem]] = [:]
 
     private struct Entry {
         let info: ThemeInfo
@@ -147,6 +152,12 @@ public final class ThemeStore {
         return themes.first { $0.id.caseInsensitiveCompare(reference) == .orderedSame }
             ?? themes.first { $0.source == .user && $0.name.caseInsensitiveCompare(reference) == .orderedSame }
             ?? themes.first { $0.name.caseInsensitiveCompare(reference) == .orderedSame }
+    }
+
+    /// Typos and skipped values in a theme's file (empty for a file with
+    /// none, or one that failed to load: see `loadErrors`).
+    public func problems(for info: ThemeInfo) -> [ThemeProblem] {
+        loadProblems[info.url] ?? []
     }
 
     /// The parsed file behind a theme.
@@ -272,13 +283,13 @@ public final class ThemeStore {
     private func loadBuiltInsIfNeeded() {
         guard !builtInsLoaded else { return }
         builtInsLoaded = true
-        let (loaded, errors) = ThemeLoader.loadDirectory(ThemeLoader.builtInThemesDirectory)
+        let (loaded, errors, problems) = ThemeLoader.loadDirectory(ThemeLoader.builtInThemesDirectory)
         for (url, definition) in loaded {
             let id = ThemeLoader.themeID(for: url)
-            let info = ThemeInfo(id: id, name: definition.name, kind: definition.type, source: .builtIn, url: url)
-            builtIns[id] = Entry(info: info, definition: definition)
+            builtIns[id] = Entry(info: ThemeInfo(id: id, definition: definition, source: .builtIn, url: url), definition: definition)
         }
         builtInErrors = errors
+        builtInProblems = problems
     }
 
     /// Rescans the user folder. Files that fail to parse keep their last
@@ -286,10 +297,13 @@ public final class ThemeStore {
     func reloadUserThemes() {
         loadBuiltInsIfNeeded()
         var errors = builtInErrors
+        var problems = builtInProblems
         var definitions: [URL: ThemeDefinition] = [:]
         for url in ThemeLoader.themeFiles(in: userThemesDirectory) {
             do {
-                definitions[url] = try ThemeLoader.load(contentsOf: url)
+                let checked = try ThemeLoader.loadChecked(contentsOf: url)
+                definitions[url] = checked.definition
+                if !checked.problems.isEmpty { problems[url] = checked.problems }
             } catch {
                 errors[url] = error.localizedDescription
                 if let lastGood = userDefinitions[url] { definitions[url] = lastGood }
@@ -300,8 +314,7 @@ public final class ThemeStore {
         var next = builtIns
         for (url, definition) in definitions {
             let id = ThemeLoader.themeID(for: url)
-            let info = ThemeInfo(id: id, name: definition.name, kind: definition.type, source: .user, url: url)
-            next[id] = Entry(info: info, definition: definition)
+            next[id] = Entry(info: ThemeInfo(id: id, definition: definition, source: .user, url: url), definition: definition)
         }
         entries = next
 
@@ -323,6 +336,7 @@ public final class ThemeStore {
         }
         if themes != sorted { themes = sorted }
         if loadErrors != errors { loadErrors = errors }
+        if loadProblems != problems { loadProblems = problems }
         resolvedCache.removeAll()
         refresh()
     }

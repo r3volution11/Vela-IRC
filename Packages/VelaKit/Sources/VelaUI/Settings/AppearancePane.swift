@@ -15,6 +15,7 @@ struct AppearancePane: View {
     @Environment(ThemeStore.self) private var themeStore
     @Environment(\.theme) private var theme
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     let navigate: (SettingsPane) -> Void
 
     @State private var filter: KindFilter = .all
@@ -128,11 +129,8 @@ struct AppearancePane: View {
                     Button("Open settings.json") { SettingsFiles.openSettingsJSON(app.settings) }
                         .buttonStyle(ThemedButtonStyle())
                 }
-                SettingsRow(
-                    "Translucency",
-                    detail: "Themes can let macOS draw the sidebar or the whole window with Liquid Glass materials by setting \"vibrancy\" to \"sidebar\" or \"window\". Opaque themes keep every color exactly as designed."
-                ) {
-                    SettingsPill(text: "\(theme.name): \(theme.vibrancy.rawValue)")
+                SettingsRow("Translucency", detail: translucencyDetail) {
+                    SettingsPill(text: "\(theme.name): \(theme.vibrancy.rawValue)\(reduceTransparency && theme.vibrancy != .none ? " (off)" : "")")
                 }
             }
         }
@@ -151,6 +149,14 @@ struct AppearancePane: View {
         } message: {
             Text("The theme file is removed from your Themes folder. This can't be undone.")
         }
+    }
+
+    private var translucencyDetail: String {
+        var text = "A theme can set \"vibrancy\" to \"sidebar\" to put the sidebar, rail and tab bars on macOS's translucent sidebar material, or to \"window\" to make the whole main window translucent. Its colors tint the material: opaque ones at 70%, ones with their own transparency exactly as written. Themes without it are opaque."
+        if reduceTransparency {
+            text += " Reduce Transparency is on (System Settings → Accessibility → Display), so every theme is drawn opaque."
+        }
+        return text
     }
 
     // MARK: Message box
@@ -210,7 +216,8 @@ struct AppearancePane: View {
                         resolved: themeStore.resolvedTheme(for: info),
                         config: config,
                         isCurrent: themeStore.currentInfo?.id == info.id,
-                        roles: roles(for: info)
+                        roles: roles(for: info),
+                        problemCount: themeStore.problems(for: info).count
                     ) {
                         select(info)
                     }
@@ -381,6 +388,21 @@ struct AppearancePane: View {
                     .buttonStyle(ThemedButtonStyle())
             }
         }
+        // Files that loaded but had parts skipped: typos and unusable values.
+        let skipped = themeStore.loadProblems
+            .filter { themeStore.loadErrors[$0.key] == nil }
+            .sorted { $0.key.lastPathComponent < $1.key.lastPathComponent }
+        ForEach(skipped, id: \.key) { url, problems in
+            SettingsCallout(
+                problems.contains { $0.severity == .error } ? .error : .warning,
+                "Parts of \(url.lastPathComponent) were ignored",
+                message: problems.map { problems.count > 1 ? "• \($0.message)" : $0.message }.joined(separator: "\n")
+                    + "\nThe rest of the theme works."
+            ) {
+                Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                    .buttonStyle(ThemedButtonStyle())
+            }
+        }
         if !themeStore.customizationProblems.isEmpty {
             SettingsCallout(
                 .warning,
@@ -402,9 +424,23 @@ private struct ThemeCard: View {
     let config: LayoutSchematicConfig
     let isCurrent: Bool
     let roles: [String]
+    /// Typos and skipped values in the theme's file.
+    var problemCount = 0
     let select: () -> Void
 
     @State private var isHovered = false
+
+    /// The card's tooltip: the name, who made it, its description, and for
+    /// your own themes the file.
+    private var tooltip: String {
+        var lines = [info.author.map { "\(info.name), by \($0)" } ?? info.name]
+        if let description = info.description { lines.append(description) }
+        if info.source == .user { lines.append(info.url.lastPathComponent) }
+        if problemCount > 0 {
+            lines.append("Parts of the file were ignored; see the message below the gallery.")
+        }
+        return lines.joined(separator: "\n")
+    }
 
     var body: some View {
         Button(action: select) {
@@ -436,6 +472,12 @@ private struct ThemeCard: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer(minLength: 2)
+                    if problemCount > 0 {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(theme[ThemeKey.statusWarning])
+                            .accessibilityHidden(true)
+                    }
                     if isCurrent {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 12))
@@ -469,9 +511,10 @@ private struct ThemeCard: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .help(info.source == .user ? "\(info.name) — \(info.url.lastPathComponent)" : info.name)
+        .help(tooltip)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(info.name), \(info.kind == .dark ? "dark" : "light") theme\(info.source == .user ? ", yours" : "")")
+        .accessibilityHint(info.description ?? "")
         .accessibilityValue(([isCurrent ? "In use" : nil] + roles.map { "Used in \($0)" }).compactMap { $0 }.joined(separator: ", "))
         .accessibilityAddTraits(isCurrent ? [.isButton, .isSelected] : .isButton)
     }

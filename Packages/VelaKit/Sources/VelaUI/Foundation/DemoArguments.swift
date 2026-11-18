@@ -6,14 +6,42 @@ import Foundation
 import VelaFoundation
 import VelaCore
 import VelaStore
+import VelaTheme
 
 /// Launch arguments for demo mode, handy for screenshots and UI work:
 ///
 ///     Vela --demo --theme "Lighter" --preset tabbed --set chat.layout=classic --set tabs.roundness=1
+///     Vela --demo --themes-dir ~/Desktop/MyThemes --theme "Harbor"
 ///
 /// `--set` values are parsed as JSON when possible (numbers, booleans,
 /// arrays), otherwise used as strings.
+///
+/// Demo mode never reads or writes the real Themes folder: it gets a fresh
+/// temporary one, empty unless `--themes-dir <folder>` copies that folder's
+/// theme files in (the folder itself is left alone).
 enum DemoArguments {
+    /// A new, isolated themes folder for a demo run: a temporary folder
+    /// holding a copy of the theme files in `--themes-dir`, if given and
+    /// readable. Never `AppPaths.themesDirectory`.
+    static func themesDirectory(for arguments: [String], fileManager: FileManager = .default) -> URL {
+        let directory = fileManager.temporaryDirectory
+            .appendingPathComponent("VelaDemo-Themes-\(UUID().uuidString)", isDirectory: true)
+        try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        guard let index = arguments.firstIndex(of: "--themes-dir"), arguments.indices.contains(index + 1) else {
+            return directory
+        }
+        let path = (arguments[index + 1] as NSString).expandingTildeInPath
+        let source = URL(fileURLWithPath: path, isDirectory: true)
+        let files = ThemeLoader.themeFiles(in: source)
+        if files.isEmpty {
+            FileHandle.standardError.write(Data("demo: no theme files found in \(source.path) (the app is sandboxed: put them in its container, e.g. ~/Library/Containers/<bundle id>/Data/tmp)\n".utf8))
+        }
+        for file in files {
+            try? fileManager.copyItem(at: file, to: directory.appendingPathComponent(file.lastPathComponent))
+        }
+        return directory
+    }
+
     @MainActor
     static func apply(_ arguments: [String], to settings: SettingsStore) {
         var iterator = arguments.makeIterator()
@@ -26,8 +54,9 @@ enum DemoArguments {
             case "--preset":
                 guard let id = iterator.next(), let preset = SettingsPreset.all.first(where: { $0.id == id }) else { continue }
                 settings.apply(preset)
-            case "--select":
-                // Handled by `selectBuffer(from:in:)` once sessions exist.
+            case "--select", "--themes-dir":
+                // Handled by `selectBuffer(from:in:)` once sessions exist,
+                // and by `themesDirectory(for:)`.
                 _ = iterator.next()
             case "--set":
                 guard let pair = iterator.next(), let eq = pair.firstIndex(of: "=") else { continue }

@@ -52,7 +52,7 @@
           "type" : "string"
         },
         "button.hoverBackground" : {
-          "description" : "Primary button under the pointer.\n\nDefault: mix(button.background, #FFFFFF, 12%) (dark), mix(button.background, #000000, 10%) (light)",
+          "description" : "Primary button (such as Save or Add Network…) under the pointer.\n\nDefault: mix(button.background, #FFFFFF, 12%) (dark), mix(button.background, #000000, 10%) (light)",
           "format" : "color-hex",
           "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
@@ -171,7 +171,7 @@
           "type" : "string"
         },
         "chat.findMatchBackground" : {
-          "description" : "Matches when searching the conversation. Usually translucent.\n\nDefault: transparent(status.warning, 35%)",
+          "description" : "Reserved for matches when searching the conversation, which this version of Vela can't do yet: not drawn. Usually translucent.\n\nDefault: transparent(status.warning, 35%)",
           "format" : "color-hex",
           "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
@@ -472,7 +472,7 @@
           "type" : "string"
         },
         "rail.background" : {
-          "description" : "Background of the collapsed sidebar.\n\nDefault: sidebar.background",
+          "description" : "Background of the collapsed sidebar. With vibrancy on, it tints the sidebar material.\n\nDefault: sidebar.background",
           "format" : "color-hex",
           "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
@@ -570,14 +570,14 @@
           "type" : "string"
         },
         "scrollbar.thumb" : {
-          "description" : "Scrollbar thumb.\n\nDefault: transparent(window.foreground, 20%)",
+          "description" : "Scroll bar thumb in the conversation, member list and sidebar.\n\nDefault: transparent(window.foreground, 20%)",
           "format" : "color-hex",
           "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
           "type" : "string"
         },
         "scrollbar.thumbHover" : {
-          "description" : "Scrollbar thumb under the pointer.\n\nDefault: transparent(window.foreground, 35%)",
+          "description" : "Scroll bar thumb under the pointer or being dragged.\n\nDefault: transparent(window.foreground, 35%)",
           "format" : "color-hex",
           "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
@@ -640,7 +640,7 @@
           "type" : "string"
         },
         "sidebar.background" : {
-          "description" : "Sidebar background. Usually a slight tint of window.background.\n\nDefault: mix(window.background, #000000, 16%) (dark), mix(window.background, window.foreground, 4.5%) (light)",
+          "description" : "Sidebar background. Usually a slight tint of window.background. With vibrancy on, it tints the sidebar material.\n\nDefault: mix(window.background, #000000, 16%) (dark), mix(window.background, window.foreground, 4.5%) (light)",
           "format" : "color-hex",
           "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
@@ -906,7 +906,7 @@
           "type" : "string"
         },
         "window.border" : {
-          "description" : "Outer window border and the edges of floating panels.\n\nDefault: pane.divider",
+          "description" : "Outline just inside the edges of Vela's windows (the main window, Settings and the Theme Editor).\n\nDefault: pane.divider",
           "format" : "color-hex",
           "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",
@@ -1081,7 +1081,7 @@
       ]
     },
     "vibrancy" : {
-      "description" : "Use the system's translucent materials: none (opaque colors), sidebar (sidebar and rail) or window.",
+      "description" : "Use macOS's translucent materials: none (opaque colors), sidebar (the sidebar, rail and tab bars) or window (the whole main window). Theme colors tint the material: opaque ones at 70%, ones with alpha as written. Off with Reduce Transparency.",
       "enum" : [
         "none",
         "sidebar",

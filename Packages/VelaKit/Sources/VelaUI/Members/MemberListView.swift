@@ -61,13 +61,14 @@ struct MemberListView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.bottom, 10)
+                    .themedScrollers()
                 }
                 .scrollIndicators(.automatic)
                 .scrollContentBackground(.hidden)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(theme[ThemeKey.memberListBackground])
+        .surfaceBackground(ThemeKey.memberListBackground, on: .content)
         .onChange(of: buffer.id) { filter = "" }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Members of \(buffer.name)")
@@ -179,7 +180,7 @@ private struct MemberSectionHeader: View {
         .padding(.top, 10)
         .padding(.bottom, 3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme[ThemeKey.memberListBackground])
+        .surfaceBackground(ThemeKey.memberListBackground, on: .content)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
     }

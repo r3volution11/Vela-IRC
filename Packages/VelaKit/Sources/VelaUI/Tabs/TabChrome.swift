@@ -87,9 +87,8 @@ struct TabMetrics: Equatable {
     static let stripInset: CGFloat = 10
 }
 
-/// Theme tokens for one row. The tab stack has no tokens of its own yet, so
-/// it borrows the sidebar's (tab states), the rail's (server row) and the
-/// title bar's (title-bar placement).
+/// Theme tokens for one row: the `tab.*` tokens, with the title bar's
+/// background, text and border in the title-bar placement.
 struct TabPalette {
     var background: String
     var border: String
@@ -154,6 +153,7 @@ struct TabPalette {
         switch surface {
         case .strip:
             palette.background = ThemeKey.tabServerBackground
+            palette.liftBacking = [ThemeKey.tabServerBackground]
         case .titleBar:
             // Title-bar networks sit in the segmented group.
             palette.liftBacking.append(palette.groupFill)
@@ -223,14 +223,17 @@ nonisolated extension Path {
 /// far edge.
 struct AttachedSelectionChrome: View {
     @Environment(\.theme) private var theme
+    @Environment(\.effectiveVibrancy) private var vibrancy
     let edge: VerticalEdge
     let metrics: TabMetrics
     let palette: TabPalette
 
     var body: some View {
         ZStack(alignment: edge == .bottom ? .top : .bottom) {
+            // Drawn like the conversation it opens into, translucent too
+            // when the conversation is on a material.
             AttachedTabShape(edge: edge, radius: metrics.radius, flare: metrics.flare)
-                .fill(theme[palette.selectedFill])
+                .fill(theme.surfaceColor(palette.selectedFill, on: .content, vibrancy: vibrancy).color)
             AttachedTabShape(edge: edge, radius: metrics.radius, flare: metrics.flare, isOutline: true)
                 .stroke(theme[palette.selectedBorder], lineWidth: 1)
             Capsule()

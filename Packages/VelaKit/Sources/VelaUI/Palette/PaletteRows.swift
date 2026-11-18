@@ -161,6 +161,7 @@ private struct PaletteThemeRowContent: View {
             font: .system(size: 13),
             color: primary
         )
+        .help([info.author.map { "By \($0)" }, info.description].compactMap { $0 }.joined(separator: "\n"))
         Spacer(minLength: 8)
         if info.source == .user {
             Text("custom")
@@ -256,8 +257,9 @@ struct PaletteKeycaps: View {
     }
 }
 
-/// A strip of a theme's key colors: sidebar, chat background, accent and
-/// the first nick colors.
+/// A tiny window in a theme's colors: the sidebar with its selected row and
+/// a mention badge, and the conversation with nick colors, a link and a
+/// message that mentions you.
 struct ThemeSwatchStrip: View {
     @Environment(\.theme) private var theme
     let swatchTheme: ResolvedTheme?
@@ -267,10 +269,10 @@ struct ThemeSwatchStrip: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        Group {
             if let swatches = swatchTheme {
-                ForEach(Array(Self.colors(of: swatches).enumerated()), id: \.offset) { _, color in
-                    Rectangle().fill(color)
+                Canvas { context, size in
+                    Self.draw(swatches, in: &context, size: size)
                 }
             } else {
                 Rectangle().fill(theme[ThemeKey.popoverBorder])
@@ -285,11 +287,36 @@ struct ThemeSwatchStrip: View {
         .accessibilityHidden(true)
     }
 
-    static func colors(of theme: ResolvedTheme) -> [Color] {
-        [
-            theme[ThemeKey.sidebarBackground],
-            theme[ThemeKey.chatBackground],
-            theme[ThemeKey.accent],
-        ] + theme.nickPalette.prefix(3).map(\.color)
+    static func draw(_ theme: ResolvedTheme, in context: inout GraphicsContext, size: CGSize) {
+        func fill(_ rect: CGRect, _ color: Color, radius: Double = 0) {
+            context.fill(Path(roundedRect: rect, cornerRadius: radius, style: .continuous), with: .color(color))
+        }
+        let sidebarWidth = (size.width * 0.3).rounded()
+        let sidebar = CGRect(x: 0, y: 0, width: sidebarWidth, height: size.height)
+        let chat = CGRect(x: sidebarWidth, y: 0, width: size.width - sidebarWidth, height: size.height)
+        fill(sidebar, theme[ThemeKey.sidebarBackground])
+        fill(chat, theme[ThemeKey.chatBackground])
+        fill(CGRect(x: sidebarWidth - 0.5, y: 0, width: 0.5, height: size.height), theme[ThemeKey.sidebarBorder])
+
+        // Sidebar: a selected row, then a row with a mention badge.
+        fill(CGRect(x: 2, y: 3, width: sidebarWidth - 4, height: 4), theme[ThemeKey.sidebarActiveBackground], radius: 1.5)
+        fill(CGRect(x: 3.5, y: 4.5, width: sidebarWidth - 9, height: 1.2), theme[ThemeKey.sidebarActiveForeground], radius: 0.6)
+        fill(CGRect(x: 3.5, y: 9.5, width: sidebarWidth - 11, height: 1.2), theme[ThemeKey.sidebarHighlightForeground], radius: 0.6)
+        fill(CGRect(x: sidebarWidth - 6, y: 8.6, width: 4, height: 3), theme[ThemeKey.sidebarHighlightBadgeBackground], radius: 1.5)
+
+        // Conversation: nick, text and a link; a mention; nick and text.
+        let x = chat.minX + 3
+        let body = theme[ThemeKey.chatForeground].opacity(0.6)
+        let nicks = theme.nickPalette
+        fill(CGRect(x: x, y: 3, width: 6, height: 1.5), nicks[2 % nicks.count].color, radius: 0.75)
+        fill(CGRect(x: x + 8, y: 3, width: 10, height: 1.5), body, radius: 0.75)
+        fill(CGRect(x: x + 20, y: 3, width: 14, height: 1.5), theme[ThemeKey.chatLink], radius: 0.75)
+        fill(CGRect(x: chat.minX, y: 6, width: chat.width, height: 4.5), theme[ThemeKey.chatHighlightBackground])
+        fill(CGRect(x: chat.minX, y: 6, width: 1, height: 4.5), theme[ThemeKey.chatHighlightBorder])
+        fill(CGRect(x: x, y: 7.5, width: 6, height: 1.5), nicks[7 % nicks.count].color, radius: 0.75)
+        fill(CGRect(x: x + 8, y: 7.5, width: 6, height: 1.5), theme[ThemeKey.chatMention], radius: 0.75)
+        fill(CGRect(x: x + 16, y: 7.5, width: 18, height: 1.5), body, radius: 0.75)
+        fill(CGRect(x: x, y: 12, width: 6, height: 1.5), nicks[4 % nicks.count].color, radius: 0.75)
+        fill(CGRect(x: x + 8, y: 12, width: 22, height: 1.5), body, radius: 0.75)
     }
 }

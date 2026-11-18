@@ -14,7 +14,14 @@
 #            --settings-pane <pane> (presets, appearance, layout, messages,
 #              media, networks, notifications, intelligence, advanced; renders
 #              the Settings window instead, 820x600 unless --size is given),
-#            --settings-scroll <points> (scroll the pane down first)
+#            --settings-scroll <points> (scroll the pane down first),
+#            --theme-editor <theme> (renders the Theme Editor started from
+#              that theme, 760x680 unless --size is given),
+#            --themes-dir <folder> (theme files to offer, e.g. one with
+#              "vibrancy"; copied in, so the folder is never changed)
+#
+# Demo mode never touches your real Themes folder: without --themes-dir it
+# shows the built-in themes only.
 set -euo pipefail
 app="${1:A}"; out="${2:A}"; shift 2
 rm -f "$out"
@@ -22,5 +29,22 @@ rm -f "$out"
 container_tmp="$HOME/Library/Containers/io.github.r3volution11.Vela/Data/tmp"
 mkdir -p "$container_tmp"
 tmp_out="$container_tmp/snapshot-$$.png"
-"$app/Contents/MacOS/Vela" --demo --snapshot "$tmp_out" "$@" >/dev/null 2>&1 || true
+# The sandbox can't read arbitrary folders, so --themes-dir is staged in the
+# container's tmp first.
+args=()
+staged_themes=""
+while (( $# )); do
+  if [[ "$1" == --themes-dir && $# -ge 2 ]]; then
+    staged_themes="$container_tmp/themes-$$"
+    rm -rf "$staged_themes"; mkdir -p "$staged_themes"
+    cp "${2:A}"/*.json(N) "${2:A}"/*.jsonc(N) "$staged_themes"/ 2>/dev/null || true
+    args+=(--themes-dir "$staged_themes")
+    shift 2
+  else
+    args+=("$1")
+    shift
+  fi
+done
+"$app/Contents/MacOS/Vela" --demo --snapshot "$tmp_out" "${args[@]}" >/dev/null 2>&1 || true
+[[ -n "$staged_themes" ]] && rm -rf "$staged_themes"
 if [[ -f "$tmp_out" ]]; then mv "$tmp_out" "$out"; echo "$out"; else echo "snapshot failed" >&2; exit 1; fi

@@ -123,7 +123,7 @@ public struct ThemeOverrides: Sendable, Hashable {
                     }
                 case "vibrancy":
                     if ThemeVibrancy(rawValue: value.stringValue ?? "") == nil {
-                        problems.append("“\(path)” must be \"none\", \"sidebar\" or \"window\".")
+                        problems.append(ThemeProblems.vibrancyMessage(path: path, value: value.stringValue))
                     }
                 case AccentCustomizations.markerKey, MessageBoxBorderCustomizations.markerKey:
                     // Written by the accent or border picker: the keys it set.
@@ -132,7 +132,8 @@ public struct ThemeOverrides: Sendable, Hashable {
                     }
                 default:
                     if ThemeRegistry.token(key) == nil {
-                        problems.append("“\(path)” is not a theme color token.")
+                        let suggestion = ThemeProblems.suggestion(forToken: key).map { " Did you mean “\($0)”?" } ?? ""
+                        problems.append("“\(path)” is not a theme color token, so it's ignored.\(suggestion)")
                     } else if ThemeColor(hex: value.stringValue ?? "") == nil {
                         problems.append("“\(path)” is not a hex color.")
                     }

@@ -82,6 +82,7 @@ struct SettingsRootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .id(selection)
         }
+        .themedWindowBorder()
         .background(theme[ThemeKey.settingsBackground])
         .background(ThemedWindowConfigurator(theme: theme, title: "\(selection.title) — Vela Settings"))
         .frame(minWidth: 720, idealWidth: 820, maxWidth: .infinity, minHeight: 480, idealHeight: 600, maxHeight: .infinity)

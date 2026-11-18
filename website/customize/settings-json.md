@@ -96,10 +96,10 @@ Like VS Code's `workbench.colorCustomizations`, `appearance.colorCustomizations`
 }
 ```
 
-- Keys are [token names](/reference/theme-tokens), plus `nickColors`, `ircColors` and `vibrancy`.
+- Keys are [token names](/reference/theme-tokens), plus `nickColors`, `ircColors` and `vibrancy` (`"none"`, `"sidebar"` or `"window"`; see [Translucency](/customize/creating-themes#translucency)).
 - A `"[Theme Name]"` block applies only to themes whose name or id matches, ignoring case. List several in one key, and use `*` as a wildcard.
 - Theme-specific values win over global ones.
-- Unknown tokens and malformed colors are ignored and listed in **Settings → Appearance**.
+- Unknown tokens and malformed colors are ignored and listed in **Settings → Appearance**, with the token you probably meant: "“sidebar.backgroud” is not a theme color token, so it's ignored. Did you mean “sidebar.background”?"
 - Customizations apply to the theme in use and to the previews in the theme gallery and picker, but not inside the theme editor.
 
 From lowest to highest priority, a color comes from: the token's default, the included theme(s), the theme's own `colors`, global `colorCustomizations`, then `"[Theme Name]"` customizations.

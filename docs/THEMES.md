@@ -57,7 +57,8 @@ the reference that lives with the source.
 
 Because of `"$schema"`, editors such as VS Code, [Zed](https://zed.dev) and [Nova](https://nova.app) autocomplete
 every token name, show its description and default, and flag typos and
-malformed colors as you type.
+malformed colors as you type. Vela checks too: see
+[Typos and skipped values](#typos-and-skipped-values).
 
 ## Where themes live
 
@@ -76,6 +77,8 @@ renamed or deleted, the theme list and the active theme update immediately. If
 you save a file with a mistake in it (a missing comma, a bad color), Vela keeps
 showing the **last version that worked** and reports the problem in Settings →
 Appearance, so a half-finished edit never leaves you with a broken window.
+A file with only typos still loads; see
+[Typos and skipped values](#typos-and-skipped-values).
 
 **Overriding a built-in.** A user theme whose file name matches a built-in id
 (for example `nord.json`) replaces that built-in in the list. It can still
@@ -92,11 +95,14 @@ commas are allowed.
 | `name` | yes | Display name. Must be unique among your themes. |
 | `type` | yes | `"dark"` or `"light"`. Picks the token defaults and the appearance of system UI (see [Limits](#limits)). |
 | `include` | no | Name or id of another theme to start from. |
-| `author`, `description` | no | About the theme. Not shown in the app; a built-in theme's description appears on the website's built-in themes page. |
+| `author`, `description` | no | About the theme. Shown in the theme card's tooltip (Settings → Appearance), in Select Theme's tooltip and in the theme editor; a built-in theme's description also appears on the website's built-in themes page. |
 | `colors` | no | Token → color. Anything you leave out is derived. |
 | `nickColors` | no | Array of colors used for nicknames. |
 | `ircColors` | no | mIRC color index (`"0"`–`"98"`) → color. |
-| `vibrancy` | no | `"none"` (default), `"window"` or `"sidebar"`. `"window"` drops the window's solid backing, so transparent background colors show what's behind the window; `"sidebar"` is reserved and currently draws like `"none"`. The only key that isn't a color. |
+| `vibrancy` | no | `"none"` (default), `"sidebar"` or `"window"`: whether the sidebar (or the tab bars) or the whole main window use macOS's translucent materials, tinted by the theme's colors. See [Translucency](#translucency). The only key that isn't a color. |
+
+Any other key is ignored and reported (see
+[Typos and skipped values](#typos-and-skipped-values)).
 
 Colors are hex strings: `#RGB`, `#RGBA`, `#RRGGBB` or `#RRGGBBAA`. Alpha is
 honored everywhere, which is how hover and selection highlights stay subtle
@@ -152,6 +158,61 @@ Two tokens deserve a note:
   light or too dark to read as text.
 - `accentForeground` is text drawn **on** the accent. By default it's whichever
   of white or a dark tint reads better.
+
+## Translucency
+
+`vibrancy` puts parts of the main window on macOS's translucent materials
+(`NSVisualEffectView`, blending with what's behind the window):
+
+| Value | Sidebar and rail | Tab bars | Title strip, conversation, message bar, member list |
+| --- | --- | --- | --- |
+| `"none"` | opaque | opaque | opaque |
+| `"sidebar"` | sidebar material | sidebar material | opaque |
+| `"window"` | sidebar material | window material | window material |
+
+The theme's surface colors tint the material: `sidebar.background`,
+`rail.background`, `tab.barBackground`, `tab.serverBackground` (and
+`titleBar.background` under title-bar tabs), and with `"window"`
+`titleBar.background`, `chat.background`, `input.containerBackground` and
+`memberList.background`. An **opaque color tints at 70%**; a color with its
+own **alpha is used exactly as written** (`#RRGGBB00` shows the bare
+material). With `"window"`, the full-width rows on the conversation
+(`chat.highlightBackground`, and `chat.selfMessageBackground` when it differs
+from `chat.background`) are tinted the same way. Everything drawn on those
+surfaces (text, selection, badges, fields, cards) keeps its color.
+
+The materials follow the window's active state, like the system's sidebars:
+they're solid while the window is inactive. With **Reduce Transparency** on
+(System Settings → Accessibility → Display), every theme is drawn as
+`"none"`. The Settings and Theme Editor windows are always opaque.
+
+The contrast checks stay meaningful: a surface on a material is measured as
+its tint over a stand-in for the least favorable desktop, the material modeled
+as 75% black over white (dark themes) or 75% white over black (light themes).
+The rules live in `ThemeVibrancy` (VelaTheme), shared by the app, the theme
+previews and `ThemeAudit`.
+
+## Typos and skipped values
+
+Problems that don't stop a theme from loading are reported in Settings →
+Appearance ("Parts of my-theme.json were ignored"), at the top of the theme
+editor and by `vela-theme-tool check`. Only the named key or value is left
+out:
+
+| Problem | Example message |
+| --- | --- |
+| Unknown token in `colors` | “colors.sidebar.backgroud” isn't a theme color token, so it's ignored. Did you mean “sidebar.background”? |
+| Unknown top-level key that looks like layout or type | “fontSize” isn't a theme key, so it's ignored. Themes only contain colors: fonts, sizes and layout are settings (Settings → Messages and Layout, or settings.json). |
+| Misspelled top-level key | “autor” isn't a theme key, so it's ignored. Did you mean “author”? |
+| A token outside `colors` | “accent” isn't a theme key, so it's ignored. Color tokens go inside "colors": { "accent": … }. |
+| Bad `vibrancy` (an error) | “vibrancy”: “glass” isn't a vibrancy value, so it's ignored. Use "none", "sidebar" or "window". |
+
+Suggestions come from edit distance (as for unknown settings in settings.json),
+kept tight for token names, which share long endings like `.background`.
+Malformed colors, a missing `name` or `type`, and broken includes are still
+errors that keep the last working version, as described above. The same
+"Did you mean" suggestions appear for unknown tokens in
+`appearance.colorCustomizations`.
 
 ## Building on another theme with `include`
 
@@ -318,7 +379,7 @@ If you build Vela from source, `vela-theme-tool` helps when designing themes:
 
 ```sh
 cd Packages/VelaKit
-swift run vela-theme-tool check path/to/my-theme.json   # contrast report; exits 1 on failures
+swift run vela-theme-tool check path/to/my-theme.json   # typos and contrast; exits 1 on failures
 swift run vela-theme-tool check --verbose palenight     # every check, passing or not
 swift run vela-theme-tool preview my-theme.json out.png # render a mock Vela window
 swift run vela-theme-tool import some-color-theme.json  # VS Code → Vela JSON on stdout
@@ -329,7 +390,10 @@ swift run vela-theme-tool tokens                        # regenerate the token t
 `check` uses WCAG contrast ratios: 4.5:1 for message text and other body text,
 3:1 for secondary text, events, badges and nick colors, and 2.5:1 for
 timestamps, placeholders and away members. Every built-in theme passes all of
-them.
+them. It also lists the file's [typos and skipped values](#typos-and-skipped-values):
+⚠ for unknown keys and tokens, ✗ for a value it can't use (which counts as a
+failure). Themes with `vibrancy` are measured as described under
+[Translucency](#translucency).
 
 ## Limits
 
@@ -340,9 +404,11 @@ them.
   take the theme's `accent` where macOS allows tinting, and otherwise look
   native.
 - With `vibrancy` `"none"` (the default) every surface is exactly the color
-  you set. `"window"` makes the window non-opaque, so transparent background
-  colors show the desktop behind it (without blur); `"sidebar"` currently
-  draws like `"none"`.
+  you set. With `"sidebar"` or `"window"`, the surfaces on a material are a
+  tint over a blur of whatever is behind the window, so their final color
+  depends on the desktop (see [Translucency](#translucency)).
+- `chat.findMatchBackground` is reserved for searching the conversation and
+  isn't drawn yet.
 - Layout, fonts, sizes and spacing aren't part of themes; they're regular
   settings and presets.
 
@@ -388,7 +454,7 @@ Base colors most other tokens derive from.
 | --- | --- | --- | --- |
 | `window.background` | Base background of the window. Most surfaces derive from it. | `#292D3E` | `#FAFAFA` |
 | `window.foreground` | Base text color. Most text colors derive from it. | `#BFC7D5` | `#3E525C` |
-| `window.border` | Outer window border and the edges of floating panels. | `pane.divider` | `pane.divider` |
+| `window.border` | Outline just inside the edges of Vela's windows (the main window, Settings and the Theme Editor). | `pane.divider` | `pane.divider` |
 | `pane.divider` | Dividers between the sidebar, conversation and member list. | `mix(window.background, #000000, 30%)` | `mix(window.background, window.foreground, 12%)` |
 
 ### Title bar
@@ -408,7 +474,7 @@ The network and channel list.
 
 | Token | Description | Dark default | Light default |
 | --- | --- | --- | --- |
-| `sidebar.background` | Sidebar background. Usually a slight tint of window.background. | `mix(window.background, #000000, 16%)` | `mix(window.background, window.foreground, 4.5%)` |
+| `sidebar.background` | Sidebar background. Usually a slight tint of window.background. With vibrancy on, it tints the sidebar material. | `mix(window.background, #000000, 16%)` | `mix(window.background, window.foreground, 4.5%)` |
 | `sidebar.foreground` | Names of channels and queries with no unread activity, and general sidebar text. | `mix(window.foreground, sidebar.background, 20%)` | `mix(window.foreground, sidebar.background, 15%)` |
 | `sidebar.secondaryForeground` | Secondary sidebar text: server names, counts, parted channels. | `mix(sidebar.foreground, sidebar.background, 40%)` | `mix(sidebar.foreground, sidebar.background, 20%)` |
 | `sidebar.headerForeground` | Section and network headers. | `mix(sidebar.foreground, sidebar.background, 30%)` | `mix(sidebar.foreground, sidebar.background, 22%)` |
@@ -430,7 +496,7 @@ The collapsed, icon-only sidebar.
 
 | Token | Description | Dark default | Light default |
 | --- | --- | --- | --- |
-| `rail.background` | Background of the collapsed sidebar. | `sidebar.background` | `sidebar.background` |
+| `rail.background` | Background of the collapsed sidebar. With vibrancy on, it tints the sidebar material. | `sidebar.background` | `sidebar.background` |
 | `rail.foreground` | Icons and initials in the collapsed sidebar. | `sidebar.foreground` | `sidebar.foreground` |
 | `rail.inactiveForeground` | Icons of disconnected or idle networks in the collapsed sidebar. | `sidebar.secondaryForeground` | `sidebar.secondaryForeground` |
 | `rail.activeBackground` | Selected item in the collapsed sidebar. | `sidebar.activeBackground` | `sidebar.activeBackground` |
@@ -494,7 +560,7 @@ The conversation view.
 | `chat.unreadMarker` | Line and label marking the first unread message. | `accent` | `accent` |
 | `chat.hoverBackground` | Message under the pointer. Usually translucent. | `transparent(chat.foreground, 4%)` | `transparent(chat.foreground, 4%)` |
 | `chat.selectionBackground` | Selected text and selected messages. Usually translucent. | `transparent(accent, 30%)` | `transparent(accent, 25%)` |
-| `chat.findMatchBackground` | Matches when searching the conversation. Usually translucent. | `transparent(status.warning, 35%)` | `transparent(status.warning, 35%)` |
+| `chat.findMatchBackground` | Reserved for matches when searching the conversation, which this version of Vela can't do yet: not drawn. Usually translucent. | `transparent(status.warning, 35%)` | `transparent(status.warning, 35%)` |
 | `chat.codeBackground` | Background of inline code and preformatted text. | `mix(chat.background, chat.foreground, 7.0%)` | `mix(chat.background, chat.foreground, 5%)` |
 | `chat.codeForeground` | Inline code and preformatted text. | `chat.foreground` | `chat.foreground` |
 
@@ -568,11 +634,11 @@ Accent, buttons, scrollbars and popovers.
 | `focusBorder` | Focus ring of focused controls. | `accent` | `accent` |
 | `button.background` | Primary button. | `accent` | `accent` |
 | `button.foreground` | Primary button text. | `accentForeground` | `accentForeground` |
-| `button.hoverBackground` | Primary button under the pointer. | `mix(button.background, #FFFFFF, 12%)` | `mix(button.background, #000000, 10%)` |
+| `button.hoverBackground` | Primary button (such as Save or Add Network…) under the pointer. | `mix(button.background, #FFFFFF, 12%)` | `mix(button.background, #000000, 10%)` |
 | `button.secondaryBackground` | Secondary button. | `mix(window.background, window.foreground, 12%)` | `mix(window.background, window.foreground, 8%)` |
 | `button.secondaryForeground` | Secondary button text. | `window.foreground` | `window.foreground` |
-| `scrollbar.thumb` | Scrollbar thumb. | `transparent(window.foreground, 20%)` | `transparent(window.foreground, 20%)` |
-| `scrollbar.thumbHover` | Scrollbar thumb under the pointer. | `transparent(window.foreground, 35%)` | `transparent(window.foreground, 35%)` |
+| `scrollbar.thumb` | Scroll bar thumb in the conversation, member list and sidebar. | `transparent(window.foreground, 20%)` | `transparent(window.foreground, 20%)` |
+| `scrollbar.thumbHover` | Scroll bar thumb under the pointer or being dragged. | `transparent(window.foreground, 35%)` | `transparent(window.foreground, 35%)` |
 | `popover.background` | Popovers, autocomplete lists and tooltips drawn by Vela. | `mix(window.background, #FFFFFF, 5%)` | `mix(window.background, #FFFFFF, 80%)` |
 | `popover.foreground` | Text in popovers. | `window.foreground` | `window.foreground` |
 | `popover.border` | Popover border. | `mix(popover.background, popover.foreground, 12%)` | `mix(popover.background, popover.foreground, 12%)` |

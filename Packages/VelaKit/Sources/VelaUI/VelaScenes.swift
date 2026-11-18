@@ -118,7 +118,9 @@ private final class AppInstances {
             DemoArguments.apply(arguments, to: app.settings)
             DemoArguments.selectBuffer(from: arguments, in: app)
         }
-        let themeStore = ThemeStore(userThemesDirectory: AppPaths.themesDirectory)
+        // Demo runs (screenshots, UI work) get their own temporary Themes
+        // folder, so they never show or change the real one.
+        let themeStore = ThemeStore(userThemesDirectory: demo ? DemoArguments.themesDirectory(for: arguments) : AppPaths.themesDirectory)
         let uiState = UIState()
         let services = SceneServices(intelligence: demo ? .demo() : .live())
         // Siri, Shortcuts and Spotlight run App Intents in this process;

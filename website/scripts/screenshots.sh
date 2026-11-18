@@ -116,6 +116,10 @@ pane settings-accent       820x705 appearance --accent Cyan
 # the end of "Make your own".
 pane settings-themes       820x736 appearance --settings-scroll 1375
 pane settings-app-icon     820x600 appearance --settings-scroll 9999 --set appearance.appIcon=sunrise
+# A theme file with typos (screenshot-themes/harbor.json, copied into the
+# demo's own Themes folder): what Settings → Appearance says about it.
+pane settings-theme-problems 820x438 appearance --themes-dir "$root/website/scripts/screenshot-themes" \
+  --settings-scroll 2050
 
 # The settings editor (Settings → Advanced): the UI view, filtered to
 # @modified, and the JSON view of a small settings.json with a typo and a

@@ -13,14 +13,19 @@ import VelaTheme
 ///     Vela --demo --snapshot /tmp/shot.png [--size 1280x800] [--snapshot-delay 3] [--theme Lighter] [--preset tabbed]
 ///     Vela --demo --snapshot /tmp/pane.png --settings-pane intelligence [--settings-scroll 400] [--size 820x640]
 ///     Vela --demo --snapshot /tmp/shot.png --theme Palenight --accent Cyan
+///     Vela --demo --snapshot /tmp/shot.png --themes-dir /path/in/container --theme "My Theme"
+///     Vela --demo --snapshot /tmp/editor.png --theme-editor "Palenight"
 ///
 /// The main UI (or, with `--settings-pane <id>`, the Settings window on that
-/// pane; ids are `SettingsPane` raw values) is hosted in a transparent
+/// pane; ids are `SettingsPane` raw values; with `--theme-editor <theme>`,
+/// the Theme Editor started from that theme) is hosted in a transparent
 /// offscreen window (independent of SwiftUI's scene restoration), rendered
 /// to a PNG after the delay, and the app quits. `--settings-scroll <points>`
 /// scrolls the pane down before the capture, and `--accent <name>` picks
-/// one of the theme's accent swatches, as Settings → Appearance would. Used
-/// by `scripts/demo-screenshot.sh`, CI and docs.
+/// one of the theme's accent swatches, as Settings → Appearance would.
+/// Demo mode uses a temporary Themes folder (see `DemoArguments`), which
+/// `--themes-dir` fills with copies of a folder's themes. Used by
+/// `scripts/demo-screenshot.sh`, CI and docs.
 @MainActor
 enum SnapshotSupport {
     static let arguments = ProcessInfo.processInfo.arguments
@@ -57,7 +62,18 @@ enum SnapshotSupport {
         }
         let content: AnyView
         let defaultSize: CGSize
-        if let id = settingsPaneID {
+        if let base = value(after: "--theme-editor") {
+            if let info = themeStore.info(for: base) {
+                ThemeEditorHandoff.shared.requestedBase = info
+            } else {
+                FileHandle.standardError.write(Data("snapshot: no theme called \"\(base)\"; the editor starts from the theme in use\n".utf8))
+            }
+            content = AnyView(
+                ThemeEditorView()
+                    .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
+            )
+            defaultSize = CGSize(width: 760, height: 680)
+        } else if let id = settingsPaneID {
             guard let pane = SettingsPane(rawValue: id) else {
                 let ids = SettingsPane.allCases.map(\.rawValue).joined(separator: ", ")
                 FileHandle.standardError.write(Data("snapshot failed: unknown settings pane \"\(id)\" (use one of: \(ids))\n".utf8))

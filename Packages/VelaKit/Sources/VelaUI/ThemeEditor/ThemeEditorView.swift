@@ -22,6 +22,8 @@ struct ThemeEditorView: View {
     /// The definition as last loaded or saved, for Revert and the dirty state.
     @State private var baseline: ThemeDefinition?
     @State private var baseName = ""
+    /// The theme the working copy was loaded from, for its file's problems.
+    @State private var baseInfo: ThemeInfo?
     @State private var filter: TokenFilter = .group("window")
     @State private var query = ""
     @State private var status: Status?
@@ -51,11 +53,17 @@ struct ThemeEditorView: View {
         let draft = themeStore.draft ?? Self.untitled
         let findings = ThemeAudit.audit(theme).filter { !$0.passes }
 
+        let problems = editorProblems(draft)
+
         VStack(spacing: 0) {
             topBar
             SettingsHairline()
             detailsBar(draft, findings: findings)
             SettingsHairline()
+            if !problems.isEmpty {
+                problemsBar(problems, draft: draft)
+                SettingsHairline()
+            }
             HStack(spacing: 0) {
                 sidebar(draft, findings: findings)
                     .frame(width: 220)
@@ -73,6 +81,7 @@ struct ThemeEditorView: View {
             statusBar(draft)
         }
         .ignoresSafeArea(.container, edges: .top)
+        .themedWindowBorder()
         .background(theme[ThemeKey.settingsBackground])
         .background(ThemedWindowConfigurator(theme: theme, title: "Theme Editor", tallTitleBar: true))
         .frame(minWidth: 720, minHeight: 560)
@@ -165,6 +174,39 @@ struct ThemeEditorView: View {
                 baseMenu
             }
 
+            HStack(spacing: 10) {
+                detailLabel("Author")
+                ThemedTextField(
+                    "Your name",
+                    text: Binding(get: { draft.author ?? "" }, set: { author in update { $0.author = author.isEmpty ? nil : author } }),
+                    accessibilityName: "Author"
+                )
+                .frame(width: 130)
+                detailLabel("Description")
+                ThemedTextField(
+                    "One sentence about the theme",
+                    text: Binding(get: { draft.description ?? "" }, set: { text in update { $0.description = text.isEmpty ? nil : text } }),
+                    accessibilityName: "Description"
+                )
+                .frame(maxWidth: .infinity)
+                .help("Shown when you hover the theme's card in Settings → Appearance")
+                detailLabel("Translucency")
+                    .padding(.leading, 6)
+                Picker("Translucency", selection: Binding(
+                    get: { draft.vibrancy ?? ThemeVibrancy.none },
+                    set: { value in update { $0.vibrancy = value == ThemeVibrancy.none ? nil : value } }
+                )) {
+                    Text("None").tag(ThemeVibrancy.none)
+                    Text("Sidebar").tag(ThemeVibrancy.sidebar)
+                    Text("Window").tag(ThemeVibrancy.window)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("\"vibrancy\": put the sidebar, rail and tab bars (Sidebar) or the whole main window (Window) on macOS's translucent materials, tinted by this theme's colors")
+                .accessibilityLabel("Translucency")
+            }
+
             NickPaletteEditor(draft: draft, findings: findings) { change in update(change) }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -226,6 +268,56 @@ struct ThemeEditorView: View {
         .help("Load another theme's colors as the starting point")
         .accessibilityLabel("Start from theme")
         .accessibilityValue(baseName)
+    }
+
+    // MARK: Problems
+
+    /// Names in the working copy that aren't tokens, and what the file it
+    /// was loaded from had skipped (unknown keys, a bad vibrancy).
+    private func editorProblems(_ draft: ThemeDefinition) -> [ThemeProblem] {
+        let fileProblems = baseInfo.map { themeStore.problems(for: $0) } ?? []
+        return fileProblems.filter { $0.kind != .unknownToken } + ThemeProblems.check(draft)
+    }
+
+    private func problemsBar(_ problems: [ThemeProblem], draft: ThemeDefinition) -> some View {
+        let unknownTokens = draft.colors.keys.filter { ThemeRegistry.token($0) == nil }
+        let fileOnly = problems.contains { $0.kind != .unknownToken }
+        return HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(theme[ThemeKey.statusWarning])
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                ForEach(problems, id: \.self) { problem in
+                    Text(problem.message)
+                        .foregroundStyle(theme[ThemeKey.settingsForeground])
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if fileOnly {
+                    Text(unknownTokens.isEmpty
+                         ? "Saving from the editor leaves these out of the file."
+                         : "Saving from the editor leaves the ignored keys and values out of the file; unknown tokens stay until you remove them.")
+                        .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                }
+            }
+            .font(.system(size: 11.5))
+            .textSelection(.enabled)
+            Spacer(minLength: 8)
+            if !unknownTokens.isEmpty {
+                Button("Remove Unknown Tokens") {
+                    update { draft in
+                        for key in unknownTokens { draft.colors.removeValue(forKey: key) }
+                    }
+                }
+                .buttonStyle(ThemedButtonStyle())
+                .help("Remove \(unknownTokens.sorted().joined(separator: ", ")) from this theme")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme[ThemeKey.statusWarning].opacity(0.08))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Problems in this theme")
     }
 
     // MARK: Sidebar
@@ -441,6 +533,7 @@ struct ThemeEditorView: View {
             themeStore.draft = definition
             baseline = definition
             baseName = info.name
+            baseInfo = info
             status = nil
             pendingAction = nil
         } catch {
@@ -463,6 +556,7 @@ struct ThemeEditorView: View {
             themeStore.draft = definition
             baseline = definition
             baseName = info.name
+            baseInfo = info
             let settings = app.settings
             let role: String
             if settings[.appearanceFollowSystem] {

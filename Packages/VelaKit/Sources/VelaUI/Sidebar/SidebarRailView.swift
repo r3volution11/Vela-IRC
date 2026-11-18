@@ -65,7 +65,7 @@ struct SidebarRailView: View {
         .padding(.trailing, 1)
         .frame(width: SidebarMetrics.railWidth)
         .frame(maxHeight: .infinity)
-        .background(theme[ThemeKey.railBackground])
+        .surfaceBackground(ThemeKey.railBackground, on: .sidebar)
         .overlay(alignment: .trailing) {
             Rectangle().fill(theme[ThemeKey.railBorder]).frame(width: 1)
         }
@@ -275,6 +275,7 @@ private func railTileFill(_ theme: ResolvedTheme, isSelected: Bool, isHovering: 
 private struct RailNetworkItem: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
+    @Environment(\.effectiveVibrancy) private var vibrancy
     let session: NetworkSession
     let isSelected: Bool
     let isCollapsed: Bool
@@ -297,7 +298,7 @@ private struct RailNetworkItem: View {
                 .overlay(alignment: .bottomTrailing) {
                     // Centered on the circle's edge at 45°, like a presence dot.
                     ConnectionIndicator(state: session.connectionState, size: 8)
-                        .background(Circle().fill(theme[ThemeKey.railBackground]).padding(-2))
+                        .background(Circle().fill(theme.surfaceColor(ThemeKey.railBackground, on: .sidebar, vibrancy: vibrancy).color).padding(-2))
                         .offset(x: -1, y: -1)
                 }
         }
@@ -353,6 +354,7 @@ private struct RailBufferItem: View {
 /// Mention count capsule on the corner of a rail tile.
 private struct RailBadge: View {
     @Environment(\.theme) private var theme
+    @Environment(\.effectiveVibrancy) private var vibrancy
     let activity: BufferActivity
 
     var body: some View {
@@ -363,7 +365,7 @@ private struct RailBadge: View {
                 .padding(.horizontal, 4)
                 .frame(minWidth: 15, minHeight: 15)
                 .background(Capsule().fill(theme[ThemeKey.railBadgeBackground]))
-                .background(Capsule().fill(theme[ThemeKey.railBackground]).padding(-2))
+                .background(Capsule().fill(theme.surfaceColor(ThemeKey.railBackground, on: .sidebar, vibrancy: vibrancy).color).padding(-2))
                 .accessibilityHidden(true)
         }
     }

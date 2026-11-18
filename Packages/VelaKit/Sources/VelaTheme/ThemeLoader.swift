@@ -10,19 +10,39 @@ public enum ThemeLoader {
     /// File extensions recognized as theme files.
     public static let fileExtensions: Set<String> = ["json", "jsonc"]
 
+    /// A theme file that loaded, and what in it was skipped.
+    public struct Checked: Sendable {
+        public let definition: ThemeDefinition
+        /// Unknown keys and tokens, and values left out (see `ThemeProblems`).
+        public let problems: [ThemeProblem]
+    }
+
     /// Loads and validates a theme file.
     public static func load(contentsOf url: URL) throws -> ThemeDefinition {
+        try loadChecked(contentsOf: url).definition
+    }
+
+    /// Loads and validates a theme file, also reporting typos and values
+    /// that were skipped. Throws only for problems that stop the theme from
+    /// loading (bad JSON, a missing name or type, a malformed color).
+    public static func loadChecked(contentsOf url: URL) throws -> Checked {
         let data: Data
         do {
             data = try Data(contentsOf: url)
         } catch {
             throw ThemeError.unreadable(path: url.lastPathComponent, reason: error.localizedDescription)
         }
-        return try decode(data)
+        return try decodeChecked(data)
     }
 
     /// Decodes and validates theme JSON(C).
     public static func decode(_ data: Data) throws -> ThemeDefinition {
+        try decodeChecked(data).definition
+    }
+
+    /// Decodes and validates theme JSON(C), also reporting typos and values
+    /// that were skipped.
+    public static func decodeChecked(_ data: Data) throws -> Checked {
         let definition: ThemeDefinition
         do {
             definition = try JSONC.decode(ThemeDefinition.self, from: data)
@@ -30,7 +50,7 @@ public enum ThemeLoader {
             throw ThemeError.from(decoding: error)
         }
         try definition.validate()
-        return definition
+        return Checked(definition: definition, problems: ThemeProblems.check(data))
     }
 
     /// The theme id for a file: its name without the extension.
@@ -56,18 +76,25 @@ public enum ThemeLoader {
     }
 
     /// Loads every theme in `directory`, collecting per-file errors instead of
-    /// stopping at the first one.
-    public static func loadDirectory(_ directory: URL) -> (themes: [(url: URL, definition: ThemeDefinition)], errors: [URL: String]) {
+    /// stopping at the first one, and the problems in the files that loaded.
+    public static func loadDirectory(_ directory: URL) -> (
+        themes: [(url: URL, definition: ThemeDefinition)],
+        errors: [URL: String],
+        problems: [URL: [ThemeProblem]]
+    ) {
         var themes: [(url: URL, definition: ThemeDefinition)] = []
         var errors: [URL: String] = [:]
+        var problems: [URL: [ThemeProblem]] = [:]
         for url in themeFiles(in: directory) {
             do {
-                themes.append((url, try load(contentsOf: url)))
+                let checked = try loadChecked(contentsOf: url)
+                themes.append((url, checked.definition))
+                if !checked.problems.isEmpty { problems[url] = checked.problems }
             } catch {
                 errors[url] = error.localizedDescription
             }
         }
-        return (themes, errors)
+        return (themes, errors, problems)
     }
 
     /// Every bundled theme, keyed by id. Loaded once.

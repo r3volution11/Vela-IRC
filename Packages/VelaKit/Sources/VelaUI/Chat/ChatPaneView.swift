@@ -16,11 +16,16 @@ struct ChatColumnView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.chatStyle) private var style
     @Environment(\.theme) private var theme
+    @Environment(\.effectiveVibrancy) private var vibrancy
 
     var body: some View {
         let usesTabs = style.navigationStyle == .tabs
         let buffer = app.selectedBuffer
         let session = app.selectedSession
+        // On a material, each part tints it once: the conversation's color
+        // goes under the conversation only, not under the header and input
+        // too (which would tint those twice).
+        let onMaterial = vibrancy.material(for: .content) != nil
 
         VStack(spacing: 0) {
             if usesTabs && style.tabPlacement == .titleBar {
@@ -28,7 +33,9 @@ struct ChatColumnView: View {
             } else if let buffer, let session {
                 ChatHeaderView(buffer: buffer, session: session)
             } else {
-                Color.clear.frame(height: 52).windowTitleBarArea()
+                Color.clear.frame(height: 52)
+                    .background { if onMaterial { SurfaceFill(ThemeKey.chatBackground, on: .content) } }
+                    .windowTitleBarArea()
             }
 
             if usesTabs && style.tabPlacement == .top {
@@ -39,6 +46,7 @@ struct ChatColumnView: View {
                 MessageListView(buffer: buffer, session: session)
                     .id(buffer.id)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background { if onMaterial { SurfaceFill(ThemeKey.chatBackground, on: .content) } }
                     .environment(\.nickColorBuffer, buffer)
                     .translationHost(buffer: buffer)
                     .onscreenEntity(buffer: buffer, session: session)
@@ -50,12 +58,13 @@ struct ChatColumnView: View {
                     .environment(\.nickColorBuffer, buffer)
             } else {
                 EmptyStateView()
+                    .background { if onMaterial { SurfaceFill(ThemeKey.chatBackground, on: .content) } }
                 if usesTabs && style.tabPlacement == .bottom {
                     TabStackView(placement: .bottom)
                 }
             }
         }
-        .background(theme[ThemeKey.chatBackground])
+        .background { if !onMaterial { theme[ThemeKey.chatBackground] } }
     }
 }
 
@@ -115,7 +124,7 @@ struct ChatHeaderView: View {
         .padding(.leading, trafficLightInset(style: style, sidebarCollapsed: app.settings[.sidebarCollapsed]))
         .padding(.trailing, 12)
         .frame(height: 52)
-        .background(theme[ThemeKey.titleBarBackground])
+        .surfaceBackground(ThemeKey.titleBarBackground, on: .content)
         .overlay(alignment: .bottom) {
             Rectangle().fill(theme[ThemeKey.titleBarBorder]).frame(height: 1)
         }

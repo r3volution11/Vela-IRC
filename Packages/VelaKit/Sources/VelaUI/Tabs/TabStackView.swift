@@ -107,7 +107,7 @@ private struct TitleBarTabStack: View {
         .padding(.trailing, 12)
         .frame(height: barHeight)
         .background {
-            theme[palette.background]
+            SurfaceFill(palette.background, on: .tabs)
                 .windowTitleBarArea()
                 .allowsWindowActivationEvents(true)
         }
@@ -147,6 +147,7 @@ private struct StripTabStack: View {
             if showsServers {
                 ServerTabRow(surface: .strip, isSegmented: false, tabHeight: serverHeight, rowHeight: serverRowHeight)
                     .padding(isTop ? .top : .bottom, isPill ? 0 : 2)
+                    .surfaceBackground(ThemeKey.tabServerBackground, on: .tabs)
             }
             if isTop {
                 channelRow(appearance: appearance, height: channelRowHeight)
@@ -157,7 +158,7 @@ private struct StripTabStack: View {
         .background(alignment: isTop ? .bottom : .top) {
             Rectangle().fill(theme[palette.border]).frame(height: 1)
         }
-        .background(theme[palette.background])
+        .surfaceBackground(palette.background, on: .tabs)
         .overlay(alignment: .bottom) {
             // Above the input, also close the strip off from the input bar.
             if !isTop {

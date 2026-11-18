@@ -40,6 +40,7 @@ struct DisplayItemRow: View, Equatable {
 /// context menu and the hover toolbar.
 struct MessageRow: View {
     @Environment(\.theme) private var theme
+    @Environment(\.effectiveVibrancy) private var vibrancy
     @Environment(\.chatStyle) private var style
     @Environment(MessageListController.self) private var controller
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -114,10 +115,14 @@ struct MessageRow: View {
     @ViewBuilder
     private func background(for line: ChatLine) -> some View {
         ZStack {
+            // Full-width row colors are part of the conversation's
+            // surface: on a material they tint it too, rather than
+            // standing out as opaque bands.
             if line.isHighlight {
-                theme[ThemeKey.chatHighlightBackground]
-            } else if line.isSelf {
-                theme[ThemeKey.chatSelfMessageBackground]
+                theme.surfaceColor(ThemeKey.chatHighlightBackground, on: .content, vibrancy: vibrancy).color
+            } else if line.isSelf, theme.color(ThemeKey.chatSelfMessageBackground) != theme.color(ThemeKey.chatBackground) {
+                // (The default, chat.background, would tint it twice.)
+                theme.surfaceColor(ThemeKey.chatSelfMessageBackground, on: .content, vibrancy: vibrancy).color
             }
             if isHovered {
                 theme[ThemeKey.chatHoverBackground]

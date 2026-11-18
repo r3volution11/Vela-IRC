@@ -242,7 +242,11 @@ swift test --package-path Packages/VelaKit                    # unit tests (400+
 VELA_LIVE_TESTS=1 swift test --package-path Packages/VelaKit \
   --filter "LiveNetwork|LiveSession"                          # live TLS + IRCv3 checks against public servers
 scripts/demo-screenshot.sh build/Vela.app shot.png --theme Lighter --preset tabbed   # offscreen screenshot
+scripts/demo-screenshot.sh build/Vela.app shot.png --themes-dir my-themes --theme "Harbor"  # with themes from a folder
 ```
+
+Demo mode uses a temporary Themes folder, so it never shows or changes your
+own themes; `--themes-dir <folder>` copies a folder's theme files into it.
 
 To build a signed and notarized release, see [docs/RELEASING.md](docs/RELEASING.md).
 

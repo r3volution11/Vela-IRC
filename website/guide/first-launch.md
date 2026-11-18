@@ -48,5 +48,5 @@ Vela has a demo mode with sample networks and conversations that never connects 
 open -a Vela --args --demo
 ```
 
-Quit Vela to leave demo mode. Settings you change in the demo aren't saved.
+Quit Vela to leave demo mode. Settings you change in the demo aren't saved, and the demo shows only the built-in themes: it never reads or changes your Themes folder.
 :::

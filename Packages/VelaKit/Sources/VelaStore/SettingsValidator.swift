@@ -146,24 +146,7 @@ public enum SettingsValidator {
 
     /// Optimal string alignment distance (Levenshtein plus transpositions).
     static func editDistance(_ a: String, _ b: String) -> Int {
-        let a = Array(a), b = Array(b)
-        guard !a.isEmpty else { return b.count }
-        guard !b.isEmpty else { return a.count }
-        var previous2 = [Int](repeating: 0, count: b.count + 1)
-        var previous = Array(0...b.count)
-        var current = [Int](repeating: 0, count: b.count + 1)
-        for i in 1...a.count {
-            current[0] = i
-            for j in 1...b.count {
-                let cost = a[i - 1] == b[j - 1] ? 0 : 1
-                current[j] = min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost)
-                if i > 1, j > 1, a[i - 1] == b[j - 2], a[i - 2] == b[j - 1] {
-                    current[j] = min(current[j], previous2[j - 2] + 1)
-                }
-            }
-            (previous2, previous, current) = (previous, current, previous2)
-        }
-        return previous[b.count]
+        EditDistance.distance(a, b)
     }
 }
 

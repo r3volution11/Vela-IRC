@@ -1,0 +1,17 @@
+// A theme with deliberate mistakes, for the "Parts of harbor.json were
+// ignored" screenshot (settings-theme-problems in screenshots.sh).
+{
+  "$schema": "https://raw.githubusercontent.com/r3volution11/Vela-IRC/main/schemas/vela-theme.schema.json",
+  "name": "Harbor",
+  "type": "dark",
+  "author": "Vela",
+  "description": "Blue-grey surfaces with a warm amber accent.",
+  "fontSize": 14,
+  "vibrancy": "glass",
+  "colors": {
+    "window.background": "#1D2733",
+    "window.foreground": "#D3DCE6",
+    "accent": "#F2A65A",
+    "sidebar.backgroud": "#18212B"
+  }
+}

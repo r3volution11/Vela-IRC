@@ -11,12 +11,14 @@ import VelaTheme
 
 /// The main window: sidebar | chat | member list, all drawn with theme
 /// tokens. A custom split (not NavigationSplitView) keeps the system glass
-/// sidebar from overriding the theme; themes can opt back into vibrancy.
+/// sidebar from overriding the theme; themes opt into macOS materials with
+/// `vibrancy` (see `SurfaceFill` and `ThemeVibrancy`).
 struct MainWindowView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
     @Environment(IntelligenceServices.self) private var intelligence
     @Environment(\.theme) private var theme
+    @Environment(\.effectiveVibrancy) private var vibrancy
     @Environment(\.appearsActive) private var appearsActive
     @Environment(\.chatStyle) private var style
 
@@ -65,8 +67,9 @@ struct MainWindowView: View {
                     .id(mode)
             }
         }
-        .background(theme[ThemeKey.windowBackground])
-        .background(WindowConfigurator(theme: theme, trafficLights: trafficLightLayout))
+        .themedWindowBorder()
+        .background(WindowBackdrop())
+        .background(WindowConfigurator(theme: theme, vibrancy: vibrancy, trafficLights: trafficLightLayout))
         .ignoresSafeArea()
         .frame(minWidth: 640, minHeight: 420)
         .animation(.snappy(duration: 0.2), value: showMembers)
@@ -113,9 +116,12 @@ struct MainWindowView: View {
 }
 
 /// Applies theme-driven window chrome: transparent title bar, background
-/// color and light/dark appearance for system-drawn controls.
+/// color and light/dark appearance for system-drawn controls. With vibrancy
+/// the window lets what's behind it through to the materials.
 struct WindowConfigurator: NSViewRepresentable {
     let theme: ResolvedTheme
+    /// The vibrancy drawn (`none` with Reduce Transparency on).
+    var vibrancy: ThemeVibrancy = .none
     var trafficLights: TrafficLightLayout = .horizontal(stripHeight: 52)
 
     func makeCoordinator() -> TrafficLightPositioner { TrafficLightPositioner() }
@@ -148,8 +154,8 @@ struct WindowConfigurator: NSViewRepresentable {
         guard let window else { return }
         WindowChrome.apply(
             to: window,
-            backgroundColor: theme.vibrancy == .window ? .clear : theme.color(ThemeKey.windowBackground).nsColor,
-            isOpaque: theme.vibrancy != .window,
+            backgroundColor: vibrancy.isTranslucent ? .clear : theme.color(ThemeKey.windowBackground).nsColor,
+            isOpaque: !vibrancy.isTranslucent,
             appearanceName: theme.appearanceName
         )
     }

@@ -21,11 +21,13 @@ The **Match System Appearance** switch is in the **Theme** menu and in **Setting
 
 Press <kbd>⌃⌘T</kbd> (or choose **Theme → Select Theme…**) and move through the list with the arrow keys. The whole app takes on each theme as you go, so you can judge it on your own conversations. Press **Return** to keep it, or **Esc** to go back.
 
+Each theme in the list has a tiny picture of a window in its colors: the sidebar with its selected channel and a mention badge, and the conversation with nick colors, a link and a message that mentions you. Hover a theme's name for its author and description.
+
 With **Match System Appearance** on, the theme you pick becomes the theme for the mode your Mac is in right now, and the other mode keeps its own. With it off, the theme you pick is used all the time.
 
 ## The theme gallery
 
-**Settings → Appearance** shows every theme as a small preview of Vela's window. Use **All**, **Dark** and **Light** to filter.
+**Settings → Appearance** shows every theme as a small preview of Vela's window in your own layout, with its selected channel, badges, tabs, links, mentions and the New line in the theme's colors, and translucency if the theme has it. Use **All**, **Dark** and **Light** to filter. Hover a card for the theme's author and description. See [Previews are drawn for you](/customize/creating-themes#previews).
 
 - **Click** a theme to use it. It follows the same rule as Select Theme: with **Match System Appearance** on, it becomes the theme for the current mode.
 - **Right-click** a theme for more: **Use in Dark Mode** or **Use in Light Mode** (which keeps matching on), **Customize in Theme Editor…**, and, for your own themes, **Show in Finder** and **Delete Theme…**.
@@ -74,7 +76,7 @@ From the [command palette](/guide/command-palette): **Typing: Message Box Border
 
 Themes you import, save from the theme editor or write yourself live in the **Themes folder**. Open it with **Theme → Reveal Themes Folder**. Drop a theme file in, and it appears in the list right away; edit one in your text editor, and Vela reloads it the moment you save.
 
-If a theme file has a mistake, Vela keeps showing the last version that worked and explains the problem in **Settings → Appearance**.
+If a theme file has a mistake, Vela keeps showing the last version that worked and explains the problem in **Settings → Appearance**. If it only has a typo, such as a misspelled token name or a key themes don't have, the theme loads and **Settings → Appearance** lists what was ignored, with the name you probably meant. See [Typos and skipped values](/customize/creating-themes#problems).
 
 A theme of your own with the same file name as a built-in one (for example `nord.json`) replaces the built-in in the list.
 
@@ -91,7 +93,12 @@ To change just a color or two, add `appearance.colorCustomizations` to [settings
 
 ## Translucency
 
-Every built-in theme is opaque, so every color is exactly as designed. A theme can set `"vibrancy"` to `"window"` to let what's behind the window show through wherever its background colors are transparent. **Settings → Appearance → Details → Translucency** shows what the current theme uses. See [Translucency](/customize/creating-themes#translucency).
+Every built-in theme is opaque, so every color is exactly as designed. A theme can set `"vibrancy"` to put parts of the window on macOS's translucent materials, so your desktop shows through, blurred:
+
+- **`"sidebar"`:** the sidebar and the collapsed rail (or, with tab stacks, the tab bars) use the macOS sidebar material.
+- **`"window"`:** the whole main window is translucent.
+
+The theme's colors tint the material, so it still looks like the theme. **Settings → Appearance → Details → Translucency** shows what the current theme uses. To try it on any theme, choose **Translucency** in the [theme editor](/customize/theme-editor), or add `"vibrancy"` for the theme in [`appearance.colorCustomizations`](/customize/settings-json#color-customizations). With **Reduce Transparency** on in **System Settings → Accessibility → Display**, every theme is drawn opaque. See [Translucency](/customize/creating-themes#translucency).
 
 ## What themes don't change
 

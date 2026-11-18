@@ -123,7 +123,7 @@ struct InputBar: View {
             .padding(.top, 10)
             .padding(.bottom, 12)
         }
-        .background(theme[ThemeKey.inputContainerBackground])
+        .surfaceBackground(ThemeKey.inputContainerBackground, on: .content)
         .fixedSize(horizontal: false, vertical: true)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: pendingPaste != nil)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: replyTarget?.id)

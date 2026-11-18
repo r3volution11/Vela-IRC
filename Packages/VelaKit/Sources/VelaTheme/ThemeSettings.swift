@@ -13,18 +13,52 @@ public struct ThemeInfo: Sendable, Identifiable, Hashable {
     public let kind: ThemeKind
     public let source: Source
     public let url: URL
+    /// Who made the theme, from its file's `author`.
+    public let author: String?
+    /// One sentence about the theme, from its file's `description`.
+    public let description: String?
 
     public enum Source: Sendable, Hashable {
         case builtIn
         case user
     }
 
-    public init(id: String, name: String, kind: ThemeKind, source: Source, url: URL) {
+    public init(
+        id: String,
+        name: String,
+        kind: ThemeKind,
+        source: Source,
+        url: URL,
+        author: String? = nil,
+        description: String? = nil
+    ) {
         self.id = id
         self.name = name
         self.kind = kind
         self.source = source
         self.url = url
+        self.author = author.flatMap(Self.trimmed)
+        self.description = description.flatMap(Self.trimmed)
+    }
+
+    /// The `ThemeInfo` of a loaded theme file. `author` and `description`
+    /// come from the file itself, never from a theme it includes.
+    public init(id: String, definition: ThemeDefinition, source: Source, url: URL) {
+        self.init(
+            id: id,
+            name: definition.name,
+            kind: definition.type,
+            source: source,
+            url: url,
+            author: definition.author,
+            description: definition.description
+        )
+    }
+
+    /// `nil` for empty or whitespace-only text.
+    private static func trimmed(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     /// Whether `reference` names this theme by id or name (case-insensitive).

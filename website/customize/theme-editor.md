@@ -14,8 +14,14 @@ At the top of the editor:
 - **Theme name** is the name that appears in your theme list.
 - **Type** is **Dark** or **Light**. It decides the defaults for colors you don't set, and whether macOS draws menus and alerts light or dark.
 - **Start from** loads another theme's colors as your starting point.
+- **Author** and **Description** are who made the theme and one sentence about it. They're shown when you hover the theme's card in **Settings → Appearance** or its name in **Select Theme** (<kbd>⌃⌘T</kbd>).
+- **Translucency** is **None**, **Sidebar** or **Window**: whether the sidebar, rail and tab bars, or the whole main window, use macOS's translucent materials, tinted by your colors. Every Vela window previews it as you switch. See [Translucency](/customize/creating-themes#translucency).
 
-When you start from a built-in theme, the copy gets a new name ("Nord Custom"), so saving never overwrites the original.
+When you start from a built-in theme, the copy gets a new name ("Nord Custom") and the description "Based on Nord.", so saving never overwrites the original.
+
+### Problems in the theme
+
+If the theme you start from has typos or values Vela skipped, such as a misspelled token name, a key themes don't have (`"fontSize"`) or a `vibrancy` that isn't `"none"`, `"sidebar"` or `"window"`, the editor lists them in a bar under the details, with the token you probably meant. **Remove Unknown Tokens** deletes misspelled token names from your working copy. Saving from the editor writes only what themes support, so unknown keys and a bad `vibrancy` are left out of the file. See [Typos and skipped values](/customize/creating-themes#problems).
 
 ## Change colors
 
@@ -34,11 +40,11 @@ Below the tokens are the **nick colors** (the palette nicknames are drawn from; 
 
 ## Preview, save, export
 
-Every Vela window shows your changes as you make them, including this one. Nothing is saved until you choose:
+Every Vela window shows your changes as you make them, including this one, and the **Live preview** in the left column draws a miniature of your window in the theme, translucency included. Nothing is saved until you choose:
 
 | Button | Does |
 | --- | --- |
-| **Save** (<kbd>⌘S</kbd>) | Saves the theme to your Themes folder and makes it your theme (for the current mode, if you match the system appearance). |
+| **Save** (<kbd>⌘S</kbd>) | Saves the theme to your Themes folder and makes it your theme (for the current mode, if you match the system appearance). Under the pointer, it shows the theme's `button.hoverBackground`. |
 | **Export…** | Saves a copy as a `.json` file you can share or [contribute](https://github.com/r3volution11/Vela-IRC/blob/main/CONTRIBUTING.md). |
 | **Revert** | Undoes every change since the theme was loaded or last saved. |
 | **Close** (<kbd>⌘W</kbd>) | Closes the editor. If there are unsaved changes, Vela asks whether to save them. |

@@ -61,6 +61,13 @@ struct ThemedButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         ThemedButtonBody(configuration: configuration, prominent: prominent)
     }
+
+    /// The fill token: `button.hoverBackground` under the pointer for a
+    /// primary button. A secondary button has no hover color of its own.
+    static func fillKey(prominent: Bool, isHovering: Bool) -> String {
+        guard prominent else { return ThemeKey.buttonSecondaryBackground }
+        return isHovering ? ThemeKey.buttonHoverBackground : ThemeKey.buttonBackground
+    }
 }
 
 private struct ThemedButtonBody: View {
@@ -68,6 +75,8 @@ private struct ThemedButtonBody: View {
     @Environment(\.isEnabled) private var isEnabled
     let configuration: ButtonStyleConfiguration
     let prominent: Bool
+
+    @State private var isHovering = false
 
     var body: some View {
         configuration.label
@@ -77,11 +86,12 @@ private struct ThemedButtonBody: View {
             .foregroundStyle(theme[prominent ? ThemeKey.buttonForeground : ThemeKey.buttonSecondaryForeground])
             .background(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(theme[prominent ? ThemeKey.buttonBackground : ThemeKey.buttonSecondaryBackground])
+                    .fill(theme[ThemedButtonStyle.fillKey(prominent: prominent, isHovering: isHovering && isEnabled)])
                     .opacity(configuration.isPressed ? 0.8 : 1)
             )
             .opacity(isEnabled ? 1 : 0.45)
             .contentShape(Rectangle())
+            .onHover { isHovering = $0 }
     }
 }
 

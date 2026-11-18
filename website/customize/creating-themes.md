@@ -25,7 +25,7 @@ How Vela looks is split between the theme and your settings:
 
 So a theme you design with the Modern Chat preset also looks right in Classic IRC, Tabbed or Focus, and trying a new theme never resets your fonts or layout. Think of a Vela theme as a palette: your settings decide the shape of the window, the theme decides its colors.
 
-Theme files have no keys for anything else. If a file has one anyway (say, `"font": "Menlo"`), Vela loads the theme and ignores that key. To change layout or type, use **Settings** (<kbd>⌘,</kbd>), the [settings reference](/reference/settings) or a [preset](/guide/presets).
+Theme files have no keys for anything else. If a file has one anyway (say, `"font": "Menlo"`), Vela loads the theme, ignores that key and says so in **Settings → Appearance**: "“font” isn't a theme key, so it's ignored. Themes only contain colors: fonts, sizes and layout are settings." (See [Typos and skipped values](#problems).) To change layout or type, use **Settings** (<kbd>⌘,</kbd>), the [settings reference](/reference/settings) or a [preset](/guide/presets).
 
 ## Quick start {#quick-start}
 
@@ -127,7 +127,7 @@ Here's a theme with every key filled in. Only `name` and `type` are required.
   // mIRC colors by number; list only the ones you change.
   "ircColors": { "1": "#141B24", "2": "#5B8FD6", "4": "#F07B7B" },
 
-  // "none" (the default), "window" or "sidebar".
+  // "none" (the default), "sidebar" or "window": see Translucency.
   "vibrancy": "none",
 }
 ```
@@ -139,15 +139,15 @@ Theme files are JSON with comments: `//` and `/* */` comments and trailing comma
 | `$schema` | String | No | The address of Vela's theme schema, so your editor can autocomplete and check the file. See [below](#schema). |
 | `name` | String | **Yes** | The name shown in the gallery and in Select Theme. Settings refer to the theme by this name or by its file name. Can't be empty. |
 | `type` | `"dark"` or `"light"` | **Yes** | Picks the defaults for colors you don't set, and whether macOS draws menus and alerts light or dark. See [Light and dark](#light-and-dark). VS Code's `"vs-dark"`, `"vs"`, `"hc-black"` and `"hc-light"` work too. |
-| `author` | String | No | Who made the theme. |
-| `description` | String | No | One sentence about the theme. Vela doesn't show `author` or `description` in the app, but they travel with the file, and for built-in themes the description appears on the [Built-in themes](/reference/built-in-themes) page. |
+| `author` | String | No | Who made the theme. Shown when you hover the theme's card in **Settings → Appearance** or its name in **Select Theme** (<kbd>⌃⌘T</kbd>), and in the [theme editor](/customize/theme-editor). |
+| `description` | String | No | One sentence about the theme, shown with the author in the same places. For built-in themes it also appears on the [Built-in themes](/reference/built-in-themes) page. |
 | `include` | String | No | Another theme to start from, by name or id: `"Palenight"`. See [Building on another theme](#building-on-another-theme). |
 | `colors` | Object | No | Token name → color: `"chat.background": "#1E2030"`. Anything you leave out is [worked out from the rest](#how-defaults-work). See [Color tokens](#tokens). |
 | `nickColors` | Array of colors | No | The palette for nicknames: `["#F28C8C", "#A6D98C", …]`. Replaces the default palette. See [Nick colors](#nick-colors). |
 | `ircColors` | Object | No | mIRC color number (`"0"` to `"98"`) → color: `{ "4": "#F07B7B" }`. Only the numbers you list change. See [mIRC colors](#irc-colors). |
-| `vibrancy` | `"none"`, `"window"` or `"sidebar"` | No | Whether the window can be see-through. Defaults to `"none"`. See [Translucency](#translucency). |
+| `vibrancy` | `"none"`, `"sidebar"` or `"window"` | No | Whether parts of the window use macOS's translucent materials. Defaults to `"none"`. See [Translucency](#translucency). |
 
-There are no other keys. In particular, there's nothing for fonts, sizes, spacing, layout or images: see [Colors only, by design](#colors-only).
+There are no other keys. In particular, there's nothing for fonts, sizes, spacing, layout or images: see [Colors only, by design](#colors-only). Vela warns about any other key, and about token names it doesn't know: see [Typos and skipped values](#problems).
 
 ### Writing colors {#color-values}
 
@@ -169,6 +169,8 @@ The `"$schema"` line points to Vela's [theme schema](https://github.com/r3voluti
 - autocomplete token names as you type inside `colors`,
 - show each token's description and default when you hover it,
 - underline typos, unknown keys and malformed colors.
+
+Vela checks the same things itself when it loads the file, and lists what it skipped in **Settings → Appearance** and the theme editor, so you don't need a schema-aware editor to catch typos. See [Typos and skipped values](#problems).
 
 In VS Code, a `.json` file with comments shows "Comments are not permitted in JSON". Name the file `.jsonc` instead (Vela reads both), or click **JSON** in the status bar and choose **JSON with Comments**.
 
@@ -308,18 +310,36 @@ Both palettes also feed the [accent color](/customize/themes#accent-color) picke
 
 ## Translucency {#translucency}
 
-`vibrancy` is the one key in a theme that isn't a color. It chooses how the window's surfaces are drawn, and like the rest of a theme it only changes how things look:
+`vibrancy` is the one key in a theme that isn't a color. It puts parts of the main window on macOS's translucent materials, the frosted surfaces Finder and Mail use for their sidebars, so your desktop and the windows behind Vela show through, blurred. Like the rest of a theme, it only changes how things look:
 
-| Value | Effect |
+| Value | What sits on a material |
 | --- | --- |
-| `"none"` (default) | Every surface is painted in exactly the colors in your theme. All the built-in themes use this. |
-| `"window"` | Vela draws the window without its solid backing, so wherever your background colors are transparent (`#RRGGBBAA`), whatever is behind the window shows through. Opaque colors look the same as with `"none"`. |
-| `"sidebar"` | Reserved for a translucent sidebar. In this version of Vela, it looks the same as `"none"`. |
+| `"none"` (default) | Nothing. Every surface is painted in exactly the colors in your theme. All the built-in themes use this. |
+| `"sidebar"` | The sidebar (and the collapsed rail), on the macOS sidebar material. With tab stacks instead of the sidebar, the tab bars: the strip above or below the conversation, or the title bar when the tabs are in it. The conversation, message bar and member list stay opaque. |
+| `"window"` | The whole main window. The sidebar and rail use the sidebar material, as with `"sidebar"`; the title bar, tab bars, conversation, message bar and member list use the window material. |
 
-**Settings → Appearance → Details → Translucency** shows what the current theme uses. To try it on a theme without editing the file, add `"vibrancy"` for that theme in [`appearance.colorCustomizations`](/customize/settings-json#color-customizations).
+**Your colors tint the material.** On a material, each surface's background token is drawn on top of it as a tint, so the theme still decides the colors:
 
-::: warning
-Text on a see-through background can be hard to read, and Vela's contrast checks can't know what's behind your window. Keep text on opaque, or nearly opaque, backgrounds.
+- **An opaque color tints at 70%.** `"sidebar.background": "#1E2030"` lets 30% of the material through. Every theme, including the built-in ones, works with vibrancy without any other change.
+- **A color with its own transparency is used exactly as written**, so you choose the strength: `"#1E2030E6"` (90%) is a light frost, `"#1E203080"` (50%) a strong one, and `"#1E203000"` shows the bare material.
+- **The tokens this applies to** are the surface backgrounds: `sidebar.background` and `rail.background`; `tab.barBackground` and `tab.serverBackground` (and `titleBar.background` for tabs in the title bar); and with `"window"`, also `titleBar.background`, `chat.background`, `input.containerBackground` and `memberList.background`. With `"window"`, the full-width backgrounds of messages that mention you (`chat.highlightBackground`) and of your own messages (`chat.selfMessageBackground`) are tinted the same way, so they don't show as solid bands.
+- **Everything drawn on top stays as you set it:** text, the selected row, badges, the message field, link previews, reactions and so on.
+- **Inactive windows look opaque.** As in Finder, the material turns solid while Vela's window isn't the frontmost one, so a translucent theme looks a little different in the background.
+
+**Reduce Transparency turns it off.** With **Reduce Transparency** on in **System Settings → Accessibility → Display**, Vela draws every theme as if `vibrancy` were `"none"`. **Settings → Appearance → Details → Translucency** shows the current theme's value, and says "(off)" when Reduce Transparency wins.
+
+**Only the main window.** The Settings and Theme Editor windows are always opaque.
+
+To try it without editing a file, use **Translucency** (**None**, **Sidebar** or **Window**) in the [theme editor](/customize/theme-editor), which previews it across Vela, or add `"vibrancy"` for that theme in [`appearance.colorCustomizations`](/customize/settings-json#color-customizations):
+
+```jsonc
+"appearance.colorCustomizations": {
+  "[Palenight]": { "vibrancy": "sidebar" }
+}
+```
+
+::: tip Contrast checks still count
+Text on a material sits over whatever is behind the window. So for a theme with `vibrancy`, the [contrast checks](#checking-contrast) measure each surface on a material as its tint over a stand-in for the least favorable desktop: the material over white for a dark theme, over black for a light one. Text that only just passes on an opaque background may need a little more contrast, or a stronger tint.
 :::
 
 ## Building on another theme {#building-on-another-theme}
@@ -348,7 +368,7 @@ Here's what you get from the included theme:
 | `colors` | Every color it sets, merged with yours. Yours win. |
 | `ircColors` | Every mIRC color it sets, merged with yours. Yours win. |
 | `nickColors` | Its palette, unless you set your own. |
-| `vibrancy` | Its setting, unless you set your own. |
+| `vibrancy` | Its setting, unless you set your own. (`"none"` turns off an included theme's vibrancy.) |
 | `name`, `type`, `author`, `description` | Nothing. These always come from your file, so `name` and `type` are still required. |
 
 ::: warning The included theme's colors are all set
@@ -422,6 +442,7 @@ Tips:
 
 - **Body text matters most.** `chat.foreground` on `chat.background` should be well above 4.5:1; check it on `chat.highlightBackground` (mentions) and `chat.selfMessageBackground` too.
 - **Translucent colors are measured over what's under them:** a translucent sidebar color over the sidebar, a highlight over the conversation, and so on.
+- **With `vibrancy`, surfaces on a material are measured over a stand-in for the desktop:** their tint over the material on a white desktop (dark themes) or a black one (light themes), the least favorable case. See [Translucency](#translucency).
 - **Watch the accent as text** on light themes, and set `accentText` to a deeper shade if links and mentions fail.
 - **Don't rely on color alone.** Vela already adds arrows to joins and parts, and bars and tints to mentions; keep those colors distinct, but not too faint.
 
@@ -429,10 +450,12 @@ If you build Vela from source, `vela-theme-tool` runs the same checks from the c
 
 ```sh
 cd Packages/VelaKit
-swift run vela-theme-tool check path/to/harbor.json             # failing checks only; exits 1 on failures
+swift run vela-theme-tool check path/to/harbor.json             # problems and failing checks; exits 1 on failures
 swift run vela-theme-tool check --verbose path/to/harbor.json   # every check
 swift run vela-theme-tool preview path/to/harbor.json harbor.png  # render a mock window
 ```
+
+`check` also lists [typos and skipped values](#problems) in the file, marked ⚠ (unknown keys and tokens) or ✗ (a value it can't use, such as a bad `vibrancy`). A ✗ counts as a failure, a ⚠ doesn't.
 
 ## Previews are drawn for you {#previews}
 
@@ -442,17 +465,20 @@ Vela draws your theme's preview card for you from its colors; there's nothing to
 
 Each card in **Settings → Appearance** is a miniature of Vela's window, drawn live in that theme:
 
-- **The surfaces:** the window, sidebar, title bar, conversation, message bar and field, and member list, with the dividers between them.
-- **Text, drawn as bars** in the theme's text colors: channel names (a selected channel, unread ones with a badge, and the rest), the channel name and topic, message text, timestamps, join and part lines, the message field's placeholder, and member names, including a prefix and someone away.
+- **The surfaces:** the window, sidebar (or the collapsed rail), title bar, conversation, message bar and field, and member list, with the dividers and borders between them.
+- **The sidebar's states:** the selected channel in `sidebar.activeBackground`, an unread channel with its count badge, and a channel that mentions you in `sidebar.highlightForeground` with the mention badge. The rail shows the selected tile with its indicator and a mention badge.
+- **Text, drawn as bars** in the theme's text colors: the channel name and topic, message text, timestamps, join and part lines, the message field's placeholder, and member names, including a prefix and someone away.
+- **The conversation's accents:** a link in `chat.link`, the New line in `chat.unreadMarker`, and a message that mentions you, on `chat.highlightBackground` with its `chat.highlightBorder` bar and your name in `chat.mention`.
 - **Nicknames** in the theme's nick colors, after the readability filter.
 - **The window buttons** in the theme's error, warning and success colors.
-- **Tab stacks** in the accent, if you use tabs.
+- **Tab stacks** in the `tab.*` colors, if you use tabs: the network row on `tab.serverBackground` with the selected network, then the channel tabs (selected, unread, mentioned and read) with the selected one opening into the conversation, or as pills, or in the title bar, as your settings say.
+- **Translucency:** with `vibrancy`, the surfaces on a material are drawn over a soft stand-in desktop in two of the theme's own colors, tinted the way the app tints them, so you can tell a translucent theme at a glance.
 
-**The card shows your own layout:** sidebar or tabs, your message layout, avatars, timestamps, colored nicks, the member list, the monospace font and the message box border. In other words, it's your Vela in that theme. It includes your [color overrides](/customize/settings-json#color-customizations) for the theme, such as a picked accent, and it's redrawn the moment you save the file.
+**The card shows your own layout:** sidebar, rail or tabs, your message layout, avatars, timestamps, colored nicks, the member list, the monospace font and the message box border. In other words, it's your Vela in that theme. It includes your [color overrides](/customize/settings-json#color-customizations) for the theme, such as a picked accent, and it's redrawn the moment you save the file. **Hover a card** for the theme's author and description.
 
-The same drawing is the **Live preview** in the theme editor. **Select Theme** (<kbd>⌃⌘T</kbd>) shows a strip of swatches instead: the sidebar, the conversation, the accent and the first three nick colors.
+The same drawing is the **Live preview** in the theme editor, and the layout and preset pictures in **Settings → Layout**, **Settings → Presets** and **Settings → Messages** are drawn in your theme the same way. **Select Theme** (<kbd>⌃⌘T</kbd>) shows a tiny version: the sidebar with its selected row and a mention badge, and the conversation with nick colors, a link and a message that mentions you.
 
-A card is a summary. It doesn't show translucency, mention highlights, links, selections, link previews, the Settings window's colors or mIRC colors, so check those in the app; see [Testing your theme](#testing). If Vela can't draw a theme at all (because the theme it includes is missing, say), its card shows a warning sign instead.
+A card is a summary. It doesn't show selections, hover colors, link previews, the Settings window's colors or mIRC colors, and its translucency is only a stand-in for your real desktop, so check those in the app; see [Testing your theme](#testing). If Vela can't draw a theme at all (because the theme it includes is missing, say), its card shows a warning sign instead; if parts of the file were skipped, its name has a small warning triangle.
 
 ## Testing your theme {#testing}
 
@@ -467,7 +493,8 @@ A theme has to work with every layout, so try yours in more than one. With your 
 7. **Media and IRCv3.** Look at link previews, images and videos, and, on a network that supports them, reactions, replies and typing lines.
 8. **Popovers.** Open the command palette (<kbd>⇧⌘P</kbd>) and the emoji picker.
 9. **The Settings window.** It uses the `settings.*` colors; open a few panes, including **Advanced**.
-10. **Contrast.** In the theme editor, check that **Contrast issues** is empty, or that you're happy with what's left.
+10. **Translucency.** If your theme sets `vibrancy`, look at it over a light and a dark desktop picture, with the window in front and behind other windows. See [Translucency](#translucency).
+11. **Contrast.** In the theme editor, check that **Contrast issues** is empty, or that you're happy with what's left.
 
 Layouts and presets never change your theme, and themes never change your layout, so whatever you test with, the theme file stays the same.
 
@@ -524,15 +551,32 @@ Vela explains what's wrong, and keeps using the last version of the file that wo
 | The included theme “Nope” wasn't found. | Check the name or id in `include`. Until then, the theme's card shows a warning sign, and if it's the theme in use, Vela shows Palenight (or Lighter, for a light theme) instead. |
 | The themes include each other in a loop: A → B → A. | Remove one of the `include`s. |
 
-A `vibrancy` value other than `"none"`, `"window"` or `"sidebar"` is an error too.
+### Settings → Appearance says "Parts of my-theme.json were ignored" {#problems}
+
+<Screenshot src="/screenshots/settings-theme-problems.webp" alt="Settings → Appearance: below Make your own, a red callout titled Parts of harbor.json were ignored, listing that fontSize isn't a theme key because themes only contain colors, that glass isn't a vibrancy value and the three valid values, and that colors.sidebar.backgroud isn't a theme color token with the suggestion sidebar.background, then The rest of the theme works and a Show in Finder button" caption="A theme file with three mistakes. The theme still loads." />
+
+The theme loaded and works, but Vela skipped part of the file: a key or token name it doesn't know (usually a typo) or a value it can't use. Everything else in the file is used. The same list shows at the top of the [theme editor](/customize/theme-editor) when you open the theme there, and `vela-theme-tool check` prints it too. The theme's card gets a small warning triangle.
+
+| Message | What it means |
+| --- | --- |
+| “colors.sidebar.backgroud” isn't a theme color token, so it's ignored. Did you mean “sidebar.background”? | A token name with a typo. Vela suggests the closest real token when there's one. Fix the name; the [token reference](/reference/theme-tokens) has every spelling. |
+| “fontSize” isn't a theme key, so it's ignored. Themes only contain colors: fonts, sizes and layout are settings (Settings → Messages and Layout, or settings.json). | A key for something themes don't do. Set it in Settings instead; see [Colors only, by design](#colors-only). |
+| “autor” isn't a theme key, so it's ignored. Did you mean “author”? | A misspelled top-level key. |
+| “accent” isn't a theme key, so it's ignored. Color tokens go inside "colors": { "accent": … }. | A color token outside `colors`. Move it into `colors`. |
+| “vibrancy”: “glass” isn't a vibrancy value, so it's ignored. Use "none", "sidebar" or "window". | A `vibrancy` Vela can't use. The theme is drawn as if it had none (or with its included theme's). A value in the wrong case, such as `"Sidebar"`, adds "Did you mean "sidebar"?". |
+
+The callout is a warning, or an error when a value was skipped (the `vibrancy` message). In the theme editor, **Remove Unknown Tokens** deletes misspelled token names from the working copy; saving from the editor leaves unknown keys and a bad `vibrancy` out of the file.
+
+Colors are stricter: a malformed color stops the theme from loading, as in the table above, because Vela can't guess what you meant.
 
 ### A color doesn't change {#color-doesnt-change}
 
 - **An override in settings.json wins.** Colors in [`appearance.colorCustomizations`](/customize/settings-json#color-customizations) apply on top of the theme, and so do the [accent color](/customize/themes#accent-color) and [message box border color](/customize/themes#message-box-border) you pick in **Settings → Appearance**, which are saved there. **Settings → Appearance → Details → Color overrides** counts the ones you wrote yourself. The theme editor leaves all overrides out, so a theme can look right in the editor and different after you save it. Choose **Default** in the accent and border color pickers, or remove the entries from settings.json.
-- **The token name has a typo.** Vela ignores names it doesn't know, without an error. The `$schema` line makes your editor underline them, and the [token reference](/reference/theme-tokens) has the right spelling.
+- **The token name has a typo.** Vela ignores names it doesn't know, and lists them under "Parts of … were ignored" in **Settings → Appearance**, with the token you probably meant. See [Typos and skipped values](#problems). The `$schema` line also makes your editor underline them.
 - **A more specific token is set.** If the theme, or the theme it includes, sets `chat.background`, changing `window.background` doesn't move it. Set that token too, or remove it so it follows again. See [How defaults work](#how-defaults-work).
 - **You're editing a different theme.** With **Match System Appearance** on, the theme in use depends on whether your Mac is in Dark Mode or Light Mode.
-- **Vela doesn't draw that part yet.** `window.border`, `button.hoverBackground`, `scrollbar.thumb`, `scrollbar.thumbHover` and `chat.findMatchBackground` are in the reference, but this version of Vela doesn't use them. Setting them does no harm.
+- **Vela doesn't draw that part yet.** `chat.findMatchBackground` is reserved for searching the conversation, which this version of Vela can't do yet. Setting it does no harm. (The other tokens are all drawn: `window.border` is the thin outline inside the edge of Vela's windows, `button.hoverBackground` a primary button such as **Save** under the pointer, and `scrollbar.thumb` and `scrollbar.thumbHover` the scroll bars of the conversation, member list and sidebar.)
+- **The window is inactive and translucent.** With `vibrancy`, the material turns solid while Vela isn't the frontmost window, which changes how tinted surfaces look. See [Translucency](#translucency).
 - **It's drawn by macOS.** Menus, alerts and file pickers follow only the theme's `type`.
 
 ### The fonts, sizes or layout didn't change
