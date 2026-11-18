@@ -9,7 +9,8 @@ import VelaMedia
 import VelaTheme
 
 /// A GIF from Tenor, GIPHY or Imgur (`.gifv`), playing inline like a GIF,
-/// with a "via Tenor · tenor.com" caption that opens the link.
+/// with a "via Tenor · tenor.com" caption that opens the link when clicked
+/// (and whose text can be selected).
 ///
 /// The site's MP4 rendition plays muted in a loop, with no controls: a tenth
 /// of the GIF's size or less, and decoded by the GPU. Without one (stickers,
@@ -105,27 +106,26 @@ struct InlineGIFView: View {
     }
 
     /// "via GIPHY · giphy.com": the site the GIF comes from, as GIF sites ask.
+    /// A click opens the link; a drag selects the text.
     private var caption: some View {
-        Button {
-            EmbedActions.open(linkURL)
-        } label: {
-            HStack(spacing: 4) {
-                Text("via \(gif.provider.displayName)").fontWeight(.semibold)
-                Text("· \(EmbedActions.displayHost(linkURL))")
-            }
-            .font(style.font(size: max(9, style.fontSize - 2)))
-            .foregroundStyle(theme[ThemeKey.embedSiteName])
-            .underline(captionHovering)
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .contentShape(Rectangle())
+        HStack(spacing: 4) {
+            Text("via \(gif.provider.displayName)").fontWeight(.semibold)
+            Text("· \(EmbedActions.displayHost(linkURL))")
         }
-        .buttonStyle(.plain)
+        .font(style.font(size: max(9, style.fontSize - 2)))
+        .foregroundStyle(theme[ThemeKey.embedSiteName])
+        .underline(captionHovering)
+        .lineLimit(1)
+        .truncationMode(.middle)
+        .textSelection(.enabled)
+        .linkClickArea(linkURL)
         .onHover { captionHovering = $0 }
-        .pointerStyle(.link)
         .help("Open \(linkURL.absoluteString)")
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Via \(gif.provider.displayName), \(EmbedActions.displayHost(linkURL))")
+        .accessibilityAddTraits(.isLink)
         .accessibilityHint("Opens the link in your browser")
+        .accessibilityAction { EmbedActions.open(linkURL) }
         .contextMenu { EmbedLinkMenuItems(url: linkURL, onHide: onHide) }
     }
 }

@@ -25,12 +25,14 @@ import Synchronization
 ///   the text, which selects and shows menus as it does anywhere else;
 /// - `LinkClickMonitor`, which watches mouse events go by and opens a link
 ///   that was clicked: pressed and released in place, as a single click.
-///   It opens once the double-click interval has passed, as a double- or
-///   triple-click selects a word or the line instead.
+///   It opens on the release, at once. A double- or triple-click selects a
+///   word or the line; its first click has opened the link, and the others
+///   open nothing.
 ///
 /// The visible text draws exactly as it would with its links. Text without
 /// links is just that `Text`. Nothing updates view state while the pointer
-/// moves.
+/// moves. `linkClickArea(_:)` makes a whole view (a link preview) one link
+/// the same way.
 struct LinkPointerText: View {
     let text: AttributedString
     /// `Text` modifiers (font, italic, color), applied to the visible text
@@ -239,16 +241,32 @@ private struct LinkPointerRegions: NSViewRepresentable {
 /// pointer style above it applies there, and lets every other event through
 /// to the text underneath. Tells `LinkClickMonitor` which link a click
 /// landed on.
+///
+/// The links are the runs of a text's links (`regions`), or, with
+/// `coversBounds`, the whole view is one link (`linkClickArea(_:)`). A
+/// whole-view link also takes right-clicks and Control-clicks, so they open
+/// the context menu around it: selectable text shows only its own text menu
+/// (Cut, Copy, Paste, Font…), never a SwiftUI `.contextMenu`. On text with
+/// a selection, they still reach the text, whose menu copies it.
 final class LinkPointerRegionView: NSView {
     var regions: LinkRegions
+    /// The whole view is link 0, apart from `excluded`; `regions` is unused.
+    var coversBounds = false
+    /// Spots in a whole-view link that aren't part of it (controls of their
+    /// own), in this view's coordinates.
+    var excluded: [CGRect] = []
     /// Where each link goes, by its index in `regions`.
     var urls: [URL] = []
     /// Opens a clicked link.
     var open: (URL) -> Void = { NSWorkspace.shared.open($0) }
     /// The type of the event being handled (tests stand in their own).
     var currentEventType: () -> NSEvent.EventType? = { NSApplication.shared.currentEvent?.type }
+    /// The modifier keys of the event being handled (tests stand in their own).
+    var currentModifiers: () -> NSEvent.ModifierFlags = { NSApplication.shared.currentEvent?.modifierFlags ?? [] }
     /// Set while checking that nothing covers the view.
     private var claimsEverything = false
+    /// Set while looking at what's underneath.
+    private var claimsNothing = false
 
     init(regions: LinkRegions) {
         self.regions = regions
@@ -269,8 +287,36 @@ final class LinkPointerRegionView: NSView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        guard claimsEverything || Self.claimsPointer(during: currentEventType()) else { return nil }
-        return regions.contains(convert(point, from: superview)) ? self : nil
+        guard !claimsNothing else { return nil }
+        let eventType = currentEventType()
+        let claims = claimsEverything || Self.claimsPointer(during: eventType)
+        let isContextClick = !claims && coversBounds && Self.isContextClick(eventType, modifiers: currentModifiers())
+        guard claims || isContextClick, linkIndex(at: convert(point, from: superview)) != nil else { return nil }
+        if isContextClick, isOverSelectedText(superview.map { $0.convert(point, to: nil) } ?? point) { return nil }
+        return self
+    }
+
+    /// A press that opens a context menu.
+    static func isContextClick(_ eventType: NSEvent.EventType?, modifiers: NSEvent.ModifierFlags) -> Bool {
+        eventType == .rightMouseDown || (eventType == .leftMouseDown && modifiers.contains(.control))
+    }
+
+    /// Whether the view underneath at a point in the window is text with a
+    /// selection, being the first responder (its selection is the one
+    /// shown). Its own menu copies the selection.
+    private func isOverSelectedText(_ point: CGPoint) -> Bool {
+        guard let window, let root = window.contentView?.superview ?? window.contentView else { return false }
+        claimsNothing = true
+        defer { claimsNothing = false }
+        guard let below = root.hitTest(point), below === window.firstResponder else { return false }
+        return below.accessibilitySelectedTextRange().length > 0
+    }
+
+    /// The link at `point`, in this view's coordinates.
+    func linkIndex(at point: CGPoint) -> Int? {
+        guard coversBounds else { return regions.link(at: point) }
+        guard bounds.contains(point), !excluded.contains(where: { $0.contains(point) }) else { return nil }
+        return 0
     }
 
     /// Pointer movement only: clicks, drags, scrolls and the rest go to the
@@ -286,7 +332,7 @@ final class LinkPointerRegionView: NSView {
     /// covers it there (the hover toolbar, a popover's arrow).
     func link(atWindowPoint point: CGPoint) -> URL? {
         guard let window, !isHiddenOrHasHiddenAncestor,
-              let index = regions.link(at: convert(point, from: nil)), urls.indices.contains(index),
+              let index = linkIndex(at: convert(point, from: nil)), urls.indices.contains(index),
               let root = window.contentView?.superview ?? window.contentView else { return nil }
         claimsEverything = true
         defer { claimsEverything = false }
@@ -296,11 +342,11 @@ final class LinkPointerRegionView: NSView {
 
 // MARK: Clicks
 
-/// Opens the links in `LinkPointerText` when they're clicked. One local
-/// event monitor for the app, installed while any such text is in a
-/// window. It only watches mouse events go by and never changes or keeps
-/// one, so the text selects, and everything else handles clicks, exactly
-/// as it would without it.
+/// Opens the links in `LinkPointerText` (and `linkClickArea(_:)`) when
+/// they're clicked, on the click's release. One local event monitor for the
+/// app, installed while any such text is in a window. It only watches mouse
+/// events go by and never changes or keeps one, so the text selects, and
+/// everything else handles clicks, exactly as it would without it.
 @MainActor
 final class LinkClickMonitor {
     static let shared = LinkClickMonitor()
@@ -312,9 +358,6 @@ final class LinkClickMonitor {
         NSApp.isActive && window.isKeyWindow && window.attachedSheet == nil
             && (NSApp.modalWindow == nil || NSApp.modalWindow === window)
     }
-
-    /// How long a click waits to be sure it isn't the start of a double-click.
-    var doubleClickInterval: () -> TimeInterval = { NSEvent.doubleClickInterval }
 
     private struct Target {
         let url: URL
@@ -364,18 +407,13 @@ final class LinkClickMonitor {
                let window = event.window, acceptsClicks(window) {
                 target = linkTarget(at: event)
             }
-            if let clicked = tracker.mouseDown(at: event.locationInWindow, clickCount: event.clickCount, modifiers: event.modifierFlags, target: target) {
-                clicked.open(clicked.url)
-            }
+            tracker.mouseDown(at: event.locationInWindow, clickCount: event.clickCount, modifiers: event.modifierFlags, target: target)
         case .leftMouseDragged:
             tracker.mouseDragged(to: event.locationInWindow)
         case .leftMouseUp:
-            guard let pending = tracker.mouseUp(at: event.locationInWindow, clickCount: event.clickCount) else { return }
-            // A run loop timer, so it fires during menu tracking too.
-            let timer = Timer(timeInterval: doubleClickInterval(), repeats: false) { _ in
-                MainActor.assumeIsolated { LinkClickMonitor.shared.openPending(pending) }
+            if let clicked = tracker.mouseUp(at: event.locationInWindow, clickCount: event.clickCount) {
+                clicked.open(clicked.url)
             }
-            RunLoop.main.add(timer, forMode: .common)
         case .rightMouseDown:
             contextURL = linkTarget(at: event)?.url
         case .pressure:
@@ -383,12 +421,6 @@ final class LinkClickMonitor {
             if event.stage >= 2 { tracker.cancelPress() }
         default:
             break
-        }
-    }
-
-    private func openPending(_ id: Int) {
-        if let clicked = tracker.takePending(id) {
-            clicked.open(clicked.url)
         }
     }
 
@@ -409,16 +441,15 @@ final class LinkClickMonitor {
 /// events by `LinkClickMonitor`; `Target` is the link.
 ///
 /// A click (pressed and released within a few points, never dragged
-/// further) becomes pending on release. It opens when the double-click
-/// interval passes, or at once when the next press turns out not to be a
-/// second click; a second click cancels it.
+/// further) opens the link on its release, at once, as in Messages or
+/// Slack. Only a first click opens: the second click of a double-click (or
+/// the rest of a triple-click), which selects a word (or the line), opens
+/// nothing more.
 nonisolated struct LinkClickTracker<Target> {
     /// How far, in points, the pointer can wander during a click.
     static var slop: CGFloat { 4 }
 
     private var press: (location: CGPoint, target: Target)?
-    private var pending: (id: Int, target: Target)?
-    private var lastID = 0
 
     /// Whether a press like this can open a link: a single click, perhaps
     /// with Command or Option, but not Shift (which extends the selection)
@@ -427,20 +458,13 @@ nonisolated struct LinkClickTracker<Target> {
         clickCount <= 1 && modifiers.isDisjoint(with: [.shift, .control])
     }
 
-    /// A press, on `target` when it's on a link. Returns a link clicked just
-    /// before that can open now, this press not being its second click.
-    mutating func mouseDown(at location: CGPoint, clickCount: Int, modifiers: NSEvent.ModifierFlags, target: Target?) -> Target? {
-        var settled: Target?
-        if let pending {
-            self.pending = nil
-            if clickCount <= 1 { settled = pending.target }
-        }
+    /// A press, on `target` when it's on a link.
+    mutating func mouseDown(at location: CGPoint, clickCount: Int, modifiers: NSEvent.ModifierFlags, target: Target?) {
         if let target, Self.opensLinks(clickCount: clickCount, modifiers: modifiers) {
             press = (location, target)
         } else {
             press = nil
         }
-        return settled
     }
 
     /// Moving further than `slop` from the press makes it a drag.
@@ -455,22 +479,11 @@ nonisolated struct LinkClickTracker<Target> {
         press = nil
     }
 
-    /// The release. When it ends a click on a link, returns the id of the
-    /// now-pending click: `takePending` it once the double-click interval
-    /// has passed.
-    mutating func mouseUp(at location: CGPoint, clickCount: Int) -> Int? {
+    /// The release: the link to open now, when it ends a click on one.
+    mutating func mouseUp(at location: CGPoint, clickCount: Int) -> Target? {
         defer { press = nil }
         guard let press, clickCount <= 1, Self.distance(press.location, location) <= Self.slop else { return nil }
-        lastID += 1
-        pending = (lastID, press.target)
-        return lastID
-    }
-
-    /// The link to open, if click `id` is still pending.
-    mutating func takePending(_ id: Int) -> Target? {
-        guard let pending, pending.id == id else { return nil }
-        self.pending = nil
-        return pending.target
+        return press.target
     }
 
     private static func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat {

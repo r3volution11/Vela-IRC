@@ -37,6 +37,8 @@ Pick how much a link preview shows in **Settings → Media → Link previews**:
 
 <Screenshot src="/screenshots/media-compact.webp" alt="Minimal link previews: one line per link, with a small thumbnail" caption="Minimal link previews: one line per link." />
 
+**Click anywhere on a preview** to open the page in your browser. To copy part of it instead, select its text as you would in a message: drag across the title, the description or the site name, double-click a word or triple-click a line, then press <kbd>⌘C</kbd> or right-click the selection and choose **Copy**. Dragging never opens the page. Right-click anywhere else on the preview to open or copy the link, or for its [site rules](#from-a-preview).
+
 Turn off **Show link previews** to show web pages as plain links. Images and videos have settings of their own.
 
 From the command palette: **Media: Minimal Link Previews**, **Standard Link Previews**, **Large Link Previews** and **Toggle Link Previews**.
@@ -48,10 +50,12 @@ Choose how YouTube, Vimeo, Twitch, Streamable and Reddit links and video files s
 | Style | What it shows |
 | --- | --- |
 | **Player** (default) | The title and a large thumbnail with **▶**. Press it and the video plays in its place. |
-| **Compact** | One line with **▶**. The player opens underneath when you press it. |
+| **Compact** | One line with **▶**. The player opens underneath when you press it, or click anywhere on the line. |
 | **Off** | No player: the link gets an ordinary link preview, or stays a plain link if link previews are off. |
 
 <Screenshot src="/screenshots/media-videos-compact.webp" alt="Compact videos: one line per video with a play button" caption="Compact videos: the player opens underneath when you press ▶." />
+
+Click a video's title, or the line above it, to open the video on its site. You can select and copy that text like a link preview's: dragging across it never opens or plays anything.
 
 The video site's player loads only when you press **▶**. See [what Vela fetches](#what-vela-fetches-and-what-that-means-for-privacy) for what happens before that.
 
@@ -102,7 +106,7 @@ Any other link to a `.gif`, `.webp` or `.apng` file plays inline as an [image](#
 - **Small and smooth.** These sites keep a video copy of every GIF, usually a tenth of its size or less, and Vela plays that copy: silent, looping and without controls, just like a GIF. Stickers, which have see-through backgrounds, play from the GIF itself. If the video copy can't be loaded, Vela plays the GIF instead.
 - **Sized like images.** GIFs follow the [Images](#images) settings: **Full size**, up to the **Maximum image height**, or **Thumbnail**, which plays while the pointer is over it. A GIF bigger than **Largest image to load automatically** shows a chip that opens it in your browser.
 - **Pause and play** with the **GIF** badge in the corner, or by right-clicking the GIF. GIFs pause while they're scrolled out of view. With **Reduce Motion** turned on in macOS, they show their first frame and a play button.
-- **Click a GIF** to see it larger (<kbd>Esc</kbd> closes it). The line underneath, such as **via GIPHY · giphy.com**, says where it's from; click it to open the GIF's page in your browser.
+- **Click a GIF** to see it larger (<kbd>Esc</kbd> closes it). The line underneath, such as **via GIPHY · giphy.com**, says where it's from; click it to open the GIF's page in your browser, or drag across it to select it.
 - **Your other settings apply** as they do to images: [blur](#blur), [site rules](#site-rules), the [adult-site filter](#adult-sites), **Load previews automatically** (a **Load GIF** button until you click it) and turning media off for a channel. On a site set to **Text only**, a GIF link gets a link preview with the GIF's title and no animation.
 
 To find the GIF behind a page or a short link, Vela fetches the page, as it does for any [link preview](#what-vela-fetches-and-what-that-means-for-privacy). A link that already says which GIF it is, such as a GIPHY page or a file on Tenor's or GIPHY's servers, needs no page: Vela loads only the GIF.
@@ -167,7 +171,7 @@ Turn the filter off with the switch, or run **Media: Hide Adult Site Previews** 
 - **Always allow** sets the site to **Everything**.
 - **Unblock** removes your rule for the site.
 
-Right-click a chip for the same actions, or to open or copy the link.
+Right-click a chip for the same actions, or to open or copy the link. You can also select a chip's text, such as the site's name, and copy it.
 
 ## Site rules
 

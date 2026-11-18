@@ -256,7 +256,8 @@ nonisolated enum BlurredMedia {
 
 /// A softened, upscaled 24-pixel copy of the image with an eye-slash and
 /// "Click to show". Clicking reveals the link's media; with Reduce Motion
-/// the image appears at once instead of fading in.
+/// the image appears at once instead of fading in. Inside a
+/// `linkClickArea` (a link preview), it keeps its own clicks.
 private struct BlurredMediaStandIn: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -306,6 +307,9 @@ private struct BlurredMediaStandIn: View {
                 .contentShape(shape)
         }
         .buttonStyle(.plain)
+        // In a link preview, whose click would open the page: the first
+        // click only reveals.
+        .outsideLinkClickArea()
         .onHover { hovering = $0 }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
         .help("Click to show")

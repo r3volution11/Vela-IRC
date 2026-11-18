@@ -11,7 +11,8 @@ import VelaTheme
 /// the style of `EmbedChip`, saying why ("Adult site · preview blocked",
 /// the site), with small "Show once" and "Always allow" (or, for the user's
 /// own block, "Unblock") buttons. Nothing from the site is fetched until one
-/// of them is clicked.
+/// of them is clicked. The reason and the domain can be selected and copied;
+/// clicking them does nothing.
 struct BlockedPreviewChip: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
@@ -31,11 +32,13 @@ struct BlockedPreviewChip: View {
             Text(Self.title(for: block.reason))
                 .foregroundStyle(theme[ThemeKey.embedDescription])
                 .lineLimit(1)
+                .textSelection(.enabled)
                 .layoutPriority(1)
             Text(block.domain)
                 .foregroundStyle(theme[ThemeKey.embedSiteName])
                 .lineLimit(1)
                 .truncationMode(.middle)
+                .textSelection(.enabled)
             HStack(spacing: 8) {
                 ForEach(Self.actions(for: block.reason), id: \.self) { action in
                     ChipTextButton(title: action.title, help: help(for: action)) { perform(action) }

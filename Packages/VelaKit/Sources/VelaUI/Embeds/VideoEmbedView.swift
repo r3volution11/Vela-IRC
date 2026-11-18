@@ -15,9 +15,15 @@ import VelaTheme
 /// Player (full): a card with the provider badge, title and author over a
 /// thumbnail facade up to `maxPlayerWidth` wide; clicking ▶ swaps in the real
 /// player (a web view) at the video's aspect ratio, and × collapses it again.
-/// Compact: a one-line title row with ▶ that expands the player underneath.
+/// Clicking the title or the line above it opens the link.
+/// Compact: a one-line title row with ▶ that expands the player underneath;
+/// a click anywhere on the row does the same.
 /// A playing player can be expanded to fill the window; its spot here then
 /// shows a placeholder.
+///
+/// The title, provider, community and author can be selected and copied
+/// (drag, double- or triple-click) without opening or playing anything
+/// (`linkClickArea`).
 ///
 /// Nothing is loaded from the provider until the user clicks play; the
 /// facade only fetches the thumbnail. The player itself lives in
@@ -52,7 +58,9 @@ struct VideoEmbedView: View {
     }
 
     @State private var hoveringFacade = false
+    /// The pointer is over the title or the line above it: the title is underlined.
     @State private var hoveringTitle = false
+    @State private var hoveringHeader = false
 
     private var brand: Color {
         EmbedColors.color(hex: embed.provider.brandColor) ?? theme[ThemeKey.embedAccent]
@@ -115,8 +123,11 @@ struct VideoEmbedView: View {
     private var fullBody: some View {
         EmbedColumnLayout(spacing: 6, minWidth: 260, maxWidth: Self.cardMaxWidth - 4 - 24) {
             header
+                .linkClickArea(linkURL)
+                .onHover { hoveringHeader = $0 }
+                .help("Open \(linkURL.absoluteString)")
             if let title {
-                titleButton(title, lineLimit: 2, size: style.fontSize + 1)
+                titleText(title, lineLimit: 2, size: style.fontSize + 1)
             }
             player(maxWidth: Self.maxPlayerWidth)
                 .padding(.top, 2)
@@ -145,24 +156,24 @@ struct VideoEmbedView: View {
             }
         }
         .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
+        .textSelection(.enabled)
     }
 
-    private func titleButton(_ title: String, lineLimit: Int, size: Double) -> some View {
-        Button {
-            EmbedActions.open(linkURL)
-        } label: {
-            Text(title)
-                .font(style.font(size: size, weight: .semibold))
-                .foregroundStyle(theme[ThemeKey.embedTitle])
-                .underline(hoveringTitle)
-                .lineLimit(lineLimit)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: lineLimit > 1)
-        }
-        .buttonStyle(.plain)
-        .onHover { hoveringTitle = $0 }
-        .pointerStyle(.link)
-        .help("Open \(linkURL.absoluteString)")
+    /// The video's title: a click opens the link, a drag selects.
+    private func titleText(_ title: String, lineLimit: Int, size: Double) -> some View {
+        Text(title)
+            .font(style.font(size: size, weight: .semibold))
+            .foregroundStyle(theme[ThemeKey.embedTitle])
+            .underline(hoveringTitle || hoveringHeader)
+            .lineLimit(lineLimit)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: lineLimit > 1)
+            .textSelection(.enabled)
+            .linkClickArea(linkURL)
+            .onHover { hoveringTitle = $0 }
+            .help("Open \(linkURL.absoluteString)")
+            .accessibilityAddTraits(.isLink)
+            .accessibilityAction { EmbedActions.open(linkURL) }
     }
 
     private func player(maxWidth: CGFloat) -> some View {
@@ -232,57 +243,69 @@ struct VideoEmbedView: View {
 
     // MARK: Compact
 
+    /// The compact row's ▶ (or a click on the row): plays the video, or
+    /// closes the player. The first click on a blurred row only shows it.
+    private func toggleCompactPlayer() {
+        if !isPlaying, blur.isBlurred {
+            blur.reveal()
+            return
+        }
+        isPlaying ? stop() : play()
+    }
+
     private var compactBody: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button {
-                // The first click on a blurred row only shows it.
-                if !isPlaying, blur.isBlurred {
-                    blur.reveal()
-                    return
-                }
-                isPlaying ? stop() : play()
-            } label: {
-                HStack(spacing: 7) {
+            HStack(spacing: 7) {
+                Button(action: toggleCompactPlayer) {
                     Image(systemName: isPlaying ? "stop.circle.fill" : "play.circle.fill")
                         .font(.system(size: max(12, style.fontSize + 1)))
                         .foregroundStyle(theme[ThemeKey.accent])
-                    ProviderBadge(provider: embed.provider)
-                    if let community = embed.community, !community.isEmpty {
-                        Text(community)
-                            .font(style.font(size: max(9, style.fontSize - 2)))
-                            .foregroundStyle(theme[ThemeKey.embedSiteName])
-                            .lineLimit(1)
-                    }
-                    Text(title ?? EmbedActions.displayHost(linkURL))
-                        .font(style.font(size: max(10, style.fontSize - 1), weight: .semibold))
-                        .foregroundStyle(theme[ThemeKey.embedTitle])
-                        .lineLimit(1)
-                    if let author = embed.authorName, !author.isEmpty {
-                        Text("· \(author)")
-                            .font(style.font(size: max(9, style.fontSize - 2)))
-                            .foregroundStyle(theme[ThemeKey.embedSiteName])
-                            .lineLimit(1)
-                    }
-                    if !isPlaying, let thumbnail = embed.thumbnailURL {
-                        RemoteImageView(url: thumbnail, maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: 40), policy: policy) {
-                            theme[ThemeKey.embedPlaceholderBackground]
-                        }
-                        .blurredMedia(.url(thumbnail), policy: policy, kind: .video, cornerRadius: 4)
-                        .frame(width: 34, height: 22)
-                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                    }
                 }
-                .padding(.leading, 8)
-                .padding(.trailing, isPlaying || embed.thumbnailURL == nil ? 10 : 4)
-                .padding(.vertical, 4)
-                .frame(minHeight: 28)
-                .embedCard(accent: brand, cornerRadius: 6, accentWidth: 3)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .outsideLinkClickArea()
+                ProviderBadge(provider: embed.provider)
+                    .textSelection(.enabled)
+                if let community = embed.community, !community.isEmpty {
+                    Text(community)
+                        .font(style.font(size: max(9, style.fontSize - 2)))
+                        .foregroundStyle(theme[ThemeKey.embedSiteName])
+                        .lineLimit(1)
+                        .textSelection(.enabled)
+                }
+                Text(title ?? EmbedActions.displayHost(linkURL))
+                    .font(style.font(size: max(10, style.fontSize - 1), weight: .semibold))
+                    .foregroundStyle(theme[ThemeKey.embedTitle])
+                    .lineLimit(1)
+                    .textSelection(.enabled)
+                if let author = embed.authorName, !author.isEmpty {
+                    Text("· \(author)")
+                        .font(style.font(size: max(9, style.fontSize - 2)))
+                        .foregroundStyle(theme[ThemeKey.embedSiteName])
+                        .lineLimit(1)
+                        .textSelection(.enabled)
+                }
+                if !isPlaying, let thumbnail = embed.thumbnailURL {
+                    RemoteImageView(url: thumbnail, maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: 40), policy: policy) {
+                        theme[ThemeKey.embedPlaceholderBackground]
+                    }
+                    .blurredMedia(.url(thumbnail), policy: policy, kind: .video, cornerRadius: 4)
+                    .frame(width: 34, height: 22)
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                }
             }
-            .buttonStyle(.plain)
+            .padding(.leading, 8)
+            .padding(.trailing, isPlaying || embed.thumbnailURL == nil ? 10 : 4)
+            .padding(.vertical, 4)
+            .frame(minHeight: 28)
+            .embedCard(accent: brand, cornerRadius: 6, accentWidth: 3)
+            // A click anywhere plays (or closes) the video; a drag selects.
+            .linkClickArea(linkURL, perform: toggleCompactPlayer)
             .frame(maxWidth: Self.compactRowMaxWidth, alignment: .leading)
             .help(isPlaying ? "Close the player" : "Play \(title ?? "video") here")
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(isPlaying ? "Close video" : "Play video"): \(title ?? linkURL.absoluteString), \(embed.provider.displayName)")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { toggleCompactPlayer() }
 
             if isPlaying {
                 player(maxWidth: Self.maxPlayerWidth)

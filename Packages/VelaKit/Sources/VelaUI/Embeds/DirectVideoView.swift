@@ -13,6 +13,8 @@ import VelaTheme
 /// video only streamed) when the user clicks play. Never autoplays. The
 /// player lives in `EmbedPlayerStore` like the provider players: one plays
 /// at a time, it pauses when scrolled out of view, and it can be expanded.
+/// The file name and site under it (or on the compact row, where a click
+/// plays) can be selected and copied.
 struct DirectVideoView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -107,6 +109,7 @@ struct DirectVideoView: View {
         }
         .font(style.font(size: max(9, style.fontSize - 2)))
         .foregroundStyle(theme[ThemeKey.embedSiteName])
+        .textSelection(.enabled)
         .accessibilityHidden(true)
     }
 
@@ -171,42 +174,52 @@ struct DirectVideoView: View {
 
     private var compactBody: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button {
-                // The first click on a blurred row only shows it.
-                if !isPlaying, blur.isBlurred {
-                    blur.reveal()
-                    return
-                }
-                isPlaying ? stop() : play()
-            } label: {
-                HStack(spacing: 7) {
+            HStack(spacing: 7) {
+                Button(action: toggleCompactPlayer) {
                     Image(systemName: isPlaying ? "stop.circle.fill" : (blur.isBlurred ? "eye.slash" : "play.circle.fill"))
                         .font(.system(size: max(12, style.fontSize + 1)))
                         .foregroundStyle(theme[ThemeKey.accent])
-                    Text(EmbedActions.displayName(linkURL))
-                        .font(style.font(size: max(10, style.fontSize - 1), weight: .semibold))
-                        .foregroundStyle(theme[ThemeKey.embedTitle])
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Text("· \(EmbedActions.displayHost(linkURL))")
-                        .font(style.font(size: max(9, style.fontSize - 2)))
-                        .foregroundStyle(theme[ThemeKey.embedSiteName])
-                        .lineLimit(1)
                 }
-                .padding(.horizontal, 9)
-                .padding(.vertical, 4)
-                .frame(minHeight: 28)
-                .embedCard(accent: theme[ThemeKey.embedAccent], cornerRadius: 6, accentWidth: 3)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .outsideLinkClickArea()
+                Text(EmbedActions.displayName(linkURL))
+                    .font(style.font(size: max(10, style.fontSize - 1), weight: .semibold))
+                    .foregroundStyle(theme[ThemeKey.embedTitle])
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                Text("· \(EmbedActions.displayHost(linkURL))")
+                    .font(style.font(size: max(9, style.fontSize - 2)))
+                    .foregroundStyle(theme[ThemeKey.embedSiteName])
+                    .lineLimit(1)
+                    .textSelection(.enabled)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .frame(minHeight: 28)
+            .embedCard(accent: theme[ThemeKey.embedAccent], cornerRadius: 6, accentWidth: 3)
+            // A click anywhere plays (or closes) the video; a drag selects.
+            .linkClickArea(linkURL, perform: toggleCompactPlayer)
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(isPlaying ? "Close video" : "Show video"): \(EmbedActions.displayName(linkURL))")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { toggleCompactPlayer() }
 
             if isPlaying {
                 playerArea
             }
         }
         .frame(maxWidth: VideoEmbedView.maxPlayerWidth, alignment: .leading)
+    }
+
+    /// The compact row's ▶ (or a click on the row): plays the video, or
+    /// closes the player. The first click on a blurred row only shows it.
+    private func toggleCompactPlayer() {
+        if !isPlaying, blur.isBlurred {
+            blur.reveal()
+            return
+        }
+        isPlaying ? stop() : play()
     }
 
     private func play() {

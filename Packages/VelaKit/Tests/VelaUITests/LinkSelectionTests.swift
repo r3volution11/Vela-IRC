@@ -14,28 +14,25 @@ struct LinkClickTrackerTests {
     private typealias Tracker = LinkClickTracker<String>
     private let onLink = CGPoint(x: 100, y: 50)
 
-    @Test func aClickOpensTheLinkOnceNoSecondClickCame() throws {
+    @Test func aClickOpensTheLinkOnRelease() {
         var tracker = Tracker()
-        #expect(tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a") == nil)
-        let pendingClick = tracker.mouseUp(at: onLink, clickCount: 1)
-        let pending = try #require(pendingClick)
-        #expect(tracker.takePending(pending) == "a")
-        #expect(tracker.takePending(pending) == nil)
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        #expect(tracker.mouseUp(at: onLink, clickCount: 1) == "a")
+        // Nothing is left over to open later.
+        #expect(tracker.mouseUp(at: onLink, clickCount: 1) == nil)
     }
 
-    @Test func aLittleWobbleIsStillAClick() throws {
+    @Test func aLittleWobbleIsStillAClick() {
         var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
         tracker.mouseDragged(to: CGPoint(x: 102, y: 51))
         tracker.mouseDragged(to: CGPoint(x: 103, y: 52))
-        let pendingClick = tracker.mouseUp(at: CGPoint(x: 102, y: 52), clickCount: 1)
-        let pending = try #require(pendingClick)
-        #expect(tracker.takePending(pending) == "a")
+        #expect(tracker.mouseUp(at: CGPoint(x: 102, y: 52), clickCount: 1) == "a")
     }
 
     @Test func aDragFromALinkSelectsInstead() {
         var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
         tracker.mouseDragged(to: CGPoint(x: 130, y: 50))
         #expect(tracker.mouseUp(at: CGPoint(x: 130, y: 50), clickCount: 1) == nil)
     }
@@ -43,7 +40,7 @@ struct LinkClickTrackerTests {
     @Test func aDragThatComesBackIsStillADrag() {
         // Selecting, then changing your mind and returning to the link.
         var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
         tracker.mouseDragged(to: CGPoint(x: 160, y: 50))
         tracker.mouseDragged(to: onLink)
         #expect(tracker.mouseUp(at: onLink, clickCount: 1) == nil)
@@ -51,70 +48,62 @@ struct LinkClickTrackerTests {
 
     @Test func aReleaseAwayFromThePressIsNotAClick() {
         var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
         #expect(tracker.mouseUp(at: CGPoint(x: 100, y: 60), clickCount: 1) == nil)
     }
 
-    @Test func aDoubleClickSelectsAWordInstead() throws {
+    @Test func aDoubleClickOpensTheLinkOnce() {
+        // The first click opens it; the second selects a word and opens
+        // nothing more.
         var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
-        let firstClick = tracker.mouseUp(at: onLink, clickCount: 1)
-        let first = try #require(firstClick)
-        // The second press cancels the first click, and isn't one itself.
-        #expect(tracker.mouseDown(at: onLink, clickCount: 2, modifiers: [], target: "a") == nil)
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        #expect(tracker.mouseUp(at: onLink, clickCount: 1) == "a")
+        tracker.mouseDown(at: onLink, clickCount: 2, modifiers: [], target: "a")
         #expect(tracker.mouseUp(at: onLink, clickCount: 2) == nil)
-        #expect(tracker.takePending(first) == nil)
     }
 
-    @Test func aTripleClickSelectsTheLineInstead() throws {
+    @Test func aTripleClickOpensTheLinkOnce() {
         var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
-        let firstClick = tracker.mouseUp(at: onLink, clickCount: 1)
-        let first = try #require(firstClick)
-        for count in 2...3 {
-            #expect(tracker.mouseDown(at: onLink, clickCount: count, modifiers: [], target: "a") == nil)
-            #expect(tracker.mouseUp(at: onLink, clickCount: count) == nil)
+        var opened: [String] = []
+        for count in 1...3 {
+            tracker.mouseDown(at: onLink, clickCount: count, modifiers: [], target: "a")
+            if let link = tracker.mouseUp(at: onLink, clickCount: count) { opened.append(link) }
         }
-        #expect(tracker.takePending(first) == nil)
+        #expect(opened == ["a"])
     }
 
-    @Test func anotherSingleClickOpensTheLinkRightAway() throws {
-        // A press that isn't a double-click settles it: no need to wait.
+    @Test func separateClicksEachOpen() {
+        // Clicks too far apart in time to make a double-click.
         var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
-        let firstClick = tracker.mouseUp(at: onLink, clickCount: 1)
-        let first = try #require(firstClick)
-        #expect(tracker.mouseDown(at: CGPoint(x: 300, y: 50), clickCount: 1, modifiers: [], target: nil) == "a")
-        #expect(tracker.takePending(first) == nil)
-    }
-
-    @Test func onlyTheLatestClickIsPending() throws {
-        var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
-        let firstClick = tracker.mouseUp(at: onLink, clickCount: 1)
-        let first = try #require(firstClick)
         let other = CGPoint(x: 300, y: 50)
-        #expect(tracker.mouseDown(at: other, clickCount: 1, modifiers: [], target: "b") == "a")
-        let secondClick = tracker.mouseUp(at: other, clickCount: 1)
-        let second = try #require(secondClick)
-        // The first click's timer firing late doesn't cut the second's wait short.
-        #expect(tracker.takePending(first) == nil)
-        #expect(tracker.takePending(second) == "b")
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        #expect(tracker.mouseUp(at: onLink, clickCount: 1) == "a")
+        tracker.mouseDown(at: other, clickCount: 1, modifiers: [], target: "b")
+        #expect(tracker.mouseUp(at: other, clickCount: 1) == "b")
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        #expect(tracker.mouseUp(at: onLink, clickCount: 1) == "a")
     }
 
     @Test func pressesOffLinksOpenNothing() {
         var tracker = Tracker()
-        #expect(tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: nil) == nil)
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: nil)
         #expect(tracker.mouseUp(at: onLink, clickCount: 1) == nil)
     }
 
-    @Test func commandAndOptionClicksOpenLinks() throws {
+    @Test func aPressOffALinkForgetsTheLastOne() {
+        // A press that never got its release (a menu took it), then a click
+        // beside the link.
+        var tracker = Tracker()
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: nil)
+        #expect(tracker.mouseUp(at: onLink, clickCount: 1) == nil)
+    }
+
+    @Test func commandAndOptionClicksOpenLinks() {
         for modifiers: NSEvent.ModifierFlags in [.command, .option, [.command, .option], .capsLock, .function] {
             var tracker = Tracker()
-            _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: modifiers, target: "a")
-            let pendingClick = tracker.mouseUp(at: onLink, clickCount: 1)
-            let pending = try #require(pendingClick, "\(modifiers)")
-            #expect(tracker.takePending(pending) == "a")
+            tracker.mouseDown(at: onLink, clickCount: 1, modifiers: modifiers, target: "a")
+            #expect(tracker.mouseUp(at: onLink, clickCount: 1) == "a", "\(modifiers)")
         }
     }
 
@@ -122,7 +111,7 @@ struct LinkClickTrackerTests {
         // Shift extends the selection; Control-click opens the menu.
         for modifiers: NSEvent.ModifierFlags in [.shift, .control, [.command, .shift], [.control, .option]] {
             var tracker = Tracker()
-            _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: modifiers, target: "a")
+            tracker.mouseDown(at: onLink, clickCount: 1, modifiers: modifiers, target: "a")
             #expect(tracker.mouseUp(at: onLink, clickCount: 1) == nil, "\(modifiers)")
         }
     }
@@ -130,7 +119,7 @@ struct LinkClickTrackerTests {
     @Test func aForceClickDoesNotOpen() {
         // A deep press looks the word up instead.
         var tracker = Tracker()
-        _ = tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
+        tracker.mouseDown(at: onLink, clickCount: 1, modifiers: [], target: "a")
         tracker.cancelPress()
         #expect(tracker.mouseUp(at: onLink, clickCount: 1) == nil)
     }
@@ -313,23 +302,20 @@ struct LinkSelectionTests {
         ])
     }
 
-    /// Long enough for a pending click to open (see `withQuickClicks`).
-    private func waitOutDoubleClick() async throws {
-        try await Task.sleep(for: .milliseconds(450))
+    /// Longer than the double-click interval used to be, when a click
+    /// waited it out before opening.
+    private func waitAWhile() async throws {
+        try await Task.sleep(for: .milliseconds(600))
     }
 
     /// Runs `body` with the monitor taking clicks in this inactive test
-    /// app's windows and a short double-click interval.
-    private func withQuickClicks(_ body: () async throws -> Void) async rethrows {
+    /// app's windows.
+    private func withClicksAccepted(_ body: () async throws -> Void) async rethrows {
         _ = NSApplication.shared
         let monitor = LinkClickMonitor.shared
-        let acceptsClicks = monitor.acceptsClicks, interval = monitor.doubleClickInterval
+        let acceptsClicks = monitor.acceptsClicks
         monitor.acceptsClicks = { _ in true }
-        monitor.doubleClickInterval = { 0.25 }
-        defer {
-            monitor.acceptsClicks = acceptsClicks
-            monitor.doubleClickInterval = interval
-        }
+        defer { monitor.acceptsClicks = acceptsClicks }
         try await body()
     }
 
@@ -340,7 +326,7 @@ struct LinkSelectionTests {
         // a `.link` run, so a drag that starts there selects nothing. (If
         // this ever fails, SwiftUI has changed and the workaround may no
         // longer be needed.)
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message(), linkText: false)
             defer { hosted.close() }
             // Where the link is, measured on our text (it lays out the same).
@@ -358,42 +344,39 @@ struct LinkSelectionTests {
     // MARK: Selecting
 
     @Test func aDragStartingOnALinkSelectsText() async throws {
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             try await drag(from: try hosted.linkPoint(0, dx: 1), to: hosted.textPoint(x: -4), in: hosted)
             let selected = try #require(hosted.selectedText)
             #expect(selected.hasPrefix("https://example.com/alpha/beta and #vela then"), "\(selected)")
-            try await waitOutDoubleClick()
             #expect(hosted.opened.urls.isEmpty)
         }
     }
 
     @Test func aDragAcrossALinkCopiesItsFullText() async throws {
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             try await drag(from: hosted.textPoint(x: 1), to: hosted.textPoint(x: -1), in: hosted)
             let copied = try #require(try hosted.copiedText())
             #expect(copied.hasPrefix("see https://example.com/alpha/beta and #vela then some more plain wor"), "\(copied)")
-            try await waitOutDoubleClick()
             #expect(hosted.opened.urls.isEmpty)
         }
     }
 
     @Test func aDragEndingOnALinkOpensNothing() async throws {
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             try await drag(from: hosted.textPoint(x: -4), to: try hosted.linkPoint(0), in: hosted)
-            try await waitOutDoubleClick()
             #expect(!(hosted.selectedText ?? "").isEmpty)
             #expect(hosted.opened.urls.isEmpty)
         }
     }
 
-    @Test func aDoubleClickInALinkSelectsAWord() async throws {
-        try await withQuickClicks {
+    @Test func aDoubleClickInALinkSelectsAWordAndOpensItOnce() async throws {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             // On "example".
@@ -405,77 +388,74 @@ struct LinkSelectionTests {
             #expect(!selected.isEmpty)
             #expect(!selected.contains(" "), "\(selected)")
             #expect(Self.url.absoluteString.contains(selected), "\(selected)")
-            try await waitOutDoubleClick()
-            #expect(hosted.opened.urls.isEmpty)
+            // The first click opened it; the second didn't again.
+            #expect(hosted.opened.urls == [Self.url])
         }
     }
 
-    @Test func aTripleClickInALinkSelectsTheLine() async throws {
-        try await withQuickClicks {
+    @Test func aTripleClickInALinkSelectsTheLineAndOpensItOnce() async throws {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             try await click(at: try hosted.linkPoint(0), in: hosted, count: 3)
             let selected = try #require(hosted.selectedText)
             #expect(selected.hasPrefix(Self.plain), "\(selected)")
-            try await waitOutDoubleClick()
-            #expect(hosted.opened.urls.isEmpty)
+            #expect(hosted.opened.urls == [Self.url])
         }
     }
 
     // MARK: Opening
 
-    @Test func aClickOnALinkOpensItOnce() async throws {
-        try await withQuickClicks {
+    @Test func aClickOnALinkOpensItOnRelease() async throws {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
-            try await click(at: try hosted.linkPoint(0), in: hosted)
-            try await waitOutDoubleClick()
+            let point = try hosted.linkPoint(0)
+            try await send([event(.leftMouseDown, at: point, in: hosted)])
+            #expect(hosted.opened.urls.isEmpty)
+            // At once: no waiting to see whether a second click follows.
+            NSApp.sendEvent(event(.leftMouseUp, at: point, in: hosted))
             #expect(hosted.opened.urls == [Self.url])
-            try await waitOutDoubleClick()
+            try await waitAWhile()
             #expect(hosted.opened.urls == [Self.url])
         }
     }
 
     @Test func aClickOnAChannelOpensItsJoinLink() async throws {
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             try await click(at: try hosted.linkPoint(1), in: hosted)
-            try await waitOutDoubleClick()
             #expect(hosted.opened.urls == [Self.channel])
         }
     }
 
     @Test func aCommandClickOpensTheLinkAndAShiftClickDoesNot() async throws {
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             try await click(at: try hosted.linkPoint(0), in: hosted, modifiers: .shift)
-            try await waitOutDoubleClick()
             #expect(hosted.opened.urls.isEmpty)
             try await click(at: try hosted.linkPoint(0), in: hosted, modifiers: .command)
-            try await waitOutDoubleClick()
             #expect(hosted.opened.urls == [Self.url])
         }
     }
 
     @Test func aClickOnPlainTextOpensNothing() async throws {
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             try await click(at: hosted.textPoint(x: 6), in: hosted)
             try await click(at: hosted.textPoint(x: -6), in: hosted)
-            try await waitOutDoubleClick()
             #expect(hosted.opened.urls.isEmpty)
         }
     }
 
     @Test func aCoveredLinkDoesNotOpen() async throws {
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message(), covered: true)
             defer { hosted.close() }
             try await click(at: try hosted.linkPoint(0), in: hosted)
-            try await waitOutDoubleClick()
             #expect(hosted.opened.urls.isEmpty)
         }
     }
@@ -487,14 +467,13 @@ struct LinkSelectionTests {
         defer { hosted.close() }
         #expect(!LinkClickMonitor.shared.acceptsClicks(hosted.window))
         try await click(at: try hosted.linkPoint(0), in: hosted)
-        try await waitOutDoubleClick()
         #expect(hosted.opened.urls.isEmpty)
     }
 
     // MARK: Copy Link
 
     @Test func aRightClickPicksTheLinkForCopyLink() async throws {
-        try await withQuickClicks {
+        try await withClicksAccepted {
             let hosted = try await host(message())
             defer { hosted.close() }
             let monitor = LinkClickMonitor.shared

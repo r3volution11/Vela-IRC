@@ -18,6 +18,10 @@ import VelaTheme
 /// Without `showsImages` (a text-only site) the card has no image, thumbnail
 /// or favicon; a neutral glyph stands in for the favicon. While the link is
 /// blurred (`\.embedBlur`), its image and thumbnails are (favicons aren't).
+///
+/// The whole card is a link (`linkClickArea`): a click anywhere opens the
+/// page, and the site name, title and description can be selected and
+/// copied like message text. A blurred image's Click to show stays a button.
 struct LinkCardView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -37,7 +41,8 @@ struct LinkCardView: View {
     @State private var imagePixelSize: CGSize?
     /// The Standard card's thumbnail couldn't be loaded, so it takes no room.
     @State private var thumbnailFailed: Bool
-    @State private var titleHovering = false
+    /// The pointer is over the card: its title is underlined.
+    @State private var hovering = false
 
     init(
         preview: LinkPreview,
@@ -131,7 +136,7 @@ struct LinkCardView: View {
                 siteRow
                     .padding(.bottom, 1)
                 if let title = preview.displayTitle {
-                    titleLink(title, size: style.fontSize + 1, lineLimit: 2)
+                    titleText(title, size: style.fontSize + 1, lineLimit: 2)
                 }
                 if let summary = preview.displaySummary {
                     Text(summary)
@@ -150,6 +155,8 @@ struct LinkCardView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .embedCard(accent: accent)
+        .opensPage(preview.url, hovering: $hovering)
+        .help(preview.url.absoluteString)
         .frame(maxWidth: StandardCardLayout.maxCardWidth, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilitySummary)
@@ -172,10 +179,6 @@ struct LinkCardView: View {
             theme[ThemeKey.embedPlaceholderBackground]
         }
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .contentShape(Rectangle())
-        .onTapGesture { EmbedActions.open(preview.url) }
-        .pointerStyle(.link)
-        .help(preview.url.absoluteString)
         .blurredMedia(.url(url), policy: policy, kind: .thumbnail)
         .accessibilityHidden(true)
     }
@@ -187,7 +190,7 @@ struct LinkCardView: View {
             EmbedColumnLayout(spacing: 5, minWidth: 0, maxWidth: textColumnMaxWidth) {
                 siteRow
                 if let title = preview.displayTitle {
-                    titleLink(title, size: style.fontSize + 1, lineLimit: 2)
+                    titleText(title, size: style.fontSize + 1, lineLimit: 2)
                 }
                 if let summary = preview.displaySummary {
                     Text(summary)
@@ -220,6 +223,8 @@ struct LinkCardView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .embedCard(accent: accent)
+        .opensPage(preview.url, hovering: $hovering)
+        .help(preview.url.absoluteString)
         .frame(maxWidth: Self.maxWidth, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilitySummary)
@@ -242,25 +247,20 @@ struct LinkCardView: View {
                 .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
                 .foregroundStyle(theme[ThemeKey.embedSiteName])
                 .lineLimit(1)
+                .textSelection(.enabled)
         }
     }
 
-    private func titleLink(_ title: String, size: Double, lineLimit: Int) -> some View {
-        Button {
-            EmbedActions.open(preview.url)
-        } label: {
-            Text(title)
-                .font(style.font(size: size, weight: .semibold))
-                .foregroundStyle(theme[ThemeKey.embedTitle])
-                .underline(titleHovering)
-                .lineLimit(lineLimit)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: lineLimit > 1)
-        }
-        .buttonStyle(.plain)
-        .onHover { titleHovering = $0 }
-        .pointerStyle(.link)
-        .help(preview.url.absoluteString)
+    /// The page's title, underlined while the pointer is over the card.
+    private func titleText(_ title: String, size: Double, lineLimit: Int) -> some View {
+        Text(title)
+            .font(style.font(size: size, weight: .semibold))
+            .foregroundStyle(theme[ThemeKey.embedTitle])
+            .underline(hovering)
+            .lineLimit(lineLimit)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: lineLimit > 1)
+            .textSelection(.enabled)
     }
 
     private func largeImage(_ url: URL, pixelSize: CGSize) -> some View {
@@ -278,9 +278,6 @@ struct LinkCardView: View {
                 theme[ThemeKey.embedPlaceholderBackground]
             }
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .contentShape(Rectangle())
-            .onTapGesture { EmbedActions.open(preview.url) }
-            .pointerStyle(.link)
             .blurredMedia(.url(url), policy: policy, kind: .thumbnail)
             .accessibilityHidden(true)
         }
@@ -295,12 +292,13 @@ struct LinkCardView: View {
                 .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
                 .foregroundStyle(theme[ThemeKey.embedSiteName])
                 .lineLimit(1)
+                .textSelection(.enabled)
                 .layoutPriority(1)
             if let title = preview.displayTitle {
                 Text("·")
                     .font(style.font(size: max(9, style.fontSize - 2)))
                     .foregroundStyle(theme[ThemeKey.embedSiteName])
-                titleLink(title, size: max(10, style.fontSize - 1), lineLimit: 1)
+                titleText(title, size: max(10, style.fontSize - 1), lineLimit: 1)
             }
             if let imageURL {
                 RemoteImageView(url: imageURL, maxPixelSize: EmbedImagePipeline.pixelBudget(forPoints: 40), policy: policy) {
@@ -317,6 +315,7 @@ struct LinkCardView: View {
         .padding(.vertical, 4)
         .frame(minHeight: 28)
         .embedCard(accent: accent, cornerRadius: 6, accentWidth: 3)
+        .opensPage(preview.url, hovering: $hovering)
         .frame(maxWidth: Self.maxWidth, alignment: .leading)
         .help(preview.displaySummary ?? preview.url.absoluteString)
         .accessibilityElement(children: .combine)
@@ -347,6 +346,15 @@ struct LinkCardView: View {
                 }
             }
         }
+    }
+}
+
+private extension View {
+    /// The card, as a link to `url` that keeps its text selectable, with
+    /// `hovering` set while the pointer is over it.
+    func opensPage(_ url: URL, hovering: Binding<Bool>) -> some View {
+        linkClickArea(url)
+            .onHover { hovering.wrappedValue = $0 }
     }
 }
 

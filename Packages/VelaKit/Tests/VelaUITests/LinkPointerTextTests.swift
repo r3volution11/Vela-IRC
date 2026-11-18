@@ -123,6 +123,49 @@ struct LinkPointerTextTests {
         #expect(view.hitTest(CGPoint(x: 10, y: 95)) == nil)
     }
 
+    @Test func aWholeViewLinkClaimsItselfButNotItsControls() {
+        // A link preview (`linkClickArea`): all of it but a button inside.
+        let container = NSView(frame: CGRect(x: 0, y: 0, width: 200, height: 100))
+        let view = LinkPointerRegionView(regions: LinkRegions())
+        view.coversBounds = true
+        view.frame = container.bounds
+        view.excluded = [CGRect(x: 150, y: 0, width: 50, height: 50)]
+        container.addSubview(view)
+        var eventType: NSEvent.EventType? = .mouseMoved
+        var modifiers: NSEvent.ModifierFlags = []
+        view.currentEventType = { eventType }
+        view.currentModifiers = { modifiers }
+        // Container coordinates are bottom-left origin: y 95 is near the top.
+        #expect(view.linkIndex(at: CGPoint(x: 10, y: 90)) == 0)
+        #expect(view.linkIndex(at: CGPoint(x: 160, y: 10)) == nil)
+        #expect(view.hitTest(CGPoint(x: 10, y: 5)) === view)
+        #expect(view.hitTest(CGPoint(x: 160, y: 95)) == nil)
+        #expect(view.hitTest(CGPoint(x: 260, y: 95)) == nil)
+        // Clicks go through to the text; context clicks open the view's menu.
+        eventType = .leftMouseDown
+        #expect(view.hitTest(CGPoint(x: 10, y: 5)) == nil)
+        modifiers = .control
+        #expect(view.hitTest(CGPoint(x: 10, y: 5)) === view)
+        #expect(view.hitTest(CGPoint(x: 160, y: 95)) == nil)
+        modifiers = []
+        eventType = .rightMouseDown
+        #expect(view.hitTest(CGPoint(x: 10, y: 5)) === view)
+        // Links in text leave context clicks to the text.
+        view.coversBounds = false
+        view.regions.update([.init(rect: CGRect(x: 0, y: 0, width: 50, height: 20), link: 0)])
+        #expect(view.hitTest(CGPoint(x: 10, y: 95)) == nil)
+    }
+
+    @Test func contextClicksAreRightClicksAndControlClicks() {
+        #expect(LinkPointerRegionView.isContextClick(.rightMouseDown, modifiers: []))
+        #expect(LinkPointerRegionView.isContextClick(.leftMouseDown, modifiers: .control))
+        #expect(LinkPointerRegionView.isContextClick(.leftMouseDown, modifiers: [.control, .option]))
+        #expect(!LinkPointerRegionView.isContextClick(.leftMouseDown, modifiers: []))
+        #expect(!LinkPointerRegionView.isContextClick(.leftMouseDown, modifiers: .command))
+        #expect(!LinkPointerRegionView.isContextClick(.rightMouseUp, modifiers: []))
+        #expect(!LinkPointerRegionView.isContextClick(nil, modifiers: .control))
+    }
+
     // MARK: Laid out offscreen
 
     private struct Hosted {
