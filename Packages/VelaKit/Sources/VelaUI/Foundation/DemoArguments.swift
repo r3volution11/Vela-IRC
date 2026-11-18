@@ -24,9 +24,8 @@ enum DemoArguments {
     /// holding a copy of the theme files in `--themes-dir`, if given and
     /// readable. Never `AppPaths.themesDirectory`.
     static func themesDirectory(for arguments: [String], fileManager: FileManager = .default) -> URL {
-        let directory = fileManager.temporaryDirectory
-            .appendingPathComponent("VelaDemo-Themes-\(UUID().uuidString)", isDirectory: true)
-        try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        // Removed when the demo quits (DemoScratch), or swept by a later run.
+        let directory = DemoScratch.makeDirectory(prefix: "VelaDemo-Themes-", in: fileManager.temporaryDirectory)
         guard let index = arguments.firstIndex(of: "--themes-dir"), arguments.indices.contains(index + 1) else {
             return directory
         }

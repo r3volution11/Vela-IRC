@@ -11,6 +11,7 @@ Thanks for helping build Vela! This guide covers the basics.
    swift test  --package-path Packages/VelaKit
    ```
 3. Almost all code lives in `Packages/VelaKit`. The `Vela/` app target is intentionally tiny.
+4. Run the app with `scripts/run.sh --dev` (or ⌘R in Xcode). Debug builds are a separate app, **Vela Dev** (bundle id `io.github.r3volution11.Vela.dev`, a **DEV** badge on its Dock icon), with their own sandbox: settings, networks, history and Keychain items. They never touch the Vela you use every day, and the two can run at the same time. To try things without any network, add `--demo`.
 
 ## Code guidelines
 

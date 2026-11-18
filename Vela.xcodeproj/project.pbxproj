@@ -208,7 +208,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Vela;
+				INFOPLIST_KEY_CFBundleDisplayName = "Vela Dev";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Doug C. Hardester and contributors. MPL-2.0.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -216,7 +216,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.r3volution11.Vela;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.r3volution11.Vela.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

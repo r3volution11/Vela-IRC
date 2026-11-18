@@ -26,7 +26,10 @@ set -euo pipefail
 app="${1:A}"; out="${2:A}"; shift 2
 rm -f "$out"
 # The app is sandboxed, so it writes into its container's tmp and we copy out.
-container_tmp="$HOME/Library/Containers/io.github.r3volution11.Vela/Data/tmp"
+# Release builds are io.github.r3volution11.Vela; Debug ("Vela Dev") builds
+# end in .dev and have their own container.
+bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist" 2>/dev/null || echo io.github.r3volution11.Vela)
+container_tmp="$HOME/Library/Containers/$bundle_id/Data/tmp"
 mkdir -p "$container_tmp"
 tmp_out="$container_tmp/snapshot-$$.png"
 # The sandbox can't read arbitrary folders, so --themes-dir is staged in the

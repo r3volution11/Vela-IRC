@@ -3,17 +3,23 @@
 #
 #   scripts/run.sh            # build (Release) and launch Vela
 #   scripts/run.sh --demo     # launch with offline sample content
-#   scripts/run.sh --debug    # build the Debug configuration instead
+#   scripts/run.sh --dev      # build and launch "Vela Dev" (Debug) instead
 #
-# The built app is copied to build/Vela.app (ignored by git), so you can also
-# drag it to /Applications or double-click it in Finder.
+# Release builds are copied to build/Vela.app; --dev builds to
+# build/Vela Dev.app (both ignored by git), so you can also drag them to
+# /Applications or double-click them in Finder.
+#
+# "Vela Dev" (bundle id io.github.r3volution11.Vela.dev) is a separate app:
+# its own settings, networks, history, Keychain items, Siri/Shortcuts and
+# Dock icon (badged DEV). It runs side by side with your everyday Vela and
+# never touches its data. --debug is an alias for --dev.
 set -euo pipefail
 cd "${0:A:h}/.."
 
 configuration=Release
 args=()
 for arg in "$@"; do
-  if [[ "$arg" == "--debug" ]]; then configuration=Debug; else args+=("$arg"); fi
+  if [[ "$arg" == "--debug" || "$arg" == "--dev" ]]; then configuration=Debug; else args+=("$arg"); fi
 done
 
 echo "Building Vela ($configuration)…"
@@ -32,9 +38,16 @@ if [[ ! -d "$product" ]]; then
   exit 1
 fi
 
-# Quit a running copy so the fresh build is the one that opens.
-pkill -f "$PWD/build/Vela.app/Contents/MacOS/Vela" 2>/dev/null && sleep 1 || true
-rm -rf build/Vela.app
-cp -R "$product" build/Vela.app
-echo "Launching build/Vela.app"
-open build/Vela.app --args "${args[@]}"
+if [[ "$configuration" == "Debug" ]]; then
+  installed="build/Vela Dev.app"
+else
+  installed="build/Vela.app"
+fi
+
+# Quit a running copy of this build so the fresh one is what opens. The
+# other build (release or dev) keeps running.
+pkill -f "$PWD/$installed/Contents/MacOS/Vela" 2>/dev/null && sleep 1 || true
+rm -rf "$installed"
+cp -R "$product" "$installed"
+echo "Launching $installed"
+open "$installed" --args "${args[@]}"

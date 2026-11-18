@@ -1,49 +1,141 @@
 # Releasing Vela
 
-How to ship a signed, notarized build and publish it on GitHub. The website's **Download** button points at `https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg`, so every release must:
+How to ship a signed, notarized Vela and publish it on GitHub, from a one-time setup to checking the download. The website's **Download** button points at `https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg`. Every release must therefore:
 
 - upload an asset named exactly `Vela.dmg`;
-- be marked as the latest release (not a pre-release).
+- be marked as the latest release, not a pre-release.
+
+Until the first release is published, that link returns 404.
+
+## Release builds and development builds
+
+Vela has two identities, so a release never collides with your own testing.
+
+| | Release | Development |
+| --- | --- | --- |
+| Built by | `scripts/release.sh` (signed and notarized), or `scripts/run.sh` (local, unsigned) | `scripts/run.sh --dev`, or ⌘R in Xcode |
+| Configuration | Release | Debug |
+| App name | Vela | Vela Dev (a **DEV** badge on the Dock icon) |
+| Bundle id | `io.github.r3volution11.Vela` | `io.github.r3volution11.Vela.dev` |
+| Data | `~/Library/Containers/io.github.r3volution11.Vela/` | `~/Library/Containers/io.github.r3volution11.Vela.dev/` |
+
+macOS keys an app's sandbox, preferences, notification settings and Siri & Shortcuts registration to its bundle id. Vela Dev therefore has its own settings, networks, history and Keychain items, and runs side by side with Vela.
+
+The release build you ship uses the same identity as the `build/Vela.app` that `scripts/run.sh` makes. Installing a release over it keeps your settings and history. See [Upgrading from your local build](#upgrading-from-your-local-build).
 
 ## One-time setup
 
-1. **Developer ID certificate.** In Xcode → Settings → Accounts, add your Apple ID and select your team. Then choose **Manage Certificates… → + → Developer ID Application**. Only the account holder can create this certificate. Check that it's installed:
-   ```sh
-   security find-identity -v -p codesigning | grep "Developer ID Application"
-   ```
-2. **Notarization credentials.** Create an app-specific password at [appleid.apple.com](https://appleid.apple.com) (Sign-In and Security → App-Specific Passwords). Then store it in your Keychain, where `notarytool` will prompt for the password:
-   ```sh
-   xcrun notarytool store-credentials vela-notary --apple-id "<apple-id-email>" --team-id "<TEAMID>"
-   ```
+1. **Join the Apple Developer Program** (paid, yearly) with the Apple ID you'll sign with. Distributing outside the Mac App Store needs a Developer ID certificate, and only members can create one. Note your **Team ID**: Membership details at [developer.apple.com/account](https://developer.apple.com/account). It's a 10-character code.
+2. **Create a Developer ID Application certificate.**
+   - In Xcode → Settings → Accounts, add your Apple ID and select your team.
+   - Click **Manage Certificates…**, then **+**, then **Developer ID Application**. Only the account holder can create this certificate.
+   - It goes into your login keychain. Check it:
+     ```sh
+     security find-identity -v -p codesigning | grep "Developer ID Application"
+     ```
+     You should see one line like `"Developer ID Application: Your Name (TEAMID)"`.
+   - **Back it up.** Export the certificate with its private key as a `.p12` from Keychain Access, and store it somewhere safe, such as your password manager. Losing the key means creating a new certificate.
+3. **Store notarization credentials.**
+   - Create an app-specific password at [account.apple.com](https://account.apple.com) → Sign-In and Security → App-Specific Passwords.
+   - Store it in your keychain under the profile name the release script uses:
+     ```sh
+     xcrun notarytool store-credentials vela-notary --apple-id "<apple-id-email>" --team-id "<TEAMID>"
+     ```
+     `notarytool` asks for the password, and you never type it into a file.
+   - Check it: `xcrun notarytool history --keychain-profile vela-notary`.
+4. **Do a dry run.** `scripts/release.sh --skip-notarize` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work.
 
-## Cutting a release
+## Before each release
 
-1. **Bump the version.**
-   - Update `MARKETING_VERSION` (and `CURRENT_PROJECT_VERSION`) in `Vela.xcodeproj/project.pbxproj`.
-   - Add a section to `CHANGELOG.md`, inserted above the newest existing entry.
-2. **Refresh the adult-domain list:**
+1. **Pick the version.** Use [semantic versioning](https://semver.org): below 1.0, bump the minor version for features (0.2.0) and the patch for fixes only (0.2.1).
+   - The version is `MARKETING_VERSION` in `Vela.xcodeproj/project.pbxproj` (the Vela target's Debug and Release configurations).
+   - Also bump `CURRENT_PROJECT_VERSION`, the build number, by 1 for every build you ship.
+   - The easiest way is Xcode: Vela target → General → Version and Build.
+2. **Finish the changelog.** In `CHANGELOG.md`, rename `## Unreleased` to `## <version> - <yyyy-mm-dd>`. Read it through as a user would, and move anything that isn't user-facing out. Start a new empty `## Unreleased` section above it for the next cycle.
+3. **Refresh the adult-domain list:** `scripts/update-adult-domains.sh`. Check its summary; see [The adult-domain list](#the-adult-domain-list).
+4. **Check that everything is green:**
    ```sh
-   scripts/update-adult-domains.sh
+   swift test --package-path Packages/VelaKit
+   (cd website && npm run docs:build && npm run docs:check)
    ```
-   Check its summary, then commit the updated list with the release. See [The adult-domain list](#the-adult-domain-list).
-3. **Commit and push** to `main`, then make sure CI is green: `gh run list --limit 2`.
-4. **Build, sign, notarize and staple:**
+   Then commit, push and wait for CI: `gh run list --limit 2`.
+5. **Check the docs and screenshots.** Every user-facing change is documented on the site. If the UI changed, re-shoot with `website/scripts/screenshots.sh` and commit the images.
+6. **Try the Release build yourself:** `scripts/run.sh`, then use it for a bit. Release builds are optimized, and occasionally behave differently from the Debug build you develop with.
+
+## Building the release
+
+```sh
+scripts/release.sh
+```
+
+What it does:
+1. Reads the version from the project and warns if the working tree has uncommitted changes.
+2. Finds your **Developer ID Application** certificate and Team ID, and checks that the `vela-notary` profile exists.
+3. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`.
+4. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
+5. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
+6. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
+7. **Builds the DMG** (`Vela.app` plus an Applications shortcut), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
+8. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
+
+Notarization usually takes a few minutes. If Apple rejects a submission, the script prints Apple's log; the usual causes are an unsigned nested binary or a missing hardened-runtime flag. Options:
+- `--skip-notarize`: signs but doesn't notarize, for testing the pipeline.
+- `--adhoc`: no Developer ID at all, for testing on your own Mac only. Other Macs will refuse it.
+
+## Checking the build before you publish
+
+Test what users will get, not your local build:
+
+```sh
+spctl -a -vvv -t install build/release/Vela.dmg            # "accepted, source=Notarized Developer ID"
+xcrun stapler validate build/release/Vela.dmg
+hdiutil attach build/release/Vela.dmg                       # then:
+spctl -a -vvv "/Volumes/Vela <version>/Vela.app"
+codesign -dv --verbose=4 "/Volumes/Vela <version>/Vela.app" 2>&1 | grep -E "Authority|TeamIdentifier|Timestamp"
+hdiutil detach "/Volumes/Vela <version>"
+```
+
+Then do a real install:
+1. Quit any running Vela and copy `Vela.app` from the DMG to `/Applications`.
+2. Open it from there. On first launch, macOS asks for your Keychain password once per saved network password; see below.
+3. Connect a network, and check inline media, the notification permission prompt, and **Catch me up** if Apple Intelligence is on.
+4. Ideally, try it on a second Mac or a fresh user account with nothing of Vela's on it, opening the DMG from **Downloads** so Gatekeeper sees the quarantine flag.
+
+### Upgrading from your local build
+
+The release has the same bundle id as `build/Vela.app`, so it uses the same settings, networks and history. Your saved passwords stay in the Keychain, but they were created by a differently signed copy, so macOS asks once whether the release may use each one. Click **Always Allow**.
+
+After you've switched, delete `build/Vela.app`, or at least don't keep both copies around. Two apps with the same bundle id confuse Siri, Shortcuts and Spotlight about which one to open.
+
+## Publishing
+
+```sh
+v=0.2.0   # the version you set
+git tag -s "v$v" -m "Vela $v"     # signed tag (1Password), or -a for unsigned
+git push origin "v$v"
+gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build/release/SHA256SUMS \
+  --title "Vela $v" --notes-file release-notes.md --latest
+```
+
+- **Release notes:** a short, friendly rewrite of the changelog section with highlights first. Link the full [changelog](https://velairc.app/changelog). Write it in `release-notes.md`, and don't commit that file.
+- **Don't** mark it as a pre-release: pre-releases aren't "latest", so the Download button would skip them.
+
+## After publishing
+
+1. **Check the download:**
    ```sh
-   scripts/release.sh
+   curl -sIL https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg | grep -i location
    ```
-   This writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `SHA256SUMS`. To test the pipeline without your certificate, use `--adhoc`. To skip Apple's notary service, use `--skip-notarize`.
-5. **Tag and publish:**
-   ```sh
-   v=0.1.0
-   git tag -a "v$v" -m "Vela $v"
-   git push origin "v$v"
-   gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build/release/SHA256SUMS \
-     --title "Vela $v" --notes-file <release-notes.md> --latest
-   ```
-   Write the release notes for users, as a light rewrite of the changelog entry.
-6. **Verify:**
-   - `curl -sIL https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg | grep -i location` resolves to the new version.
-   - The website changelog shows the new version first after the **Deploy Website** workflow runs.
+   It should end in `/download/v<version>/Vela.dmg`. Then download it with a browser and install it once more.
+2. **Check the website:** the **Deploy Website** workflow runs on every push to `main`. Check that the changelog page shows the new version first, and that velairc.app's Download button gets the new DMG.
+3. **Start the next cycle:** make sure `CHANGELOG.md` has an empty `## Unreleased` section.
+
+## If something goes wrong
+
+- **A bad release:** don't delete the release. Ship a fixed version (bump the patch number) and mark it latest. If the build is harmful, delete only its DMG assets and say so in the release notes.
+- **"No Developer ID Application certificate found":** the certificate isn't in the login keychain, or its private key is missing (it shows without a disclosure triangle in Keychain Access). Re-import your `.p12` backup.
+- **"Notarization profile not found":** run the `store-credentials` step again.
+- **Gatekeeper rejects the DMG on another Mac:** run `xcrun stapler validate` on both the DMG and the app inside it, and check that `spctl` says "Notarized Developer ID".
 
 ## The adult-domain list
 
@@ -57,5 +149,6 @@ The adult-site filter blocks previews (never links) from domains on a list bundl
 ## Notes
 
 - **Releases are universal.** They run on Apple silicon and Intel, and need macOS 26 or later.
-- **The app is sandboxed and uses the hardened runtime.** Entitlements are in `Vela/Vela.entitlements`.
+- **The app is sandboxed and uses the hardened runtime.** Entitlements are in `Vela/Vela.entitlements`; the release script refuses a build without the App Sandbox entitlement.
 - **Notarization happens twice.** The app is notarized and stapled first, so it stays verifiable offline after it's copied out of the disk image. Then the DMG itself is notarized and stapled.
+- **Updates are manual for now.** Users download new versions from the website. Automatic updates (Sparkle) and the Mac App Store are on the roadmap.

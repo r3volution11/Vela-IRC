@@ -111,8 +111,8 @@ public final class AppModel: SessionHost {
 
     /// Offline sample content for screenshots, SwiftUI previews and UI work.
     public static func demo() -> AppModel {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("VelaDemo-\(UUID().uuidString)")
-        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        DemoScratch.removeStale()
+        let root = DemoScratch.makeDirectory(prefix: "VelaDemo-")
         let model = AppModel(
             settings: SettingsStore(fileURL: root.appendingPathComponent("settings.json")),
             networkStore: NetworkConfigStore(fileURL: root.appendingPathComponent("networks.json")),
@@ -728,6 +728,8 @@ public final class AppModel: SessionHost {
     public func prepareForTermination() {
         settings.flush()
         for session in sessions { session.shutdown() }
+        // Demo data is throwaway: remove this run's scratch folders.
+        if isDemo { DemoScratch.removeOwn() }
     }
 
     /// Drops cached link previews fetched more than `previewCacheMaxAge` ago.

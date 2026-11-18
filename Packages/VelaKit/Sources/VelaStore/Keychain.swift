@@ -28,7 +28,16 @@ public struct KeychainError: Error, Sendable, Equatable, CustomStringConvertible
 /// false`) because development builds are ad-hoc signed without a team ID,
 /// which the data-protection keychain requires.
 public final class Keychain: Sendable {
-    public static let shared = Keychain(service: "io.github.r3volution11.Vela")
+    /// Vela's items. Development builds ("Vela Dev", bundle id ending in
+    /// `.dev`) use their own service so they never touch the release app's
+    /// secrets.
+    public static let shared = Keychain(service: serviceName)
+
+    static var serviceName: String {
+        let release = "io.github.r3volution11.Vela"
+        guard let id = Bundle.main.bundleIdentifier, id.hasPrefix(release) else { return release }
+        return id
+    }
 
     public let service: String
 

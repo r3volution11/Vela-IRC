@@ -77,6 +77,7 @@ enum SnapshotSupport {
             guard let pane = SettingsPane(rawValue: id) else {
                 let ids = SettingsPane.allCases.map(\.rawValue).joined(separator: ", ")
                 FileHandle.standardError.write(Data("snapshot failed: unknown settings pane \"\(id)\" (use one of: \(ids))\n".utf8))
+                DemoScratch.removeOwn()
                 exit(1)
             }
             content = AnyView(
@@ -119,6 +120,7 @@ enum SnapshotSupport {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             capture(window, to: URL(fileURLWithPath: path))
+            DemoScratch.removeOwn()
             exit(0)
         }
     }

@@ -68,6 +68,42 @@ enum DockIcon {
     }
 
     private static var images: [AppIcon: NSImage] = [:]
+
+    // MARK: Development builds
+
+    /// True for "Vela Dev" (Debug builds, bundle id ending in `.dev`), which
+    /// run beside the release app with their own data.
+    static var isDevBuild: Bool {
+        Bundle.main.bundleIdentifier?.hasSuffix(".dev") == true
+    }
+
+    /// `image` with an orange "DEV" band across the bottom, so a development
+    /// build is easy to tell apart in the Dock and app switcher.
+    static func devBadged(_ image: NSImage) -> NSImage {
+        let size = NSSize(width: 512, height: 512)
+        return NSImage(size: size, flipped: false) { rect in
+            image.draw(in: rect)
+            // The icon body sits inside the macOS icon grid's margins.
+            let body = rect.insetBy(dx: rect.width * 0.098, dy: rect.height * 0.098)
+            let band = NSRect(x: body.minX, y: body.minY + body.height * 0.06, width: body.width, height: body.height * 0.22)
+            NSColor(srgbRed: 1.0, green: 0.55, blue: 0.16, alpha: 0.95).setFill()
+            NSBezierPath(roundedRect: band, xRadius: band.height * 0.18, yRadius: band.height * 0.18).fill()
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: band.height * 0.62, weight: .heavy),
+                .foregroundColor: NSColor.white,
+                .kern: band.height * 0.06,
+            ]
+            let text = NSAttributedString(string: "DEV", attributes: attributes)
+            let textSize = text.size()
+            text.draw(at: NSPoint(x: band.midX - textSize.width / 2, y: band.midY - textSize.height / 2))
+            return true
+        }
+    }
+
+    /// The app's own icon, as Finder shows it.
+    static func bundleIcon() -> NSImage {
+        NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
+    }
 }
 
 /// Keeps the Dock tile in step with `appearance.appIcon`: once Vela has
@@ -88,8 +124,17 @@ final class DockIconController {
 
     /// - Parameter setImage: Sets the Dock tile's image; `nil` restores the
     ///   app's own icon. Tests pass a recorder.
-    init(settings: SettingsStore, setImage: @escaping (NSImage?) -> Void = { NSApplication.shared.applicationIconImage = $0 }) {
+    /// Development builds always badge the Dock icon "DEV".
+    private let isDevBuild: Bool
+    private var devBadgeShown = false
+
+    init(
+        settings: SettingsStore,
+        isDevBuild: Bool = DockIcon.isDevBuild,
+        setImage: @escaping (NSImage?) -> Void = { NSApplication.shared.applicationIconImage = $0 }
+    ) {
         self.settings = settings
+        self.isDevBuild = isDevBuild
         self.setImage = setImage
     }
 
@@ -123,6 +168,13 @@ final class DockIconController {
     func apply() {
         guard isLaunched else { return }
         let icon = settings[.appearanceAppIcon]
+        if isDevBuild {
+            guard icon != applied || !devBadgeShown else { return }
+            setImage(DockIcon.devBadged(DockIcon.dockImage(for: icon) ?? DockIcon.bundleIcon()))
+            devBadgeShown = true
+            applied = icon
+            return
+        }
         guard icon != applied else { return }
         setImage(DockIcon.dockImage(for: icon))
         applied = icon
