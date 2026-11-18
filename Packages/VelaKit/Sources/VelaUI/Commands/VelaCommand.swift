@@ -42,6 +42,7 @@ struct VelaCommand: Identifiable {
         case media = "Media"
         case navigation = "Navigation"
         case network = "Network"
+        case notifications = "Notifications"
         case preset = "Preset"
         case settings = "Settings"
         case tabs = "Tabs"

@@ -21,6 +21,9 @@ enum SettingControlKind: Equatable {
     case text
     /// `[String]`: a token field with chips.
     case stringList(SettingSuggestionSource?)
+    /// A list whose elements are a fixed set of strings (`dock.badgeCounts`):
+    /// a token field offering just those.
+    case enumList([String])
     case siteRules
     case colorCustomizations
     /// Any other object: edited in settings.json.
@@ -49,7 +52,11 @@ enum SettingControlKind: Equatable {
         case "string":
             self = descriptor.suggestionSource.map { .suggestedString($0) } ?? .text
         case "array":
-            self = .stringList(descriptor.suggestionSource)
+            if let values = descriptor.itemEnumValues {
+                self = .enumList(values)
+            } else {
+                self = .stringList(descriptor.suggestionSource)
+            }
         case "object":
             switch descriptor.key {
             case SettingKey<[String: JSONValue]>.mediaSiteRules.key: self = .siteRules
@@ -64,7 +71,7 @@ enum SettingControlKind: Equatable {
     /// Wide controls go under the description instead of beside it.
     var isWide: Bool {
         switch self {
-        case .stringList, .siteRules, .colorCustomizations, .object, .unknown: true
+        case .stringList, .enumList, .siteRules, .colorCustomizations, .object, .unknown: true
         default: false
         }
     }
@@ -174,8 +181,11 @@ struct SettingsEditorRow: View {
         case .string(let text): return text.isEmpty ? "Empty" : provider.label(for: text, source: entry.descriptor?.suggestionSource)
         case .number(let number): return NumberSettingInput.format(number, integer: false)
         case .array(let items):
+            let isEnumList = entry.descriptor?.itemEnumValues != nil
             return items.isEmpty ? "Empty list" : items.map { item in
-                item.stringValue.map { provider.label(for: $0, source: entry.descriptor?.suggestionSource) } ?? SettingsJSONText.compact(item)
+                item.stringValue.map {
+                    isEnumList ? SettingsMetadata.enumLabel($0) : provider.label(for: $0, source: entry.descriptor?.suggestionSource)
+                } ?? SettingsJSONText.compact(item)
             }.joined(separator: ", ")
         case .object(let object): return object.isEmpty ? "Empty" : "\(object.count) \(object.count == 1 ? "entry" : "entries")"
         case .null: return "null"
@@ -303,6 +313,19 @@ struct SettingsEditorRow: View {
                 showsSuggestionsOnFocus: source != nil,
                 onChange: { write(.array($0.map { .string($0) })) }
             )
+        case .enumList(let allowed):
+            TokenField(
+                values: (value.arrayValue ?? []).compactMap(\.stringValue),
+                allowsMultiple: true,
+                suggestions: allowed.map { TokenSuggestion(value: $0, label: SettingsMetadata.enumLabel($0)) },
+                placeholder: "Add…",
+                accessibilityLabel: title,
+                label: { SettingsMetadata.enumLabel($0) },
+                resolve: { Self.resolveEnumValue($0, allowed: allowed) },
+                rejectionMessage: "Choose from the list: " + allowed.map(SettingsMetadata.enumLabel).joined(separator: ", ") + ".",
+                showsSuggestionsOnFocus: true,
+                onChange: { write(.array($0.map { .string($0) })) }
+            )
         case .siteRules:
             SettingsInsetBox {
                 SiteRulesEditor(
@@ -329,6 +352,16 @@ struct SettingsEditorRow: View {
         case .domains: "Enter a site's domain, such as example.com."
         case .languages: "Pick a language from the list, or type a language code such as “pt-BR”."
         default: "That isn't a value this setting accepts."
+        }
+    }
+
+    /// Typed text for an enum list: one of `allowed`, by its settings.json
+    /// value or its label, ignoring case; anything else is refused.
+    static func resolveEnumValue(_ text: String, allowed: [String]) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return allowed.first {
+            $0.caseInsensitiveCompare(trimmed) == .orderedSame
+                || SettingsMetadata.enumLabel($0).caseInsensitiveCompare(trimmed) == .orderedSame
         }
     }
 

@@ -93,8 +93,8 @@ private final class AppInstances {
     let uiState: UIState
     let services: SceneServices
     let siri: SiriSceneSupport
-    /// Shows the chosen Dock icon (`appearance.appIcon`). Snapshot runs
-    /// leave the Dock alone.
+    /// Shows the chosen Dock icon (`appearance.appIcon`), the DEV band and
+    /// the offline mark. Snapshot runs leave the Dock alone.
     let dockIcon: DockIconController?
 
     private static var current: AppInstances?
@@ -138,7 +138,7 @@ private final class AppInstances {
         if SnapshotSupport.isActive {
             dockIcon = nil
         } else {
-            let dockIcon = DockIconController(settings: app.settings)
+            let dockIcon = DockIconController(settings: app.settings, isOffline: { [weak app] in app?.showsOfflineMark ?? false })
             dockIcon.start()
             self.dockIcon = dockIcon
         }

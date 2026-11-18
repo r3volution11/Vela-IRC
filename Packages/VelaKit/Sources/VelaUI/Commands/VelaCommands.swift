@@ -31,6 +31,8 @@ struct VelaCommands: Commands {
             CommandItems(app: app, themeStore: themeStore, uiState: uiState) { commands in
                 CommandMenuButton(commands.addNetwork)
                 CommandMenuButton(commands.joinChannel)
+                Divider()
+                CommandMenuButton(commands.showChatLogs)
             }
         }
 

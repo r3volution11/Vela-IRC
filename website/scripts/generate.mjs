@@ -107,9 +107,24 @@ if (order.length < 40) fail(`only ${order.length} settings found in the catalog;
 const missing = order.filter((property) => !keyDefinitions.has(property))
 if (missing.length) fail(`couldn't parse the definition of ${missing.join(', ')}`)
 
+/** `[DockBadgeCount]` → `DockBadgeCount`: the enum a list of choices holds, if it is one. */
+const listEnum = (type) => {
+  const element = type.match(/^\[(\w+)\]$/)?.[1]
+  return element && enums.has(element) ? element : undefined
+}
+
 function settingDefault({ rawDefault, type }) {
   if (rawDefault === '[:]') return '{}'
   if (rawDefault === '[]') return '[]'
+  // A list of choices: `[.mentions, .privateMessages]`.
+  const element = listEnum(type)
+  if (element && rawDefault.startsWith('[')) {
+    const values = rawDefault.slice(1, -1).split(',').map((item) => item.trim()).filter(Boolean)
+    for (const value of values) {
+      if (!value.startsWith('.') || !enums.get(element).includes(value.slice(1))) fail(`unknown default ${value} for ${type}`)
+    }
+    return `[${values.map((value) => JSON.stringify(value.slice(1))).join(', ')}]`
+  }
   if (rawDefault.startsWith('.')) {
     const value = rawDefault.slice(1)
     if (!enums.get(type)?.includes(value)) fail(`unknown default ${rawDefault} for ${type}`)
@@ -126,6 +141,8 @@ function settingType({ type }) {
   // Stored as true/false; a missing key or "system" follows macOS.
   if (type === 'SystemFollowingBool') return 'Boolean, or <code>"system"</code> to follow macOS'
   if (enums.has(type)) return `One of ${enums.get(type).map((value) => `<code>"${value}"</code>`).join(', ')}`
+  const element = listEnum(type)
+  if (element) return `Array of any of ${enums.get(element).map((value) => `<code>"${value}"</code>`).join(', ')}`
   return {
     String: 'String',
     Bool: 'Boolean',
@@ -167,10 +184,12 @@ const categoryNames = {
   memberList: 'Member list',
   media: 'Media',
   notifications: 'Notifications',
+  dock: 'Dock',
   highlight: 'Highlights',
   input: 'Input',
   connection: 'Connection',
   history: 'History',
+  logging: 'Chat logs',
   navigation: 'Navigation',
   tabs: 'Tabs',
   intelligence: 'Apple Intelligence',

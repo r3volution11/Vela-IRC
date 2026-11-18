@@ -17,8 +17,16 @@ public protocol SessionHost: AnyObject {
     func session(_ session: NetworkSession, didUpdateBouncerNetworks networks: [BouncerNetwork])
     func sessionDidChangeConfig(_ session: NetworkSession)
     func sessionDidChangeUnreadCounts(_ session: NetworkSession)
+    /// The connection changed: its state, or whether Vela means to be
+    /// connected (``NetworkSession/expectsConnection``). Optional.
+    func sessionDidChangeConnection(_ session: NetworkSession)
     /// You sent a message from the composer (not a command). Optional.
     func session(_ session: NetworkSession, didSendComposerMessageIn buffer: BufferModel)
+    /// A line was added to `buffer` (live or replayed, never one loaded
+    /// from the database), for chat logs. Optional.
+    func session(_ session: NetworkSession, didAdd line: ChatLine, to buffer: BufferModel)
+    /// `line` was deleted (IRCv3 `REDACT`) by `nick`, for chat logs. Optional.
+    func session(_ session: NetworkSession, didRedact line: ChatLine, by nick: String?, reason: String?, at time: Date, isHistory: Bool, in buffer: BufferModel)
     var behavior: SessionBehavior { get }
 }
 
@@ -68,6 +76,9 @@ public final class NetworkSession: Identifiable {
     @ObservationIgnored private var flushTask: Task<Void, Never>?
     @ObservationIgnored private var reconnectAttempt = 0
     @ObservationIgnored private var userRequestedDisconnect = false
+    /// A connection was asked for (by you or by auto-connect) and you
+    /// haven't disconnected since.
+    @ObservationIgnored private var wantsConnection = false
     @ObservationIgnored private var connectedAt: Date?
     @ObservationIgnored private var bufferIndex: [String: BufferModel] = [:]
     @ObservationIgnored private var pendingNames: [String: [String: Member]] = [:]
@@ -115,6 +126,15 @@ public final class NetworkSession: Identifiable {
         case .connected: false
         case .disconnected: !userRequestedDisconnect && (config.autoConnect || reconnectTask != nil)
         }
+    }
+
+    /// Whether Vela means to be connected to this network: it connects
+    /// automatically, or it was connected (or asked to connect) since Vela
+    /// started, and you haven't disconnected it since. Disconnecting for
+    /// sleep or when Vela quits counts as disconnecting. Waiting to
+    /// reconnect after a dropped connection doesn't.
+    public var expectsConnection: Bool {
+        !userRequestedDisconnect && (config.autoConnect || wantsConnection)
     }
 
     /// Soju "control" connection that lists bouncer networks rather than chatting.
@@ -190,8 +210,10 @@ public final class NetworkSession: Identifiable {
 
     public func connect() {
         userRequestedDisconnect = false
+        wantsConnection = true
         reconnectTask?.cancel()
         reconnectTask = nil
+        host?.sessionDidChangeConnection(self)
         guard connectionState == .disconnected, let host else { return }
         let clientConfig = host.clientConfig(for: self)
         lastError = nil
@@ -211,8 +233,10 @@ public final class NetworkSession: Identifiable {
 
     public func disconnect(reason: String? = nil) {
         userRequestedDisconnect = true
+        wantsConnection = false
         reconnectTask?.cancel()
         reconnectTask = nil
+        host?.sessionDidChangeConnection(self)
         guard let client else { return }
         Task { await client.disconnect(reason: reason ?? "Vela — https://github.com/r3volution11/Vela-IRC") }
     }
@@ -223,7 +247,9 @@ public final class NetworkSession: Identifiable {
             return
         }
         userRequestedDisconnect = false
+        wantsConnection = true
         reconnectTask?.cancel()
+        host?.sessionDidChangeConnection(self)
         reconnectTask = Task { [weak self] in
             await client.disconnect(reason: "Reconnecting")
             try? await Task.sleep(for: .milliseconds(300))
@@ -276,6 +302,7 @@ public final class NetworkSession: Identifiable {
             if state == .connecting {
                 info("Connecting to \(config.host):\(config.port)\(config.useTLS ? " (TLS)" : "")…", in: serverBuffer)
             }
+            host?.sessionDidChangeConnection(self)
         case .disconnected(let reason):
             connectionState = .disconnected
             connectedAt = nil
@@ -293,6 +320,7 @@ public final class NetworkSession: Identifiable {
             }
             for buffer in channels { info("Disconnected", in: buffer) }
             scheduleReconnectIfNeeded()
+            host?.sessionDidChangeConnection(self)
         case .registered(let nick):
             self.nick = nick
             connectedAt = Date()
@@ -421,7 +449,7 @@ public final class NetworkSession: Identifiable {
             guard let nick = message.source?.nick else { break }
             updateMember(nick) { $0.realname = message.param(0) }
         case "REDACT":
-            handleRedact(message)
+            handleRedact(message, isHistory: isHistory)
         case "ERROR":
             error(message.param(0) ?? "Server error", in: serverBuffer)
         case "FAIL", "WARN", "NOTE":
@@ -687,11 +715,18 @@ public final class NetworkSession: Identifiable {
         }
     }
 
-    private func handleRedact(_ message: IRCMessage) {
+    private func handleRedact(_ message: IRCMessage, isHistory: Bool) {
         guard let target = message.param(0), let msgid = message.param(1) else { return }
         let name = isupport.isChannel(target) || !(message.source.map { !isSelf($0.nick) } ?? false) ? target : (message.source?.nick ?? target)
         guard let buffer = buffer(named: name), let index = buffer.lines.lastIndex(where: { $0.msgid == msgid }) else { return }
+        let wasRedacted = buffer.lines[index].isRedacted
         buffer.lines[index].isRedacted = true
+        if !wasRedacted {
+            host?.session(
+                self, didRedact: buffer.lines[index], by: message.source?.nick, reason: message.param(2),
+                at: message.serverTime ?? Date(), isHistory: isHistory, in: buffer
+            )
+        }
         let key = buffer.id.storeKey
         if let database { Task { try? await database.markRedacted(msgid: msgid, in: key) } }
     }
@@ -1347,6 +1382,7 @@ public final class NetworkSession: Identifiable {
         // A copy of a line already shown (a bouncer replaying what we saw
         // live) is neither shown nor stored again.
         guard buffer.append(line, limit: host?.behavior.scrollbackInMemory ?? 1000) else { return }
+        host?.session(self, didAdd: line, to: buffer)
         if buffer.kind != .server || line.kind.isConversation {
             enqueue(line.record(networkID: id, bufferName: buffer.id.foldedName))
         }

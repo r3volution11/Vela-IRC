@@ -55,9 +55,15 @@ struct SettingsEditorSearchTests {
         #expect(typing.allSatisfy { $0.hasPrefix("input.") })
         // "Messages" is the title of the chat category.
         #expect(keys("@category:messages") == keys("@category:chat"))
+        // History holds stored messages and chat logs.
+        let history: Set<String> = [
+            "history.retentionDays", "logging.enabled", "logging.maxFileSizeMB", "logging.keepFiles",
+            "logging.includeEvents", "logging.includeServer", "logging.excludedBuffers",
+        ]
+        #expect(Set(keys("@category:history")) == history)
         // Several categories are OR'ed.
         let both = Set(keys("@category:typing @category:history"))
-        #expect(both == Set(typing).union(["history.retentionDays"]))
+        #expect(both == Set(typing).union(history))
         // A category that doesn't exist matches nothing.
         #expect(keys("@category:nope").isEmpty)
     }
@@ -67,6 +73,7 @@ struct SettingsEditorSearchTests {
         #expect(messages.contains("chat.fontSize"))
         #expect(messages.contains("input.autocorrect"))
         #expect(messages.contains("history.retentionDays"))
+        #expect(messages.contains("logging.enabled"))
         #expect(!messages.contains("media.autoLoad"))
         #expect(keys("@pane:networks") == ["connection.autoReconnect"])
         #expect(keys("@pane:presets").isEmpty)

@@ -109,6 +109,7 @@ Vela is sandboxed, so everything lives in its container:
 | `networks.json` | Your networks (never passwords) |
 | `Themes/` | Your own themes |
 | `vela.sqlite` | Message history, read positions and cached link previews |
+| `Logs/` | [Chat logs](/guide/chat-logs), if you turned them on and didn't choose another folder |
 
 **Settings → Advanced → ⋯ → Reveal Data Folder** opens it in Finder. Passwords, channel keys and certificates are in your login keychain, under `io.github.r3volution11.Vela`.
 

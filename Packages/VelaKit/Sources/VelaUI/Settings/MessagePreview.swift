@@ -112,54 +112,79 @@ struct MessageSamplePreview: View {
     }
 
     private func classicRow(_ line: Line) -> some View {
-        let time = style.showTimestamps
+        let slot = placement(for: line, layout: .classic).slot
+        let time = slot == .leadingColumn
             ? Text(verbatim: timestamp(line) + " ").font(style.timestampFont).foregroundStyle(theme[ThemeKey.chatTimestamp])
             : Text(verbatim: "")
-        let content: Text
+        var content: Text
         if line.isEvent || line.id == -1 {
             content = eventText(line)
         } else {
             let nick = Text(verbatim: "<\(line.nick)> ").font(style.nickFont).foregroundStyle(nickColor(line))
             content = Text("\(nick)\(messageText(line))")
         }
-        return Text("\(time)\(content)")
-            .font(style.bodyFont)
-            .lineSpacing(style.lineSpacing)
-            .foregroundStyle(theme[ThemeKey.chatForeground])
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 1)
-            .background(highlight(line))
+        if slot == .inline {
+            content = Text("\(content)\(inlineTime(line))")
+        }
+        return arranged(
+            Text("\(time)\(content)")
+                .font(style.bodyFont)
+                .lineSpacing(style.lineSpacing)
+                .foregroundStyle(theme[ThemeKey.chatForeground])
+                .fixedSize(horizontal: false, vertical: true),
+            line: line,
+            slot: slot
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 1)
+        .background(highlight(line))
     }
 
     private func columnsRow(_ line: Line) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            if style.showTimestamps {
-                Text(timestamp(line))
-                    .font(style.timestampFont)
-                    .foregroundStyle(theme[ThemeKey.chatTimestamp])
-                    .fixedSize()
+        let slot = placement(for: line, layout: .columns).slot
+        let nickWidth = min(style.columnsNickWidth, 200)
+        return VStack(alignment: .leading, spacing: 2) {
+            if slot == .above {
+                // In the text column, so the nick stays level with the text.
+                smallTime(line)
+                    .padding(.leading, nickWidth + 8)
             }
-            Group {
-                if line.isEvent || line.id == -1 {
-                    Text(line.id == -1 ? "" : (line.kind == .join ? "→" : "←"))
-                        .foregroundStyle(theme[ThemeKey.chatEvent])
-                } else {
-                    Text(line.nick).font(style.nickFont).foregroundStyle(nickColor(line))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if slot == .leadingColumn {
+                    Text(timestamp(line))
+                        .font(style.timestampFont)
+                        .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                        .fixedSize()
                 }
-            }
-            .lineLimit(1)
-            .frame(width: min(style.columnsNickWidth, 200), alignment: .trailing)
-            Group {
-                if line.isEvent || line.id == -1 {
-                    eventText(line, includeArrow: false)
-                } else {
-                    messageText(line)
+                Group {
+                    if line.isEvent || line.id == -1 {
+                        Text(line.id == -1 ? "" : (line.kind == .join ? "→" : "←"))
+                            .foregroundStyle(theme[ThemeKey.chatEvent])
+                    } else {
+                        Text(line.nick).font(style.nickFont).foregroundStyle(nickColor(line))
+                    }
                 }
+                .lineLimit(1)
+                .frame(width: nickWidth, alignment: .trailing)
+                arranged(
+                    Group {
+                        if line.isEvent || line.id == -1 {
+                            if slot == .inline {
+                                Text("\(eventText(line, includeArrow: false))\(inlineTime(line))")
+                            } else {
+                                eventText(line, includeArrow: false)
+                            }
+                        } else {
+                            messageText(line)
+                        }
+                    }
+                    .lineSpacing(style.lineSpacing)
+                    .fixedSize(horizontal: false, vertical: true),
+                    line: line,
+                    slot: slot == .above ? nil : slot
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .lineSpacing(style.lineSpacing)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .font(style.bodyFont)
         .foregroundStyle(theme[ThemeKey.chatForeground])
@@ -174,15 +199,42 @@ struct MessageSamplePreview: View {
         // Without avatars, match the message list's slim time gutter.
         let metrics = GroupedMetrics(style: style)
         let textInset = style.showAvatars ? avatarSize + 10 : metrics.gutter + metrics.spacing
+        // Only the group's first message shows its time.
+        let slot = placement(for: first, layout: .grouped).slot
         if first.isEvent || first.id == -1 {
             eventText(first)
                 .font(style.metaFont)
                 .padding(.leading, textInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: slot == .gutter && !style.showAvatars ? .firstTextBaseline : .top, spacing: 10) {
                 if style.showAvatars {
-                    AvatarView(nick: first.nick, size: avatarSize)
+                    VStack(spacing: 3) {
+                        AvatarView(nick: first.nick, size: avatarSize)
+                        if slot == .gutter {
+                            // As in the list: centered when it fits, else
+                            // flush right with the avatar.
+                            let time = Text(verbatim: plainTimestamp(first))
+                                .font(style.gutterTimestampFont)
+                                .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                                .lineLimit(1)
+                            ViewThatFits(in: .horizontal) {
+                                time.fixedSize()
+                                time
+                                    .minimumScaleFactor(0.7)
+                                    .frame(width: avatarSize + 10, alignment: .trailing)
+                                    .frame(width: avatarSize, alignment: .trailing)
+                            }
+                        }
+                    }
+                    .frame(width: avatarSize)
+                } else if slot == .gutter {
+                    Text(verbatim: plainTimestamp(first))
+                        .font(style.gutterTimestampFont)
+                        .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(width: max(0, textInset - 10), alignment: .trailing)
                 } else {
                     Color.clear.frame(width: max(0, textInset - 10), height: 1)
                 }
@@ -191,10 +243,16 @@ struct MessageSamplePreview: View {
                         Text(first.nick)
                             .font(style.nickFont)
                             .foregroundStyle(nickColor(first))
-                        if style.showTimestamps {
+                        if slot == .header {
                             Text(timestamp(first))
                                 .font(style.timestampFont)
                                 .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                        } else if slot == .trailingColumn {
+                            Spacer(minLength: 12)
+                            Text(verbatim: plainTimestamp(first))
+                                .font(style.timestampFont)
+                                .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                                .fixedSize()
                         }
                     }
                     ForEach(group) { line in
@@ -205,6 +263,9 @@ struct MessageSamplePreview: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(highlight(line))
+                        if slot == .below, line.id == first.id {
+                            smallTime(first)
+                        }
                     }
                 }
             }
@@ -214,9 +275,64 @@ struct MessageSamplePreview: View {
     // MARK: Pieces
 
     private func timestamp(_ line: Line) -> String {
-        let date = Self.baseDate.addingTimeInterval(Double(line.minute) * 60)
-        let text = style.timestamp(date)
+        let text = plainTimestamp(line)
         return style.layout == .classic ? "[\(text)]" : text
+    }
+
+    private func plainTimestamp(_ line: Line) -> String {
+        style.timestamp(Self.baseDate.addingTimeInterval(Double(line.minute) * 60))
+    }
+
+    /// Where the message list would draw this line's time.
+    private func placement(for line: Line, layout: ChatLayout) -> TimestampPlacement {
+        let position = style.timestampPosition(for: layout)
+        if line.isEvent || line.id == -1 {
+            return .event(layout: layout, position: position, showTimestamps: style.showTimestamps)
+        }
+        return .message(layout: layout, position: position, isContinuation: false, isHovered: false, showTimestamps: style.showTimestamps)
+    }
+
+    /// The time on a small line of its own (Top and Bottom).
+    private func smallTime(_ line: Line) -> some View {
+        Text(verbatim: plainTimestamp(line))
+            .font(style.gutterTimestampFont)
+            .foregroundStyle(theme[ThemeKey.chatTimestamp])
+            .fixedSize()
+    }
+
+    /// An event's time after its text.
+    private func inlineTime(_ line: Line) -> Text {
+        Text(verbatim: "  " + plainTimestamp(line))
+            .font(style.gutterTimestampFont)
+            .foregroundStyle(theme[ThemeKey.chatTimestamp])
+    }
+
+    /// `content` with the time at the right edge, or on a line above or
+    /// below it; as it is for the other slots.
+    @ViewBuilder
+    private func arranged(_ content: some View, line: Line, slot: TimestampSlot?) -> some View {
+        switch slot {
+        case .trailingColumn:
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                content.frame(maxWidth: .infinity, alignment: .leading)
+                Text(verbatim: plainTimestamp(line))
+                    .font(style.timestampFont)
+                    .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                    .fixedSize()
+            }
+        case .above:
+            VStack(alignment: .leading, spacing: 2) {
+                smallTime(line)
+                content
+            }
+        case .below:
+            VStack(alignment: .leading, spacing: 2) {
+                content
+                smallTime(line)
+            }
+        default:
+            content
+        }
     }
 
     private func nickColor(_ line: Line) -> Color {

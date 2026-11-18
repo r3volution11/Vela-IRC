@@ -62,6 +62,7 @@ Changes apply immediately. Setting something back to its default removes it from
 | **A number** | A field and a stepper. Hover the field for the allowed range. Type a number and press <kbd>Return</kbd>; a number out of range says "Must be between 9 and 28." and isn't saved, and <kbd>Esc</kbd> puts the old one back. |
 | **Text with suggestions** (fonts, themes, the timestamp format and the translation language) | A field holding one chip. Pick a suggestion or type your own. Fonts are shown in their own typeface, and timestamp formats with a sample time. Remove the chip (**×**) to go back to the default. |
 | **A list** (highlight words, and the channels with media turned off, blurred images or automatic translation) | A field of chips. See [below](#chips). |
+| **A list of choices** (what the Dock badge counts, and which messages bounce the Dock icon) | A field of chips offering only the setting's choices, with readable names such as **Private messages**. Anything else is refused. |
 | **Site rules** | The same editor as **Settings → Media → Site rules**, with **Everything**, **Text only** or **Nothing** for each site. New sites are suggested from your rules and from links in your conversations. See [Site rules](/guide/inline-media#site-rules). |
 | **Color customizations** | Override groups. See [below](#color-customizations). |
 
@@ -138,7 +139,7 @@ Suggestions appear as you type: after a `"` where a setting name goes, after a `
 
 - **Setting names** come with their title, and the highlighted one's description and default show underneath. A dot marks settings already in the file.
 - **Choosing a setting** inserts it with its default value selected, ready to type over, and offers the other values when there's a choice.
-- **Values** include `true` and `false`, each setting's choices, your themes and fonts, timestamp formats, translation languages and your channels (`#vela · Libera.Chat`).
+- **Values** include `true` and `false`, each setting's choices (inside the list, for lists of choices like `dock.badgeCounts`), your themes and fonts, timestamp formats, translation languages and your channels (`#vela · Libera.Chat`).
 - **Inside `appearance.colorCustomizations`**, you get theme tokens, `"[Theme Name]"` scopes, `nickColors`, `ircColors` and `vibrancy`, and for a token's value, the color it has in your current theme.
 - **Inside `media.siteRules`**, you get sites from your rules and from links in your conversations, then `"allow"`, `"textOnly"` or `"block"`.
 

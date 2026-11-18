@@ -37,7 +37,7 @@ Settings (<kbd>⌘,</kbd>) has nine panes:
 | **Messages** | Message layout, fonts, spacing, timestamps, join/part display, nick colors and avatars; typing: spelling, autocorrect, Writing Tools and typing indicators; and how long history is kept. |
 | **Media** | Link preview size, video players, images, the adult-site filter, blurring and site rules. |
 | **Networks** | Add, edit, connect and remove networks and bouncers, and whether to reconnect automatically. |
-| **Notifications** | Highlights, private messages, sounds and your highlight words. |
+| **Notifications** | Highlights, private messages and sounds; the Dock icon's badge, offline mark and bouncing; and your highlight words. |
 | **Apple Intelligence** | Catch me up summaries, translation, Writing Tools, and Siri, Shortcuts and Spotlight. |
 | **Advanced** | The [settings editor](/customize/settings-editor): every setting in one searchable list, and settings.json itself. |
 

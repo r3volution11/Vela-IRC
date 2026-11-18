@@ -43,13 +43,14 @@ This is how IRC works in any client, but it's worth knowing:
 Everything stays on your Mac, inside Vela's sandbox container:
 
 - **Message history** in a local database, kept forever unless you set **Settings → Messages → History → Keep messages**.
+- **Chat logs**, only if you turn them on (they're off by default): plain-text copies of your channels and conversations, unencrypted, in Vela's folder or one you choose. Vela never sends them anywhere, but a folder you choose may sync if it's in iCloud Drive or a similar service. See [Chat logs](/guide/chat-logs#privacy).
 - **Link previews** you've loaded. Page previews are refreshed after a week, and cached previews older than 30 days are deleted when Vela starts.
 - **Settings, networks and themes** as plain files you can read.
 - **Passwords, channel keys and client certificates** in your macOS Keychain, never in plain files.
 
 Outside the container, macOS keeps your channel and conversation names in Spotlight's index (unless you turn off **Show channels in Spotlight**), and the translation languages you've downloaded.
 
-Vela is sandboxed: it can only reach its own container and files you choose to open, such as a theme you import. See [where files live](/help/troubleshooting#where-files-live) and [how to remove everything](/guide/install#uninstalling).
+Vela is sandboxed: it can only reach its own container and files you choose, such as a theme you import or a folder for chat logs. See [where files live](/help/troubleshooting#where-files-live) and [how to remove everything](/guide/install#uninstalling).
 
 ## This website
 

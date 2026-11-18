@@ -31,6 +31,8 @@ public final class AppModel: SessionHost {
     public let networkStore: NetworkConfigStore
     public let database: VelaDatabase?
     public let previewService: LinkPreviewService
+    /// Plain-text chat logs (`logging.*`); see AppModel+ChatLogs.swift.
+    public let chatLogs: ChatLogService
     public let keychain: Keychain
     public let isDemo: Bool
 
@@ -47,6 +49,13 @@ public final class AppModel: SessionHost {
     /// Called when you send a message from the composer (not a command).
     /// The scene layer donates it to Siri so it learns where you talk.
     @ObservationIgnored public var onComposerMessage: ((BufferModel, NetworkSession) -> Void)?
+    /// Whether the Dock icon shows the offline mark: `dock.showOffline` is
+    /// on and a network Vela means to be connected to has been offline for
+    /// longer than the grace period. The scene layer's `DockIconController`
+    /// draws it. Always false in demo mode. See AppModel+Dock.swift.
+    public internal(set) var showsOfflineMark = false
+    /// The Dock badge, offline mark and bounce bookkeeping (AppModel+Dock.swift).
+    @ObservationIgnored var dock = DockState()
 
     /// Whether the main window is key; drives unread counting.
     public var isWindowActive = true {
@@ -61,7 +70,8 @@ public final class AppModel: SessionHost {
 
     @ObservationIgnored private let notifier: Notifier
     @ObservationIgnored private var pathMonitor: NWPathMonitor?
-    @ObservationIgnored private var workspaceObservers: [NSObjectProtocol] = []
+    /// Sleep and wake (NSWorkspace), and app activation.
+    @ObservationIgnored private var systemObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var sessionsConnectedBeforeSleep: Set<UUID> = []
     @ObservationIgnored private var started = false
     @ObservationIgnored private var readyWaiters: [CheckedContinuation<Void, Never>] = []
@@ -84,6 +94,14 @@ public final class AppModel: SessionHost {
         self.isDemo = isDemo
         self.previewService = previewService ?? LinkPreviewService(cache: database.map(DatabasePreviewCache.init))
         self.notifier = notifier ?? (isDemo ? SilentNotifier() : UserNotificationNotifier())
+        // Logs go next to settings.json by default: Vela's data folder, or
+        // demo mode's temporary one (where nothing is logged anyway).
+        self.chatLogs = ChatLogService(
+            settings: settings,
+            defaultFolder: settings.fileURL.deletingLastPathComponent().appending(path: "Logs", directoryHint: .isDirectory),
+            preferences: isDemo ? InMemoryChatLogPreferences() : UserDefaultsChatLogPreferences(),
+            isDemo: isDemo
+        )
     }
 
     /// The production configuration rooted in Application Support.
@@ -151,6 +169,9 @@ public final class AppModel: SessionHost {
             }
         }
         observeSystem()
+        observeDockSettings()
+        chatLogs.start(networkIDs: Set(networkStore.networks.map(\.id)))
+        updateDock()
         pruneHistoryIfNeeded()
         prunePreviewCache()
     }
@@ -234,6 +255,7 @@ public final class AppModel: SessionHost {
     }
 
     public func session(_ session: NetworkSession, didReceiveNotable line: ChatLine, in buffer: BufferModel) {
+        requestDockAttention(for: line, in: buffer)
         guard !isBufferVisible(buffer.id) || !NSApp.isActive else { return }
         let isQuery = buffer.kind == .query
         if line.isHighlight && !settings[.notifyHighlights] { return }
@@ -299,6 +321,11 @@ public final class AppModel: SessionHost {
 
     public func sessionDidChangeUnreadCounts(_ session: NetworkSession) {
         updateDockBadge()
+    }
+
+    public func sessionDidChangeConnection(_ session: NetworkSession) {
+        updateOfflineMark()
+        chatLogs.connectionChanged(session)
     }
 
     // MARK: Selection
@@ -403,6 +430,8 @@ public final class AppModel: SessionHost {
         networkStore.upsert(config)
         session(for: config.id)?.updateConfig(config)
         sortSessions()
+        // Turning auto-connect on or off changes whether it should be online.
+        updateOfflineMark()
     }
 
     public func removeNetwork(id: UUID) {
@@ -420,7 +449,7 @@ public final class AppModel: SessionHost {
         networkStore.remove(id: id)
         if let database { Task { try? await database.deleteNetwork(id) } }
         if selectedBufferID == nil, let first = orderedBuffers.first { select(first) }
-        updateDockBadge()
+        updateDock()
     }
 
     public func secrets(for networkID: UUID) -> NetworkSecrets {
@@ -523,7 +552,9 @@ public final class AppModel: SessionHost {
         }
     }
 
-    private func isOrphanedChild(_ session: NetworkSession) -> Bool {
+    /// A bouncer network whose bouncer was removed. It isn't connected at
+    /// launch, and doesn't count as offline.
+    func isOrphanedChild(_ session: NetworkSession) -> Bool {
         guard let parent = session.config.parentNetworkID else { return false }
         return networkStore.networks.first { $0.id == parent } == nil
     }
@@ -678,18 +709,12 @@ public final class AppModel: SessionHost {
 
     public var totalHighlights: Int { sessions.reduce(0) { $0 + $1.totalHighlights } }
 
-    private func updateDockBadge() {
-        guard !isDemo else { return }
-        let count = totalHighlights
-        NSApp?.dockTile.badgeLabel = count > 0 ? "\(count)" : nil
-    }
-
     private func observeSystem() {
         let center = NSWorkspace.shared.notificationCenter
-        workspaceObservers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
+        systemObservers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.systemWillSleep() }
         })
-        workspaceObservers.append(center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+        systemObservers.append(center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.systemDidWake() }
         })
 
@@ -707,6 +732,13 @@ public final class AppModel: SessionHost {
             self?.select(bufferID: bufferID)
             NSApp.activate()
         }
+
+        // Switching to Vela stops a Dock bounce.
+        systemObservers.append(NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.cancelDockAttention() }
+        })
     }
 
     private func systemWillSleep() {
@@ -727,8 +759,13 @@ public final class AppModel: SessionHost {
 
     /// Flush pending writes and quit politely.
     public func prepareForTermination() {
+        // Quitting disconnects every network; that's no reason for the Dock
+        // to show anything.
+        stopDockUpdates()
         settings.flush()
         for session in sessions { session.shutdown() }
+        // Write what's queued and end each log with "Log closed".
+        chatLogs.shutdown()
         // Demo data is throwaway: remove this run's scratch folders.
         if isDemo { DemoScratch.removeOwn() }
     }

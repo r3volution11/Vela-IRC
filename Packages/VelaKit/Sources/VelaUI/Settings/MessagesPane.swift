@@ -83,6 +83,7 @@ struct MessagesPane: View {
 
             SettingsSection("Timestamps", footer: "Timestamps show as “\(timestampSample)”.") {
                 SettingsToggle("Show timestamps", isOn: $settings[.chatShowTimestamps])
+                TimestampPositionRows()
                 SettingsSegmentedRow(
                     title: "Clock",
                     detail: "System follows your Mac's 24-hour time setting.",
@@ -180,6 +181,8 @@ struct MessagesPane: View {
                     )
                 )
             }
+
+            ChatLogsSection()
         }
     }
 

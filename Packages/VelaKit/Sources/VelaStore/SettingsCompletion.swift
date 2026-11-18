@@ -206,6 +206,8 @@ public enum SettingsCompletion {
     ///   `"chat.fontSize": 13` with the default selected;
     /// - values: enum values, `true`/`false`, `"system"` for settings that
     ///   follow macOS, and the default (marked ``SettingsCompletionItem/isDefault``);
+    /// - list elements: the allowed values of lists like `dock.badgeCounts`,
+    ///   with a readable title;
     /// - nested values: the allowed values of `media.siteRules`-style objects.
     ///
     /// Suggestions that depend on the app (themes, fonts, buffers, domains,
@@ -218,7 +220,7 @@ public enum SettingsCompletion {
         case .key(let position):
             return SettingsValidator.catalog.map { settingItem($0, at: position) }
         case .value(let position):
-            return position.isArrayElement ? [] : topLevelValueItems(at: position)
+            return position.isArrayElement ? listElementItems(at: position) : topLevelValueItems(at: position)
         case .nestedValue(let position):
             guard position.path.count == 2, !position.isArrayElement,
                   let allowed = position.descriptor?.objectValueEnum
@@ -382,6 +384,13 @@ public enum SettingsCompletion {
         case .array(let array) where array.isEmpty: 1
         default: nil
         }
+    }
+
+    /// The allowed values of a list whose elements are a fixed set of
+    /// strings (`dock.badgeCounts`), titled like the settings editor's chips.
+    private static func listElementItems(at position: SettingsValuePosition) -> [SettingsCompletionItem] {
+        guard position.path.count == 1, let allowed = position.descriptor?.itemEnumValues else { return [] }
+        return allowed.map { valueItem(.string($0), title: SettingsMetadata.enumLabel($0), at: position) }
     }
 
     private static func topLevelValueItems(at position: SettingsValuePosition) -> [SettingsCompletionItem] {

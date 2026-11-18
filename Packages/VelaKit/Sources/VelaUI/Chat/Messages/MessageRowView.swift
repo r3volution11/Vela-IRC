@@ -71,7 +71,7 @@ struct MessageRow: View {
             .overlay(alignment: .topTrailing) {
                 if isHovered || isPickerOpen {
                     MessageHoverToolbar(line: line, links: links, isPickerOpen: $isPickerOpen)
-                        .padding(.trailing, 14)
+                        .padding(.trailing, 14 + toolbarTimeInset)
                         .offset(y: -14)
                         .transition(.opacity)
                 }
@@ -105,13 +105,32 @@ struct MessageRow: View {
     }
 
     private var topPadding: CGFloat {
-        switch style.layout {
+        let base: CGFloat = switch style.layout {
         case .grouped: item.isContinuation ? 1 : style.messageSpacing + 5
         case .classic, .columns: item.isContinuation ? 1 : max(1, style.messageSpacing / 2) + 1
         }
+        return base + (timePlacement.slot == .above ? TimestampLine.rowInset : 0)
     }
 
-    private var bottomPadding: CGFloat { 1 }
+    private var bottomPadding: CGFloat { 1 + (timePlacement.slot == .below ? TimestampLine.rowInset : 0) }
+
+    /// Where the row's time goes, hovered or not (for the row's padding
+    /// and the toolbar, which only care about the place).
+    private var timePlacement: TimestampPlacement {
+        TimestampPlacement.message(
+            layout: style.layout,
+            position: style.timestampPosition,
+            isContinuation: item.isContinuation,
+            isHovered: true,
+            showTimestamps: style.showTimestamps
+        )
+    }
+
+    /// With times at the right edge, the hover toolbar sits just left of
+    /// them, so hovering a message shows its time rather than covering it.
+    private var toolbarTimeInset: CGFloat {
+        timePlacement.slot == .trailingColumn ? TimestampMetrics.toolbarInset(style: style) : 0
+    }
 
     @ViewBuilder
     private func background(for line: ChatLine) -> some View {
@@ -141,6 +160,8 @@ struct MessageRow: View {
 // MARK: Layouts
 
 /// `[12:01] <nick> text`, wrapped lines hanging after the timestamp column.
+/// `chat.timestampPosition.classic` can move the time to the right edge or
+/// onto its own line above or below (without brackets there).
 struct ClassicMessageContent: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -152,13 +173,23 @@ struct ClassicMessageContent: View {
     var body: some View {
         let line = item.line
         let timeWidth = TimestampMetrics.columnWidth(style: style, bracketed: true)
+        let placement = TimestampPlacement.message(
+            layout: .classic,
+            position: style.classicTimestampPosition,
+            isContinuation: item.isContinuation,
+            isHovered: isHovered,
+            showTimestamps: style.showTimestamps
+        )
         VStack(alignment: .leading, spacing: 2) {
             if let reply = item.reply {
                 ReplyQuoteView(reply: reply)
-                    .padding(.leading, style.showTimestamps ? timeWidth + 8 : 0)
+                    .padding(.leading, placement.slot == .leadingColumn ? timeWidth + 8 : 0)
+            }
+            if placement.slot == .above {
+                TimestampLine(time: line.time, edge: .top)
             }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if style.showTimestamps {
+                if placement.slot == .leadingColumn {
                     Text("[\(style.timestamp(line.time))]")
                         .font(style.timestampFont)
                         .foregroundStyle(theme[ThemeKey.chatTimestamp])
@@ -169,8 +200,12 @@ struct ClassicMessageContent: View {
                     MessageBodyText(line: line, rendered: rendered, prefix: prefix(for: line))
                         .messageAccessibility(line: line, rendered: rendered)
                     MessageTranslationView(line: line)
+                    if placement.slot == .below {
+                        TimestampLine(time: line.time, edge: .bottom)
+                    }
                     MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
                 }
+                .trailingTimestamp(line.time, placement)
             }
         }
     }
@@ -202,6 +237,10 @@ struct ClassicMessageContent: View {
 /// Slack/Discord style: a header (name and time, plus the avatar when
 /// enabled) for the first message of a group, bare text for continuations
 /// with their time in the gutter on hover.
+///
+/// `chat.timestampPosition.grouped` moves the first message's time into the
+/// gutter (Left), to the right edge (Right, where continuations then show
+/// theirs on hover too) or below the message (Bottom).
 struct GroupedMessageContent: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -213,6 +252,13 @@ struct GroupedMessageContent: View {
     var body: some View {
         let line = item.line
         let metrics = GroupedMetrics(style: style)
+        let placement = TimestampPlacement.message(
+            layout: .grouped,
+            position: style.groupedTimestampPosition,
+            isContinuation: item.isContinuation,
+            isHovered: isHovered,
+            showTimestamps: style.showTimestamps
+        )
         VStack(alignment: .leading, spacing: 4) {
             if let reply = item.reply {
                 if style.showAvatars {
@@ -230,34 +276,66 @@ struct GroupedMessageContent: View {
                         .padding(.leading, metrics.textX - metrics.leading)
                 }
             }
-            HStack(alignment: item.isContinuation ? .firstTextBaseline : .top, spacing: metrics.spacing) {
-                gutterView(for: line, width: metrics.gutter)
+            HStack(alignment: rowAlignment(placement), spacing: metrics.spacing) {
+                gutterView(for: line, width: metrics.gutter, placement: placement)
                 VStack(alignment: .leading, spacing: 2) {
                     VStack(alignment: .leading, spacing: 1) {
                         if !item.isContinuation {
-                            header(for: line)
+                            header(for: line, showsTime: placement.slot == .header)
                         }
                         MessageBodyText(line: line, rendered: rendered)
                     }
                     .messageAccessibility(line: line, rendered: rendered)
                     MessageTranslationView(line: line)
+                    if placement.slot == .below {
+                        TimestampLine(time: line.time, edge: .bottom)
+                    }
                     MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
                 }
+                .trailingTimestamp(line.time, placement)
             }
         }
     }
 
+    /// Continuations line their hover time up with the text. A first
+    /// message's time in the margin (Left, without avatars) lines up with
+    /// the name; otherwise the avatar hangs from the top.
+    private func rowAlignment(_ placement: TimestampPlacement) -> VerticalAlignment {
+        if item.isContinuation { return .firstTextBaseline }
+        return placement.slot == .gutter && !style.showAvatars ? .firstTextBaseline : .top
+    }
+
     @ViewBuilder
-    private func gutterView(for line: ChatLine, width: CGFloat) -> some View {
+    private func gutterView(for line: ChatLine, width: CGFloat, placement: TimestampPlacement) -> some View {
         if item.isContinuation {
             // The time on hover, right-aligned against the text column.
+            // Always laid out (invisible otherwise): it gives the gutter the
+            // text's baseline.
             Text(style.timestamp(line.time))
                 .font(style.gutterTimestampFont)
                 .foregroundStyle(theme[ThemeKey.chatTimestamp])
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .frame(width: width, alignment: .trailing)
-                .opacity(isHovered && style.showTimestamps ? 1 : 0)
+                .opacity(placement.slot == .gutter && placement.isVisible ? 1 : 0)
+                .accessibilityHidden(true)
+        } else if style.showAvatars, placement.slot == .gutter {
+            // Left with avatars: the time under the avatar, which then
+            // sets the row's height so the time never runs into the next.
+            VStack(spacing: 3) {
+                AvatarView(nick: line.nick ?? "?", size: width, buffer: controller.buffer)
+                    .padding(.top, 1)
+                avatarTime(line.time, width: width)
+            }
+            .frame(width: width)
+        } else if placement.slot == .gutter {
+            // Left: the time in the margin, where hover times go.
+            Text(style.timestamp(line.time))
+                .font(style.gutterTimestampFont)
+                .foregroundStyle(theme[ThemeKey.chatTimestamp])
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: width, alignment: .trailing)
                 .accessibilityHidden(true)
         } else if style.showAvatars {
             // The avatar hangs from the top without setting the row height,
@@ -273,7 +351,26 @@ struct GroupedMessageContent: View {
         }
     }
 
-    private func header(for line: ChatLine) -> some View {
+    /// A first message's time under its avatar (Left): centered when it
+    /// fits, otherwise flush with the avatar's right edge, running into the
+    /// row's leading inset rather than toward the text, and shrinking only
+    /// if even that's too narrow (long 12-hour times with seconds).
+    private func avatarTime(_ time: Date, width: CGFloat) -> some View {
+        let text = Text(style.timestamp(time))
+            .font(style.gutterTimestampFont)
+            .foregroundStyle(theme[ThemeKey.chatTimestamp])
+            .lineLimit(1)
+        return ViewThatFits(in: .horizontal) {
+            text.fixedSize()
+            text
+                .minimumScaleFactor(0.7)
+                .frame(width: width + style.rowHorizontalPadding - 4, alignment: .trailing)
+                .frame(width: width, alignment: .trailing)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func header(for line: ChatLine, showsTime: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text(line.nick ?? "")
                 .font(style.nickFont)
@@ -290,7 +387,7 @@ struct GroupedMessageContent: View {
                             .strokeBorder(theme[ThemeKey.chatNotice].opacity(0.5), lineWidth: 1)
                     )
             }
-            if style.showTimestamps {
+            if showsTime {
                 Text(style.timestamp(line.time))
                     .font(style.timestampFont)
                     .foregroundStyle(theme[ThemeKey.chatTimestamp])
@@ -301,6 +398,8 @@ struct GroupedMessageContent: View {
 }
 
 /// irssi/weechat style: time, right-aligned nick, then text, in columns.
+/// `chat.timestampPosition.columns` can move the time column to the right
+/// edge, or put the time on a small line above or below the text.
 struct ColumnsMessageContent: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -312,9 +411,21 @@ struct ColumnsMessageContent: View {
     var body: some View {
         let line = item.line
         let metrics = ColumnsMetrics(style: style)
+        let placement = TimestampPlacement.message(
+            layout: .columns,
+            position: style.columnsTimestampPosition,
+            isContinuation: item.isContinuation,
+            isHovered: isHovered,
+            showTimestamps: style.showTimestamps
+        )
         VStack(alignment: .leading, spacing: 2) {
             if let reply = item.reply {
                 ReplyQuoteView(reply: reply)
+                    .padding(.leading, metrics.textX)
+            }
+            if placement.slot == .above {
+                // In the text column, so the nick stays level with the text.
+                TimestampLine(time: line.time, edge: .top)
                     .padding(.leading, metrics.textX)
             }
             HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -334,8 +445,12 @@ struct ColumnsMessageContent: View {
                     MessageBodyText(line: line, rendered: rendered, prefix: actionPrefix(for: line))
                         .messageAccessibility(line: line, rendered: rendered)
                     MessageTranslationView(line: line)
+                    if placement.slot == .below {
+                        TimestampLine(time: line.time, edge: .bottom)
+                    }
                     MessageExtras(line: line, bufferID: controller.buffer.id, isHovered: isHovered)
                 }
+                .trailingTimestamp(line.time, placement)
             }
         }
     }
@@ -375,6 +490,7 @@ struct ColumnsMessageContent: View {
 
 /// Column positions for the columns layout, measured from the row's content edge.
 struct ColumnsMetrics {
+    /// The time column before the nicks; 0 unless times are on the left.
     let timeWidth: CGFloat
     let timeGap: CGFloat = 10
     let nickWidth: CGFloat
@@ -382,7 +498,8 @@ struct ColumnsMetrics {
 
     @MainActor
     init(style: ChatStyle) {
-        timeWidth = style.showTimestamps ? TimestampMetrics.columnWidth(style: style, bracketed: false) : 0
+        let leftTimes = style.showTimestamps && style.columnsTimestampPosition == .left
+        timeWidth = leftTimes ? TimestampMetrics.columnWidth(style: style, bracketed: false) : 0
         nickWidth = max(40, style.columnsNickWidth)
     }
 

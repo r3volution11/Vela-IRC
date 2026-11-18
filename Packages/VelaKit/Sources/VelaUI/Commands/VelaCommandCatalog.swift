@@ -628,6 +628,7 @@ struct VelaCommandCatalog {
         commands += chatLayouts
         commands += presets
         commands += chatToggles
+        commands += timestampPositionCommands
         commands += joinPartModes
         commands += unreadCommands
         commands += mediaCommands
@@ -640,8 +641,10 @@ struct VelaCommandCatalog {
         commands += typingCommands + messageBoxBorderCommands
         commands += catchUpCommands
         commands += translationCommands
+        commands += chatLogCommands
         commands += accentCommands
         commands += appIconCommands
+        commands += dockCommands
         commands += [addNetwork, joinChannel, sortChannels]
         for session in app.sessions {
             commands += networkCommands(for: session)

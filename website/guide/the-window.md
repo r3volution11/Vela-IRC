@@ -85,4 +85,4 @@ All of them are listed in [Keyboard shortcuts](/reference/keyboard-shortcuts).
 
 ## The Dock icon
 
-Vela's Dock icon shows a badge with the number of mentions and private messages you haven't read yet.
+Vela's Dock icon shows a badge with the number of mentions and private messages you haven't read yet, and a small amber mark when a network has gone offline. You can count every channel message instead, show a dot rather than a number, or have the icon bounce for mentions and private messages: see [The Dock icon](/guide/notifications#dock) in Notifications.

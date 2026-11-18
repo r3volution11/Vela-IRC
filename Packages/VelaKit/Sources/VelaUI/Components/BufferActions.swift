@@ -30,6 +30,7 @@ struct BufferContextMenuItems: View {
             }
             CommandMenuToggle(VelaCommandCatalog.blurCommand(app: app, bufferID: buffer.id))
             TranslationBufferMenuItems(buffer: buffer)
+            ChatLogBufferMenuItems(buffer: buffer)
             CatchUpBufferMenuItems(buffer: buffer, session: session)
             Divider()
             if buffer.kind == .channel {
@@ -77,6 +78,7 @@ struct ServerContextMenuItems: View {
         }
         CommandMenuToggle(VelaCommandCatalog.networkBlurCommand(app: app, networkID: session.id))
         TranslationNetworkMenuItems(session: session)
+        ChatLogNetworkMenuItems(session: session)
         Divider()
         Button("Edit Network…") {
             uiState.networkEditor = .existing(session.config.parentNetworkID ?? session.id)

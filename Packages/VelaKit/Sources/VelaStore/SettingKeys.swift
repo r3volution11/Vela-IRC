@@ -40,6 +40,20 @@ public enum TimestampClock: String, Codable, Sendable, CaseIterable, SettingValu
     case twentyFourHour = "24h"
 }
 
+/// Where message times are drawn. Each layout keeps its own
+/// (`chat.timestampPosition.classic`, `.grouped` and `.columns`).
+public enum TimestampPosition: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// Before the message: the time column in classic and columns, the
+    /// margin beside the text in grouped.
+    case left
+    /// At the right edge, level with the message's first line.
+    case right
+    /// Above the message; in grouped, beside the name.
+    case top
+    /// Below the message.
+    case bottom
+}
+
 /// How much a link preview shows.
 public enum LinkPreviewSize: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
     /// One line: site, title and a small thumbnail.
@@ -97,6 +111,47 @@ public enum AppIcon: String, Codable, Sendable, CaseIterable, SettingValueConver
     case paper
     /// Bright blue, with a white V.
     case vivid
+}
+
+/// A kind of unread message the Dock badge counts (`dock.badgeCounts`).
+/// The badge shows the total of the kinds chosen, counting each message
+/// once: a mention in a channel counts once even with both `mentions` and
+/// `channels` chosen. Muted channels and conversations never count.
+public enum DockBadgeCount: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// Messages in channels that mention your nick or a highlight word.
+    case mentions
+    /// Messages in private conversations.
+    case privateMessages
+    /// Every message in channels, mentions included.
+    case channels
+}
+
+/// How the Dock badge shows its count (`dock.badgeStyle`).
+public enum DockBadgeStyle: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// The number, up to 99; more shows as "99+".
+    case capped
+    /// The exact number.
+    case exact
+    /// A dot (•) instead of a number.
+    case dot
+}
+
+/// Whether and how long the Dock icon bounces for new messages while
+/// Vela is in the background (`dock.bounce`).
+public enum DockBounceStyle: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    case off
+    /// Bounce once for each message.
+    case once
+    /// Keep bouncing until you switch to Vela.
+    case untilActive
+}
+
+/// A kind of message that bounces the Dock icon (`dock.bounceFor`).
+public enum DockBounceTrigger: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// Messages in channels that mention your nick or a highlight word.
+    case mentions
+    /// Messages in private conversations.
+    case privateMessages
 }
 
 /// A switch that follows a macOS setting until it's changed in Vela, such
@@ -222,6 +277,30 @@ extension SettingKey where Value == TimestampClock {
     public static var chatClock: SettingKey<TimestampClock> {
         .init("chat.clock", default: .system,
               summary: "Timestamp clock: system (follow the Mac's 24-hour time setting), 12h or 24h. Ignored when chat.timestampFormat is set.")
+    }
+}
+
+extension SettingKey where Value == TimestampPosition {
+    public static var chatTimestampPositionClassic: SettingKey<TimestampPosition> {
+        .init("chat.timestampPosition.classic", default: .left,
+              summary: "Where times go in the classic layout: left (before the nick), right (at the right edge, level with the first line), top (on a small line above each message) or bottom (on a small line below it).")
+    }
+    public static var chatTimestampPositionGrouped: SettingKey<TimestampPosition> {
+        .init("chat.timestampPosition.grouped", default: .top,
+              summary: "Where times go in the grouped layout: top (beside the name), left (in the margin beside the text), right (at the right edge of the name line) or bottom (below the group's first message). Only a group's first message shows its time; hover the others to see theirs.")
+    }
+    public static var chatTimestampPositionColumns: SettingKey<TimestampPosition> {
+        .init("chat.timestampPosition.columns", default: .left,
+              summary: "Where times go in the columns layout: left (the time column before the nicks), right (a time column at the right edge), top (on a small line above the text) or bottom (on a small line below it).")
+    }
+
+    /// The timestamp position key for `layout`.
+    public static func chatTimestampPosition(for layout: ChatLayout) -> SettingKey<TimestampPosition> {
+        switch layout {
+        case .classic: .chatTimestampPositionClassic
+        case .grouped: .chatTimestampPositionGrouped
+        case .columns: .chatTimestampPositionColumns
+        }
     }
 }
 
@@ -428,6 +507,47 @@ extension SettingKey where Value == Bool {
     }
 }
 
+// MARK: Dock
+
+extension SettingKey where Value == Bool {
+    public static var dockShowBadge: SettingKey<Bool> {
+        .init("dock.showBadge", default: true,
+              summary: "Show a badge on the Dock icon counting unread messages; dock.badgeCounts chooses which.")
+    }
+    public static var dockShowOffline: SettingKey<Bool> {
+        .init("dock.showOffline", default: true,
+              summary: "Draw a small offline mark on the Dock icon while a network Vela should be connected to has been disconnected for more than about 10 seconds. Networks you disconnect yourself don't count.")
+    }
+}
+
+extension SettingKey where Value == [DockBadgeCount] {
+    public static var dockBadgeCounts: SettingKey<[DockBadgeCount]> {
+        .init("dock.badgeCounts", default: [.mentions, .privateMessages],
+              summary: "What the Dock badge counts, in any combination: mentions (unread channel messages with your nick or a highlight word), privateMessages (unread messages in private conversations) and channels (every unread channel message). Each message counts once, and muted channels and conversations never count.")
+    }
+}
+
+extension SettingKey where Value == DockBadgeStyle {
+    public static var dockBadgeStyle: SettingKey<DockBadgeStyle> {
+        .init("dock.badgeStyle", default: .capped,
+              summary: "How the Dock badge shows its count: capped (the number, with 99+ for more), exact (the exact number) or dot (a dot instead of a number).")
+    }
+}
+
+extension SettingKey where Value == DockBounceStyle {
+    public static var dockBounce: SettingKey<DockBounceStyle> {
+        .init("dock.bounce", default: .off,
+              summary: "Bounce the Dock icon for the messages in dock.bounceFor while Vela is in the background: off, once (once for each message) or untilActive (until you switch to Vela). Muted channels and conversations never bounce it.")
+    }
+}
+
+extension SettingKey where Value == [DockBounceTrigger] {
+    public static var dockBounceFor: SettingKey<[DockBounceTrigger]> {
+        .init("dock.bounceFor", default: [.mentions, .privateMessages],
+              summary: "Which messages bounce the Dock icon when dock.bounce is on: mentions (your nick or a highlight word in a channel) and privateMessages.")
+    }
+}
+
 extension SettingKey where Value == [String] {
     public static var highlightWords: SettingKey<[String]> {
         .init("highlight.words", default: [],
@@ -439,6 +559,41 @@ extension SettingKey where Value == Int {
     public static var historyRetentionDays: SettingKey<Int> {
         .init("history.retentionDays", default: 0,
               summary: "Delete stored messages older than this many days. 0 keeps history forever.")
+    }
+}
+
+// MARK: Chat logs
+
+extension SettingKey where Value == Bool {
+    public static var loggingEnabled: SettingKey<Bool> {
+        .init("logging.enabled", default: false,
+              summary: "Save plain-text chat logs: one folder per network, one file per channel or conversation, holding only what was written (no previews, embeds or translations). The folder is chosen in Settings → Messages → Chat logs.")
+    }
+    public static var loggingIncludeEvents: SettingKey<Bool> {
+        .init("logging.includeEvents", default: true,
+              summary: "Also log joins, parts, quits, nick changes, kicks, topic changes and mode changes.")
+    }
+    public static var loggingIncludeServer: SettingKey<Bool> {
+        .init("logging.includeServer", default: false,
+              summary: "Also log each network's server messages (connection messages, the MOTD, notices from services) in server.log.")
+    }
+}
+
+extension SettingKey where Value == Int {
+    public static var loggingMaxFileSizeMB: SettingKey<Int> {
+        .init("logging.maxFileSizeMB", default: 10,
+              summary: "Start a new log file when one reaches this many megabytes. The full file is renamed with the dates it covers.")
+    }
+    public static var loggingKeepFiles: SettingKey<Int> {
+        .init("logging.keepFiles", default: 5,
+              summary: "Log files to keep per channel or conversation, counting the current one; older ones are deleted when a new file starts. 0 keeps every file.")
+    }
+}
+
+extension SettingKey where Value == [String] {
+    public static var loggingExcludedBuffers: SettingKey<[String]> {
+        .init("logging.excludedBuffers", default: [],
+              summary: "Buffers that are never logged: \"<networkUUID>/<foldedName>\" or \"<networkUUID>/*\".")
     }
 }
 
@@ -522,6 +677,9 @@ public enum SettingsCatalog {
             SettingKey.chatClock.descriptor,
             SettingKey.chatTimestampSeconds.descriptor,
             SettingKey.chatTimestampFormat.descriptor,
+            SettingKey.chatTimestampPositionClassic.descriptor,
+            SettingKey.chatTimestampPositionGrouped.descriptor,
+            SettingKey.chatTimestampPositionColumns.descriptor,
             SettingKey.chatShowJoinPart.descriptor,
             SettingKey.chatColorNicks.descriptor,
             SettingKey.chatShowAvatars.descriptor,
@@ -559,6 +717,12 @@ public enum SettingsCatalog {
             SettingKey.notifyHighlights.descriptor,
             SettingKey.notifyPrivateMessages.descriptor,
             SettingKey.notifySound.descriptor,
+            SettingKey.dockShowBadge.descriptor,
+            SettingKey.dockBadgeCounts.descriptor,
+            SettingKey.dockBadgeStyle.descriptor,
+            SettingKey.dockShowOffline.descriptor,
+            SettingKey.dockBounce.descriptor,
+            SettingKey.dockBounceFor.descriptor,
             SettingKey.highlightWords.descriptor,
             SettingKey.inputSendTypingIndicators.descriptor,
             SettingKey.inputSpellCheck.descriptor,
@@ -569,6 +733,12 @@ public enum SettingsCatalog {
             SettingKey.inputWritingTools.descriptor,
             SettingKey.connectionAutoReconnect.descriptor,
             SettingKey.historyRetentionDays.descriptor,
+            SettingKey.loggingEnabled.descriptor,
+            SettingKey.loggingMaxFileSizeMB.descriptor,
+            SettingKey.loggingKeepFiles.descriptor,
+            SettingKey.loggingIncludeEvents.descriptor,
+            SettingKey.loggingIncludeServer.descriptor,
+            SettingKey.loggingExcludedBuffers.descriptor,
 
             SettingKey.intelligenceCatchUp.descriptor,
             SettingKey.intelligenceCatchUpThreshold.descriptor,

@@ -56,7 +56,8 @@ struct EventRow: View {
     }
 }
 
-/// Positions an event's time, symbol and text to match the active layout.
+/// Positions an event's time, symbol and text to match the active layout
+/// and its timestamp position (see `TimestampPlacement.event`).
 struct EventRowLayout<Content: View>: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -66,11 +67,16 @@ struct EventRowLayout<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
+        let placement = TimestampPlacement.event(
+            layout: style.layout,
+            position: style.timestampPosition,
+            showTimestamps: style.showTimestamps
+        )
         Group {
             switch style.layout {
-            case .classic: classic
-            case .grouped: grouped
-            case .columns: columns
+            case .classic: classic(placement)
+            case .grouped: grouped(placement)
+            case .columns: columns(placement)
             }
         }
         .padding(.leading, style.layout == .grouped ? GroupedMetrics(style: style).leading : style.rowHorizontalPadding)
@@ -89,10 +95,10 @@ struct EventRowLayout<Content: View>: View {
             .accessibilityHidden(true)
     }
 
-    private var classic: some View {
+    private func classic(_ placement: TimestampPlacement) -> some View {
         let timeWidth = TimestampMetrics.columnWidth(style: style, bracketed: true)
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
-            if style.showTimestamps {
+            if placement.slot == .leadingColumn {
                 Text("[\(style.timestamp(time))]")
                     .font(style.timestampFont)
                     .foregroundStyle(theme[ThemeKey.chatTimestamp])
@@ -100,30 +106,29 @@ struct EventRowLayout<Content: View>: View {
             }
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 icon
-                content()
+                textAndTime(placement)
             }
+            .trailingTimestamp(time, placement)
         }
     }
 
     /// The icon in the gutter (centered under avatars, otherwise against the
     /// text column), the text in the message column, then the time.
-    private var grouped: some View {
+    private func grouped(_ placement: TimestampPlacement) -> some View {
         let metrics = GroupedMetrics(style: style)
         return HStack(alignment: .firstTextBaseline, spacing: metrics.spacing) {
             icon.frame(width: metrics.gutter, alignment: style.showAvatars ? .center : .trailing)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 content()
-                if style.showTimestamps {
-                    Text(style.timestamp(time))
-                        .font(style.gutterTimestampFont)
-                        .foregroundStyle(theme[ThemeKey.chatTimestamp])
-                        .fixedSize()
+                if placement.slot == .inline {
+                    InlineTimestamp(time: time)
                 }
             }
+            .trailingTimestamp(time, placement)
         }
     }
 
-    private var columns: some View {
+    private func columns(_ placement: TimestampPlacement) -> some View {
         let metrics = ColumnsMetrics(style: style)
         return HStack(alignment: .firstTextBaseline, spacing: 0) {
             if metrics.timeWidth > 0 {
@@ -136,6 +141,22 @@ struct EventRowLayout<Content: View>: View {
             icon
                 .frame(width: metrics.nickWidth, alignment: .trailing)
                 .padding(.trailing, metrics.textX - metrics.nickX - metrics.nickWidth)
+            textAndTime(placement)
+                .trailingTimestamp(time, placement)
+        }
+    }
+
+    /// The text, followed by the time when it goes after it (Top and Bottom
+    /// in classic and columns: a line of its own for every join would be
+    /// too much).
+    @ViewBuilder
+    private func textAndTime(_ placement: TimestampPlacement) -> some View {
+        if placement.slot == .inline {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                content()
+                InlineTimestamp(time: time)
+            }
+        } else {
             content()
         }
     }

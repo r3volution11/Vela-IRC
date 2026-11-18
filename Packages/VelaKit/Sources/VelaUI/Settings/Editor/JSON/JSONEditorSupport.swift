@@ -208,6 +208,8 @@ nonisolated struct JSONHoverDocs: Equatable, Sendable {
             facts.append(Fact(label: "Values", value: "true, false or \"system\" (same as macOS)"))
         } else if let values = descriptor.enumValues, !values.isEmpty {
             facts.append(Fact(label: "Values", value: values.map { "\"\($0)\"" }.joined(separator: ", ")))
+        } else if let values = descriptor.itemEnumValues, !values.isEmpty {
+            facts.append(Fact(label: "Values", value: "A list of any of " + values.map { "\"\($0)\"" }.joined(separator: ", ")))
         } else if let allowed = descriptor.objectValueEnum {
             facts.append(Fact(label: "Type", value: "Object of site → " + allowed.map { "\"\($0)\"" }.joined(separator: ", ")))
         } else {

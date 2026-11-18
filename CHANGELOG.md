@@ -15,6 +15,10 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **12-hour or 24-hour timestamps.** Settings → Messages → Timestamps has a **Clock** choice (System, 12-hour, 24-hour) and a **Show seconds** switch; a custom Unicode date pattern is still available under **Custom format**. New settings: `chat.clock` and `chat.timestampSeconds`.
   - System is the default and follows your Mac's 24-hour time setting, even when you change it while Vela is running. Timestamps were always 24-hour before, so on a Mac set to 12-hour time they now read like 2:47 PM.
   - `chat.timestampFormat` is now empty by default and only holds a custom pattern. A format chosen in 0.1.0 is kept as your custom format.
+- **Move timestamps** to the **Left**, **Right**, **Top** or **Bottom** of messages, in Settings → Messages → Timestamps → **Position**. Each layout keeps its own position, and the defaults look as before: on the left in Classic and Compact columns, beside the name in Modern. New settings: `chat.timestampPosition.classic`, `chat.timestampPosition.grouped` and `chat.timestampPosition.columns`; palette commands **Chat: Timestamps on the Left**, **on the Right**, **at the Top** and **at the Bottom**, for the layout you're using.
+  - In Modern, a group's first message shows its time in the chosen place: in the margin (Left), at the right edge (Right), beside the name (Top) or below the message (Bottom). Hover the others to see theirs, as before.
+  - Times on the right line up in one column, and the hover toolbar moves aside so it doesn't cover them. A time at the bottom comes after a message's translation, above its previews and reactions.
+  - Joins, parts and other events stay one line. Their time shares the messages' column with Right, and with Left in Classic and Compact columns; otherwise it follows their text.
 - **Videos you can expand.** Settings → Media → **Videos** chooses how YouTube, Vimeo, Twitch and Streamable links and video files show: **Player** (the default: a large thumbnail whose player loads in place when you press ▶), **Compact** (one line; ▶ opens the player underneath) or **Off** (a link preview). New setting: `media.videos`.
   - **Expand** a playing video to fill the window. It keeps playing; Esc, a click outside it or **Return** puts it back. The player's own full-screen button still works.
   - One video plays at a time. Videos pause when you scroll them out of view or switch conversations, and stay where they were; press play to resume.
@@ -104,9 +108,27 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
   - It takes a second or two, only for those sites, one page at a time, and the preview is saved. Never for blocked or adult sites, or before you click **Load preview** when previews don't load automatically.
   - Right-click such a preview to see **Preview Loaded with Safari's Engine**.
 - **Load previews from sites that need a browser**, a new switch in Settings → Media → Loading (on by default), turns that off. New setting: `media.browserFallback`.
+- **Choose what the Dock badge counts.** Settings → Notifications → **Dock** turns the badge on or off and counts any combination of **Mentions and highlight words**, **Private messages** and **All channel messages**. New settings: `dock.showBadge`, `dock.badgeCounts` and `dock.badgeStyle`; palette command **Notifications: Show Dock Badge**.
+  - Each message counts once, so a mention isn't counted twice with All channel messages checked. Only messages, actions and notices count, never joins or parts, and muted channels and conversations never count.
+  - **Style:** **99+** (the default: the number, up to 99), **Exact** or **Dot**.
+  - The default, mentions and private messages, is what the badge counted before.
+- **An offline mark on the Dock icon.** When a network drops and isn't back within about 10 seconds, a small amber mark with an unplugged cable appears on the bottom-left corner of the Dock icon, and it goes away once every network is back. New setting: `dock.showOffline` (on by default).
+  - It's for networks that connect automatically or that you connected; it shows while Vela waits to reconnect too. Networks you disconnect or remove don't count, and neither do sleep and quitting. Bouncer networks count by their own connection.
+  - It works with every Dock icon, and with Vela Dev's DEV band.
+- **Bounce the Dock icon** for mentions, private messages or both while Vela is in the background: **Once** for each message, or **Until you switch to Vela**. Off by default, and muted channels and conversations never bounce it. New settings: `dock.bounce` and `dock.bounceFor`.
+- The settings editor shows lists of choices, such as `dock.badgeCounts`, as chips with readable names that accept only the setting's choices, and the JSON view suggests those choices inside the list.
+- **Chat logs.** Settings → Messages → **Chat logs** saves plain-text logs of your channels and private conversations: a folder for each network, with a file for each channel or conversation (`Logs/Libera.Chat/#vela.log`). Off by default. New settings: `logging.enabled`, `logging.maxFileSizeMB`, `logging.keepFiles`, `logging.includeEvents`, `logging.includeServer` and `logging.excludedBuffers`; palette commands **Chat: Save Chat Logs** and **Chat: Show Chat Logs**, and **File → Show Chat Logs**.
+  - Logs hold only what was written: messages, actions and notices (yours too), with links as typed and mIRC formatting removed, plus joins, parts, quits, nick, topic and mode changes, and kicks (**Include channel events**, on by default). Never link previews, images, videos, translations or Catch me up summaries.
+  - Lines look like `[2026-11-17 21:04:05] <alice> hi`, in UTF-8, with `--- Log opened …` and `--- Log closed …` where Vela starts and stops writing. A deleted message stays in the log, followed by a line saying it was deleted.
+  - When a log reaches **10 MB** it's renamed with the dates it covers (`#vela 2026-11-01 – 2026-11-17.log`) and a new one starts; each channel keeps its **5** newest files, about 50 MB at most. Both are adjustable, and **Keep all** never deletes.
+  - Messages a bouncer or the server replays are logged only when they're newer than what the log has, so what you missed while Vela was closed fills in without duplicates. History Vela loads from its own database is never logged again.
+  - Logs go in Vela's data folder, or any folder you choose with **Choose…**; **Reveal in Finder** opens it. If the chosen folder goes missing, Vela uses its own folder and says so in Settings.
+  - **Include server messages** (off by default) adds each network's connection messages, MOTD and notices from services in `server.log`.
+  - Right-click a channel or network for **Don't Log This Channel** or **Don't Log on This Network**.
 
 ### Changed
 
+- **The Dock badge leaves muted channels out**, mentions included (they used to count), and counts notices in private conversations along with messages and actions.
 - **The website's icon is the new V and star**, deep blue in light mode and cyan in dark mode.
 - **The website links the apps it mentions**, such as Vivaldi, VS Code, irssi, WeeChat, ZNC and soju, so you can find out more about them.
 - **A new app icon, "Glint":** a glass V on navy with a small star in its notch, built for macOS 26's Default, Dark, Clear and Tinted icon styles. The website's favicons, logo and social card use it too.

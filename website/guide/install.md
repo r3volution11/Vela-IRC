@@ -44,7 +44,7 @@ Your networks, settings, themes and history are kept. They live outside the app,
    ~/Library/Containers/io.github.r3volution11.Vela
    ```
 
-   It holds your settings, networks, themes and message history. In Finder, choose **Go → Go to Folder…** (<kbd>⇧⌘G</kbd>) and paste the path.
+   It holds your settings, networks, themes and message history, and your [chat logs](/guide/chat-logs) unless you chose another folder for them. In Finder, choose **Go → Go to Folder…** (<kbd>⇧⌘G</kbd>) and paste the path.
 3. Saved passwords, channel keys and client certificates are in your login keychain. Open **Keychain Access** and search for `io.github.r3volution11.Vela` to remove them.
 
 ## Building from source

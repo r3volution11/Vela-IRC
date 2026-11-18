@@ -66,6 +66,8 @@ done
 # Message layouts (the grouped layout is preset-modern).
 shot layout-classic 1280x800 1400 --theme Palenight --preset modern --set chat.layout=classic
 shot layout-columns 1280x800 1400 --theme Palenight --preset modern --set chat.layout=columns
+# Modern with each group's time at the right edge (chat.timestampPosition.grouped).
+shot timestamps-right 1280x800 1400 --theme Palenight --preset modern --set chat.timestampPosition.grouped=right
 
 # Tab stacks: placements and roundness (top + 0.5 is preset-tabbed).
 shot tabs-title-bar 1280x800 1400 --theme Palenight --preset tabbed --set tabs.placement=titleBar
@@ -114,12 +116,17 @@ pane() {
 }
 pane settings-intelligence 820x530 intelligence
 pane settings-siri         820x620 intelligence --settings-scroll 9999
-pane settings-typing       820x716 messages --settings-scroll 9999
+# Typing, Memory and History; Chat logs follows them at the end of the pane.
+# Timestamps, with Position for the current layout (Modern) and Other layouts.
+pane settings-timestamps   820x450 messages --settings-scroll 915
+pane settings-typing       820x708 messages --settings-scroll 1944
+pane settings-chat-logs    820x425 messages --settings-scroll 9999 --set logging.enabled=true
 pane settings-accent       820x705 appearance --accent Cyan
 # The last two rows of theme cards, drawn from each theme's colors, down to
 # the end of "Make your own".
 pane settings-themes       820x736 appearance --settings-scroll 1375
 pane settings-app-icon     820x600 appearance --settings-scroll 9999 --set appearance.appIcon=sunrise
+pane settings-dock         820x450 notifications --settings-scroll 262
 # A theme file with typos (screenshot-themes/harbor.json, copied into the
 # demo's own Themes folder): what Settings → Appearance says about it.
 pane settings-theme-problems 820x438 appearance --themes-dir "$root/website/scripts/screenshot-themes" \

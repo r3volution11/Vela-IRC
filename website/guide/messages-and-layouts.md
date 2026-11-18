@@ -19,7 +19,7 @@ Pair it with **Monospace** (below) for a terminal feel; the **Classic IRC** [pre
 
 <Screenshot src="/screenshots/preset-modern.webp" alt="The Modern grouped layout: a name and time header over consecutive messages from the same person" />
 
-Like [Slack](https://slack.com) or [Discord](https://discord.com): consecutive messages from one person share a single header with their name and the time. Hover a follow-up message to see its time in the margin.
+Like [Slack](https://slack.com) or [Discord](https://discord.com): consecutive messages from one person share a single header with their name and the time. Hover a follow-up message to see its time in the margin. You can [move the time](#timestamp-position) too.
 
 Messages are grouped when they arrive within **5 minutes** of each other (**Group messages within** in Settings, `chat.groupingInterval` in settings.json). Turn on **Avatars** to show initials next to each group; they're off by default.
 
@@ -40,13 +40,39 @@ In **Settings → Messages**:
 
 ## Timestamps
 
-Turn timestamps on or off, and choose how they read:
+<Screenshot src="/screenshots/settings-timestamps.webp" alt="Settings → Messages → Timestamps: Show timestamps, Position (Left, Right, Top or Bottom) for the current layout, Other layouts, Clock, Show seconds and Custom format" />
+
+Turn timestamps on or off, move them (see [Timestamp position](#timestamp-position)), and choose how they read:
 
 - **Clock**: **System** (the default) follows your Mac's **24-hour time** setting in System Settings → General → Date & Time, and updates as soon as you change it. **12-hour** (`2:47 PM`) and **24-hour** (`14:47`) override it for Vela.
 - **Show seconds** adds seconds (`2:47:09 PM`, `14:47:09`).
 - **Custom format** lets you write any [Unicode date pattern](https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table), such as `HH.mm` or `EEE HH:mm`. It starts from the format you had; turn it off to go back to the clock settings.
 
 Below the settings, a sample shows what your timestamps look like.
+
+### Timestamp position
+
+**Position** puts the time on the **Left**, **Right**, **Top** or **Bottom** of each message. Each layout keeps its own position, so you can have times on the right in Modern and in a column on the left in Classic. The control sets the layout you're using; **Other layouts** shows the others' and lets you change them too. The preview at the top of **Settings → Messages** follows along.
+
+<Screenshot src="/screenshots/timestamps-right.webp" alt="The Modern layout with timestamps on the right: each group's time sits at the right edge, level with the name" />
+
+| Position | Classic | Modern | Compact columns |
+| --- | --- | --- | --- |
+| **Left** | Before the nick, `[12:01] <nick> text` (the default) | In the margin, level with the name (under the avatar, with avatars on) | The time column before the nicks (the default) |
+| **Right** | At the right edge, level with the first line | At the right edge, level with the name | A time column at the right edge |
+| **Top** | On a small line above each message | Beside the name (the default) | On a small line above the text |
+| **Bottom** | On a small line below each message | Below the group's first message | On a small line below the text |
+
+In **Modern**, only a group's first message shows its time. Hover the others to see theirs: in the margin, or at the right edge with **Right**. **Bottom** goes under the first message, the one it dates, rather than under the whole group.
+
+A few details:
+
+- Times on the right line up in one column, and the hover toolbar moves to their left so it never covers them.
+- A time at the bottom comes right after the message and its [translation](/guide/apple-intelligence#translate-messages), above link previews, images and reactions.
+- Joins, parts and other events stay one compact line. With **Right**, and with **Left** in Classic and Compact columns, their time is in the same column as the messages'. Otherwise it follows the event's text, as Modern has always shown it, rather than taking a line of its own.
+- Turning **Show timestamps** off hides them in every position. Copying a message never includes its time, and VoiceOver reads the time with the message wherever it's drawn.
+
+In settings.json these are [`chat.timestampPosition.classic`](/reference/settings#chat.timestampPosition.classic), [`chat.timestampPosition.grouped`](/reference/settings#chat.timestampPosition.grouped) and [`chat.timestampPosition.columns`](/reference/settings#chat.timestampPosition.columns), each `"left"`, `"right"`, `"top"` or `"bottom"`. In the [command palette](/guide/command-palette), **Chat: Timestamps on the Left**, **on the Right**, **at the Top** and **at the Bottom** set the layout you're using, and turn timestamps on if they're off.
 
 ## Joins, parts and other noise
 
@@ -95,3 +121,5 @@ In settings.json these are [`chat.openAt`](/reference/settings#chat.openAt) (`"f
 Vela stores your messages on your Mac in a local database. Each channel keeps the most recent **1,000** messages in memory (**Messages kept in memory**); scroll up and older messages load from disk, then from the server if it supports [`chathistory`](/reference/ircv3).
 
 To limit how much history is kept, set **Settings → Messages → History → Keep messages** (from a week to two years). Older messages are removed when Vela starts. By default history is kept forever. In settings.json it's [`history.retentionDays`](/reference/settings#history.retentionDays), which takes any number of days.
+
+For a copy you can keep, search or open in other apps, turn on [chat logs](/guide/chat-logs): plain-text files, one folder per network.

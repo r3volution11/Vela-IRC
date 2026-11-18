@@ -45,9 +45,9 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .layout: ["navigation", "tabs", "sidebar", "memberList"]
         case .chat: ["chat"]
         case .typing: ["input"]
-        case .history: ["history"]
+        case .history: ["history", "logging"]
         case .media: ["media"]
-        case .notifications: ["notifications", "highlight"]
+        case .notifications: ["notifications", "dock", "highlight"]
         case .connection: ["connection"]
         case .intelligence: ["intelligence", "translation"]
         }
@@ -137,6 +137,13 @@ extension SettingDescriptor {
         schema.objectValue?["enum"]?.arrayValue?.compactMap(\.stringValue)
     }
 
+    /// For lists whose elements are a fixed set of strings
+    /// (`dock.badgeCounts`): the strings, from the schema's `items.enum`.
+    public var itemEnumValues: [String]? {
+        guard schema.objectValue?["type"]?.stringValue == "array" else { return nil }
+        return schema.objectValue?["items"]?.objectValue?["enum"]?.arrayValue?.compactMap(\.stringValue)
+    }
+
     /// True for settings that follow a macOS setting until set
     /// (``SystemFollowingBool``): `true`, `false` or `"system"`.
     public var followsSystem: Bool { SettingsMetadata.systemFollowingKeys.contains(key) }
@@ -157,6 +164,7 @@ public enum SettingsMetadata {
         "input": "Typing",
         "intelligence": "Apple Intelligence",
         "highlight": "Highlights",
+        "logging": "Chat Logs",
     ]
 
     /// Names for keys that don't humanize well.
@@ -168,6 +176,9 @@ public enum SettingsMetadata {
         "chat.showJoinPart": "Join/Part Messages",
         "chat.openAt": "Open Channels At",
         "chat.showUnreadMarker": "Show New Line",
+        "chat.timestampPosition.classic": "Timestamp Position in Classic",
+        "chat.timestampPosition.grouped": "Timestamp Position in Modern",
+        "chat.timestampPosition.columns": "Timestamp Position in Compact Columns",
         "intelligence.catchUp": "Catch Me Up",
         "intelligence.catchUpThreshold": "Catch Me Up After",
         "intelligence.spotlightChannels": "Channels in Spotlight",
@@ -176,6 +187,13 @@ public enum SettingsMetadata {
         "input.spellCheck": "Check Spelling",
         "input.grammarCheck": "Check Grammar",
         "history.retentionDays": "Keep Messages (Days)",
+        "dock.showOffline": "Show Offline Mark",
+        "logging.enabled": "Save Chat Logs",
+        "logging.maxFileSizeMB": "Max File Size (MB)",
+        "logging.keepFiles": "Files to Keep",
+        "logging.includeEvents": "Include Channel Events",
+        "logging.includeServer": "Include Server Messages",
+        "logging.excludedBuffers": "Channels Not Logged",
     ]
 
     /// Number ranges, merged into each descriptor's schema as
@@ -196,6 +214,8 @@ public enum SettingsMetadata {
         "media.maxImageSizeMB": 1...100,
         "media.maxImageHeight": 120...800,
         "history.retentionDays": 0...3650,
+        "logging.maxFileSizeMB": 1...1024,
+        "logging.keepFiles": 0...1000,
         "intelligence.catchUpThreshold": 1...1000,
     ]
 
@@ -215,6 +235,7 @@ public enum SettingsMetadata {
         "media.disabledBuffers": .buffers,
         "media.blurredBuffers": .buffers,
         "translation.autoTranslate": .buffers,
+        "logging.excludedBuffers": .buffers,
         "translation.language": .languages,
     ]
 
@@ -235,6 +256,15 @@ public enum SettingsMetadata {
         "block": "Nothing",
         // appearance.messageBoxBorder
         "accent": "Accent when typing",
+        // dock.badgeCounts and dock.bounceFor
+        "mentions": "Mentions and highlight words",
+        "channels": "All channel messages",
+        // dock.badgeStyle
+        "capped": "Up to 99+",
+        "exact": "Exact number",
+        "dot": "Dot (•)",
+        // dock.bounce
+        "untilActive": "Until you switch to Vela",
     ]
 
     /// A readable label for a settings.json enum value, in sentence case:

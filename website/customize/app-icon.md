@@ -53,6 +53,8 @@ The standard Vela icon is built for all four: its V and star are separate layers
 
 The other five icons are fixed pictures. They look the same whatever your Icon & widget style is. If you use Dark, Clear or Tinted and want the Dock to match the rest of your icons, choose **Vela**.
 
+When a network goes offline, Vela draws a small amber [offline mark](/guide/notifications#offline) on whichever icon you chose. To draw it on the standard icon, Vela shows a picture of it in the Dock, so it may not follow Dark, Clear or Tinted until the network is back and the mark goes away.
+
 ## In settings.json {#settings-json}
 
 The choice is saved in [settings.json](/customize/settings-json) as [`appearance.appIcon`](/reference/settings#appearance.appIcon):

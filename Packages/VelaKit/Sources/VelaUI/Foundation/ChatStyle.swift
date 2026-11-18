@@ -22,6 +22,10 @@ public struct ChatStyle: Equatable {
     public var timestampPattern = TimestampFormat.pattern(clock: .system, seconds: false, locale: .autoupdatingCurrent)
     /// Language and region timestamps are written in (AM/PM symbols).
     public var timestampLocaleIdentifier = Locale.autoupdatingCurrent.identifier
+    /// Where each layout draws times (`chat.timestampPosition.*`).
+    public var classicTimestampPosition: TimestampPosition = .left
+    public var groupedTimestampPosition: TimestampPosition = .top
+    public var columnsTimestampPosition: TimestampPosition = .left
     public var joinPart: JoinPartDisplay = .collapse
     public var colorNicks = true
     public var showAvatars = false
@@ -74,6 +78,9 @@ public struct ChatStyle: Equatable {
             locale: locale
         )
         timestampLocaleIdentifier = locale.identifier
+        classicTimestampPosition = settings[.chatTimestampPositionClassic]
+        groupedTimestampPosition = settings[.chatTimestampPositionGrouped]
+        columnsTimestampPosition = settings[.chatTimestampPositionColumns]
         joinPart = settings[.chatShowJoinPart]
         colorNicks = settings[.chatColorNicks]
         showAvatars = settings[.chatShowAvatars]
@@ -138,6 +145,18 @@ public struct ChatStyle: Equatable {
     }
 
     // MARK: Timestamps
+
+    /// Where `layout` draws times.
+    public func timestampPosition(for layout: ChatLayout) -> TimestampPosition {
+        switch layout {
+        case .classic: classicTimestampPosition
+        case .grouped: groupedTimestampPosition
+        case .columns: columnsTimestampPosition
+        }
+    }
+
+    /// Where the current layout draws times.
+    public var timestampPosition: TimestampPosition { timestampPosition(for: layout) }
 
     public func timestamp(_ date: Date) -> String {
         Self.formatter(pattern: timestampPattern, localeIdentifier: timestampLocaleIdentifier).string(from: date)

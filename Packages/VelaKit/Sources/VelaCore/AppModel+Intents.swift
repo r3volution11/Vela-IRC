@@ -317,4 +317,5 @@ extension AppModel {
 
 extension SessionHost {
     public func session(_ session: NetworkSession, didSendComposerMessageIn buffer: BufferModel) {}
+    public func sessionDidChangeConnection(_ session: NetworkSession) {}
 }
