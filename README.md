@@ -253,7 +253,7 @@ scripts/demo-screenshot.sh build/Vela.app shot.png --themes-dir my-themes --them
 Demo mode uses a temporary Themes folder, so it never shows or changes your
 own themes; `--themes-dir <folder>` copies a folder's theme files into it.
 
-To build a signed and notarized release, see [docs/RELEASING.md](docs/RELEASING.md).
+To build a signed and notarized release, see [docs/RELEASING.md](docs/RELEASING.md). Start with `scripts/release.sh --preflight`, which checks that everything is ready (git, version and changelog, CI, tests, website, generated files, media sites) and builds nothing.
 
 ## Project layout
 

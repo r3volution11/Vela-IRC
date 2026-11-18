@@ -43,25 +43,34 @@ The release build you ship uses the same identity as the `build/Vela.app` that `
      ```
      `notarytool` asks for the password, and you never type it into a file.
    - Check it: `xcrun notarytool history --keychain-profile vela-notary`.
-4. **Do a dry run.** `scripts/release.sh --skip-notarize` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work.
+4. **Do a dry run.** `scripts/release.sh --skip-notarize --skip-preflight` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work. `--skip-preflight` leaves out the [release checks](#release-checks), which would otherwise stop the build until everything is ready to ship; the post-build checks still run.
 
 ## Before each release
+
+Start by running the release checks on their own:
+
+```sh
+scripts/release.sh --preflight
+```
+
+It runs every [preflight check](#preflight-checks) and builds nothing. It ends with a summary: each check with PASS, FAIL or SKIP, and for each failure what to do. Work through the steps below and run it again until it says **Ready to release**. `scripts/release.sh` runs the same checks before it builds anything, and refuses to build while one fails.
+
+The checks catch what can be checked. Deciding the version, writing the changelog and the release notes, and trying the build are still up to you:
 
 1. **Pick the version.** Use [semantic versioning](https://semver.org): below 1.0, bump the minor version for features (0.2.0) and the patch for fixes only (0.2.1).
    - The version is `MARKETING_VERSION` in `Vela.xcodeproj/project.pbxproj` (the Vela target's Debug and Release configurations).
    - Also bump `CURRENT_PROJECT_VERSION`, the build number, by 1 for every build you ship.
    - The easiest way is Xcode: Vela target → General → Version and Build.
+   - *Checked:* both configurations agree, the version is newer than the previous release's, the build number is higher than that release's, and the tag `v<version>` isn't taken.
 2. **Finish the changelog.** In `CHANGELOG.md`, rename `## Unreleased` to `## <version> - <yyyy-mm-dd>`. Read it through as a user would, and move anything that isn't user-facing out. Start a new empty `## Unreleased` section above it for the next cycle.
+   - *Checked:* the newest version section has that heading and entries, and `## Unreleased` has none. Whether the entries read well is up to you.
 3. **Refresh the adult-domain list:** `scripts/update-adult-domains.sh`. Check its summary; see [The adult-domain list](#the-adult-domain-list).
-4. **Check that everything is green:**
-   ```sh
-   swift test --package-path Packages/VelaKit
-   (cd website && npm run docs:build && npm run docs:check)
-   ```
-   Then commit, push and wait for CI: `gh run list --limit 2`.
-   The **Media sites** workflow checks the sites Vela shows media from every Monday; if its last run failed, sort that out first. `scripts/release.sh` checks them again anyway.
-5. **Check the docs and screenshots.** Every user-facing change is documented on the site. If the UI changed, re-shoot with `website/scripts/screenshots.sh` and commit the images.
-6. **Try the Release build yourself:** `scripts/run.sh`, then use it for a bit. Release builds are optimized, and occasionally behave differently from the Debug build you develop with.
+   - *Checked:* the list was refreshed since the previous release.
+4. **Commit, push and wait for CI.**
+   - *Checked:* you're on `main`, nothing is uncommitted, `origin/main` has your commit, and CI passed for exactly that commit. The checks also run the package tests, build and check the website, compare the generated files with the code, and check the media sites against the real sites.
+5. **Check the docs and screenshots.** Every user-facing change is documented on the site. If the UI changed, re-shoot with `website/scripts/screenshots.sh` and commit the images. *Not checked.*
+6. **Try the Release build yourself:** `scripts/run.sh`, then use it for a bit. Release builds are optimized, and occasionally behave differently from the Debug build you develop with. *Not checked.*
+7. **Write the release notes** (see [Publishing](#publishing)). *Not checked.*
 
 ## Building the release
 
@@ -70,35 +79,125 @@ scripts/release.sh
 ```
 
 What it does:
-1. Reads the version from the project and warns if the working tree has uncommitted changes.
+1. Reads the version and build number from the Vela target's Release configuration.
 2. Finds your **Developer ID Application** certificate and Team ID, and checks that the `vela-notary` profile exists.
-3. **Checks the media sites** with `scripts/check-media-sites.sh`: every sample link in `MediaSites.swift` is resolved against the real site, and the report is printed. If a site fails, the script stops before archiving and names the broken sites. See [When the media check fails](#when-the-media-check-fails).
+3. **Runs the [preflight checks](#preflight-checks)** (`scripts/release-preflight.sh`): git, the version and changelog, CI, the adult-domain list, the generated files, the package tests, the website and the media sites. If one fails, it prints the summary and stops before archiving.
 4. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`.
 5. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
 6. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
 7. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
 8. **Builds the DMG** (`Vela.app` plus an Applications shortcut), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
-9. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
+9. **Checks the DMG** as users get it, with the [post-build checks](#post-build-checks) (`scripts/verify-release.sh`). If one fails, it stops.
+10. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
+11. Prints a summary of every check and its result.
 
-Notarization usually takes a few minutes. If Apple rejects a submission, the script prints Apple's log; the usual causes are an unsigned nested binary or a missing hardened-runtime flag. Options:
-- `--skip-notarize`: signs but doesn't notarize, for testing the pipeline.
-- `--adhoc`: no Developer ID at all, for testing on your own Mac only. Other Macs will refuse it. It skips the media check too, since nothing it builds ships; add `--media-check` to check anyway.
-- `--skip-media-check`: builds without checking the media sites. Use it when you've looked at the failure and it shouldn't hold up the release, such as a site that's down for an hour.
+Notarization usually takes a few minutes. If Apple rejects a submission, the script prints Apple's log; the usual causes are an unsigned nested binary or a missing hardened-runtime flag. For testing the pipeline, `--skip-notarize` signs without notarizing, and `--adhoc` doesn't use your Developer ID at all; see [Options](#options).
+
+## Release checks
+
+`scripts/release.sh` checks the release twice: the **preflight checks** before it builds anything, and the **post-build checks** on the finished DMG. Each check prints a PASS, FAIL or SKIP line as it runs; a failure says what's wrong and how to fix it. Every preflight check runs even after one fails, so you see everything to fix at once. The run ends with a summary of all of them, and any failure stops the release.
+
+### Preflight checks
+
+`scripts/release.sh --preflight` runs these on their own, and so does `scripts/release-preflight.sh`. They build no app and don't touch your files or branches: besides fetching `main` and the tags from `origin`, they write only to ignored folders (`build/release-preflight/` for logs and the SwiftPM build, `website/node_modules`, the website's build output).
+
+"The previous release" below is the newest `v*` tag in HEAD's history, other than this version's own tag.
+
+#### Git
+
+Skipped for `--adhoc`.
+
+- **On main.** Releases are built from `main`. *If it fails:* merge your work into `main` and `git switch main`.
+- **Clean working tree.** No uncommitted changes and no untracked files, so the release is exactly the commit CI tested. Ignored files such as `build/` don't count. *If it fails:* it lists the files. Commit them, stash them (`git stash -u`) or delete them. For a test build, `--allow-dirty` lets them through.
+- **Pushed.** After `git fetch`, `origin/main` contains HEAD. *If it fails:* `git push origin main` (pull first if `origin/main` moved on), then wait for CI.
+- **Tag `v<version>` is new.** Neither your clone nor `origin` has the tag. *If it fails:* if that version was released, bump the version and the changelog. If the tag was made by mistake and nothing was published, delete it, as the check says (`git tag -d v<version>`, `git push origin :refs/tags/v<version>`).
+
+#### Version
+
+Skipped for `--adhoc`.
+
+- **Version.** `MARKETING_VERSION` is the same in the Vela target's Debug and Release configurations, has the form `<major>.<minor>.<patch>`, and is newer than the previous release. *If it fails:* set it in Xcode (Vela target → General → Version), which changes both configurations.
+- **Build number.** `CURRENT_PROJECT_VERSION` is a whole number above 0, the same in both configurations, and higher than the previous release's (read from the project at its tag). *If it fails:* set it to one more than the previous release's (Xcode: Build).
+- **Changelog section.** The newest version section in `CHANGELOG.md` is `## <version> - <yyyy-mm-dd>`, with a real date, and has entries. Headings, blank lines and HTML comments aren't entries. *If it fails:* rename `## Unreleased` to that heading, or fix the heading's version or date.
+- **Changelog Unreleased.** `## Unreleased`, if there is one, has no entries; empty `### Added`-style headings are fine. Anything listed there is in this build, so it belongs in this release's section. *If it fails:* move the entries into `## <version> - <date>`.
+
+#### CI
+
+Skipped for `--adhoc` and `--skip-ci-check`. These checks ask GitHub with `gh`, so it must be installed and signed in (`gh auth login`).
+
+- **CI workflow.** The **CI** workflow (`.github/workflows/ci.yml`) has a finished, successful run for exactly HEAD's commit. *If it fails:*
+  - no run yet: push, wait for CI to finish (`gh run watch`), and run the checks again;
+  - still running: wait for it, then run the checks again;
+  - failed: the check links the run. Fix what failed, push and wait again; for a fluke, `gh run rerun <id> --failed`.
+- **Media sites workflow.** If the **Media sites** workflow ran for HEAD (it runs when media code changes), it passed. Not running is fine; the media sites check below covers it. *If it fails:* as for CI. For a site that's broken, see [When the media check fails](#when-the-media-check-fails).
+
+#### Adult-domain list
+
+- **Adult-domain list.** The list was refreshed since the previous release: its header has a later `# Date:` or a different upstream `# Commit:` than the list at the previous release's tag, or today's date. Before the first release, it must be at most 30 days old. *If it fails:* run `scripts/update-adult-domains.sh`, check its summary and commit the list; see [The adult-domain list](#the-adult-domain-list).
+
+#### Generated files
+
+Files generated from the code must match what's committed. The checks compare what the code generates now with the committed files, without rewriting them. Ignored output, such as `website/_generated/`, isn't compared.
+
+- **Settings reference.** `node website/scripts/generate.mjs` runs without errors and changes no committed file. It writes the settings, presets and themes reference into `website/_generated/`. *If it fails:* fix what it reports, or commit what it changed.
+- **Theme schema.** `schemas/vela-theme.schema.json` matches `vela-theme-tool schema`. *If it fails:* `swift run --package-path Packages/VelaKit vela-theme-tool schema > schemas/vela-theme.schema.json`, then commit it.
+- **Theme token table.** The table between the `TOKEN TABLE` markers in `docs/THEMES.md` matches `vela-theme-tool tokens`. *If it fails:* replace it with the output of `swift run --package-path Packages/VelaKit vela-theme-tool tokens`, then commit it.
+- **Media sites page.** `website/reference/media-sites.md` matches `vela-media-tool docs`. *If it fails:* `swift run --package-path Packages/VelaKit vela-media-tool docs --write website/reference/media-sites.md`, then commit it.
+
+#### Tests, website and media sites
+
+- **Package tests** (skipped for `--skip-tests`). `swift test --package-path Packages/VelaKit` passes, and every test target's run reaches its end: a test that quits the test process early can leave swift test reporting success with tests that never ran, and the check names the last test such a run started. It builds in `build/release-preflight/swift`, apart from Xcode's and your editor's builds, so the first run takes a few minutes. *If it fails:* the check shows the build errors or the failing tests; everything is in `build/release-preflight/swift-test.log`. Fix them, then commit, push and wait for CI.
+- **Website.** In `website/`: `npm ci` if `node_modules` is missing, then `npm run docs:build` and `npm run docs:check`. *If it fails:* the check shows the errors; everything is in `build/release-preflight/website.log`. Fix them and check again with `(cd website && npm run docs:build && npm run docs:check)`.
+- **Media sites** (skipped for `--skip-media-check`, and for `--adhoc` unless you add `--media-check`). `scripts/check-media-sites.sh` resolves every live sample link in `MediaSites.swift` against the real site and prints its report. *If it fails:* it names the broken sites; see [When the media check fails](#when-the-media-check-fails). If a site is only down for a while, `--skip-media-check` lets the release go ahead.
+
+### Post-build checks
+
+Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts it read-only (out of sight, in a temporary folder), checks the `Vela.app` inside as users get it, and unmounts it:
+
+| Check | Passes when | If it fails |
+| --- | --- | --- |
+| Disk image | The DMG mounts read-only. | Build it again. |
+| Bundle id | It's exactly `io.github.r3volution11.Vela`, never the `.dev` one. | The app came from the Debug configuration; build with `scripts/release.sh`. |
+| Version | `CFBundleShortVersionString` is the version and `CFBundleVersion` the build number. | The project changed while building, or the build isn't from it; build again. |
+| Architectures | The app has both `arm64` and `x86_64`. | Check that the archive is for `generic/platform=macOS` with `ONLY_ACTIVE_ARCH=NO`, as the script does. |
+| App Sandbox | The `com.apple.security.app-sandbox` entitlement is on. | Check `CODE_SIGN_ENTITLEMENTS` (`Vela/Vela.entitlements`) in the Release configuration. |
+| Signature | `codesign --verify --deep --strict` passes. | A file changed after signing, or a nested binary isn't signed. Build again. |
+| Developer ID | Signed with a Developer ID Application certificate of your Team ID, with a secure timestamp. | Check the certificate (see [If something goes wrong](#if-something-goes-wrong)) and `VELA_TEAM_ID`. |
+| Gatekeeper | `spctl -a -vvv` on the app says "Notarized Developer ID". | Notarization or stapling didn't work; build again and read Apple's log. |
+| Stapled ticket (app), (DMG) | `xcrun stapler validate` passes on the app and on the DMG. | As for Gatekeeper. |
+| Applications link | The DMG has its Applications shortcut. | Build again. |
+
+`--skip-notarize` skips the Gatekeeper and stapled-ticket checks, and `--adhoc` also skips the Developer ID check; the summary lists them as skipped. When a post-build check fails, `build/release/Vela.dmg` stays for you to look at, but `Vela-<version>.dmg` and `SHA256SUMS` aren't written.
+
+To check a DMG again, such as the one you downloaded after publishing:
+
+```sh
+scripts/verify-release.sh build/release/Vela.dmg
+scripts/verify-release.sh ~/Downloads/Vela.dmg --version 0.2.0 --build 3 --team <TEAMID>
+```
+
+It expects the project's version and build number unless you give `--version` and `--build`, and any Developer ID team unless you give `--team` (or set `VELA_TEAM_ID`).
+
+### Options
+
+| Option | What it does |
+| --- | --- |
+| `--preflight` | Runs only the preflight checks and builds nothing. It doesn't look for your certificate. The first thing to run when you prepare a release. |
+| `--skip-notarize` | Signs with your Developer ID but doesn't notarize, for testing the pipeline. The post-build checks skip Gatekeeper and the stapled tickets. |
+| `--adhoc` | No Developer ID at all, for testing on your own Mac only; other Macs will refuse the app. Skips the git, version and CI checks, and the media check (add `--media-check` to run it). The post-build checks that apply still run. |
+| `--allow-dirty` | Lets uncommitted changes through the clean working tree check, for test builds. The check shows as skipped. |
+| `--skip-tests` | Skips the package tests. |
+| `--skip-ci-check` | Skips asking GitHub about CI, for instance when you're offline or GitHub is down. |
+| `--skip-media-check` | Skips the media sites check. Use it when you've looked at the failure and it shouldn't hold up the release, such as a site that's down for an hour. |
+| `--media-check` | Checks the media sites even with `--adhoc`. |
+| `--skip-preflight` | Skips every preflight check. **Only for emergencies, and for dry runs you won't ship**: it prints a warning at the start and the end, and the post-build checks still run. After an emergency release, run `scripts/release.sh --preflight` as soon as you can. |
+
+`scripts/release-preflight.sh` takes `--adhoc`, `--allow-dirty`, `--skip-tests`, `--skip-ci-check`, `--skip-media-check` and `--media-check` too, and `--help` lists them.
 
 ## Checking the build before you publish
 
-Test what users will get, not your local build:
+The [post-build checks](#post-build-checks) have already checked the DMG's identity, version, architectures, sandbox, signature, notarization and stapling. What's left is to test what users will get, not your local build, with a real install:
 
-```sh
-spctl -a -vvv -t install build/release/Vela.dmg            # "accepted, source=Notarized Developer ID"
-xcrun stapler validate build/release/Vela.dmg
-hdiutil attach build/release/Vela.dmg                       # then:
-spctl -a -vvv "/Volumes/Vela <version>/Vela.app"
-codesign -dv --verbose=4 "/Volumes/Vela <version>/Vela.app" 2>&1 | grep -E "Authority|TeamIdentifier|Timestamp"
-hdiutil detach "/Volumes/Vela <version>"
-```
-
-Then do a real install:
 1. Quit any running Vela and copy `Vela.app` from the DMG to `/Applications`.
 2. Open it from there. On first launch, macOS asks for your Keychain password once per saved network password; see below.
 3. Connect a network, and check inline media, the notification permission prompt, and **Catch me up** if Apple Intelligence is on.
@@ -129,7 +228,7 @@ gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build
    ```sh
    curl -sIL https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg | grep -i location
    ```
-   It should end in `/download/v<version>/Vela.dmg`. Then download it with a browser and install it once more.
+   It should end in `/download/v<version>/Vela.dmg`. Then download it with a browser, check it with `scripts/verify-release.sh ~/Downloads/Vela.dmg --version <version> --build <build>`, and install it once more.
 2. **Check the website:** the **Deploy Website** workflow runs on every push to `main`. Check that the changelog page shows the new version first, and that velairc.app's Download button gets the new DMG.
 3. **Start the next cycle:** make sure `CHANGELOG.md` has an empty `## Unreleased` section.
 
@@ -138,7 +237,8 @@ gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build
 - **A bad release:** don't delete the release. Ship a fixed version (bump the patch number) and mark it latest. If the build is harmful, delete only its DMG assets and say so in the release notes.
 - **"No Developer ID Application certificate found":** the certificate isn't in the login keychain, or its private key is missing (it shows without a disclosure triangle in Keychain Access). Re-import your `.p12` backup.
 - **"Notarization profile not found":** run the `store-credentials` step again.
-- **Gatekeeper rejects the DMG on another Mac:** run `xcrun stapler validate` on both the DMG and the app inside it, and check that `spctl` says "Notarized Developer ID".
+- **Gatekeeper rejects the DMG on another Mac:** run `scripts/verify-release.sh` on that DMG. It runs `xcrun stapler validate` on both the DMG and the app inside it, and checks that `spctl` says "Notarized Developer ID".
+- **A preflight or post-build check fails:** see [Release checks](#release-checks) for what each one needs.
 
 ## When the media check fails
 

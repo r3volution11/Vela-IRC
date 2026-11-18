@@ -1,0 +1,223 @@
+#!/bin/zsh
+# Checks a built Vela disk image the way users get it. scripts/release.sh runs
+# it on build/release/Vela.dmg once the DMG is made, notarized and stapled, and
+# stops if a check fails. Run it on its own to check a DMG again, such as the
+# one you downloaded from the release page.
+#
+#   scripts/verify-release.sh build/release/Vela.dmg
+#   scripts/verify-release.sh ~/Downloads/Vela.dmg --version 0.2.0 --build 3
+#
+# It mounts the DMG read-only (out of sight, in a temporary folder), checks
+# the Vela.app inside, and unmounts it:
+#   • the bundle id is io.github.r3volution11.Vela (never the .dev one);
+#   • CFBundleShortVersionString and CFBundleVersion are the version and build;
+#   • it runs on Apple silicon and Intel (arm64 and x86_64);
+#   • the App Sandbox entitlement is on;
+#   • codesign --verify --deep --strict passes;
+#   • it's signed with a Developer ID Application certificate (of --team, if
+#     given), with a secure timestamp;
+#   • Gatekeeper (spctl) accepts it as "Notarized Developer ID";
+#   • the notarization ticket is stapled to the app and to the DMG;
+#   • the DMG has the Applications shortcut.
+#
+# Options:
+#   --version <version>  The version to expect (default: MARKETING_VERSION of
+#                        the Vela target's Release configuration).
+#   --build <number>     The build number to expect (default: CURRENT_PROJECT_VERSION).
+#   --team <id>          The Team ID to expect (default: VELA_TEAM_ID; with
+#                        neither, any Developer ID team passes and is shown).
+#   --skip-notarize      The build was signed but not notarized: skip the
+#                        Gatekeeper and stapled-ticket checks.
+#   --adhoc              An ad hoc build: also skip the Developer ID check.
+#   --results <file>     Append each result to <file> and leave the summary to
+#                        the caller (scripts/release.sh).
+#
+# Exits 0 when every check that ran passed, 1 when one failed, 2 for a usage
+# error.
+set -euo pipefail
+script="${0:A}"
+cd "${0:A:h}/.."
+source scripts/lib/release-checks.zsh
+
+usage() { sed -n '2,/^set -euo/p' "$script" | sed -e '$d' -e 's/^# \{0,1\}//'; }
+needs_value() { [[ $# -ge 2 && -n "$2" ]] || { print -u2 -r -- "$1 needs a value"; exit 2; } }
+
+bundle_id=io.github.r3volution11.Vela
+dmg=""
+version=""
+build_number=""
+team="${VELA_TEAM_ID:-}"
+notarized=1
+adhoc=0
+results=""
+while (( $# )); do
+  case "$1" in
+    --version) needs_value "$@"; version="$2"; shift 2 ;;
+    --build) needs_value "$@"; build_number="$2"; shift 2 ;;
+    --team) needs_value "$@"; team="$2"; shift 2 ;;
+    --skip-notarize) notarized=0; shift ;;
+    --adhoc) adhoc=1; notarized=0; shift ;;
+    --results) needs_value "$@"; results="$2"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    -*) print -u2 -r -- "Unknown option: $1 (see --help)"; exit 2 ;;
+    *) [[ -z "$dmg" ]] || { print -u2 "Give one disk image."; exit 2; }; dmg="$1"; shift ;;
+  esac
+done
+[[ -n "$dmg" ]] || { usage >&2; exit 2; }
+[[ -n "$version" ]] || version=$(vela_setting Vela.xcodeproj/project.pbxproj Release MARKETING_VERSION || true)
+[[ -n "$build_number" ]] || build_number=$(vela_setting Vela.xcodeproj/project.pbxproj Release CURRENT_PROJECT_VERSION || true)
+
+tmp=$(mktemp -d -t vela-verify)
+mountpoint="$tmp/volume"
+mounted=0
+cleanup() {
+  if (( mounted )); then
+    hdiutil detach "$mountpoint" -quiet 2>/dev/null || hdiutil detach "$mountpoint" -force -quiet 2>/dev/null || true
+  fi
+  rm -rf "$tmp"
+}
+trap cleanup EXIT
+
+if [[ -n "$results" ]]; then
+  RELEASE_CHECKS_RESULTS="$results"
+else
+  RELEASE_CHECKS_RESULTS="$tmp/results"
+fi
+: >> "$RELEASE_CHECKS_RESULTS"
+
+finish() {
+  [[ -n "$results" ]] || print_check_summary "$RELEASE_CHECKS_RESULTS"
+  if (( release_checks_failed )); then
+    print -P "%F{red}✗ $release_checks_failed post-build check(s) failed for ${dmg:t}.%f"
+    exit 1
+  fi
+  print -P "%F{green}✓ ${dmg:t} passed the post-build checks.%f"
+  exit 0
+}
+
+check_section "Post-build checks"
+mkdir -p "$mountpoint"
+if [[ ! -f "$dmg" ]]; then
+  check_fail "Disk image" "$dmg doesn't exist" "Build it with scripts/release.sh."
+  finish
+fi
+if attach_output=$(hdiutil attach "$dmg" -readonly -nobrowse -noautoopen -mountpoint "$mountpoint" 2>&1); then
+  mounted=1
+  check_pass "Disk image" "mounts read-only"
+else
+  check_fail "Disk image" "hdiutil couldn't mount it: ${attach_output//$'\n'/ }" "Rebuild it with scripts/release.sh."
+  finish
+fi
+
+app="$mountpoint/Vela.app"
+if [[ ! -d "$app" ]]; then
+  check_fail "Vela.app" "the disk image has no Vela.app" "Rebuild it with scripts/release.sh."
+  finish
+fi
+# tidy <output>: a tool's output on one line, without "Processing: …" lines
+# or the path of the temporary mount folder.
+tidy() {
+  local -a lines=("${(@f)1}")
+  lines=("${(@)lines:#Processing:*}")
+  local text="${(j: :)lines}"
+  print -r -- "${text//$mountpoint\//}"
+}
+info="$app/Contents/Info.plist"
+plist_value() { plutil -extract "$1" raw -o - "$info" 2>/dev/null || true; }
+
+found=$(plist_value CFBundleIdentifier)
+if [[ "$found" == "$bundle_id" ]]; then
+  check_pass "Bundle id" "$found"
+else
+  check_fail "Bundle id" "${found:-none}, expected $bundle_id" \
+    "Only the Release configuration has the release bundle id; build with scripts/release.sh, not a Debug build."
+fi
+
+found_version=$(plist_value CFBundleShortVersionString)
+found_build=$(plist_value CFBundleVersion)
+if [[ -z "$version" || -z "$build_number" ]]; then
+  check_fail "Version" "no version or build number to expect" "Give --version and --build."
+elif [[ "$found_version" == "$version" && "$found_build" == "$build_number" ]]; then
+  check_pass "Version" "$found_version ($found_build)"
+else
+  check_fail "Version" "the app is ${found_version:-?} (${found_build:-?}), expected $version ($build_number)" \
+    "Rebuild from the committed project (MARKETING_VERSION and CURRENT_PROJECT_VERSION in both configurations)."
+fi
+
+executable="$app/Contents/MacOS/$(plist_value CFBundleExecutable)"
+archs=$(lipo -archs "$executable" 2>/dev/null || true)
+if [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]]; then
+  check_pass "Architectures" "$archs"
+else
+  check_fail "Architectures" "${archs:-none found}, expected arm64 and x86_64" \
+    "Archive with ONLY_ACTIVE_ARCH=NO for generic/platform=macOS, as scripts/release.sh does."
+fi
+
+entitlements="$tmp/entitlements.plist"
+codesign -d --entitlements - --xml "$app" > "$entitlements" 2>/dev/null || true
+sandbox=$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$entitlements" 2>/dev/null || true)
+if [[ "$sandbox" == true ]]; then
+  check_pass "App Sandbox" "on"
+else
+  check_fail "App Sandbox" "the com.apple.security.app-sandbox entitlement is missing" \
+    "Check CODE_SIGN_ENTITLEMENTS (Vela/Vela.entitlements) in the Release configuration."
+fi
+
+if verify_output=$(codesign --verify --deep --strict "$app" 2>&1); then
+  check_pass "Signature" "codesign --verify --deep --strict passes"
+else
+  check_fail "Signature" "$(tidy "$verify_output")" \
+    "Rebuild with scripts/release.sh; a file changed after signing, or a nested binary isn't signed."
+fi
+
+signing=$(codesign -dvv "$app" 2>&1 || true)
+if (( adhoc )); then
+  check_skip "Developer ID" "ad hoc build"
+else
+  authority=$(print -r -- "$signing" | sed -n 's/^Authority=//p' | head -n 1)
+  found_team=$(print -r -- "$signing" | sed -n 's/^TeamIdentifier=//p' | head -n 1)
+  if [[ "$authority" != "Developer ID Application: "* ]] || ! print -r -- "$signing" | grep -q '^Authority=Developer ID Certification Authority$'; then
+    if print -r -- "$signing" | grep -q '^Signature=adhoc'; then
+      authority="an ad hoc signature"
+    fi
+    check_fail "Developer ID" "signed with ${authority:-no certificate}, not a Developer ID Application certificate" \
+      "Release with your Developer ID certificate (scripts/release.sh, without --adhoc)."
+  elif [[ -n "$team" && "$found_team" != "$team" ]]; then
+    check_fail "Developer ID" "Team ID $found_team, expected $team" "Sign with your own team's certificate, or set VELA_TEAM_ID."
+  elif [[ "$authority" != *"($found_team)" ]]; then
+    check_fail "Developer ID" "the certificate ($authority) doesn't match Team ID $found_team" "Sign with your own team's certificate."
+  elif ! print -r -- "$signing" | grep -q '^Timestamp='; then
+    check_fail "Developer ID" "no secure timestamp" "Sign with --timestamp (OTHER_CODE_SIGN_FLAGS), as scripts/release.sh does."
+  else
+    check_pass "Developer ID" "$authority${team:+ (team as expected)}"
+  fi
+fi
+
+if (( notarized )); then
+  assessment=$(spctl -a -vvv "$app" 2>&1 || true)
+  if print -r -- "$assessment" | grep -q 'source=Notarized Developer ID'; then
+    check_pass "Gatekeeper" "accepted, Notarized Developer ID"
+  else
+    check_fail "Gatekeeper" "$(tidy "$assessment")" \
+      "Notarize and staple the app (scripts/release.sh without --skip-notarize); see \"If something goes wrong\" in docs/RELEASING.md."
+  fi
+  for file label in "$app" "Stapled ticket (app)" "$dmg" "Stapled ticket (DMG)"; do
+    if staple_output=$(xcrun stapler validate "$file" 2>&1); then
+      check_pass "$label" "stapler validate passes"
+    else
+      check_fail "$label" "$(tidy "$staple_output")" "Notarize and staple it again: rerun scripts/release.sh."
+    fi
+  done
+else
+  if (( adhoc )); then reason="ad hoc build"; else reason="--skip-notarize"; fi
+  check_skip "Gatekeeper" "not notarized ($reason)"
+  check_skip "Stapled tickets" "not notarized ($reason)"
+fi
+
+if [[ -L "$mountpoint/Applications" && "$(readlink "$mountpoint/Applications")" == /Applications ]]; then
+  check_pass "Applications link" "→ /Applications"
+else
+  check_fail "Applications link" "the DMG has no Applications shortcut" "Rebuild it with scripts/release.sh."
+fi
+
+finish
