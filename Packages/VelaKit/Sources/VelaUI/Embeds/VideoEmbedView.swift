@@ -6,7 +6,11 @@ import SwiftUI
 import VelaMedia
 import VelaTheme
 
-/// A YouTube/Vimeo/Twitch/Streamable video.
+/// A YouTube/Vimeo/Twitch/Streamable/Reddit video.
+///
+/// Reddit videos play from their HLS stream in AVKit, and a Reddit "GIF" (a
+/// video without sound) loops, muted. Vela can't tell whether a Reddit post
+/// is NSFW, so their facade shows no picture of the video until it plays.
 ///
 /// Player (full): a card with the provider badge, title and author over a
 /// thumbnail facade up to `maxPlayerWidth` wide; clicking ▶ swaps in the real
@@ -83,10 +87,15 @@ struct VideoEmbedView: View {
         }
     }
 
+    private var playerSource: EmbedPlayerSource {
+        guard embed.provider.playsNatively else { return .embed(embed) }
+        return embed.isGIF == true ? .silentLoop(embed.embedURL) : .file(embed.embedURL)
+    }
+
     private func play() {
         store.start(
             playerKey,
-            source: .embed(embed),
+            source: playerSource,
             info: EmbedPlayerInfo(
                 linkURL: linkURL,
                 title: title,
@@ -122,6 +131,12 @@ struct VideoEmbedView: View {
     private var header: some View {
         HStack(spacing: 6) {
             ProviderBadge(provider: embed.provider)
+            if let community = embed.community, !community.isEmpty {
+                Text("·").foregroundStyle(theme[ThemeKey.embedSiteName])
+                Text(community)
+                    .foregroundStyle(theme[ThemeKey.embedSiteName])
+                    .lineLimit(1)
+            }
             if let author = embed.authorName, !author.isEmpty {
                 Text("·").foregroundStyle(theme[ThemeKey.embedSiteName])
                 Text(author)
@@ -193,8 +208,16 @@ struct VideoEmbedView: View {
                     ) {
                         theme[ThemeKey.embedPlaceholderBackground]
                     }
+                } else {
+                    // No picture of the video (Reddit) until it plays.
+                    theme[ThemeKey.embedPlaceholderBackground]
                 }
                 PlayGlyph(diameter: 54, hovering: hoveringFacade)
+            }
+            .overlay(alignment: .bottomLeading) {
+                if embed.isGIF == true {
+                    AnimationBadge(compact: false, isPlaying: false, hovering: false, toggle: nil).padding(8)
+                }
             }
             .contentShape(Rectangle())
             .clipped()
@@ -203,7 +226,7 @@ struct VideoEmbedView: View {
         .onHover { hoveringFacade = $0 }
         .animation(.easeOut(duration: 0.12), value: hoveringFacade)
         .help("Play \(title ?? "video") here")
-        .accessibilityLabel("Play video: \(title ?? linkURL.absoluteString), \(embed.provider.displayName)")
+        .accessibilityLabel("Play \(embed.isGIF == true ? "GIF" : "video"): \(title ?? linkURL.absoluteString), \(embed.provider.displayName)")
         .accessibilityHint("Starts the \(embed.provider.displayName) player inline")
     }
 
@@ -224,6 +247,12 @@ struct VideoEmbedView: View {
                         .font(.system(size: max(12, style.fontSize + 1)))
                         .foregroundStyle(theme[ThemeKey.accent])
                     ProviderBadge(provider: embed.provider)
+                    if let community = embed.community, !community.isEmpty {
+                        Text(community)
+                            .font(style.font(size: max(9, style.fontSize - 2)))
+                            .foregroundStyle(theme[ThemeKey.embedSiteName])
+                            .lineLimit(1)
+                    }
                     Text(title ?? EmbedActions.displayHost(linkURL))
                         .font(style.font(size: max(10, style.fontSize - 1), weight: .semibold))
                         .foregroundStyle(theme[ThemeKey.embedTitle])

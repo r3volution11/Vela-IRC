@@ -90,6 +90,10 @@ shot media-restrictions   1280x800 1400 --theme Palenight --preset modern --sele
   --set media.blurImages=true
 shot media-blur           1280x800 1400 --theme Palenight --preset modern --select "#vela-offtopic" \
   --set 'translation.autoTranslate=[]'
+# #macdev's two unread lines are GIFs from GIPHY and Tenor; open at the newest
+# so both are in view. Each shows its first frame (the snapshot can't draw video).
+shot media-gifs           1280x800 1400 --theme Palenight --preset modern --select "#macdev" \
+  --set chat.openAt=newest
 
 # Apple Intelligence: a Catch me up card (the demo's summaries are canned)
 # and #vela-offtopic's Spanish, Japanese and German lines, translated.

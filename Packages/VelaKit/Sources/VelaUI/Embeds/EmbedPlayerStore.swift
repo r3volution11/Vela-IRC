@@ -30,8 +30,10 @@ enum EmbedPlayerPlacement: Hashable, Sendable {
 enum EmbedPlayerSource: Hashable {
     /// A provider's player (YouTube, Vimeo, …) in a web view.
     case embed(EmbedInfo)
-    /// A video file, in AVKit.
+    /// A video file (or HLS stream), in AVKit.
     case file(URL)
+    /// A video without sound that loops like a GIF: muted, no controls.
+    case silentLoop(URL)
 }
 
 /// What the expanded view shows around a player.
@@ -422,6 +424,7 @@ extension EmbedPlayerStore {
         switch source {
         case .embed(let embed): WebPlayerSurface(embed: embed)
         case .file(let url): FilePlayerSurface(url: url)
+        case .silentLoop(let url): FilePlayerSurface(url: url, loops: true)
         }
     }
 
@@ -566,7 +569,8 @@ private final class PlaybackMessageProxy: NSObject, WKScriptMessageHandler {
 }
 
 /// A video file in AVKit, playing as soon as it's created. Never created
-/// before the user clicks play, so nothing streams until then.
+/// before the user clicks play, so nothing streams until then. With `loops`
+/// (a Reddit "GIF") it's muted, has no controls and starts over at the end.
 final class FilePlayerSurface: NSObject, EmbedPlaybackSurface, @preconcurrency AVPlayerViewDelegate {
     let player: AVPlayer
     let playerView: EmbedAVPlayerView
@@ -575,14 +579,27 @@ final class FilePlayerSurface: NSObject, EmbedPlaybackSurface, @preconcurrency A
     private(set) var isInFullscreen = false
 
     private var statusObservation: NSKeyValueObservation?
+    private var loopObserver: (any NSObjectProtocol)?
 
-    init(url: URL) {
+    init(url: URL, loops: Bool = false) {
         player = AVPlayer(url: url)
-        player.preventsDisplaySleepDuringVideoPlayback = true
+        player.preventsDisplaySleepDuringVideoPlayback = !loops
         playerView = EmbedAVPlayerView()
         super.init()
         playerView.player = player
-        playerView.controlsStyle = .floating
+        playerView.controlsStyle = loops ? .none : .floating
+        if loops {
+            player.isMuted = true
+            player.actionAtItemEnd = .none
+            loopObserver = NotificationCenter.default.addObserver(
+                forName: AVPlayerItem.didPlayToEndTimeNotification, object: player.currentItem, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.player.seek(to: .zero)
+                    self?.player.play()
+                }
+            }
+        }
         playerView.showsFullScreenToggleButton = true
         playerView.autoresizingMask = [.width, .height]
         playerView.delegate = self
@@ -599,6 +616,8 @@ final class FilePlayerSurface: NSObject, EmbedPlaybackSurface, @preconcurrency A
 
     func stop() {
         statusObservation = nil
+        if let loopObserver { NotificationCenter.default.removeObserver(loopObserver) }
+        loopObserver = nil
         onEvent = nil
         player.pause()
         player.replaceCurrentItem(with: nil)

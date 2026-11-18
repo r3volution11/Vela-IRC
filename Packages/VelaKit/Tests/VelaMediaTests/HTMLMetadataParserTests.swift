@@ -39,6 +39,20 @@ import Testing
         #expect(meta.themeColor == nil)
     }
 
+    @Test func metaRefresh() {
+        func refresh(_ content: String) -> URL? {
+            HTMLMetadataParser.parse(
+                html: #"<head><meta http-equiv="Refresh" content="\#(content)"></head>"#,
+                baseURL: URL(string: "https://giphy.com/gifs/a")!
+            ).refreshURL
+        }
+        #expect(refresh("0;url=https://giphy.com/gifs/b") == URL(string: "https://giphy.com/gifs/b"))
+        #expect(refresh("5; URL='/gifs/c'") == URL(string: "https://giphy.com/gifs/c"))
+        #expect(refresh("0") == nil)
+        #expect(refresh("0;javascript:alert(1)") == nil)
+        #expect(refresh("0;url=javascript:alert(1)") == nil)
+    }
+
     @Test func htmlTitleWhitespaceIsCollapsed() {
         let html = "<head><title>\n   Twitter   Card\n   Page\n</title></head>"
         let meta = HTMLMetadataParser.parse(html: html, baseURL: URL(string: "https://example.com")!)

@@ -18,7 +18,13 @@ public struct HTMLMetadata: Sendable, Hashable {
     public var faviconURL: URL?
     /// From `<link rel="alternate" type="application/json+oembed">`.
     public var oEmbedURL: URL?
+    /// Where `<meta http-equiv="refresh" content="0;url=…">` sends the page.
+    public var refreshURL: URL?
     public var videoURL: URL?
+    /// `og:video:type` of the first video, lowercased (`video/mp4`).
+    public var videoType: String?
+    public var videoWidth: Int?
+    public var videoHeight: Int?
     public var imageWidth: Int?
     public var imageHeight: Int?
     /// The page labels itself adult: `<meta name="rating">` with `adult`,
@@ -36,6 +42,9 @@ public struct HTMLMetadata: Sendable, Hashable {
         faviconURL: URL? = nil,
         oEmbedURL: URL? = nil,
         videoURL: URL? = nil,
+        videoType: String? = nil,
+        videoWidth: Int? = nil,
+        videoHeight: Int? = nil,
         imageWidth: Int? = nil,
         imageHeight: Int? = nil,
         declaresAdult: Bool = false
@@ -49,6 +58,9 @@ public struct HTMLMetadata: Sendable, Hashable {
         self.faviconURL = faviconURL
         self.oEmbedURL = oEmbedURL
         self.videoURL = videoURL
+        self.videoType = videoType
+        self.videoWidth = videoWidth
+        self.videoHeight = videoHeight
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
         self.declaresAdult = declaresAdult
@@ -63,6 +75,8 @@ public struct HTMLMetadata: Sendable, Hashable {
 /// - site name: `og:site_name`, `application-name`
 /// - image: `og:image:secure_url`/`og:image`/`og:image:url`, `twitter:image(:src)`,
 ///   `<link rel=image_src>`, `itemprop=image`
+/// - video: `og:video:secure_url`/`og:video:url`/`og:video`, with the first
+///   video's `og:video:type`, `:width` and `:height`
 /// - favicon: `<link rel=icon|shortcut icon|apple-touch-icon>`, preferring
 ///   raster icons of at least 32 px
 ///
@@ -133,10 +147,15 @@ public enum HTMLMetadataParser {
         var ogImageSecure: String?
         var ogImageWidth: String?
         var ogImageHeight: String?
+        var ogVideoCount = 0
+        var ogVideoType: String?
+        var ogVideoWidth: String?
+        var ogVideoHeight: String?
         var themeColors: [ThemeColorCandidate] = []
         var icons: [IconCandidate] = []
         var imageSrc: String?
         var oEmbed: String?
+        var refresh: String?
         var declaresAdult = false
 
         mutating func addMeta(_ attributes: [String: String]) {
@@ -163,6 +182,8 @@ public enum HTMLMetadataParser {
                 if HTMLMetadataParser.isAdultRating(content) || folded.contains("rtalabel.org") { declaresAdult = true }
             case "pics-label":
                 if folded.contains(HTMLMetadataParser.rtaLabel) || folded.contains("rtalabel.org") { declaresAdult = true }
+            case "refresh":
+                if refresh == nil { refresh = Self.refreshTarget(content) }
             default:
                 break
             }
@@ -185,6 +206,16 @@ public enum HTMLMetadataParser {
                 if ogImageCount <= 1, ogImageWidth == nil { ogImageWidth = content }
             case "og:image:height":
                 if ogImageCount <= 1, ogImageHeight == nil { ogImageHeight = content }
+            case "og:video", "og:video:url":
+                // Like og:image: the type and size describe the first video only.
+                if key == "og:video" || values["og:video"] == nil { ogVideoCount += 1 }
+                setFirst(key, content)
+            case "og:video:type":
+                if ogVideoCount <= 1, ogVideoType == nil { ogVideoType = content }
+            case "og:video:width":
+                if ogVideoCount <= 1, ogVideoWidth == nil { ogVideoWidth = content }
+            case "og:video:height":
+                if ogVideoCount <= 1, ogVideoHeight == nil { ogVideoHeight = content }
             case "theme-color":
                 themeColors.append(ThemeColorCandidate(value: content, hasMedia: attributes["media"] != nil))
             case "twitter:image:src":
@@ -263,7 +294,14 @@ public enum HTMLMetadataParser {
             }
             meta.videoURL = url(values["og:video:secure_url"]) ?? url(values["og:video:url"])
                 ?? url(values["og:video"])
+            if meta.videoURL != nil {
+                meta.videoType = ogVideoType.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+                    .flatMap { $0.isEmpty ? nil : $0 }
+                meta.videoWidth = ogVideoWidth.flatMap(Self.positiveInt)
+                meta.videoHeight = ogVideoHeight.flatMap(Self.positiveInt)
+            }
             meta.oEmbedURL = url(oEmbed)
+            meta.refreshURL = url(refresh)
 
             let preferredColor = themeColors.first { !$0.hasMedia } ?? themeColors.first
             meta.themeColor = preferredColor.flatMap { CSSColor.normalizedHex($0.value) }
@@ -285,6 +323,20 @@ public enum HTMLMetadataParser {
                   url.host() != nil
             else { return nil }
             return url
+        }
+
+        /// `0;url=https://…` or `5; URL='…'` → the address.
+        static func refreshTarget(_ content: String) -> String? {
+            guard let semicolon = content.firstIndex(of: ";") else { return nil }
+            var rest = content[content.index(after: semicolon)...].trimmingCharacters(in: .whitespaces)
+            guard rest.lowercased().hasPrefix("url") else { return nil }
+            rest = String(rest.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+            guard rest.hasPrefix("=") else { return nil }
+            rest = String(rest.dropFirst()).trimmingCharacters(in: .whitespaces)
+            if let quote = rest.first, quote == "'" || quote == "\"" {
+                rest = String(rest.dropFirst().prefix { $0 != quote })
+            }
+            return rest.isEmpty ? nil : rest
         }
 
         private static func cleanText(_ raw: String) -> String? {

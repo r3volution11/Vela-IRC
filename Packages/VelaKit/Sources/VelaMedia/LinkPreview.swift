@@ -16,6 +16,8 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
         case video
         /// Show a thumbnail facade for `embed`; play via `EmbedPlayerHTML` on click.
         case embed
+        /// Show the animation in `gif` inline, looping like a GIF.
+        case gif
         /// Show a link card (title, summary, image, favicon, accent color).
         case page
     }
@@ -36,9 +38,12 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
     /// Accent color as `#RRGGBB`, from `<meta name="theme-color">`
     /// (or the provider's brand color for embeds).
     public var themeColor: String?
-    /// The direct image or video URL for `.image` and `.video`.
+    /// The direct image or video URL for `.image` and `.video`; for `.gif`,
+    /// the rendition loaded first (`GIFInfo.primaryURL`).
     public var mediaURL: URL?
     public var embed: EmbedInfo?
+    /// The animation and its renditions, for `.gif`.
+    public var gif: GIFInfo?
     /// MIME type of the main response, without parameters (e.g. `text/html`).
     public var contentType: String?
     public var fetchedAt: Date
@@ -52,7 +57,8 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
 
     /// Bumped whenever previews start carrying something old ones lack.
     /// 2: every image URL is kept (policy applies at load time) and `declaresAdult`.
-    public static let currentFormatVersion = 2
+    /// 3: links to GIF sites (Tenor, GIPHY, Imgur `.gifv`) are `.gif`, not page cards.
+    public static let currentFormatVersion = 3
 
     /// Whether this preview was built in the current format.
     public var isCurrentFormat: Bool {
@@ -72,6 +78,7 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
         themeColor: String? = nil,
         mediaURL: URL? = nil,
         embed: EmbedInfo? = nil,
+        gif: GIFInfo? = nil,
         contentType: String? = nil,
         fetchedAt: Date = Date(),
         declaresAdult: Bool? = nil,
@@ -89,6 +96,7 @@ public struct LinkPreview: Sendable, Codable, Hashable, Identifiable {
         self.themeColor = themeColor
         self.mediaURL = mediaURL
         self.embed = embed
+        self.gif = gif
         self.contentType = contentType
         self.fetchedAt = fetchedAt
         self.declaresAdult = declaresAdult
@@ -110,11 +118,11 @@ extension LinkPreview {
         displayTitle != nil || displaySummary != nil || (showingImages && imageURL != nil)
     }
 
-    /// The title, whitespace-collapsed; for direct images and videos without
-    /// one, the file name.
+    /// The title, whitespace-collapsed; for direct images, videos and GIFs
+    /// without one, the file name.
     public var displayTitle: String? {
-        if let title = (title ?? embed?.title).map(Self.cleaned), !title.isEmpty { return title }
-        if kind == .video || kind == .image { return Self.fileName(mediaURL ?? finalURL) }
+        if let title = (title ?? embed?.title ?? gif?.title).map(Self.cleaned), !title.isEmpty { return title }
+        if kind == .video || kind == .image || kind == .gif { return Self.fileName(mediaURL ?? finalURL) }
         return nil
     }
 

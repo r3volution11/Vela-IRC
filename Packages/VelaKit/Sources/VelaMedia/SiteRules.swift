@@ -140,7 +140,8 @@ public struct SiteRules: Sendable, Hashable {
 
     /// Which domain a "Block / Allow this site" action should write a rule for:
     /// the host without a leading `www.`, or the provider's main domain for
-    /// video sites (so one rule covers `youtu.be` and `youtube.com`).
+    /// video and GIF sites (so one rule covers `youtu.be` and `youtube.com`,
+    /// or `media.tenor.com` and `tenor.com`).
     public static func suggestedRuleDomain(for url: URL) -> String? {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return nil }
         if case .embed(let info) = MediaClassifier.classify(url) { return info.provider.mainDomain }
@@ -150,9 +151,15 @@ public struct SiteRules: Sendable, Hashable {
     /// `suggestedRuleDomain(for:)` for a bare host.
     public static func suggestedRuleDomain(forHost host: String) -> String? {
         guard var domain = normalizedDomain(host) else { return nil }
-        if let provider = EmbedProvider.provider(forHost: domain) { return provider.mainDomain }
+        if let mainDomain = providerMainDomain(forHost: domain) { return mainDomain }
         if domain.hasPrefix("www."), domain.count > 4, domain.dropFirst(4).contains(".") { domain.removeFirst(4) }
         return domain
+    }
+
+    /// The main domain of the video or GIF site whose domains cover `host`
+    /// (`youtu.be` → `youtube.com`, `gph.is` → `giphy.com`), if any.
+    static func providerMainDomain(forHost host: String) -> String? {
+        EmbedProvider.provider(forHost: host)?.mainDomain ?? GIFProvider.ruleProvider(forHost: host)?.mainDomain
     }
 
     /// Whether `host` is `domain` or one of its subdomains.

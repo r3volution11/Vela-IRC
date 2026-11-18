@@ -90,6 +90,8 @@ final class EmbedMemory {
     var fetchBlocks = MemoCache<URL, SiteBlock>(countLimit: 500)
     /// Links detected per chat line.
     var links = MemoCache<UUID, (text: String, links: [EmbedLink])>(countLimit: 2_000)
+    /// GIF sites' MP4s on disk (`LoopingVideoLoader`), by video URL.
+    private var loopingVideos = MemoCache<URL, LoadedLoopingVideo>(countLimit: 400)
 
     init() {}
 
@@ -121,6 +123,20 @@ final class EmbedMemory {
 
     func remember(pixelSize: CGSize, for url: URL) {
         pixelSizes.insert(pixelSize, for: url)
+    }
+
+    /// A GIF's downloaded MP4, if `policy` lets `url` load like an image
+    /// and its size is within the policy's limit.
+    func loopingVideo(for url: URL, policy: MediaPolicy) -> LoadedLoopingVideo? {
+        guard policy.allowsImage(url), let video = loopingVideos.value(for: url),
+              video.byteCount <= policy.maxImageBytes,
+              FileManager.default.fileExists(atPath: video.fileURL.path(percentEncoded: false))
+        else { return nil }
+        return video
+    }
+
+    func remember(loopingVideo video: LoadedLoopingVideo, for url: URL) {
+        loopingVideos.insert(video, for: url)
     }
 }
 
@@ -523,11 +539,15 @@ enum ImageLoadFailure: Hashable {
         return true
     }
 
-    var title: String {
-        switch self {
-        case .tooLarge(let limit): "Image larger than \(Self.megabytes(limit))"
-        case .tooManyPixels: "Image too large to show inline"
-        case .unavailable: "Couldn't load image"
+    var title: String { title(for: "image") }
+
+    /// The chip's title for an `noun` ("image", "GIF"): "GIF larger than 10 MB".
+    func title(for noun: String) -> String {
+        let capitalized = noun.prefix(1).uppercased() + noun.dropFirst()
+        return switch self {
+        case .tooLarge(let limit): "\(capitalized) larger than \(Self.megabytes(limit))"
+        case .tooManyPixels: "\(capitalized) too large to show inline"
+        case .unavailable: "Couldn't load \(noun)"
         }
     }
 

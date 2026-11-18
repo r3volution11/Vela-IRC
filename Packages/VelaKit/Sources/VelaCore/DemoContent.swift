@@ -149,12 +149,17 @@ enum DemoContent {
         ])
         swift.unreadCount = 4
 
+        // #macdev's two unread lines are GIFs from GIPHY and Tenor (the
+        // website's media-gifs screenshot): NASA's own uploads, public domain.
+        // Both are real and load when shown.
         let macdev = session.ensureBuffer(name: "#macdev", kind: .channel, persist: false)
         macdev.topic = "macOS development"
         members([("@", "sam"), ("", "doug"), ("", "irene")], in: macdev, session: session)
         macdev.insertSorted([
             say("irene", "anyone else seeing the new Liquid Glass sidebar fight custom backgrounds?", 90),
             say("sam", "use your own split view if you want full control over the chrome", 88),
+            say("irene", "did that. the rewrite ships tonight https://giphy.com/gifs/nasa-space-rocket-launch-x4vlKY5ocArL3SeVVU", 12),
+            say("sam", "nice. now it can have a background like this https://tenor.com/view/nasa-nasa-gifs-earth-space-station-space-gif-9368490", 9),
         ])
         macdev.unreadCount = 2
         macdev.highlightCount = 0

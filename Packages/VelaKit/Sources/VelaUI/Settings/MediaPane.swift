@@ -82,7 +82,7 @@ struct MediaPane: View {
             SettingsSection("Images") {
                 SettingsSegmentedRow(
                     title: "Size",
-                    detail: "Thumbnails keep images small; click one to see it full size.",
+                    detail: "Thumbnails keep images and GIFs small; click one to see it full size.",
                     selection: $settings[.mediaImageSize],
                     options: [(.full, "Full size"), (.thumbnail, "Thumbnail")]
                 )
@@ -122,7 +122,7 @@ struct MediaPane: View {
                 )
                 SettingsToggle(
                     "Blur images until clicked",
-                    detail: "Images and video thumbnails stay blurred until you click them. To blur only some channels, use a channel's right-click menu.",
+                    detail: "Images, GIFs and video thumbnails stay blurred until you click them. To blur only some channels, use a channel's right-click menu.",
                     isOn: $settings[.mediaBlurImages]
                 )
                 let blurred = settings[.mediaBlurredBuffers]

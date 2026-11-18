@@ -8,11 +8,13 @@ import Foundation
 //
 // - `LinkDetector` finds http(s) links in message text.
 // - `MediaClassifier` decides offline whether a URL is a direct image,
-//   a direct video, a known video embed (YouTube, Vimeo, Twitch, Streamable)
-//   or an ordinary page.
+//   a direct video, a known video embed (YouTube, Vimeo, Twitch, Streamable),
+//   a GIF site's animation (Tenor, GIPHY, Imgur `.gifv`) or an ordinary page.
 // - `LinkPreviewService` fetches what is needed to render a card
-//   (oEmbed for embeds, OpenGraph/Twitter metadata for pages).
-// - `ImageLoader` downloads and validates images with a size cap.
+//   (oEmbed for embeds, OpenGraph/Twitter metadata for pages, the
+//   animation's renditions for GIF pages).
+// - `ImageLoader` downloads and validates images with a size cap;
+//   `LoopingVideoLoader` does the same for GIF sites' MP4 renditions.
 // - `EmbedPlayerHTML` builds the page a web view loads to play an embed.
 //
 // `MediaPolicy` carries the user's privacy and size settings (with

@@ -380,12 +380,13 @@ import Testing
         #expect(preview.imageURL == url("https://example.com/real.jpg"))
     }
 
-    @Test func directVideoAndGifv() async throws {
-        server.route("https://i.imgur.com/AbCd123.mp4", method: "HEAD", StubResponse(headers: ["Content-Type": "video/mp4"]))
+    @Test func gifvIsAGIFWithoutARequest() async throws {
         let preview = try await makeService().preview(for: url("https://i.imgur.com/AbCd123.gifv"), policy: policy)
-        #expect(preview.kind == .video)
+        #expect(preview.kind == .gif)
         #expect(preview.url == url("https://i.imgur.com/AbCd123.gifv"))
         #expect(preview.mediaURL == url("https://i.imgur.com/AbCd123.mp4"))
+        #expect(preview.gif?.provider == .imgur)
+        #expect(server.requests.isEmpty)
     }
 
     // MARK: Embeds

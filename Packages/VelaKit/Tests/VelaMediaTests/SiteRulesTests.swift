@@ -98,7 +98,7 @@ import Testing
     }
 
     @Test func providerDomains() {
-        #expect(EmbedProvider.allCases.map(\.mainDomain) == ["youtube.com", "vimeo.com", "twitch.tv", "streamable.com"])
+        #expect(EmbedProvider.allCases.map(\.mainDomain) == ["youtube.com", "vimeo.com", "twitch.tv", "streamable.com", "reddit.com"])
         #expect(EmbedProvider.provider(forHost: "youtu.be") == .youtube)
         #expect(EmbedProvider.provider(forHost: "www.youtube-nocookie.com") == .youtube)
         #expect(EmbedProvider.provider(forHost: "i.ytimg.com") == .youtube)

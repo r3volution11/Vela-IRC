@@ -26,7 +26,7 @@ public enum PreviewVideoStyle: String, Sendable, Hashable, CaseIterable {
     case off
 }
 
-/// How inline images are shown. Mirrors VelaStore's `InlineImageSize` by raw value.
+/// How inline images (and GIFs) are shown. Mirrors VelaStore's `InlineImageSize` by raw value.
 public enum PreviewImageSize: String, Sendable, Hashable, CaseIterable {
     case full
     case thumbnail
@@ -68,7 +68,7 @@ public struct PreviewOverrides: Sendable, Hashable {
     public var loadRequested: Bool
     /// Domains the user chose "Show once" for on this link's blocked chip.
     public var allowedOnce: Set<String>
-    /// Clicked a blurred image to reveal it.
+    /// Clicked a blurred image (or GIF) to reveal it.
     public var revealed: Bool
     /// An inline image turned out not to be an image (e.g. ImageIO couldn't
     /// read it): preview the link as a page instead.
@@ -92,6 +92,7 @@ public struct PreviewOverrides: Sendable, Hashable {
 /// What a "Load …" chip offers, for its icon and title.
 public enum LoadChipKind: Sendable, Hashable {
     case image
+    case gif
     case video
     case videoEmbed(EmbedProvider)
     case page
@@ -109,6 +110,9 @@ public enum PreviewPlan: Sendable, Hashable {
     case blocked(SiteBlock)
     /// The image inline (`preview?.mediaURL`, or the classified image URL).
     case image(PreviewImageSize)
+    /// The GIF site's animation inline, looping (`preview?.gif`, or the
+    /// classified one). It follows the image settings.
+    case gif(PreviewImageSize)
     /// The direct video file (`preview.finalURL`).
     case directVideo(PreviewVideoStyle)
     /// The provider's facade and player (`preview?.embed`, or the classified one).
@@ -170,6 +174,7 @@ public enum PreviewDecider {
             case .image: .image
             case .video: .video
             case .embed: .embed
+            case .gif: .gif
             case .page: .page
             }
         }()
@@ -198,7 +203,7 @@ public enum PreviewDecider {
 
         // 3. Where the preview actually led, and what the page says about itself.
         if let preview {
-            for target in [preview.finalURL, preview.mediaURL].compactMap({ $0 }) {
+            for target in [preview.finalURL, preview.mediaURL].compactMap({ $0 }) + (preview.gif?.mediaURLs ?? []) {
                 switch policy.verdict(for: target) {
                 case .forbidden: return decision(.none)
                 case .blocked(let block): return blocked(block)
@@ -219,11 +224,9 @@ public enum PreviewDecider {
         if let preview {
             imageTargets.append(preview.finalURL)
             if let mediaURL = preview.mediaURL { imageTargets.append(mediaURL) }
+            imageTargets += preview.gif?.mediaURLs ?? []
         } else {
-            switch classification {
-            case .image(let mediaURL), .video(let mediaURL): imageTargets.append(mediaURL)
-            case .embed, .page: break
-            }
+            imageTargets += classification.mediaURLs
         }
         let showsImages = imageTargets.allSatisfy { policy.verdict(for: $0) == .everything }
         if !showsImages { policy.imagesAllowed = false }
@@ -265,6 +268,22 @@ public enum PreviewDecider {
             } else {
                 cardPlan()
             }
+        case .gif:
+            // Resolved: the link (or its fetched page) says where the animation is.
+            let gif = preview?.gif ?? classification.gif
+            if showsImages {
+                chip = .gif
+                if gif?.isResolved == true {
+                    plan = .gif(layout.imageSize)
+                } else if preview == nil {
+                    plan = .pending
+                    fetch = true
+                } else {
+                    cardPlan()
+                }
+            } else {
+                cardPlan()
+            }
         case .embed:
             let provider: EmbedProvider? = preview?.embed?.provider ?? {
                 if case .embed(let info) = classification { return info.provider }
@@ -290,7 +309,7 @@ public enum PreviewDecider {
 
         // 7. Blur whatever image the plan draws.
         let drawsImage: Bool = switch plan {
-        case .image, .directVideo, .videoEmbed: true
+        case .image, .gif, .directVideo, .videoEmbed: true
         case .card: preview?.imageURL != nil
         case .none, .pending, .loadChip, .blocked: false
         }
@@ -319,14 +338,11 @@ public enum PreviewDecider {
         var strict = context.policy
         strict.allowedOnce = []
         var lifted: Set<BlockReason> = []
-        var targets = [url]
-        switch classification {
-        case .image(let mediaURL), .video(let mediaURL): targets.append(mediaURL)
-        case .embed, .page: break
-        }
+        var targets = [url] + classification.mediaURLs
         if let preview {
             targets.append(preview.finalURL)
             if let mediaURL = preview.mediaURL { targets.append(mediaURL) }
+            targets += preview.gif?.mediaURLs ?? []
         }
         for target in targets {
             if case .blocked(let block) = strict.verdict(for: target),
@@ -347,7 +363,7 @@ public enum PreviewDecider {
     /// Whether a preview of this kind would show anything if it weren't blocked.
     private static func isShown(_ kind: LinkPreview.Kind, policy: MediaPolicy, layout: PreviewLayout) -> Bool {
         switch kind {
-        case .image: true
+        case .image, .gif: true
         case .video, .embed: layout.videoStyle != .off || policy.showLinkCards
         case .page: policy.showLinkCards
         }
@@ -359,5 +375,23 @@ public enum PreviewDecider {
 
     private static func isAllowedOnce(_ policy: MediaPolicy, any urls: [URL]) -> Bool {
         urls.contains { url in SiteRules.normalizedHost(url).map { policy.isAllowedOnce(host: $0) } ?? false }
+    }
+}
+
+extension MediaClassification {
+    /// The media URLs the link was classified to (images, video files, GIF
+    /// renditions), which the policy must let load like images.
+    var mediaURLs: [URL] {
+        switch self {
+        case .image(let mediaURL), .video(let mediaURL): [mediaURL]
+        case .gif(let info): info.mediaURLs
+        case .embed, .page: []
+        }
+    }
+
+    /// The GIF site's animation, for `.gif`.
+    var gif: GIFInfo? {
+        if case .gif(let info) = self { return info }
+        return nil
     }
 }

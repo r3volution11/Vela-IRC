@@ -447,6 +447,121 @@ import Testing
         #expect(!decide(imageLink, policy: MediaPolicy(autoLoad: false), blur: true).blurred)
         #expect(!decide(page, policy: MediaPolicy(siteRules: rules(["example.com": "block"])), blur: true).blurred)
     }
+
+    // MARK: GIFs
+
+    private let tenorFile = Self.url("https://media.tenor.com/WAeOn7-AdfgAAAAC/karate-kid-body-bag.gif")
+    private let tenorShort = Self.url("https://tenor.com/RaDD.gif")
+    private let giphyPage = Self.url("https://giphy.com/gifs/cat-funny-JIX9t2j0ZTN9S")
+
+    private func tenorPreview(declaresAdult: Bool = false) -> LinkPreview {
+        let gif = GIFInfo(
+            provider: .tenor,
+            videoURL: url("https://media.tenor.com/WAeOn7-AdfgAAAPo/karate-kid-body-bag.mp4"),
+            imageURL: url("https://media.tenor.com/WAeOn7-AdfgAAAAd/karate-kid-body-bag.gif"),
+            width: 490, height: 270, title: "Karate Kid"
+        )
+        return LinkPreview(
+            url: tenorShort, finalURL: url("https://tenor.com/view/karate-kid-gif-10249931"), kind: .gif,
+            title: "Karate Kid", siteName: "Tenor", mediaURL: gif.videoURL, gif: gif, declaresAdult: declaresAdult
+        )
+    }
+
+    @Test func gifLinksThatNameTheirAnimationShowAtOnce() {
+        for link in [tenorFile, giphyPage] {
+            let decision = decide(link)
+            #expect(decision.plan == .gif(.full))
+            #expect(!decision.shouldFetch)
+            #expect(decision.showsImages)
+        }
+        #expect(decide(tenorFile, layout: PreviewLayout(imageSize: .thumbnail)).plan == .gif(.thumbnail))
+        // GIFs follow the image settings, not the video ones.
+        #expect(decide(tenorFile, layout: PreviewLayout(videoStyle: .off)).plan == .gif(.full))
+    }
+
+    @Test func gifPagesAreFetchedFirst() {
+        let pending = decide(tenorShort)
+        #expect(pending.plan == .pending)
+        #expect(pending.shouldFetch)
+        let loaded = decide(tenorShort, preview: tenorPreview())
+        #expect(loaded.plan == .gif(.full))
+        #expect(!loaded.shouldFetch)
+        // A page that turned out to have no animation is a card.
+        let card = LinkPreview(url: tenorShort, kind: .page, title: "Tenor")
+        #expect(decide(tenorShort, preview: card).plan == .card(.standard))
+    }
+
+    @Test func gifsWaitForAClickWhenAutoLoadIsOff() {
+        let manual = MediaPolicy(autoLoad: false)
+        for link in [tenorFile, tenorShort] {
+            let decision = decide(link, policy: manual)
+            #expect(decision.plan == .loadChip(.gif))
+            #expect(!decision.shouldFetch)
+        }
+        let clicked = decide(tenorShort, policy: manual, overrides: PreviewOverrides(loadRequested: true))
+        #expect(clicked.plan == .pending)
+        #expect(clicked.shouldFetch)
+        #expect(decide(tenorFile, policy: manual, overrides: PreviewOverrides(loadRequested: true)).plan == .gif(.full))
+    }
+
+    @Test func textOnlyGIFSitesGetATextCardAndNoAnimation() {
+        let textOnly = MediaPolicy(siteRules: rules(["tenor.com": "textOnly"]))
+        let pending = decide(tenorShort, policy: textOnly)
+        #expect(pending.plan == .pending)
+        #expect(pending.shouldFetch)
+        #expect(!pending.policy.imagesAllowed)
+        let card = decide(tenorShort, preview: tenorPreview(), policy: textOnly)
+        #expect(card.plan == .card(.standard))
+        #expect(!card.showsImages)
+        #expect(!card.policy.allowsImage(url("https://media.tenor.com/WAeOn7-AdfgAAAPo/karate-kid-body-bag.mp4")))
+        // A file link on a text-only site: a card too, never the animation.
+        #expect(decide(tenorFile, policy: textOnly).plan == .pending)
+        #expect(decide(tenorFile, preview: tenorPreview(), policy: textOnly).plan == .card(.standard))
+        // A text-only rule for the media host alone also keeps the animation out.
+        let mediaTextOnly = MediaPolicy(siteRules: rules(["media.tenor.com": "textOnly"]))
+        #expect(decide(tenorShort, preview: tenorPreview(), policy: mediaTextOnly).plan == .card(.standard))
+    }
+
+    @Test func blockedGIFSitesShowAChip() {
+        let blocked = MediaPolicy(siteRules: rules(["giphy.com": "block"]))
+        #expect(decide(giphyPage, policy: blocked).plan == .blocked(SiteBlock(reason: .userBlocked, domain: "giphy.com")))
+        #expect(decide(Self.url("https://gph.is/g/46vwxjM"), policy: blocked).plan
+            == .blocked(SiteBlock(reason: .userBlocked, domain: "giphy.com")))
+        // The page's media on a blocked host.
+        let mediaBlocked = MediaPolicy(siteRules: rules(["media.tenor.com": "block"]))
+        #expect(decide(tenorShort, preview: tenorPreview(), policy: mediaBlocked).plan.isBlocked)
+        // "Show once" for the media host lifts it for this link.
+        let once = decide(
+            tenorShort, preview: tenorPreview(), policy: mediaBlocked,
+            overrides: PreviewOverrides(allowedOnce: ["media.tenor.com"])
+        )
+        #expect(once.plan == .gif(.full))
+    }
+
+    @Test func adultGIFPagesAreFiltered() {
+        let decision = decide(tenorShort, preview: tenorPreview(declaresAdult: true))
+        #expect(decision.plan == .blocked(SiteBlock(reason: .adultPage, domain: "tenor.com")))
+        #expect(decide(tenorShort, preview: tenorPreview(declaresAdult: true), policy: MediaPolicy(filterAdultSites: false)).plan
+            == .gif(.full))
+        let listed = MediaPolicy(extraAdultDomains: ["tenor.com"])
+        #expect(decide(tenorFile, policy: listed).plan == .blocked(SiteBlock(reason: .adultSite, domain: "tenor.com")))
+    }
+
+    @Test func gifsAreBlurredUntilRevealed() {
+        #expect(decide(tenorFile, blur: true).blurred)
+        #expect(decide(tenorShort, preview: tenorPreview(), blur: true).blurred)
+        #expect(!decide(tenorFile, blur: true, overrides: PreviewOverrides(revealed: true)).blurred)
+        // Nothing to blur yet, or on a load chip.
+        #expect(!decide(tenorShort, blur: true).blurred)
+        #expect(!decide(tenorFile, policy: MediaPolicy(autoLoad: false), blur: true).blurred)
+    }
+
+    @Test func gifsAreNotShownWhenLinkCardsAndImagesAreOff() {
+        // Link cards off: a GIF still shows (it's an image), but a text-only one has nothing to show.
+        #expect(decide(tenorFile, policy: MediaPolicy(showLinkCards: false)).plan == .gif(.full))
+        let textOnly = MediaPolicy(showLinkCards: false, siteRules: rules(["tenor.com": "textOnly"]))
+        #expect(decide(tenorFile, policy: textOnly).plan == PreviewPlan.none)
+    }
 }
 
 extension PreviewPlan {

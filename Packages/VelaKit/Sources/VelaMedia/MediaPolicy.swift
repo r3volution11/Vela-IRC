@@ -154,14 +154,14 @@ public struct MediaPolicy: Sendable, Hashable {
         verdict(for: url) == .everything
     }
 
-    /// The most specific site rule for `host`. Hosts of a video provider's
-    /// asset domains (`youtu.be`, `i.ytimg.com`) without a rule of their own
-    /// follow the provider's main-domain rule.
+    /// The most specific site rule for `host`. Hosts of a video or GIF
+    /// provider's asset domains (`youtu.be`, `i.ytimg.com`, `gph.is`) without
+    /// a rule of their own follow the provider's main-domain rule.
     public func rule(forHost host: String) -> (domain: String, access: SiteAccess)? {
         guard !siteRules.isEmpty else { return nil }
         if let match = siteRules.access(forHost: host) { return match }
-        if let provider = EmbedProvider.provider(forHost: host) {
-            return siteRules.access(forHost: provider.mainDomain)
+        if let mainDomain = SiteRules.providerMainDomain(forHost: host) {
+            return siteRules.access(forHost: mainDomain)
         }
         return nil
     }

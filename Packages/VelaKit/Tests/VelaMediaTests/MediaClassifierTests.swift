@@ -213,8 +213,9 @@ import Testing
 
     // MARK: Rewrites
 
-    @Test func imgurGifvBecomesMP4() {
-        #expect(classify("https://i.imgur.com/AbCd123.gifv") == .video(URL(string: "https://i.imgur.com/AbCd123.mp4")!))
+    @Test func imgurGifvIsAGIF() {
+        #expect(classify("https://i.imgur.com/AbCd123.gifv")
+            == .gif(GIFInfo(provider: .imgur, videoURL: URL(string: "https://i.imgur.com/AbCd123.mp4")!)))
     }
 
     @Test func githubBlobImagesBecomeRaw() {

@@ -41,8 +41,238 @@ struct PreviewFetcher: Sendable {
             return try await directMediaPreview(url, mediaURL: mediaURL, kind: .video, policy: policy)
         case .embed(let info):
             return try await embedPreview(url, finalURL: url, info: info, policy: policy, pageMetadata: nil)
+        case .gif(let info):
+            return try await gifPreview(url, info: info, policy: policy)
         case .page:
+            // Reddit shows a challenge page instead of a post; its oEmbed says more.
+            if let post = RedditLinks.post(url) {
+                return try await redditPostPreview(url, finalURL: url, post: post, policy: policy)
+            }
             return try await pagePreview(url, policy: policy)
+        }
+    }
+
+    // MARK: - Reddit
+
+    /// A `v.redd.it` video: where it redirects names the post (and its
+    /// subreddit), the post's oEmbed gives the title and author, and the HLS
+    /// playlist the shape and whether there's sound. Each is best effort:
+    /// whatever fails (Reddit's rate limit, say) leaves the facade plainer,
+    /// and the preview is kept in memory only, so it's tried again later.
+    private func redditVideoPreview(_ url: URL, info: EmbedInfo, policy: MediaPolicy) async throws -> PreviewFetchResult {
+        var embed = info
+        var degraded = false
+        var finalURL = url
+        var declaresAdult: Bool?
+
+        if let videoPage = info.canonicalPageURL, policy.allows(videoPage) {
+            switch try await attempt({ try await finalLocation(of: videoPage, policy: policy) }) {
+            case .success(let landed): finalURL = landed
+            case .refused, .failed: degraded = true
+            }
+        }
+        if RedditLinks.isAgeGate(finalURL) { declaresAdult = true }
+
+        let post = RedditLinks.post(finalURL)
+        embed.community = post?.community
+        if let post, let endpoint = OEmbedEndpoint.reddit(post: post.canonicalURL) {
+            if policy.allows(endpoint) {
+                switch try await attempt({ try await fetchOEmbed(endpoint, policy: policy) }) {
+                case .success(let oEmbed):
+                    embed.title = oEmbed.title
+                    embed.authorName = oEmbed.authorName.map { "u/" + $0 }
+                    embed.community = embed.community ?? RedditLinks.community(inEmbedHTML: oEmbed.html)
+                case .refused, .failed:
+                    degraded = true
+                }
+            } else {
+                degraded = true
+            }
+        }
+        embed.title = embed.title ?? RedditLinks.title(fromSlug: post?.slug)
+
+        if policy.allows(info.embedURL) {
+            let playlist = info.embedURL
+            switch try await attempt({ try await fetchText(playlist, accept: HLSPlaylist.accept, maxBytes: HLSPlaylist.maxBytes, policy: policy) }) {
+            case .success(let text):
+                if let summary = HLSPlaylist.summary(text) {
+                    embed.isGIF = !summary.hasAudio
+                    if let ratio = summary.aspectRatio, (0.2...5).contains(ratio) { embed.aspectRatio = ratio }
+                }
+            case .refused, .failed:
+                degraded = true
+            }
+        }
+
+        let preview = LinkPreview(
+            url: url,
+            finalURL: post?.canonicalURL ?? finalURL,
+            kind: .embed,
+            title: embed.title,
+            summary: [embed.community, embed.authorName].compactMap { $0 }.joined(separator: " · ").nilIfEmpty,
+            siteName: EmbedProvider.reddit.displayName,
+            faviconURL: RedditLinks.faviconURL,
+            themeColor: EmbedProvider.reddit.brandColor,
+            embed: embed,
+            declaresAdult: declaresAdult
+        )
+        return PreviewFetchResult(preview: preview, degraded: degraded)
+    }
+
+    /// A link to a Reddit post: a card from the post's oEmbed (its page is
+    /// a challenge for browsers). Without it, the title in the address.
+    private func redditPostPreview(
+        _ url: URL, finalURL: URL, post: RedditLinks.Post, policy: MediaPolicy
+    ) async throws -> PreviewFetchResult {
+        var title: String?
+        var author: String?
+        var community = post.community
+        var degraded = false
+        if let endpoint = OEmbedEndpoint.reddit(post: post.canonicalURL) {
+            if policy.allows(endpoint) {
+                switch try await attempt({ try await fetchOEmbed(endpoint, policy: policy) }) {
+                case .success(let oEmbed):
+                    title = oEmbed.title
+                    author = oEmbed.authorName
+                    community = community ?? RedditLinks.community(inEmbedHTML: oEmbed.html)
+                case .refused, .failed:
+                    degraded = true
+                }
+            } else {
+                degraded = true
+            }
+        }
+        let summary = [community, author.map { "Posted by u/\($0)" }].compactMap { $0 }.joined(separator: " · ")
+        return PreviewFetchResult(preview: LinkPreview(
+            url: url,
+            finalURL: finalURL,
+            kind: .page,
+            title: title ?? RedditLinks.title(fromSlug: post.slug) ?? "Reddit post",
+            summary: summary.nilIfEmpty,
+            siteName: EmbedProvider.reddit.displayName,
+            faviconURL: RedditLinks.faviconURL,
+            themeColor: EmbedProvider.reddit.brandColor,
+            contentType: "text/html"
+        ), degraded: degraded)
+    }
+
+    /// Where `url` redirects to, without reading the page there.
+    private func finalLocation(of url: URL, policy: MediaPolicy) async throws -> URL {
+        let options = HTTPFetcher.Options(
+            maxBytes: Self.maxHTMLBytes,
+            overflow: .truncate,
+            checkRedirect: { policy.requestError(for: $0) },
+            inspectResponse: { _ in .skip }
+        )
+        let result = try await HTTPFetcher.fetch(makeRequest(url, accept: Self.htmlAccept), session: session, options: options)
+        return result.finalURL ?? url
+    }
+
+    /// A small text file (a playlist).
+    private func fetchText(_ url: URL, accept: String, maxBytes: Int, policy: MediaPolicy) async throws -> String {
+        let options = HTTPFetcher.Options(maxBytes: maxBytes, overflow: .fail, checkRedirect: { policy.requestError(for: $0) })
+        let result = try await HTTPFetcher.fetch(makeRequest(url, accept: accept), session: session, options: options)
+        return String(decoding: result.body, as: UTF8.self)
+    }
+
+    // MARK: - GIF sites
+
+    /// A GIF site's animation.
+    ///
+    /// - A link to the animation itself (a Tenor or GIPHY file, an Imgur
+    ///   `.gifv`) needs no request: the view loads the rendition, with the
+    ///   policy's checks, when it is drawn.
+    /// - A page link the classifier resolved (`giphy.com/gifs/…-<id>`) is
+    ///   only fetched for its title, which the decider asks for when a text
+    ///   card is shown instead (a text-only site). That is best effort.
+    /// - Any other page (`tenor.com/view/…`, `tenor.com/<code>.gif`,
+    ///   `gph.is/…`) is fetched, redirects and all, and the animation read
+    ///   from its OpenGraph tags, or from where a short link led. A page
+    ///   without one gets an ordinary link card.
+    private func gifPreview(_ url: URL, info: GIFInfo, policy: MediaPolicy) async throws -> PreviewFetchResult {
+        let offline = PreviewFetchResult(preview: LinkPreview(
+            url: url, kind: .gif, siteName: info.provider.displayName, mediaURL: info.primaryURL, gif: info
+        ))
+        if info.isResolved {
+            let ext = url.pathExtension.lowercased()
+            let isFile = ext == "gifv" || MediaClassifier.imageExtensions.contains(ext)
+                || MediaClassifier.videoExtensions.contains(ext)
+            if isFile { return offline }
+            switch try await attempt({ try await fetchGIFPage(url, policy: policy) }) {
+            case .success(let fetched):
+                return gifPagePreview(url, fetched: fetched, info: info) ?? offline
+            case .refused:
+                var degraded = offline
+                degraded.degraded = true
+                return degraded
+            case .failed:
+                return offline
+            }
+        }
+
+        let fetched = try await fetchPage(url, policy: policy)
+        if let preview = gifPagePreview(url, fetched: fetched, info: info) { return preview }
+        return try await pagePreview(url, fetched: fetched, policy: policy)
+    }
+
+    /// A GIF page, after one same-site `<meta http-equiv="refresh">`: GIPHY
+    /// answers a page's other address (`/gifs/<id>` or `/gifs/<slug>-<id>`)
+    /// with a page that only redirects to the one with the tags.
+    private func fetchGIFPage(_ url: URL, policy: MediaPolicy) async throws -> PageFetch {
+        let fetched = try await fetchPage(url, policy: policy)
+        guard case .html(let metadata, let finalURL, _) = fetched, metadata.title == nil,
+              let target = metadata.refreshURL, target != finalURL,
+              SiteRules.normalizedHost(target) == SiteRules.normalizedHost(finalURL), policy.allows(target)
+        else { return fetched }
+        return try await fetchPage(target, policy: policy)
+    }
+
+    /// The animation a fetched GIF page (or what a short link led to) shows, if any.
+    private func gifPagePreview(_ url: URL, fetched: PageFetch, info: GIFInfo) -> PreviewFetchResult? {
+        switch fetched {
+        case .media(let kind, let finalURL, let contentType, let declaresAdult):
+            var gif = GIFInfo(provider: info.provider)
+            if kind == .video { gif.videoURL = url } else { gif.imageURL = url }
+            return PreviewFetchResult(preview: LinkPreview(
+                url: url, finalURL: finalURL, kind: .gif, siteName: info.provider.displayName,
+                mediaURL: url, gif: gif, contentType: contentType, declaresAdult: declaresAdult
+            ))
+
+        case .html(let metadata, let finalURL, let contentType):
+            var gif: GIFInfo?
+            if info.isResolved {
+                gif = info
+            } else if finalURL != url, case .gif(let landed) = MediaClassifier.classify(finalURL), landed.isResolved {
+                // gph.is/… → giphy.com/gifs/…-<id>: the address names the animation.
+                gif = landed
+            } else {
+                var isSticker = info.isSticker
+                if case .gif(let landed) = MediaClassifier.classify(finalURL), landed.isSticker { isSticker = true }
+                gif = GIFResolver.resolve(metadata, provider: info.provider, isSticker: isSticker)
+            }
+            guard var gif else { return nil }
+            gif.title = gif.title ?? metadata.title
+
+            var imageSize: CGSize?
+            if metadata.imageURL != nil, let width = metadata.imageWidth, let height = metadata.imageHeight {
+                imageSize = CGSize(width: width, height: height)
+            }
+            return PreviewFetchResult(preview: LinkPreview(
+                url: url,
+                finalURL: finalURL,
+                kind: .gif,
+                title: metadata.title ?? Self.displayHost(finalURL),
+                summary: metadata.summary,
+                siteName: metadata.siteName ?? info.provider.displayName,
+                imageURL: metadata.imageURL,
+                imageSize: imageSize,
+                faviconURL: metadata.faviconURL ?? URL(string: "/favicon.ico", relativeTo: finalURL)?.absoluteURL,
+                themeColor: metadata.themeColor,
+                mediaURL: gif.primaryURL,
+                gif: gif,
+                contentType: contentType,
+                declaresAdult: metadata.declaresAdult
+            ))
         }
     }
 
@@ -102,6 +332,7 @@ struct PreviewFetcher: Sendable {
     private func embedPreview(
         _ url: URL, finalURL: URL, info: EmbedInfo, policy: MediaPolicy, pageMetadata: HTMLMetadata?
     ) async throws -> PreviewFetchResult {
+        if info.provider == .reddit { return try await redditVideoPreview(url, info: info, policy: policy) }
         var embed = info
         var summary: String?
         var siteName = info.provider.displayName
@@ -203,7 +434,11 @@ struct PreviewFetcher: Sendable {
     }
 
     private func pagePreview(_ url: URL, policy: MediaPolicy) async throws -> PreviewFetchResult {
-        switch try await fetchPage(url, policy: policy) {
+        try await pagePreview(url, fetched: try await fetchPage(url, policy: policy), policy: policy)
+    }
+
+    private func pagePreview(_ url: URL, fetched: PageFetch, policy: MediaPolicy) async throws -> PreviewFetchResult {
+        switch fetched {
         case .media(let kind, let finalURL, let contentType, let declaresAdult):
             return PreviewFetchResult(preview: LinkPreview(
                 url: url, finalURL: finalURL, kind: kind, mediaURL: url, contentType: contentType,
@@ -215,9 +450,14 @@ struct PreviewFetcher: Sendable {
             if finalURL != url, case .embed(let info) = MediaClassifier.classify(finalURL) {
                 return try await embedPreview(url, finalURL: finalURL, info: info, policy: policy, pageMetadata: metadata)
             }
+            // … or on a Reddit post (`redd.it/<id>`, a share link), or its age check.
+            if finalURL != url, let post = RedditLinks.post(finalURL) {
+                return try await redditPostPreview(url, finalURL: finalURL, post: post, policy: policy)
+            }
 
             var metadata = metadata
             var degraded = false
+            if RedditLinks.isAgeGate(finalURL) { metadata.declaresAdult = true }
             if metadata.title == nil || metadata.imageURL == nil, let endpoint = metadata.oEmbedURL {
                 var oEmbed: OEmbedResponse?
                 if policy.allows(endpoint) {
@@ -409,4 +649,8 @@ struct PreviewFetcher: Sendable {
         }
         return nil
     }
+}
+
+extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

@@ -342,7 +342,7 @@ extension SettingKey where Value == Bool {
     }
     public static var mediaBlurImages: SettingKey<Bool> {
         .init("media.blurImages", default: false,
-              summary: "Blur images, thumbnails and video posters until clicked, everywhere.")
+              summary: "Blur images, GIFs, thumbnails and video posters until clicked, everywhere.")
     }
 }
 
@@ -363,7 +363,7 @@ extension SettingKey where Value == VideoEmbedStyle {
 extension SettingKey where Value == InlineImageSize {
     public static var mediaImageSize: SettingKey<InlineImageSize> {
         .init("media.imageSize", default: .full,
-              summary: "Inline images: full (up to media.maxImageHeight) or thumbnail.")
+              summary: "Inline images and GIFs: full (up to media.maxImageHeight) or thumbnail.")
     }
 }
 
@@ -381,16 +381,16 @@ extension SettingKey where Value == [String] {
     }
     public static var mediaBlurredBuffers: SettingKey<[String]> {
         .init("media.blurredBuffers", default: [],
-              summary: "Buffers whose images, thumbnails and video posters stay blurred until clicked: \"<networkUUID>/<foldedName>\" or \"<networkUUID>/*\".")
+              summary: "Buffers whose images, GIFs, thumbnails and video posters stay blurred until clicked: \"<networkUUID>/<foldedName>\" or \"<networkUUID>/*\".")
     }
 }
 
 extension SettingKey where Value == Double {
     public static var mediaMaxImageSizeMB: SettingKey<Double> {
-        .init("media.maxImageSizeMB", default: 10, summary: "Skip auto-loading images larger than this many megabytes.")
+        .init("media.maxImageSizeMB", default: 10, summary: "Skip auto-loading images and GIFs larger than this many megabytes.")
     }
     public static var mediaMaxImageHeight: SettingKey<Double> {
-        .init("media.maxImageHeight", default: 320, summary: "Maximum height of inline images, in points.")
+        .init("media.maxImageHeight", default: 320, summary: "Maximum height of inline images and GIFs, in points.")
     }
 }
 

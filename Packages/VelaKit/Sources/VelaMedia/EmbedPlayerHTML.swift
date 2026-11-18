@@ -49,7 +49,7 @@ public enum EmbedPlayerHTML {
             return embed.embedURL
         }
         let (name, value): (String, String) = switch embed.provider {
-        case .youtube, .vimeo, .streamable: ("autoplay", autoplay ? "1" : "0")
+        case .youtube, .vimeo, .streamable, .reddit: ("autoplay", autoplay ? "1" : "0")
         // Twitch players autoplay unless told otherwise and expect true/false.
         case .twitch: ("autoplay", autoplay ? "true" : "false")
         }

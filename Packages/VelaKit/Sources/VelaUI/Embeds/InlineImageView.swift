@@ -164,7 +164,10 @@ struct InlineImageView: View {
         .clipShape(shape)
         .overlay(shape.strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1))
         .overlay(alignment: .bottomLeading) {
-            if isAnimated { animationBadge.padding(compact ? 4 : 8) }
+            if isAnimated {
+                AnimationBadge(compact: compact, isPlaying: player.isPlaying, hovering: hovering, toggle: togglePlayback)
+                    .padding(compact ? 4 : 8)
+            }
         }
         .overlay {
             if isAnimated, !compact, !player.isPlaying, reduceMotion || userPlayback == false {
@@ -205,31 +208,6 @@ struct InlineImageView: View {
     private var accessibilityLabel: String {
         let kind = isAnimated ? "Animated image" : "Image"
         return "\(kind), \(EmbedActions.displayName(linkURL))"
-    }
-
-    @ViewBuilder
-    private var animationBadge: some View {
-        let label = HStack(spacing: 3) {
-            if !compact && (hovering || !player.isPlaying) {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 8, weight: .bold))
-            }
-            Text("GIF")
-                .font(.system(size: compact ? 8 : 9, weight: .heavy, design: .rounded))
-        }
-        .foregroundStyle(theme[ThemeKey.chatForeground])
-        .padding(.horizontal, compact ? 4 : 6)
-        .padding(.vertical, compact ? 1.5 : 3)
-        .background(Capsule().fill(theme[ThemeKey.chatBackground].opacity(0.82)))
-
-        if compact {
-            label.accessibilityHidden(true)
-        } else {
-            Button(action: togglePlayback) { label }
-                .buttonStyle(.plain)
-                .help(player.isPlaying ? "Pause animation" : "Play animation")
-                .accessibilityLabel(player.isPlaying ? "Pause animation" : "Play animation")
-        }
     }
 
     private func togglePlayback() {
@@ -295,6 +273,41 @@ struct InlineImageView: View {
         Task {
             guard let loaded = try? await ImageLoader.shared.load(imageURL, policy: policy) else { return }
             EmbedActions.copyImage(data: loaded.data, utType: loaded.utType)
+        }
+    }
+}
+
+/// The "GIF" capsule in the corner of an animation. In full size it is a
+/// button that pauses and plays, with ▶ or ❙❙ while hovered or paused;
+/// without `toggle` (a facade that hasn't played yet) it's just the label.
+struct AnimationBadge: View {
+    @Environment(\.theme) private var theme
+    let compact: Bool
+    let isPlaying: Bool
+    let hovering: Bool
+    let toggle: (() -> Void)?
+
+    var body: some View {
+        let label = HStack(spacing: 3) {
+            if !compact, toggle != nil, hovering || !isPlaying {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            Text("GIF")
+                .font(.system(size: compact ? 8 : 9, weight: .heavy, design: .rounded))
+        }
+        .foregroundStyle(theme[ThemeKey.chatForeground])
+        .padding(.horizontal, compact ? 4 : 6)
+        .padding(.vertical, compact ? 1.5 : 3)
+        .background(Capsule().fill(theme[ThemeKey.chatBackground].opacity(0.82)))
+
+        if compact || toggle == nil {
+            label.accessibilityHidden(true)
+        } else if let toggle {
+            Button(action: toggle) { label }
+                .buttonStyle(.plain)
+                .help(isPlaying ? "Pause animation" : "Play animation")
+                .accessibilityLabel(isPlaying ? "Pause animation" : "Play animation")
         }
     }
 }

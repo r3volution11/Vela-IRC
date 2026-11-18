@@ -134,12 +134,20 @@ struct EmbedLink: Identifiable, Hashable {
             id = "\(info.provider.rawValue):\(info.videoID)"
         case .image(let media), .video(let media):
             id = media.absoluteString
+        case .gif(let info):
+            // The same animation posted as a page and as a file previews once.
+            id = info.primaryURL.map { "gif:\($0.absoluteString)" } ?? Self.pageID(url)
         case .page(let page):
-            var text = page.absoluteString
-            if let hash = text.firstIndex(of: "#") { text = String(text[..<hash]) }
-            while text.hasSuffix("/") { text.removeLast() }
-            id = text.lowercased()
+            id = Self.pageID(page)
         }
+    }
+
+    /// A page without its fragment or trailing slashes, lowercased.
+    private static func pageID(_ page: URL) -> String {
+        var text = page.absoluteString
+        if let hash = text.firstIndex(of: "#") { text = String(text[..<hash]) }
+        while text.hasSuffix("/") { text.removeLast() }
+        return text.lowercased()
     }
 }
 
@@ -180,6 +188,7 @@ enum EmbedPresentation: Hashable {
     case loadChip(LoadChipKind)
     case blocked(SiteBlock)
     case image(URL, PreviewImageSize)
+    case gif(GIFInfo, PreviewImageSize)
     case directVideo(URL, PreviewVideoStyle)
     case videoEmbed(EmbedInfo, PreviewVideoStyle)
     case card(LinkPreview, PreviewLinkSize)
@@ -202,6 +211,14 @@ enum EmbedPresentation: Hashable {
             } else {
                 self = .nothing
             }
+        case .gif(let size):
+            // What the fetched page said, else what the link itself says.
+            let classified: GIFInfo? = if case .gif(let info) = link.classification { info } else { nil }
+            if let gif = preview?.gif ?? classified, gif.isResolved {
+                self = .gif(gif, size)
+            } else {
+                self = .nothing
+            }
         case .directVideo(let style):
             self = preview.map { .directVideo($0.finalURL, style) } ?? .nothing
         case .videoEmbed(let style):
@@ -216,6 +233,7 @@ enum EmbedPresentation: Hashable {
     static func loadChipLabel(_ kind: LoadChipKind) -> (systemImage: String, title: String) {
         switch kind {
         case .image: ("photo", "Load image")
+        case .gif: ("photo.stack", "Load GIF")
         case .video: ("film", "Load video")
         case .videoEmbed(let provider): ("play.rectangle", "Load \(provider.displayName) video")
         case .page: ("link", "Load preview")
@@ -304,6 +322,20 @@ private struct LinkEmbedView: View {
                 compact: size == .thumbnail,
                 maxImageHeight: style.maxImageHeight,
                 onUnsupported: onUnsupportedImage,
+                onBlocked: { block in
+                    fetchBlock = block
+                    EmbedMemory.shared.fetchBlocks.insert(block, for: link.url)
+                },
+                onHide: onHide
+            )
+            .padding(.top, 6)
+        case .gif(let gif, let size):
+            InlineGIFView(
+                linkURL: link.url,
+                gif: gif,
+                policy: decision.policy,
+                compact: size == .thumbnail,
+                maxImageHeight: style.maxImageHeight,
                 onBlocked: { block in
                     fetchBlock = block
                     EmbedMemory.shared.fetchBlocks.insert(block, for: link.url)

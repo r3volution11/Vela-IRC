@@ -9,10 +9,14 @@ public enum MediaClassification: Sendable, Hashable {
     /// A direct image file. The associated URL may be rewritten
     /// (e.g. a GitHub `blob` page to `raw.githubusercontent.com`).
     case image(URL)
-    /// A direct video file (e.g. `.mp4`, or Imgur `.gifv` rewritten to `.mp4`).
+    /// A direct video file (e.g. `.mp4`).
     case video(URL)
     /// A video from a site whose player can be embedded.
     case embed(EmbedInfo)
+    /// An animation from a GIF site (Tenor, GIPHY, Imgur `.gifv`). Resolved
+    /// when the link says where the animation is; otherwise its page is
+    /// fetched to find out (`GIFInfo.isResolved`).
+    case gif(GIFInfo)
     /// Anything else: an HTML page to summarize as a link card.
     case page(URL)
 }
@@ -31,8 +35,11 @@ public enum MediaClassifier {
 
         let parts = URLParts(url: url, host: rawHost)
 
-        if let embed = youTube(parts) ?? vimeo(parts) ?? twitch(parts) ?? streamable(parts) {
+        if let embed = youTube(parts) ?? vimeo(parts) ?? twitch(parts) ?? streamable(parts) ?? reddit(parts) {
             return .embed(embed)
+        }
+        if let gif = GIFLinks.classify(parts) {
+            return .gif(gif)
         }
         if let rewritten = rewrite(parts) {
             return rewritten
@@ -193,19 +200,16 @@ public enum MediaClassifier {
         return .streamable(id: id)
     }
 
+    /// `v.redd.it/<id>`. Links to posts stay pages: what a post holds can't
+    /// be told from its address (see `RedditLinks`).
+    private static func reddit(_ parts: URLParts) -> EmbedInfo? {
+        RedditLinks.videoID(parts).map(EmbedInfo.reddit(id:))
+    }
+
     // MARK: - Rewrites
 
     private static func rewrite(_ parts: URLParts) -> MediaClassification? {
         let url = parts.url
-
-        // i.imgur.com/<id>.gifv is an HTML wrapper around an MP4.
-        if parts.host == "i.imgur.com", url.pathExtension.lowercased() == "gifv",
-           var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-            components.path = (components.path as NSString).deletingPathExtension + ".mp4"
-            components.query = nil
-            components.fragment = nil
-            if let mp4 = components.url { return .video(mp4) }
-        }
 
         // github.com/<owner>/<repo>/blob/<ref>/<path> → raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>
         if parts.host == "github.com" || parts.host == "www.github.com" {

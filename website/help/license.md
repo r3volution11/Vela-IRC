@@ -101,6 +101,8 @@ The screenshots on this site and in the README come from Vela's demo mode. Its c
 | The rotating Earth GIF, in `#vela` | [Blue Marble animation](https://visibleearth.nasa.gov/images/57760/blue-marble-animations) by NASA Goddard Space Flight Center (Reto Stöckli; enhancements by Robert Simmon), GIF by Jahobr, via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Rotating_earth_animated.gif) | Public domain |
 | The aurora photo, in `#vela-offtopic` | U.S. Air Force photo by Senior Airman Joshua Strang, via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Aurora_borealis_over_Eielson_Air_Force_Base,_Alaska.jpg) | Public domain |
 | The RCW 38 star cluster, in the link card for ESO's [Star cluster reveals its colours in stunning 80-million-pixel ESO image](https://www.eso.org/public/news/eso2503/) | [ESO/VVVX survey](https://www.eso.org/public/images/eso2503a/) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| The rocket launch GIF, in `#macdev` | NASA, via [GIPHY](https://giphy.com/gifs/nasa-space-rocket-launch-x4vlKY5ocArL3SeVVU) | Public domain |
+| The GIF of Earth and the space station, in `#macdev` | NASA, via [Tenor](https://tenor.com/view/nasa-nasa-gifs-earth-space-station-space-gif-9368490) | Public domain |
 
 The link cards for [Swift.org](https://www.swift.org/blog/) and the [IRCv3 specifications](https://ircv3.net/irc/) show those sites' own icons. Swift and the Swift logo are trademarks of Apple Inc.; the IRCv3 logo belongs to the IRCv3 Working Group.
 

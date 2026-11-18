@@ -108,6 +108,8 @@ enum BlurredMediaSource {
 /// What is blurred, for the stand-in's menu and VoiceOver label.
 enum BlurredMediaKind {
     case image
+    /// An animation from a GIF site.
+    case gif
     /// A link card's image or thumbnail.
     case thumbnail
     /// A video's thumbnail or poster frame.
@@ -116,6 +118,7 @@ enum BlurredMediaKind {
     var noun: String {
         switch self {
         case .image: "image"
+        case .gif: "GIF"
         case .thumbnail: "preview image"
         case .video: "video thumbnail"
         }
@@ -124,6 +127,7 @@ enum BlurredMediaKind {
     var showTitle: String {
         switch self {
         case .image: "Show Image"
+        case .gif: "Show GIF"
         case .thumbnail: "Show Preview Image"
         case .video: "Show Video Thumbnail"
         }

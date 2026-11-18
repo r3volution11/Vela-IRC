@@ -89,6 +89,14 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **A theme's author and description** show when you hover its card in Settings → Appearance or its name in Select Theme, and the theme editor has **Author**, **Description** and **Translucency** fields.
 - **Themed scroll bars and button hover.** The conversation, member list and sidebar scroll bars use the theme's `scrollbar.thumb` and `scrollbar.thumbHover`, primary buttons such as **Save** show `button.hoverBackground` under the pointer, and `window.border` outlines Vela's windows. `chat.findMatchBackground` is reserved for a future conversation search.
 - **Theme guide:** Creating themes is now a step-by-step guide: the theme editor and hand-written files, every key and token group, derived colors, nick and mIRC colors, `include`, light and dark pairs, contrast checks, testing and troubleshooting. It makes clear that themes set colors only, never layout or fonts, and that Vela draws each theme's preview card from its colors.
+- **GIFs from Tenor, GIPHY and Imgur play inline.** Links to a GIF's page (`tenor.com/view/…`, `giphy.com/gifs/…`), short links (`tenor.com/RaDD.gif`, `gph.is/…`), the sites' own GIF files and Imgur `.gifv` links show the GIF itself, looping, with a **GIF** badge and a "via Tenor · tenor.com" line, instead of a link preview.
+  - Vela plays each site's video copy of the GIF, silent and without controls: usually a tenth of the GIF's size or less. Stickers play from the GIF, which keeps them see-through. If the video copy can't be loaded, the GIF plays instead.
+  - GIFs follow the image settings (**Full size** or **Thumbnail**, **Maximum image height**, **Largest image to load automatically**), pause out of view or with the **GIF** badge, show their first frame and a play button with Reduce Motion, and open larger when clicked.
+  - Blur, site rules, the adult-site filter, **Load previews automatically** (a **Load GIF** button) and turning media off for a channel apply as they do to images. A site set to Text only gets a link preview with the GIF's title and no animation.
+  - To find the GIF behind a page or short link, Vela fetches the page, like any link preview. Links that name the GIF, such as GIPHY pages and files on Tenor's and GIPHY's servers, need no page.
+- **Reddit videos play inline.** `v.redd.it` links show the post's title, subreddit and author and play in place when you press ▶, in the **Player**, **Compact** and **Off** styles like other videos, with Expand, one video at a time and pausing out of view. A Reddit "GIF" (a video without sound) loops silently.
+  - Vela can't tell from Reddit's public information whether a post is NSFW, so Reddit videos show no thumbnail or still frame before you press ▶ and never start by themselves. A post that Reddit sends to its age check is blocked as a page marked adult.
+  - Links to Reddit posts show a link preview with the post's title, subreddit and author. Their videos don't play from the post link: Reddit only shows apps what a post holds with an account.
 
 ### Changed
 
@@ -111,6 +119,9 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Demo mode cleans up after itself.** Each demo run removes its temporary folders when it quits, and the next run sweeps away any left behind (`VelaDemo-…` folders more than an hour old).
 - **Settings → Advanced is now the settings editor**, and its switches have moved: **Send typing indicators** and **Check spelling while typing** to Settings → Messages → Typing, **Keep messages** to Settings → Messages → History, and **Reconnect automatically** to Settings → Networks. Their settings.json keys (`input.sendTypingIndicators`, `input.spellCheck`, `history.retentionDays`, `connection.autoReconnect`) haven't changed. **Open settings.json** and **Reveal Data Folder** are in the editor's **⋯** menu, and the **All settings** list is now its UI view.
 - **Nick colors stay apart.** People talking in the same channel get different colors while the theme's palette has room; before, two nicks whose names hashed alike shared a color. Colors that merely look alike (orange beside red) are kept apart too, using the nearest clearly different color from the theme's palette, but only when a clearly different one is free. A nick keeps its color once given and usually has the same one everywhere. Palette colors too close to the message text (or under 3:1 against the background) are no longer used, so a colored nick never reads as plain text.
+- **Imgur `.gifv` links play like GIFs:** inline, looping and silent, without a click. They used to show a still frame and ▶ like a video file.
+- **One site rule covers all of Reddit.** A rule for `reddit.com` now also covers `redd.it` links, `v.redd.it` videos, `i.redd.it` and `preview.redd.it` images and Reddit's other media servers, and right-clicking a Reddit image offers `reddit.com`. Rules for `tenor.com` and `giphy.com` cover their media servers (and `gph.is` links) the same way.
+- Link previews are fetched once more after updating, so links to GIF sites and Reddit that were saved as link previews show the new way.
 
 ### Fixed
 
@@ -123,6 +134,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - Unblocking a site takes effect immediately, instead of after up to 15 minutes.
 - Cached link previews older than 30 days are deleted when Vela starts, so the cache no longer grows forever.
 - A playing video no longer reloads when its message is redrawn (it keeps playing) or when you scroll it away and back (it waits, paused, where you left it).
+- Links to Reddit posts showed "Reddit" as their title, with no description. Reddit answers apps with a page that only says "Reddit"; Vela now gets the post's title, subreddit and author from Reddit's oEmbed service.
 
 ## 0.1.0 - 2026-11-16
 

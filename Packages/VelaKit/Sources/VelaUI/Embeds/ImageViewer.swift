@@ -9,9 +9,49 @@ import VelaTheme
 
 /// What the full-size viewer shows.
 struct ImageViewerItem {
+    enum Media {
+        case image(LoadedImage)
+        /// A GIF site's MP4, looping and muted; its first frame shows until it plays.
+        case loopingVideo(LoadedLoopingVideo, poster: CGImage?)
+    }
+
     let linkURL: URL
-    let imageURL: URL
-    let image: LoadedImage
+    /// The image or video file's own URL.
+    let mediaURL: URL
+    let media: Media
+
+    init(linkURL: URL, imageURL: URL, image: LoadedImage) {
+        self.linkURL = linkURL
+        self.mediaURL = imageURL
+        self.media = .image(image)
+    }
+
+    init(linkURL: URL, videoURL: URL, video: LoadedLoopingVideo, poster: CGImage?) {
+        self.linkURL = linkURL
+        self.mediaURL = videoURL
+        self.media = .loopingVideo(video, poster: poster)
+    }
+
+    var pixelSize: CGSize {
+        switch media {
+        case .image(let image): image.pixelSize
+        case .loopingVideo(let video, _): video.pixelSize
+        }
+    }
+
+    var byteCount: Int {
+        switch media {
+        case .image(let image): image.data.count
+        case .loopingVideo(let video, _): video.byteCount
+        }
+    }
+
+    var isAnimated: Bool {
+        switch media {
+        case .image(let image): image.isAnimated
+        case .loopingVideo: true
+        }
+    }
 }
 
 /// Full-size image viewer: a borderless panel laid over the window it was
@@ -131,6 +171,8 @@ private struct ImageViewerView: View {
 
     @State private var still: NSImage?
     @State private var player = AnimatedImagePlayer()
+    /// A looping video's play state (an image's is the player's).
+    @State private var videoPlaying = false
     @State private var copied = false
 
     var body: some View {
@@ -157,10 +199,16 @@ private struct ImageViewerView: View {
             .padding(.bottom, 24)
         }
         .onAppear {
-            still = NSImage(data: item.image.data)
-            if item.image.isAnimated {
-                player.load(item.image.data, frameCount: item.image.frameCount)
-                if !reduceMotion { player.play() }
+            switch item.media {
+            case .image(let image):
+                still = NSImage(data: image.data)
+                if image.isAnimated {
+                    player.load(image.data, frameCount: image.frameCount)
+                    if !reduceMotion { player.play() }
+                }
+            case .loopingVideo(_, let poster):
+                still = poster.map { NSImage(cgImage: $0, size: .zero) }
+                videoPlaying = !reduceMotion
             }
         }
         .onDisappear { player.pause() }
@@ -169,9 +217,33 @@ private struct ImageViewerView: View {
         .accessibilityAddTraits(.isModal)
     }
 
+    private var isPlaying: Bool {
+        if case .loopingVideo = item.media { return videoPlaying }
+        return player.isPlaying
+    }
+
+    private func togglePlayback() {
+        if case .loopingVideo = item.media {
+            videoPlaying.toggle()
+        } else {
+            player.toggle()
+        }
+    }
+
     @ViewBuilder
     private var imageView: some View {
-        if let frame = player.frame {
+        if case .loopingVideo(let video, _) = item.media {
+            ZStack {
+                if let still {
+                    Image(nsImage: still).resizable().interpolation(.high)
+                } else {
+                    theme[ThemeKey.embedPlaceholderBackground]
+                }
+                LoopingVideoView(fileURL: video.fileURL, isPlaying: videoPlaying)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        } else if let frame = player.frame {
             Image(decorative: frame, scale: 1).resizable().interpolation(.high)
         } else if let still {
             Image(nsImage: still).resizable().interpolation(.high)
@@ -195,9 +267,9 @@ private struct ImageViewerView: View {
             }
             .frame(maxWidth: 360, alignment: .leading)
             Spacer(minLength: 12)
-            if item.image.isAnimated {
-                Button(player.isPlaying ? "Pause" : "Play", systemImage: player.isPlaying ? "pause.fill" : "play.fill") {
-                    player.toggle()
+            if item.isAnimated {
+                Button(isPlaying ? "Pause" : "Play", systemImage: isPlaying ? "pause.fill" : "play.fill") {
+                    togglePlayback()
                 }
                 .buttonStyle(ThemedButtonStyle())
             }
@@ -206,8 +278,11 @@ private struct ImageViewerView: View {
                 onClose()
             }
             .buttonStyle(ThemedButtonStyle())
-            Button(copied ? "Copied" : "Copy Image", systemImage: copied ? "checkmark" : "doc.on.doc") {
-                EmbedActions.copyImage(data: item.image.data, utType: item.image.utType)
+            Button(copied ? "Copied" : copyTitle, systemImage: copied ? "checkmark" : "doc.on.doc") {
+                switch item.media {
+                case .image(let image): EmbedActions.copyImage(data: image.data, utType: image.utType)
+                case .loopingVideo: EmbedActions.copy(item.linkURL)
+                }
                 copied = true
             }
             .buttonStyle(ThemedButtonStyle())
@@ -220,15 +295,21 @@ private struct ImageViewerView: View {
         .frame(maxWidth: 900)
     }
 
+    /// A GIF site's video has nothing worth copying but its link.
+    private var copyTitle: String {
+        if case .loopingVideo = item.media { return "Copy Link" }
+        return "Copy Image"
+    }
+
     private var detailText: String {
-        let size = item.image.pixelSize
-        let bytes = ByteCountFormatter.string(fromByteCount: Int64(item.image.data.count), countStyle: .file)
+        let size = item.pixelSize
+        let bytes = ByteCountFormatter.string(fromByteCount: Int64(item.byteCount), countStyle: .file)
         return "\(Int(size.width)) × \(Int(size.height)) · \(bytes) · \(EmbedActions.displayHost(item.linkURL))"
     }
 
     /// The image's own size in points, scaled down to fit `available`.
     private func fittedSize(in available: CGSize) -> CGSize {
-        let natural = item.image.pixelSize
+        let natural = item.pixelSize
         guard natural.width > 0, natural.height > 0, available.width > 0, available.height > 0 else { return .zero }
         let scale = min(1, available.width / natural.width, available.height / natural.height)
         return CGSize(width: (natural.width * scale).rounded(), height: (natural.height * scale).rounded())

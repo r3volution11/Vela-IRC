@@ -15,9 +15,11 @@ struct OEmbedResponse: Decodable, Sendable, Hashable {
     var thumbnailHeight: Double?
     var width: Double?
     var height: Double?
+    /// The embed markup (Reddit's names the subreddit).
+    var html: String?
 
     private enum CodingKeys: String, CodingKey {
-        case type, title, width, height
+        case type, title, width, height, html
         case authorName = "author_name"
         case providerName = "provider_name"
         case thumbnailURL = "thumbnail_url"
@@ -36,6 +38,7 @@ struct OEmbedResponse: Decodable, Sendable, Hashable {
         thumbnailHeight = Self.number(container, .thumbnailHeight)
         width = Self.number(container, .width)
         height = Self.number(container, .height)
+        html = Self.string(container, .html)
     }
 
     /// Providers disagree on types ("width": 480 vs "480" vs "100%");
@@ -61,7 +64,8 @@ struct OEmbedResponse: Decodable, Sendable, Hashable {
 
 enum OEmbedEndpoint {
     /// The oEmbed endpoint for an embed, or nil for providers without an
-    /// unauthenticated endpoint (Twitch).
+    /// unauthenticated endpoint (Twitch) or whose endpoint needs the post the
+    /// video belongs to (Reddit: `reddit(post:)`).
     static func url(for embed: EmbedInfo) -> URL? {
         guard let page = embed.canonicalPageURL else { return nil }
         let base: String
@@ -69,13 +73,18 @@ enum OEmbedEndpoint {
         case .youtube: base = "https://www.youtube.com/oembed"
         case .vimeo: base = "https://vimeo.com/api/oembed.json"
         case .streamable: base = "https://api.streamable.com/oembed.json"
-        case .twitch: return nil
+        case .twitch, .reddit: return nil
         }
         // The page URL must be fully percent-encoded or its own '&' and '?'
         // would leak into the endpoint's query.
         var query = "url=" + encode(page.absoluteString)
         if embed.provider == .youtube { query = "format=json&" + query }
         return URL(string: base + "?" + query)
+    }
+
+    /// Reddit's endpoint for a post's page.
+    static func reddit(post: URL) -> URL? {
+        URL(string: "https://www.reddit.com/oembed?url=" + encode(post.absoluteString))
     }
 
     private static let unreserved = CharacterSet(

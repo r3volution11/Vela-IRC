@@ -1,6 +1,6 @@
 ---
 title: Inline media & privacy
-description: How Vela shows images, link previews and videos inline, what it fetches and from where, and how to limit it with site rules, the adult-site filter and blur.
+description: How Vela shows images, GIFs, link previews and videos inline, what it fetches and from where, and how to limit it with site rules, the adult-site filter and blur.
 ---
 
 # Inline media & privacy
@@ -11,8 +11,9 @@ When someone posts a link, Vela can show what's behind it right in the conversat
 
 - **Images** (JPEG, PNG, WebP and others) appear inline. Animated **GIF, APNG and WebP** play inline; with **Reduce Motion** turned on in macOS, they show the first frame and a play button. Click an image to open it full size (<kbd>Esc</kbd> closes it). Right-click to open it in your browser or copy it.
 - **Link previews** show a page's site name and icon, title, description and image, in [three sizes](#link-previews).
-- **YouTube, Vimeo, Twitch and Streamable** links show the video's title and thumbnail. Press **▶** to [play it right there](#videos).
-- **Video files** (`.mp4`, `.mov`, Imgur `.gifv`) show a still frame. They never play until you click.
+- **GIFs from Tenor, GIPHY and Imgur** play inline too, even when the link is to the GIF's page rather than the GIF itself. See [GIFs](#gifs).
+- **YouTube, Vimeo, Twitch, Streamable and Reddit** video links show the video's title, and (except on [Reddit](#reddit)) its thumbnail. Press **▶** to [play it right there](#videos).
+- **Video files** (`.mp4`, `.mov`) show a still frame. They never play until you click.
 
 Hover a message's previews and click the chevron to hide them, or right-click a preview and choose **Hide Previews**.
 
@@ -40,7 +41,7 @@ From the command palette: **Media: Minimal Link Previews**, **Standard Link Prev
 
 ## Videos
 
-Choose how YouTube, Vimeo, Twitch and Streamable links and video files show in **Settings → Media → Videos**:
+Choose how YouTube, Vimeo, Twitch, Streamable and Reddit links and video files show in **Settings → Media → Videos**:
 
 | Style | What it shows |
 | --- | --- |
@@ -64,6 +65,13 @@ From the command palette: **Media: Play Videos Inline**, **Compact Videos** and 
 
 Vela keeps up to three players loaded. Starting a fourth closes the one you used least recently.
 
+### Reddit
+
+- **Reddit videos** (`v.redd.it` links) play in Vela's own player, with sound, in the same **Player**, **Compact** and **Off** styles as other videos. A Reddit "GIF", which is a video without sound, loops silently once you press **▶** and shows a **GIF** badge.
+- **No picture until you press ▶.** Vela can't tell from Reddit's public information whether a post is NSFW, so Reddit videos show no thumbnail or still frame, just the post's title, subreddit and author, and never start by themselves. If Reddit sends Vela to its age check instead of the post, the preview is blocked like any [page marked adult](#adult-sites).
+- **Links to Reddit posts** show a link preview with the post's title, subreddit and author. Reddit only lets apps see what a post holds with an account, so a post's video doesn't play from a link to the post; share the video's own `v.redd.it` link for that. Images on `i.redd.it` and `preview.redd.it` show inline like any other image.
+- **When Reddit is busy** and asks apps to slow down, the preview shows the title from the link itself, and Vela asks again later.
+
 ## Images
 
 In **Settings → Media → Images**:
@@ -71,7 +79,31 @@ In **Settings → Media → Images**:
 - **Size.** **Full size** shows images inline, up to the **Maximum image height** (320 points by default); taller ones are scaled down. **Thumbnail** keeps them small; click one to see it full size.
 - **Largest image to load automatically** (10 MB by default). Bigger images show a placeholder you can click.
 
+GIFs follow these settings too.
+
 From the command palette: **Media: Full-Size Images** and **Image Thumbnails**.
+
+## GIFs
+
+<Screenshot src="/screenshots/media-gifs.webp" alt="Two GIFs in a channel: a night rocket launch, captioned “via GIPHY · giphy.com”, and the space station above Earth, captioned “via Tenor · tenor.com”, each with a GIF badge in the corner" caption="GIFs from GIPHY and Tenor play right in the conversation." />
+
+Links to GIFs on these sites play inline, even when the link is to the site's page rather than to the GIF itself:
+
+| Site | Links |
+| --- | --- |
+| **Tenor** | Pages (`tenor.com/view/…`), short links such as `tenor.com/RaDD.gif`, and GIF files on `media.tenor.com` |
+| **GIPHY** | Pages (`giphy.com/gifs/…`, `giphy.com/stickers/…`), `gph.is` short links, and files on `media.giphy.com` and `i.giphy.com` |
+| **Imgur** | `.gifv` links |
+
+Any other link to a `.gif`, `.webp` or `.apng` file plays inline as an [image](#images).
+
+- **Small and smooth.** These sites keep a video copy of every GIF, usually a tenth of its size or less, and Vela plays that copy: silent, looping and without controls, just like a GIF. Stickers, which have see-through backgrounds, play from the GIF itself. If the video copy can't be loaded, Vela plays the GIF instead.
+- **Sized like images.** GIFs follow the [Images](#images) settings: **Full size**, up to the **Maximum image height**, or **Thumbnail**, which plays while the pointer is over it. A GIF bigger than **Largest image to load automatically** shows a chip that opens it in your browser.
+- **Pause and play** with the **GIF** badge in the corner, or by right-clicking the GIF. GIFs pause while they're scrolled out of view. With **Reduce Motion** turned on in macOS, they show their first frame and a play button.
+- **Click a GIF** to see it larger (<kbd>Esc</kbd> closes it). The line underneath, such as **via GIPHY · giphy.com**, says where it's from; click it to open the GIF's page in your browser.
+- **Your other settings apply** as they do to images: [blur](#blur), [site rules](#site-rules), the [adult-site filter](#adult-sites), **Load previews automatically** (a **Load GIF** button until you click it) and turning media off for a channel. On a site set to **Text only**, a GIF link gets a link preview with the GIF's title and no animation.
+
+To find the GIF behind a page or a short link, Vela fetches the page, as it does for any [link preview](#what-vela-fetches-and-what-that-means-for-privacy). A link that already says which GIF it is, such as a GIPHY page or a file on Tenor's or GIPHY's servers, needs no page: Vela loads only the GIF.
 
 ## What Vela fetches, and what that means for privacy
 
@@ -79,7 +111,8 @@ To build a preview, Vela downloads the linked page or image **from your Mac**. T
 
 - **The site learns your IP address**, and that someone opened the link at about that time.
 - **Vela sends no cookies** and identifies itself honestly as Vela's link previewer. It never runs the page's scripts; it reads only the page's title, description and image.
-- **Video links contact the video site before you press play.** When previews load automatically, Vela fetches the video's title and thumbnail from the video site (from YouTube's, Vimeo's or Streamable's oEmbed service, or from the Twitch page), so that site sees your IP address like any other preview. The player itself, with its scripts and cookies, loads only when you press **▶**. YouTube plays from `youtube-nocookie.com`, and nothing the player stores is kept after it closes.
+- **Video links contact the video site before you press play.** When previews load automatically, Vela fetches the video's title and thumbnail from the video site (from YouTube's, Vimeo's, Streamable's or Reddit's oEmbed service, or from the Twitch page), so that site sees your IP address like any other preview. For a Reddit video, Vela also follows the link to its post and reads the video's playlist, to learn its shape and whether it has sound. The player itself, with its scripts and cookies, loads only when you press **▶**. YouTube plays from `youtube-nocookie.com`, and nothing the player stores is kept after it closes.
+- **GIF links contact the GIF site.** Vela fetches a Tenor page or short link (or a `gph.is` link) to find its GIF, then downloads the GIF's video copy from Tenor, GIPHY or Imgur, with the same size limit and [site rules](#site-rules) as images. Downloaded GIFs are kept in a temporary folder that Vela empties each time it starts.
 - **Your local network is off-limits.** Vela never fetches previews from `localhost`, private and link-local IP addresses, or names like `router.local`, so a link in a channel can't make Vela probe devices on your network.
 - **Previews are cached** on your Mac, so scrolling back doesn't fetch them again. Page previews are refreshed after a week, and cached previews older than 30 days are deleted when Vela starts.
 
@@ -109,7 +142,7 @@ To turn media off for a whole network, right-click the network in the sidebar (o
 - **A list that comes with Vela.** Vela checks each link's site, and any site the link redirects to, against a list of about 42,000 adult domains bundled with the app, plus the adult-only `.xxx`, `.porn`, `.adult` and `.sex` domains. A listed domain covers its subdomains too.
 - **Checked on your Mac, never online.** Your links aren't sent anywhere to be checked, and Vela never downloads the list. It's refreshed with each new version of Vela.
 - **Pages that label themselves adult.** Many adult sites mark their pages with the RTA ("Restricted to Adults") label or a `rating` meta tag. When a page that isn't on the list says so, Vela shows the chip instead of its preview and loads none of its images. (Vela only finds the label by fetching the page, so the site itself is contacted.)
-- **Where the list comes from.** It's built from the open-source [Sinfonietta/hostfiles](https://github.com/Sinfonietta/hostfiles) list (MIT license). General platforms such as Reddit, X, Imgur and Tumblr are left out as a whole, although an individual adult blog on one of them may be listed.
+- **Where the list comes from.** It's built from the open-source [Sinfonietta/hostfiles](https://github.com/Sinfonietta/hostfiles) list (MIT license). General platforms such as Reddit, X, Imgur and Tumblr are left out as a whole, although an individual adult blog on one of them may be listed. Reddit videos never show a picture before you press **▶**; see [Reddit](#reddit).
 
 Turn the filter off with the switch, or run **Media: Hide Adult Site Previews** from the command palette.
 
@@ -151,7 +184,7 @@ Sites without a rule follow your other settings.
 - **A rule covers subdomains.** A rule for `example.com` also covers `img.example.com`, but not `badexample.com`.
 - **The most specific rule wins.** A rule for `i.example.com` beats one for `example.com`, so you can block a site but allow its image host, or the other way round.
 - **Your rules beat the adult list.**
-- **Video sites follow their main domain.** A rule for `youtube.com` also covers `youtu.be` links and YouTube's thumbnails. The same goes for `vimeo.com`, `twitch.tv` and `streamable.com`.
+- **Video and GIF sites follow their main domain.** A rule for `youtube.com` also covers `youtu.be` links and YouTube's thumbnails. The same goes for `vimeo.com`, `twitch.tv` and `streamable.com`, and for `reddit.com`, whose rule also covers `redd.it` links, Reddit videos (`v.redd.it`), its images (`i.redd.it`, `preview.redd.it`) and its other media servers. Likewise `tenor.com` covers `media.tenor.com`, and `giphy.com` covers `gph.is` links and GIPHY's media servers.
 - **Rules apply wherever a site turns up:** a link to it, a redirect to it, or an image from it in another site's preview.
 
 ### From a preview
@@ -161,7 +194,7 @@ Right-click any preview for:
 - **Block Previews from ‹site›**, which sets the site to **Nothing**.
 - **Previews from ‹site›**, a submenu with **Default**, **Everything**, **Text Only** and **Nothing**. **Default** removes your rule.
 
-The menu offers the site without `www.`, and a video site's main domain for videos. If a rule for a broader domain already covers the link, the menu changes that rule. A new rule applies straight away to every preview from the site, including the ones on screen.
+The menu offers the site without `www.`, and a video or GIF site's main domain for its links and media. If a rule for a broader domain already covers the link, the menu changes that rule. A new rule applies straight away to every preview from the site, including the ones on screen.
 
 ### Only load previews from listed sites
 
@@ -187,7 +220,7 @@ The **Blocked domains** and **Allowed domains** lists became site rules automati
 
 ## Blur images until clicked {#blur}
 
-Turn on **Blur images until clicked** (in **Settings → Media → Restrictions**) and images, link preview images, video thumbnails and video stills stay blurred, with **Click to show**, until you click them. The first click only reveals: it doesn't open the viewer or start the video. To hide something again, right-click it and choose **Blur Again**.
+Turn on **Blur images until clicked** (in **Settings → Media → Restrictions**) and images, GIFs, link preview images, video thumbnails and video stills stay blurred, with **Click to show**, until you click them. The first click only reveals: it doesn't open the viewer or start the video. To hide something again, right-click it and choose **Blur Again**.
 
 <Screenshot src="/screenshots/media-blur.webp" alt="A photo of the northern lights shown blurred in the chat, with a Click to show label over it" caption="A blurred image waits for a click." />
 

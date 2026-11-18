@@ -60,5 +60,7 @@ The screenshots in `docs/screenshots/` and `website/public/screenshots/` come fr
 | Rotating earth animated.gif | NASA Goddard Space Flight Center (Reto Stöckli, Robert Simmon), GIF by Jahobr, https://commons.wikimedia.org/wiki/File:Rotating_earth_animated.gif | Public domain |
 | Aurora borealis over Eielson Air Force Base, Alaska | U.S. Air Force photo by Senior Airman Joshua Strang, https://commons.wikimedia.org/wiki/File:Aurora_borealis_over_Eielson_Air_Force_Base,_Alaska.jpg | Public domain |
 | RCW 38 star cluster (eso2503a) | ESO/VVVX survey, https://www.eso.org/public/images/eso2503a/ | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| Rocket launch GIF ("Space Night GIF by NASA") | NASA, via GIPHY, https://giphy.com/gifs/nasa-space-rocket-launch-x4vlKY5ocArL3SeVVU | Public domain |
+| Earth and the space station GIF | NASA, via Tenor, https://tenor.com/view/nasa-nasa-gifs-earth-space-station-space-gif-9368490 | Public domain |
 
 The Swift.org and IRCv3 link cards show those sites' icons. Swift and the Swift logo are trademarks of Apple Inc.; the IRCv3 logo belongs to the IRCv3 Working Group. The full credits are at https://velairc.app/help/license.

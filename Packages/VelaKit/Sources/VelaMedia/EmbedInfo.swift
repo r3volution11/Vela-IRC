@@ -6,7 +6,7 @@ import Foundation
 
 /// Video sites whose players Vela can embed.
 public enum EmbedProvider: String, Sendable, Codable, Hashable, CaseIterable {
-    case youtube, vimeo, twitch, streamable
+    case youtube, vimeo, twitch, streamable, reddit
 
     /// Human-readable name, e.g. for a card's site label.
     public var displayName: String {
@@ -15,6 +15,7 @@ public enum EmbedProvider: String, Sendable, Codable, Hashable, CaseIterable {
         case .vimeo: "Vimeo"
         case .twitch: "Twitch"
         case .streamable: "Streamable"
+        case .reddit: "Reddit"
         }
     }
 
@@ -25,6 +26,7 @@ public enum EmbedProvider: String, Sendable, Codable, Hashable, CaseIterable {
         case .vimeo: "#1AB7EA"
         case .twitch: "#9146FF"
         case .streamable: "#0F90FA"
+        case .reddit: "#FF4500"
         }
     }
 
@@ -37,6 +39,7 @@ public enum EmbedProvider: String, Sendable, Codable, Hashable, CaseIterable {
         case .vimeo: "vimeo.com"
         case .twitch: "twitch.tv"
         case .streamable: "streamable.com"
+        case .reddit: "reddit.com"
         }
     }
 
@@ -47,7 +50,15 @@ public enum EmbedProvider: String, Sendable, Codable, Hashable, CaseIterable {
         case .vimeo: ["vimeocdn.com"]
         case .twitch: ["jtvnw.net"]
         case .streamable: []
+        // v.redd.it, i.redd.it, preview.redd.it, redd.it short links; older media hosts.
+        case .reddit: ["redd.it", "redditmedia.com", "redditstatic.com"]
         }
+    }
+
+    /// The video plays in AVKit from `EmbedInfo.embedURL` (an HLS playlist)
+    /// rather than in the provider's web player.
+    public var playsNatively: Bool {
+        self == .reddit
     }
 
     /// The provider whose main or asset domains cover `host`, if any.
@@ -73,9 +84,13 @@ public struct EmbedInfo: Sendable, Codable, Hashable {
     public var thumbnailURL: URL?
     public var title: String?
     public var authorName: String?
+    /// Where it was posted, e.g. "r/aww" on Reddit.
+    public var community: String?
     /// Width / height of the player. 16:9 unless known otherwise
     /// (YouTube Shorts are 9:16).
     public var aspectRatio: Double
+    /// A video without sound that loops like a GIF (a Reddit "GIF").
+    public var isGIF: Bool?
 
     public init(
         provider: EmbedProvider,
@@ -85,7 +100,9 @@ public struct EmbedInfo: Sendable, Codable, Hashable {
         thumbnailURL: URL? = nil,
         title: String? = nil,
         authorName: String? = nil,
-        aspectRatio: Double = 16.0 / 9.0
+        community: String? = nil,
+        aspectRatio: Double = 16.0 / 9.0,
+        isGIF: Bool? = nil
     ) {
         self.provider = provider
         self.videoID = videoID
@@ -94,7 +111,9 @@ public struct EmbedInfo: Sendable, Codable, Hashable {
         self.thumbnailURL = thumbnailURL
         self.title = title
         self.authorName = authorName
+        self.community = community
         self.aspectRatio = aspectRatio
+        self.isGIF = isGIF
     }
 }
 
@@ -169,6 +188,12 @@ extension EmbedInfo {
         EmbedInfo(provider: .streamable, videoID: id, embedURL: URL(string: "https://streamable.com/e/\(id)")!)
     }
 
+    /// A v.redd.it video plays from its HLS playlist: Reddit refuses direct
+    /// MP4 requests, and the playlist carries the sound as a separate track.
+    static func reddit(id: String) -> EmbedInfo {
+        EmbedInfo(provider: .reddit, videoID: id, embedURL: RedditLinks.playlistURL(videoID: id))
+    }
+
     /// The public page for this video, used as the `url` parameter of oEmbed lookups.
     var canonicalPageURL: URL? {
         switch provider {
@@ -185,6 +210,8 @@ extension EmbedInfo {
             return URL(string: "https://www.twitch.tv/videos/\(videoID)")
         case .streamable:
             return URL(string: "https://streamable.com/\(videoID)")
+        case .reddit:
+            return URL(string: "https://v.redd.it/\(videoID)")
         }
     }
 }
