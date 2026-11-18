@@ -1,6 +1,6 @@
 ---
 title: Member list
-description: Vela's channel member list, grouped by rank, with filtering, away status, private messages, whois and channel moderation (op, voice, kick, ban, ignore).
+description: Vela's channel member list, grouped by rank, with filtering, away status, selecting several people, and the user menu for messages, whois and moderation.
 ---
 
 # Member list
@@ -18,20 +18,15 @@ The member list on the right shows everyone in the current channel. Show or hide
 ## Doing things with people
 
 - **Double-click** someone to open a private conversation.
-- **Right-click** someone for **Message**, **Whois**, **Copy Nickname** and **Ignore**.
+- **Click** someone to select them. **⌘-click** adds or removes people, and **⇧-click** selects everyone between.
+- **Right-click** someone for the [user menu](/guide/user-menu): **Message**, **Mention**, **Whois**, **Ping**, **CTCP**, **Invite to**, **Copy Nick**, **Copy Host Mask** and **Ignore**.
 
-If you're a channel operator, the right-click menu also has moderation tools:
+If you're a half-op or higher in the channel, the menu also has the rank changes and moderation your rank allows: **Op**, **Voice** and the others, **Kick**, **Ban**, **Kick + Ban** (each with or without a reason) and, on networks that support it, **Quiet**. Anything you can't do isn't shown. See [Moderation](/guide/user-menu#moderation) for the rules.
 
-| Item | Sends |
-| --- | --- |
-| **Op** / **Deop** | `/op nick` / `/deop nick` |
-| **Voice** / **Devoice** | `/voice nick` / `/devoice nick` |
-| **Kick** | `/kick nick` |
-| **Ban** | `/ban nick`: bans `*!*@their.host` when Vela knows their host, or `nick!*@*` otherwise |
-| **Kick and Ban** | both, ban first |
+Right-click anyone in a selection of several people to act on all of them: **Copy Nicks**, rank changes, kick, ban and quiet. An item shows only if you can do it to everyone selected.
 
-The same [slash commands](/reference/slash-commands) work in the message field, with more options, such as a kick reason.
+The same menu opens when you right-click a nick in a message, and the same [slash commands](/reference/slash-commands) work in the message field.
 
 ## Ignoring someone
 
-**Ignore** hides that person's messages on this network, matching their nickname with any user and host. Manage the list (and add masks like `*!*@spammy.example`) in the network's settings under **Ignore list**, or with `/ignore` and `/unignore`.
+**Ignore** hides that person's messages on this network, matching their nickname with any user and host. When someone is already ignored, the menu says **Unignore** instead, which removes the entries that match them. Manage the list (and add masks like `*!*@spammy.example`) in the network's settings under **Ignore list**, or with `/ignore` and `/unignore`.

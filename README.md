@@ -155,10 +155,11 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
 - **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. Pasting multiple lines asks for confirmation before sending.
 - **Typing options:** spelling, grammar, autocorrect, text replacements and smart quotes, following your Mac's settings until you change them. Commands, nicks, channel names, links and code are never corrected.
+- **User menu:** right-click a nick in the member list or in a message for Message, Mention, Whois, Ping, CTCP, Invite and Ignore, plus the ops, voices, kicks, bans and quiets your rank in the channel allows. Select several people in the member list to act on them all.
 - **Slash commands:**
   - `/join`, `/part`, `/msg`, `/query`, `/me`, `/nick`, `/topic`, `/away`, `/whois`
-  - `/mode`, `/kick`, `/ban`, `/op`, `/voice`, `/invite`
-  - `/ctcp`, `/raw`, `/ignore`, `/close`, `/clear`, `/quit`
+  - `/mode`, `/kick`, `/kickban`, `/ban`, `/quiet`, `/op`, `/voice`, `/invite`
+  - `/ctcp`, `/ping`, `/version`, `/raw`, `/ignore`, `/close`, `/clear`, `/quit`
   - Any other command is sent to the server as typed.
 
 ## Getting started

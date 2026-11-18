@@ -77,23 +77,3 @@ struct MemberGroup: Identifiable, Equatable {
         }
     }
 }
-
-extension NetworkSession {
-    /// Our own entry in `buffer`'s member list.
-    func selfMember(in buffer: BufferModel) -> Member? {
-        buffer.member(named: nick, caseMapping: isupport.caseMapping)
-    }
-
-    /// Whether `member` ranks at least as high as the prefix for `mode`
-    /// (e.g. `o` → `@` or higher). False when the server has no such mode.
-    func member(_ member: Member?, ranksAtLeast mode: Character) -> Bool {
-        guard let member, let target = isupport.prefixes.firstIndex(where: { $0.mode == mode }) else { return false }
-        return isupport.rank(ofSymbol: member.topPrefix) <= target
-    }
-
-    /// Whether `member` currently holds the prefix for `mode`.
-    func member(_ member: Member, has mode: Character) -> Bool {
-        guard let symbol = isupport.symbol(forMode: mode) else { return false }
-        return member.prefixes.contains(symbol)
-    }
-}

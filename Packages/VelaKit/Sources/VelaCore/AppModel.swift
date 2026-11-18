@@ -208,6 +208,8 @@ public final class AppModel: SessionHost {
         behavior.sendTypingIndicators = settings[.inputSendTypingIndicators]
         behavior.highlightWords = settings[.highlightWords]
         behavior.scrollbackInMemory = max(200, settings[.chatScrollbackInMemory])
+        behavior.banMaskStyle = settings[.moderationBanMask]
+        behavior.defaultKickReason = settings[.moderationKickReason]
         return behavior
     }
 

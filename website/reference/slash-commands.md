@@ -1,6 +1,6 @@
 ---
 title: Slash commands
-description: Every slash command Vela understands, from /join, /msg and /me to /mode, /ban, /ctcp and /raw, with their aliases and arguments.
+description: Every slash command Vela understands, from /join, /msg and /me to /mode, /kickban, /quiet, /ping, /ctcp and /raw, with their aliases and arguments.
 ---
 
 # Slash commands
@@ -19,7 +19,11 @@ Any command Vela doesn't know is **sent to the server as typed**, so `/list`, `/
 | `/msg <target> <message>` | Sends a message to a nick or channel. To a nick, it opens a private conversation. Alias: `/privmsg`. |
 | `/query <nick> [message]` | Opens a private conversation with someone, and optionally sends a message. Alias: `/q`. |
 | `/notice <target> <message>` | Sends a notice, the IRC way of messaging without expecting a reply. |
-| `/ctcp <target> <command> [args]` | Sends a CTCP request, such as `/ctcp wren VERSION` or `/ctcp wren PING`. |
+| `/ctcp <target> <command> [args]` | Sends a CTCP request, such as `/ctcp wren VERSION` or `/ctcp wren PING`. The reply shows where you asked. |
+| `/ping <nick>` | Sends a CTCP PING and shows how long the reply took: "Ping reply from wren: 84 ms". |
+| `/version <nick>` | Asks which client they use (CTCP VERSION). Without a nick, or with a server name, it asks the server for its version. |
+| `/time <nick>` | Asks for their local time (CTCP TIME). Without a nick, or with a server name, it asks the server. |
+| `/clientinfo <nick>` | Asks which CTCP requests their client answers. |
 
 ## Channels
 
@@ -43,16 +47,19 @@ Any command Vela doesn't know is **sent to the server as typed**, so `/list`, `/
 
 ## Moderation
 
-These work in the current channel, and need operator rights there.
+These work in the current channel, and need operator (or half-op) rights there. The [user menu](/guide/user-menu) sends the same commands.
 
 | Command | Does |
 | --- | --- |
 | `/op <nick> [nick…]`, `/deop` | Gives or takes operator status (`+o`). |
 | `/voice <nick> [nick…]`, `/devoice` | Gives or takes voice (`+v`). |
 | `/halfop <nick> [nick…]`, `/dehalfop` | Gives or takes half-op status (`+h`), on servers that have it. |
-| `/kick <nick> [reason]` | Removes someone from the channel. Alias: `/k`. |
-| `/ban <nick or mask>` | Bans a mask. Given a nick, Vela bans `*!*@their.host` if it knows their host, otherwise `nick!*@*`. |
-| `/unban <mask>` | Removes a ban. |
+| `/kick <nick> [reason]` | Removes someone from the channel. Without a reason it uses your default kick reason ([`moderation.kickReason`](/reference/settings#moderation.kickReason)), which is empty unless you set one. Alias: `/k`. |
+| `/ban <nick or mask> [more…]` | Bans each nick or mask. A nick becomes a mask of the shape you chose in [`moderation.banMask`](/reference/settings#moderation.banMask) (`*!*@their.host` by default). If Vela doesn't know their host, it asks the server first, and bans `nick!*@*` if it can't find out. |
+| `/unban <nick or mask> [more…]` | Removes bans, building masks from nicks the same way. |
+| `/kickban <nick> [reason]` | Bans someone, then kicks them, with the reason you type or your default one. Alias: `/kb`. |
+| `/quiet <nick or mask> [more…]` | Lets someone stay but not talk, the way the network does it: `+q` on Libera.Chat, OFTC and other Solanum-style servers, a mute ban on InspIRCd (`+b m:`) and UnrealIRCd (`+b ~q:`). Elsewhere Vela says it can't. |
+| `/unquiet <nick or mask> [more…]` | Removes a quiet. |
 | `/mode [target] <modes> [args]` | Sets modes. Without a target, it applies to the current channel (or, in the server console, to you). For example `/mode +m` or `/mode #vela +b *!*@spam.example`. |
 
 ## Ignoring
@@ -75,3 +82,5 @@ The ignore list is saved with the network; you can also edit it in the [network 
 | `/raw <line>` | Sends a line to the server exactly as typed, such as `/raw PRIVMSG NickServ :help`. Alias: `/quote`. |
 
 `/connect`, `/disconnect`, `/quit`, `/reconnect`, `/close`, `/clear`, `/ignore` and `/unignore` work while you're offline; everything else needs a connection.
+
+Several nicks at once (`/op wren ada theo`, `/ban wren ada`) go out in as few lines as the network allows, such as `MODE #vela +ooo wren ada theo`.

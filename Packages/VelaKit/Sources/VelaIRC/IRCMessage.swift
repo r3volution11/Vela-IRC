@@ -353,3 +353,63 @@ extension IRCMessage {
         return chunks
     }
 }
+
+extension IRCMessage {
+    /// MODE lines that set (`+`) or unset (`-`) `mode` with each of
+    /// `arguments` on `target`, in as few lines as the server allows: at
+    /// most `perLine` changes each (ISUPPORT MODES, see
+    /// `ISupport.modeChangesPerLine`), and short enough to stay well inside
+    /// the line limit once the server adds its prefix. `+ooo a b c`, not
+    /// three lines.
+    public static func modeLines(
+        target: String,
+        sign: Character,
+        mode: Character,
+        arguments: [String],
+        perLine: Int,
+        maxBytes: Int = 400
+    ) -> [IRCMessage] {
+        let perLine = max(1, perLine)
+        var lines: [IRCMessage] = []
+        var batch: [String] = []
+        // "MODE <target> " comes before the modes and arguments.
+        let base = 6 + target.utf8.count
+        var size = base
+
+        func flush() {
+            guard !batch.isEmpty else { return }
+            let modes = String(sign) + String(repeating: String(mode), count: batch.count)
+            lines.append(IRCMessage(command: "MODE", params: [target, modes] + batch))
+            batch = []
+            size = base
+        }
+
+        for argument in arguments where !argument.isEmpty {
+            // A mode letter, a space and the argument per change, plus the
+            // sign once.
+            let cost = 2 + argument.utf8.count + (batch.isEmpty ? 1 : 0)
+            if batch.count >= perLine || (!batch.isEmpty && size + cost > maxBytes) { flush() }
+            batch.append(argument)
+            size += cost
+        }
+        flush()
+        return lines
+    }
+}
+
+/// RPL_USERHOST (302): `nick=+user@host` entries, separated by spaces.
+public enum UserHostReply {
+    /// Each nick in the reply with its `user@host`. The `*` that marks an
+    /// IRC operator and the `+`/`-` away flag are dropped.
+    public static func parse(_ text: String) -> [(nick: String, userHost: String)] {
+        text.split(separator: " ").compactMap { entry in
+            guard let equals = entry.firstIndex(of: "=") else { return nil }
+            var nick = entry[..<equals]
+            if nick.hasSuffix("*") { nick = nick.dropLast() }
+            var userHost = entry[entry.index(after: equals)...]
+            if let flag = userHost.first, flag == "+" || flag == "-" { userHost = userHost.dropFirst() }
+            guard !nick.isEmpty, userHost.contains("@") else { return nil }
+            return (String(nick), String(userHost))
+        }
+    }
+}

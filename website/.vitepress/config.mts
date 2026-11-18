@@ -29,6 +29,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Reactions, replies & typing', link: '/guide/reactions-replies-typing' },
       { text: 'Notifications & highlights', link: '/guide/notifications' },
       { text: 'Member list', link: '/guide/member-list' },
+      { text: 'User menu & moderation', link: '/guide/user-menu' },
       { text: 'Chat logs', link: '/guide/chat-logs' },
       { text: 'Apple Intelligence & translation', link: '/guide/apple-intelligence' },
       { text: 'Siri, Shortcuts & Spotlight', link: '/guide/siri-shortcuts' },

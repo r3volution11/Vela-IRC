@@ -126,8 +126,20 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
   - **Include server messages** (off by default) adds each network's connection messages, MOTD and notices from services in `server.log`.
   - Right-click a channel or network for **Don't Log This Channel** or **Don't Log on This Network**.
 
+- **A user menu for every nick.** Right-click someone in the member list, their nick on a message (the name or avatar in Modern, `<nick>` in Classic, the nick column in Compact columns) or their nick mentioned in a message, for one menu with **Message**, **Mention**, **Whois**, **Ping**, **CTCP** (Version, Time, Client Info), **Invite to** your other channels, **Copy Nick**, **Copy Host Mask** and **Ignore** or **Unignore**. A message's own menu has it too, in a submenu named after its author.
+  - **It shows only what you can do.** Rank changes, kicks, bans and quiets appear only if your rank in the channel allows them, using the network's ranks (owner, admin, op, half-op, voice). A half-op can voice and kick people without a rank; an op can manage ops and below; an owner can also make admins. A voiced user sees no moderation at all. Things that need a connection are grayed out while you're offline.
+  - **Kick** and **Kick + Ban** act at once, with your default kick reason. **Kick with Reason…** and **Kick + Ban with Reason…** ask for one first.
+  - **Quiet** and **Unquiet** on networks that announce how: `+q` on Libera.Chat, OFTC and other Solanum-style servers, mute bans on InspIRCd and UnrealIRCd.
+  - **Ping** shows the round trip when the reply comes ("Ping reply from wren: 84 ms"), and CTCP replies show in the channel or conversation where you asked, as a readable line.
+  - **Select several people** in the member list with ⌘-click and ⇧-click, then right-click one of them to change their ranks, kick, ban or quiet them all, or copy their nicks. Rank changes go out together, as many per line as the network allows.
+  - See [User menu & moderation](https://velairc.app/guide/user-menu).
+- **Moderation settings**, in Settings → Networks → **Moderation**: the **Ban mask** (`*!*@host`, the default, `*!user@host` or `nick!*@*`) and the default **Kick reason** (empty, for none). New settings: `moderation.banMask` and `moderation.kickReason`.
+- **New slash commands:** `/kickban` (or `/kb`) bans and then kicks, with an optional reason; `/quiet` and `/unquiet`; `/ping`, `/version`, `/time` and `/clientinfo` send CTCP requests to a nick. `/version` and `/time` without a nick still ask the server.
+
 ### Changed
 
+- **`/ban` uses your ban mask setting** and, when Vela doesn't know someone's host, asks the server for it instead of banning `nick!*@*` straight away. It also finds the host from any channel you share, takes several nicks or masks at once, and so does `/unban`. `/kick` without a reason uses your default kick reason, which is empty unless you set one.
+- **Several nicks in one rank change** (`/op wren ada theo`) go out in as few lines as the network allows (its `MODES` limit), instead of one line that some servers cut short.
 - **The Dock badge leaves muted channels out**, mentions included (they used to count), and counts notices in private conversations along with messages and actions.
 - **The website's icon is the new V and star**, deep blue in light mode and cyan in dark mode.
 - **The website links the apps it mentions**, such as Vivaldi, VS Code, irssi, WeeChat, ZNC and soju, so you can find out more about them.
@@ -158,6 +170,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - Links in messages, link preview images and preview chips show the pointing-hand cursor when you hover them. The rest of a message keeps the text cursor.
 - You can select and copy the text of links in messages and server lines, as anywhere else in a message: drag from a link, double-click a word in it or triple-click the line. A click still opens the link, right away. Right-clicking a link and choosing **Copy Link** copies that link (it used to copy the message's first), and VoiceOver offers an Open action for every link in a message, not just the first.
 - You can select and copy the text of link previews: the title, description and site name, by dragging, double-clicking a word or triple-clicking a line. A click anywhere on a preview opens the page, and a drag never does. Right-click selected text to copy it, or anywhere else on the preview for its menu. The same goes for a video's title and the line above it, the **via GIPHY** line under a GIF, the text of a compact video's line (where a click still plays it) and a blocked-preview chip's text.
+- Your own CTCP requests and automatic replies, echoed back by servers with `echo-message`, no longer show as "doug requested CTCP VERSION".
 - Right-clicking (or Control-clicking) the text of a message opens the message's menu, with **Reply**, **Translate**, **Copy Text**, **Copy Link** for the link you clicked and the rest, as anywhere else on the message. It used to show a menu of editing commands (Cut, Paste, Font…) instead. On selected text, the menu also offers **Copy**, **Look Up** and **Share…** for the selection. The same goes for the translation under a message.
 - The **New** unread marker now appears while the window is in the background, and messages you've already seen no longer appear below it.
 - Messages no longer appear twice after reconnecting to a ZNC bouncer. ZNC replays its buffer without message IDs, and those copies were shown and stored next to the originals; copies already stored are removed on first launch.

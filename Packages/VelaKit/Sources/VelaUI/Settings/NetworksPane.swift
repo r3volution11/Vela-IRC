@@ -44,6 +44,22 @@ struct NetworksPane: View {
                     isOn: $settings[.connectionAutoReconnect]
                 )
             }
+
+            SettingsSection(
+                "Moderation",
+                footer: "Used by Kick, Ban and Quiet in the user menu, and by /kick, /ban, /kickban and /quiet. Kick with Reason… lets you change the reason each time."
+            ) {
+                SettingsMenuRow(
+                    title: "Ban mask",
+                    detail: "What a ban or quiet matches. If Vela doesn't know someone's host, it asks the server first.",
+                    selection: $settings[.moderationBanMask],
+                    options: BanMaskStyle.allCases.map { ($0, SettingsMetadata.enumLabel($0.rawValue)) }
+                )
+                SettingsRow("Kick reason", detail: "Leave it empty to give no reason.", labelsControl: true) {
+                    ThemedTextField("No reason", text: $settings[.moderationKickReason], accessibilityName: "Kick reason")
+                        .frame(width: 220)
+                }
+            }
         }
         .sheet(item: $editorTarget) { target in
             NetworkEditorView(target: target)

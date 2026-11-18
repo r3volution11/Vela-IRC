@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import Synchronization
+import VelaCore
 
 /// Message text whose links you can click, and also select and copy like
 /// the rest of the text, with the pointing hand over links and the I-beam
@@ -37,7 +38,13 @@ import Synchronization
 /// inside a `selectableTextContextMenu`). Nothing updates view state while
 /// the pointer moves. `linkClickArea(_:)` makes a whole view (a link
 /// preview) one link the same way.
+///
+/// With a `wordContextMenu` (a message's text), the twin also notes where
+/// every character landed, so a right-click on a word (a nick) can open a
+/// menu of its own; text without links gets the twin too.
 struct LinkPointerText: View {
+    @Environment(\.wordContextMenu) private var wordMenu
+    @Environment(\.textOpensContextMenu) private var opensContextMenu
     let text: AttributedString
     /// `Text` modifiers (font, italic, color), applied to the visible text
     /// and its twin alike so both lay out the same.
@@ -50,11 +57,12 @@ struct LinkPointerText: View {
 
     var body: some View {
         let links = LinkRuns.links(in: text)
-        if links.isEmpty {
+        let wordMenu = opensContextMenu ? wordMenu : nil
+        if links.isEmpty, wordMenu == nil {
             style(Text(text))
                 .contextClicksOpenMenu()
         } else {
-            LinkRegionsText(text: LinkRuns.removingLinks(from: text), links: links, style: style)
+            LinkRegionsText(text: LinkRuns.removingLinks(from: text), links: links, wordMenu: wordMenu, style: style)
         }
     }
 }
@@ -64,26 +72,90 @@ private struct LinkRegionsText: View {
     /// The text without its links.
     let text: AttributedString
     let links: [LinkRuns.Link]
+    let wordMenu: WordContextMenu?
     let style: (Text) -> Text
 
     @State private var regions = LinkRegions()
+    @State private var glyphs = TextGlyphs()
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             // Same text and proposal as the visible one, so the same lines.
             // It draws nothing.
             style(Text(text))
-                .textRenderer(LinkRegionRecorder(links: links.map(\.range), regions: regions))
+                .textRenderer(LinkRegionRecorder(links: links.map(\.range), regions: regions, glyphs: wordMenu == nil ? nil : glyphs))
                 .textSelection(.disabled)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
             style(Text(text))
                 .overlay {
-                    LinkPointerRegions(regions: regions, urls: links.map(\.url), takesContextClicks: opensContextMenu)
-                        .pointerStyle(.link)
-                        .accessibilityHidden(true)
+                    LinkPointerRegions(
+                        regions: regions,
+                        urls: links.map(\.url),
+                        takesContextClicks: opensContextMenu,
+                        words: wordMenu.map { WordLookup(glyphs: glyphs, text: String(text.characters), menu: $0) }
+                    )
+                    .pointerStyle(.link)
+                    .accessibilityHidden(true)
                 }
         }
+    }
+}
+
+// MARK: Words
+
+/// Opens a menu of its own for a word right-clicked in selectable text
+/// (set by a message on its text: a nick opens that person's menu).
+struct WordContextMenu {
+    /// The menu for `word`, at `range` (UTF-16 offsets) in the text, or nil
+    /// for the usual menu.
+    let menu: (_ word: String, _ range: Range<Int>) -> NSMenu?
+}
+
+extension EnvironmentValues {
+    /// A menu for right-clicked words, inside a `selectableTextContextMenu`.
+    @Entry var wordContextMenu: WordContextMenu?
+}
+
+/// What a text's overlay needs to find the word under a right-click.
+struct WordLookup {
+    let glyphs: TextGlyphs
+    let text: String
+    let menu: WordContextMenu
+
+    /// The menu for the word at `point` (in the text's coordinates).
+    func menu(at point: CGPoint) -> NSMenu? {
+        guard let offset = glyphs.offset(at: point),
+              let (word, range) = NickWords.word(at: offset, in: text)
+        else { return nil }
+        return menu.menu(word, range)
+    }
+}
+
+/// Where each character of a text landed, in the text's own (top-left
+/// origin) coordinates, each box as tall as its line. Written while the
+/// twin draws, read on a right-click.
+nonisolated final class TextGlyphs: Sendable {
+    struct Box: Equatable, Sendable {
+        var rect: CGRect
+        /// The UTF-16 offset of the glyph's (first) character.
+        var offset: Int
+    }
+
+    private let storage = Mutex<[Box]>([])
+
+    func update(_ boxes: [Box]) {
+        storage.withLock { $0 = boxes }
+    }
+
+    /// The character at `point`, if any.
+    func offset(at point: CGPoint) -> Int? {
+        storage.withLock { boxes in boxes.first { $0.rect.contains(point) }?.offset }
+    }
+
+    /// Where the character at `offset` is.
+    func rect(forOffset offset: Int) -> CGRect? {
+        storage.withLock { boxes in boxes.first { $0.offset == offset }?.rect }
     }
 }
 
@@ -155,13 +227,38 @@ nonisolated final class LinkRegions: Sendable {
     }
 }
 
-/// Draws nothing; records the rects of the link runs into `regions`.
+/// Draws nothing; records the rects of the link runs into `regions`, and
+/// of every character into `glyphs` when given.
 nonisolated struct LinkRegionRecorder: TextRenderer {
     let links: [Range<Int>]
     let regions: LinkRegions
+    var glyphs: TextGlyphs?
 
     func draw(layout: Text.Layout, in context: inout GraphicsContext) {
         regions.update(Self.linkRegions(in: layout, links: links))
+        glyphs?.update(Self.glyphBoxes(in: layout))
+    }
+
+    /// A box per glyph, as tall as its line, in the coordinates of the
+    /// text's frame.
+    static func glyphBoxes(in layout: Text.Layout) -> [TextGlyphs.Box] {
+        guard let firstLine = layout.first else { return [] }
+        var boxes: [TextGlyphs.Box] = []
+        for line in layout {
+            let lineRect = line.typographicBounds.rect
+            for run in line {
+                for (glyph, index) in zip(run.indices, run.characterIndices) {
+                    guard let offset = characterOffset(index) else { continue }
+                    var rect = run[glyph].typographicBounds.rect
+                    rect.origin.y = lineRect.minY
+                    rect.size.height = lineRect.height
+                    boxes.append(TextGlyphs.Box(rect: rect, offset: offset))
+                }
+            }
+        }
+        let left = layout.map { $0.typographicBounds.rect.minX }.min() ?? 0
+        let top = firstLine.typographicBounds.rect.minY
+        return boxes.map { TextGlyphs.Box(rect: $0.rect.offsetBy(dx: -left, dy: -top), offset: $0.offset) }
     }
 
     /// One rect per stretch of a link's glyphs on each line, in the
@@ -228,6 +325,7 @@ private struct LinkPointerRegions: NSViewRepresentable {
     let regions: LinkRegions
     let urls: [URL]
     let takesContextClicks: Bool
+    var words: WordLookup?
 
     func makeNSView(context: Context) -> LinkPointerRegionView {
         let view = LinkPointerRegionView(regions: regions)
@@ -239,6 +337,7 @@ private struct LinkPointerRegions: NSViewRepresentable {
         view.regions = regions
         view.urls = urls
         view.takesContextClicks = takesContextClicks
+        view.words = words
         // The list's handler joins channels; the rest go to the system.
         let openURL = context.environment.openURL
         view.open = { openURL($0) }
@@ -273,6 +372,8 @@ final class LinkPointerRegionView: NSView {
     /// Spots in a whole-view link that aren't part of it (controls of their
     /// own), in this view's coordinates.
     var excluded: [CGRect] = []
+    /// Finds a menu of its own for a right-clicked word (a nick).
+    var words: WordLookup?
     /// Where each link goes, by its index in `regions`.
     var urls: [URL] = [] {
         didSet {
@@ -352,14 +453,25 @@ final class LinkPointerRegionView: NSView {
 
     /// With `takesContextClicks`, on selected text: the menu around the text
     /// (a message's), headed by the selection's items from the text's own
-    /// menu. Otherwise none, so the click goes on up to the menu around.
+    /// menu. On a word with a menu of its own (a nick), that menu.
+    /// Otherwise none, so the click goes on up to the menu around.
     override func menu(for event: NSEvent) -> NSMenu? {
-        guard takesContextClicks, let text = selectedText(atWindowPoint: event.locationInWindow),
+        guard takesContextClicks else { return super.menu(for: event) }
+        guard let text = selectedText(atWindowPoint: event.locationInWindow),
               let textMenu = text.menu(for: event)
-        else { return super.menu(for: event) }
+        else { return wordMenu(for: event) ?? super.menu(for: event) }
         guard let menu = surroundingMenu(for: event) else { return textMenu }
         SelectionMenuItems.move(from: textMenu, of: text, to: menu)
         return menu
+    }
+
+    /// The menu of the word under `event`, unless it's part of a link
+    /// (whose menu copies it).
+    func wordMenu(for event: NSEvent) -> NSMenu? {
+        guard let words else { return nil }
+        let point = convert(event.locationInWindow, from: nil)
+        guard regions.link(at: point) == nil else { return nil }
+        return words.menu(at: point)
     }
 
     /// The context menu the views around this one show for `event`.

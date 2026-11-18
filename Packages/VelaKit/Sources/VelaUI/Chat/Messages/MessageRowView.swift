@@ -324,6 +324,7 @@ struct GroupedMessageContent: View {
             // sets the row's height so the time never runs into the next.
             VStack(spacing: 3) {
                 AvatarView(nick: line.nick ?? "?", size: width, buffer: controller.buffer)
+                    .nickContextMenu(line.nick, userHost: line.userHost)
                     .padding(.top, 1)
                 avatarTime(line.time, width: width)
             }
@@ -344,6 +345,7 @@ struct GroupedMessageContent: View {
                 .frame(width: width, height: 1)
                 .overlay(alignment: .top) {
                     AvatarView(nick: line.nick ?? "?", size: width, buffer: controller.buffer)
+                        .nickContextMenu(line.nick, userHost: line.userHost)
                         .padding(.top, 1)
                 }
         } else {
@@ -376,6 +378,7 @@ struct GroupedMessageContent: View {
                 .font(style.nickFont)
                 .foregroundStyle(theme.nickDisplayColor(line.nick, isSelf: line.isSelf, colorNicks: style.colorNicks, in: controller.buffer))
                 .lineLimit(1)
+                .nickContextMenu(line.nick, userHost: line.userHost)
             if line.kind == .notice {
                 Text("notice")
                     .font(style.font(size: max(9, style.fontSize - 4), weight: .semibold))
@@ -438,6 +441,7 @@ struct ColumnsMessageContent: View {
                         .accessibilityHidden(true)
                 }
                 nickCell(for: line)
+                    .nickContextMenu(line.nick, userHost: line.userHost)
                     .frame(width: metrics.nickWidth, alignment: .trailing)
                     .padding(.trailing, metrics.textX - metrics.nickX - metrics.nickWidth)
                     .accessibilityHidden(true)
@@ -534,6 +538,9 @@ struct ColumnsSeparator: View {
 struct MessageBodyText: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
+    @Environment(MessageListController.self) private var controller
     let line: ChatLine
     let rendered: RenderedText?
     var prefix: AttributedString?
@@ -548,6 +555,7 @@ struct MessageBodyText: View {
                     .italic(line.kind == .action)
                     .foregroundStyle(theme[baseColorKey])
             }
+            .environment(\.wordContextMenu, nickMenu)
             .lineSpacing(style.lineSpacing)
             .tint(theme[ThemeKey.chatLink])
             .textSelection(.enabled)
@@ -558,6 +566,17 @@ struct MessageBodyText: View {
                 .font(style.bodyFont)
                 .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Right-clicking a nick in the text: the author's `<nick>` in the
+    /// prefix, or anyone in the channel, opens their user menu.
+    private var nickMenu: WordContextMenu {
+        let actions = UserMenuActions(app: app, uiState: uiState, session: controller.session, buffer: controller.buffer)
+        let line = line
+        let prefixLength = prefix.map { String($0.characters).utf16.count } ?? 0
+        return WordContextMenu { word, range in
+            actions.menu(forWord: word, range: range, in: line, prefixLength: prefixLength).map(actions.nsMenu)
         }
     }
 

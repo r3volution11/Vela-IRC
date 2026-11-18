@@ -32,10 +32,44 @@ public final class UIState {
     public var scrollTarget: UUID?
     /// The command palette, when open, and which mode it opened in.
     public var commandPalette: CommandPaletteMode?
+    /// A nick to put in a buffer's message box (Mention in a user menu).
+    public var mentionRequest: MentionRequest?
+    /// The "Kick with Reason…" sheet, when open.
+    public var kickRequest: KickRequest?
 
     public init() {}
 
     public func focusInput() { focusInputToken &+= 1 }
+}
+
+/// Mention someone in a buffer's message box, once per request.
+public struct MentionRequest: Equatable {
+    public let id = UUID()
+    public let bufferID: BufferID
+    public let nick: String
+
+    public init(bufferID: BufferID, nick: String) {
+        self.bufferID = bufferID
+        self.nick = nick
+    }
+}
+
+/// People to kick (and maybe ban) once you've typed a reason.
+public struct KickRequest: Identifiable, Equatable {
+    public let id = UUID()
+    public let bufferID: BufferID
+    public let nicks: [String]
+    /// Ban them first (Kick + Ban with Reason…).
+    public let ban: Bool
+    /// What the reason field starts with (`moderation.kickReason`).
+    public let reason: String
+
+    public init(bufferID: BufferID, nicks: [String], ban: Bool, reason: String) {
+        self.bufferID = bufferID
+        self.nicks = nicks
+        self.ban = ban
+        self.reason = reason
+    }
 }
 
 /// Modes of the VS Code-style command palette.

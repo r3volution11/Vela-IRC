@@ -154,6 +154,18 @@ public enum DockBounceTrigger: String, Codable, Sendable, CaseIterable, SettingV
     case privateMessages
 }
 
+/// The mask Ban, Kick + Ban, Quiet and `/ban` use for someone, built from
+/// their `nick!user@host` (`moderation.banMask`). Written in settings.json
+/// as the mask's shape.
+public enum BanMaskStyle: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// Anyone from their host, whatever their nick or user name.
+    case host = "*!*@host"
+    /// Their user name at their host.
+    case userHost = "*!user@host"
+    /// Their nick, from anywhere.
+    case nick = "nick!*@*"
+}
+
 /// A switch that follows a macOS setting until it's changed in Vela, such
 /// as autocorrect following System Settings → Keyboard → Text Input.
 ///
@@ -507,6 +519,22 @@ extension SettingKey where Value == Bool {
     }
 }
 
+// MARK: Moderation
+
+extension SettingKey where Value == BanMaskStyle {
+    public static var moderationBanMask: SettingKey<BanMaskStyle> {
+        .init("moderation.banMask", default: .host,
+              summary: "The mask Ban, Kick + Ban, Quiet and /ban use for a nick: \"*!*@host\" (anyone from their host), \"*!user@host\" (their user name at their host) or \"nick!*@*\" (their nick, from anywhere). When Vela doesn't know someone's host it asks the server, and uses nick!*@* if it can't find out.")
+    }
+}
+
+extension SettingKey where Value == String {
+    public static var moderationKickReason: SettingKey<String> {
+        .init("moderation.kickReason", default: "",
+              summary: "The reason Kick and Kick + Ban give, and /kick and /kickban when you don't type one. Empty gives none, and most servers then show your nick as the reason.")
+    }
+}
+
 // MARK: Dock
 
 extension SettingKey where Value == Bool {
@@ -732,6 +760,8 @@ public enum SettingsCatalog {
             SettingKey.inputSmartPunctuation.descriptor,
             SettingKey.inputWritingTools.descriptor,
             SettingKey.connectionAutoReconnect.descriptor,
+            SettingKey.moderationBanMask.descriptor,
+            SettingKey.moderationKickReason.descriptor,
             SettingKey.historyRetentionDays.descriptor,
             SettingKey.loggingEnabled.descriptor,
             SettingKey.loggingMaxFileSizeMB.descriptor,

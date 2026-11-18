@@ -20,6 +20,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
     case media
     case notifications
     case connection
+    case moderation
     case intelligence
 
     public var id: String { rawValue }
@@ -34,6 +35,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .media: "Media"
         case .notifications: "Notifications"
         case .connection: "Connection"
+        case .moderation: "Moderation"
         case .intelligence: "Apple Intelligence"
         }
     }
@@ -49,6 +51,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .media: ["media"]
         case .notifications: ["notifications", "dock", "highlight"]
         case .connection: ["connection"]
+        case .moderation: ["moderation"]
         case .intelligence: ["intelligence", "translation"]
         }
     }
@@ -62,7 +65,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .chat, .typing, .history: "messages"
         case .media: "media"
         case .notifications: "notifications"
-        case .connection: "networks"
+        case .connection, .moderation: "networks"
         case .intelligence: "intelligence"
         }
     }
@@ -265,6 +268,10 @@ public enum SettingsMetadata {
         "dot": "Dot (•)",
         // dock.bounce
         "untilActive": "Until you switch to Vela",
+        // moderation.banMask
+        "*!*@host": "Their host (*!*@host)",
+        "*!user@host": "Their user and host (*!user@host)",
+        "nick!*@*": "Their nick (nick!*@*)",
     ]
 
     /// A readable label for a settings.json enum value, in sentence case:

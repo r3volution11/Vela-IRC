@@ -167,6 +167,14 @@ struct MessageMenuItems: View {
                     Label("Whois \(nick)", systemImage: "person.crop.circle.badge.questionmark")
                 }
                 .disabled(!controller.session.isConnected)
+            } else {
+                Divider()
+            }
+            // Everything else you can do to them: the user menu.
+            Menu {
+                NickUserMenu(nick: nick, userHost: line.userHost)
+            } label: {
+                Label(nick, systemImage: "person")
             }
         }
         if controller.canDelete(line) {

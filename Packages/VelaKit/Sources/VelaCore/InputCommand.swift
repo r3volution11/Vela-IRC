@@ -19,9 +19,18 @@ nonisolated public enum InputCommand: Equatable, Sendable {
     case back
     case whois(String)
     case mode(target: String?, args: [String])
+    /// Kicks `nick` (or `a,b`). A nil reason gives `moderation.kickReason`;
+    /// an empty one gives none.
     case kick(nick: String, reason: String?)
-    case ban(mask: String)
-    case unban(mask: String)
+    /// Bans, then kicks, each nick.
+    case kickBan(nicks: [String], reason: String?)
+    /// Nicks are turned into masks (`moderation.banMask`).
+    case ban(masks: [String])
+    case unban(masks: [String])
+    /// Quiets (or unquiets) nicks or masks, the way the server does it
+    /// (`ISupport.quietMethod`).
+    case quiet(masks: [String])
+    case unquiet(masks: [String])
     case memberMode(sign: Character, mode: Character, nicks: [String])
     case invite(nick: String, channel: String?)
     case ctcp(target: String, command: String, argument: String?)
@@ -39,10 +48,11 @@ nonisolated public enum InputCommand: Equatable, Sendable {
 
     /// Commands known to the parser, for tab completion and help.
     public static let knownCommands: [String] = [
-        "away", "back", "ban", "clear", "close", "connect", "ctcp", "deop", "devoice", "disconnect",
-        "ignore", "invite", "j", "join", "kick", "leave", "me", "mode", "msg", "nick", "notice",
-        "op", "part", "q", "query", "quit", "quote", "raw", "reconnect", "topic", "unban",
-        "unignore", "voice", "whois",
+        "away", "back", "ban", "clear", "clientinfo", "close", "connect", "ctcp", "dehalfop", "deop",
+        "devoice", "disconnect", "halfop", "ignore", "invite", "j", "join", "kb", "kick", "kickban",
+        "leave", "me", "mode", "msg", "nick", "notice", "op", "part", "ping", "q", "query", "quiet",
+        "quit", "quote", "raw", "reconnect", "time", "topic", "unban", "unignore", "unquiet", "version",
+        "voice", "whois",
     ]
 
     /// Parses input. Text not starting with `/` (or starting with `//`) is
@@ -113,12 +123,21 @@ nonisolated public enum InputCommand: Equatable, Sendable {
         case "kick", "k":
             guard let nick = words.first else { return .usage("/kick <nick> [reason]") }
             return .kick(nick: nick, reason: remainder(after: 1))
+        case "kickban", "kb":
+            guard let nicks = words.first else { return .usage("/kickban <nick> [reason]") }
+            return .kickBan(nicks: nicks.split(separator: ",").map(String.init), reason: remainder(after: 1))
         case "ban":
-            guard let mask = words.first else { return .usage("/ban <nick|mask>") }
-            return .ban(mask: mask)
+            guard !words.isEmpty else { return .usage("/ban <nick|mask> [nick|mask…]") }
+            return .ban(masks: words)
         case "unban":
-            guard let mask = words.first else { return .usage("/unban <mask>") }
-            return .unban(mask: mask)
+            guard !words.isEmpty else { return .usage("/unban <nick|mask> [nick|mask…]") }
+            return .unban(masks: words)
+        case "quiet":
+            guard !words.isEmpty else { return .usage("/quiet <nick|mask> [nick|mask…]") }
+            return .quiet(masks: words)
+        case "unquiet":
+            guard !words.isEmpty else { return .usage("/unquiet <nick|mask> [nick|mask…]") }
+            return .unquiet(masks: words)
         case "op", "deop", "voice", "devoice", "halfop", "dehalfop":
             guard !words.isEmpty else { return .usage("/\(command) <nick> [nick…]") }
             let sign: Character = command.hasPrefix("de") ? "-" : "+"
@@ -130,6 +149,16 @@ nonisolated public enum InputCommand: Equatable, Sendable {
         case "ctcp":
             guard words.count >= 2 else { return .usage("/ctcp <target> <command> [args]") }
             return .ctcp(target: words[0], command: words[1].uppercased(), argument: remainder(after: 2))
+        case "ping":
+            guard let target = words.first else { return .usage("/ping <nick>") }
+            return .ctcp(target: target, command: "PING", argument: nil)
+        case "version", "time":
+            // Without a nick (or with a server name) these ask the server.
+            guard let target = words.first, !target.contains(".") else { return .unknown(command: command, args: rest) }
+            return .ctcp(target: target, command: command.uppercased(), argument: nil)
+        case "clientinfo":
+            guard let target = words.first else { return .usage("/clientinfo <nick>") }
+            return .ctcp(target: target, command: "CLIENTINFO", argument: nil)
         case "raw", "quote":
             return rest.isEmpty ? .usage("/raw <line>") : .raw(rest)
         case "quit":

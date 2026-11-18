@@ -37,6 +37,10 @@ nonisolated public struct SessionBehavior: Sendable, Equatable {
     public var highlightWords: [String] = []
     public var scrollbackInMemory = 1000
     public var historyFetchLimit = 100
+    /// How bans and quiets mask a nick (`moderation.banMask`).
+    public var banMaskStyle: BanMaskStyle = .host
+    /// The reason kicks give when none is typed (`moderation.kickReason`).
+    public var defaultKickReason = ""
 
     public init() {}
 }
@@ -87,7 +91,15 @@ public final class NetworkSession: Identifiable {
     @ObservationIgnored private var lastTypingSent: [BufferID: (state: TypingState, at: Date)] = [:]
     @ObservationIgnored private var pendingRecords: [MessageRecord] = []
     @ObservationIgnored private var highlightMatcher = HighlightMatcher(nick: "", words: [])
-    @ObservationIgnored private var ignoreMatcher = IgnoreMatcher(masks: [])
+    @ObservationIgnored var ignoreMatcher = IgnoreMatcher(masks: [])
+    /// CTCP requests you sent that haven't been answered yet.
+    @ObservationIgnored var pendingCTCP: [PendingCTCPRequest] = []
+    /// Lookups of someone's `user@host` (for a ban) waiting for USERHOST.
+    @ObservationIgnored var userHostWaiters: [String: [CheckedContinuation<String?, Never>]] = [:]
+    /// The folded nicks USERHOST was sent for, in order.
+    @ObservationIgnored var userHostQueue: [String] = []
+    /// How long a USERHOST lookup waits for its answer.
+    @ObservationIgnored var userHostTimeout: Duration = .seconds(4)
 
     public init(
         config: NetworkConfig,
@@ -488,11 +500,14 @@ public final class NetworkSession: Identifiable {
                 kind = .action
                 text = ctcp.argument ?? ""
             } else {
-                guard !isHistory else { return }
-                let what = message.command == "PRIVMSG"
-                    ? "\(source.nick) requested CTCP \(ctcp.command)"
-                    : "CTCP \(ctcp.command) reply from \(source.nick): \(ctcp.argument ?? "")"
-                info(what, in: host?.activeBuffer(in: self) ?? serverBuffer, kind: .ctcp)
+                // Your own requests and automatic replies, echoed back:
+                // sending one already said so.
+                guard !isHistory, !fromSelf else { return }
+                if message.command == "PRIVMSG" {
+                    info("\(source.nick) requested CTCP \(ctcp.command)", in: host?.activeBuffer(in: self) ?? serverBuffer, kind: .ctcp)
+                } else {
+                    showCTCPReply(ctcp.command, argument: ctcp.argument, from: source.nick)
+                }
                 return
             }
         }
@@ -765,6 +780,11 @@ public final class NetworkSession: Identifiable {
             info(message.params.last ?? "", in: serverBuffer, kind: .motd)
         case "422":
             info(message.params.last ?? "No MOTD", in: serverBuffer, kind: .motd)
+        case "302":   // RPL_USERHOST
+            let entries = UserHostReply.parse(message.params.last ?? "")
+            for entry in entries { updateMember(entry.nick) { $0.userHost = entry.userHost } }
+            // An answer to a lookup for a ban isn't shown.
+            if !answerUserHostLookup(entries) { info(text, in: serverBuffer) }
         case "301":   // RPL_AWAY
             guard let nick = params.first else { break }
             let target = buffer(named: nick) ?? active
@@ -1051,28 +1071,30 @@ public final class NetworkSession: Identifiable {
             send(IRCMessage(command: "MODE", params: [name] + args))
         case .kick(let nick, let reason):
             guard buffer.kind == .channel else { return }
-            send(IRCMessage(command: "KICK", params: [buffer.name, nick] + (reason.map { [$0] } ?? [])))
-        case .ban(let mask), .unban(let mask):
+            sendKick(nick, reason: reason, in: buffer)
+        case .kickBan(let nicks, let reason):
             guard buffer.kind == .channel else { return }
-            var banMask = mask
-            if !mask.contains("!") && !mask.contains("@") {
-                if let host = buffer.member(named: mask, caseMapping: isupport.caseMapping)?.userHost?.split(separator: "@").last {
-                    banMask = "*!*@\(host)"
-                } else {
-                    banMask = "\(mask)!*@*"
-                }
+            Task { await self.kickBan(nicks, reason: reason, in: buffer) }
+        case .ban(let masks), .unban(let masks):
+            guard buffer.kind == .channel else { return }
+            let sign: Character = if case .ban = command { "+" } else { "-" }
+            Task { await self.setBans(sign: sign, targets: masks, in: buffer) }
+        case .quiet(let masks), .unquiet(let masks):
+            guard buffer.kind == .channel else { return }
+            guard let method = isupport.quietMethod else {
+                error("\(displayName) doesn't say how to quiet someone. Ban them instead, or set the mode with /mode.", in: buffer)
+                return
             }
-            let sign = if case .ban = command { "+b" } else { "-b" }
-            send(IRCMessage(command: "MODE", params: [buffer.name, sign, banMask]))
+            let sign: Character = if case .quiet = command { "+" } else { "-" }
+            Task { await self.setQuiets(sign: sign, targets: masks, method: method, in: buffer) }
         case .memberMode(let sign, let mode, let nicks):
             guard buffer.kind == .channel else { return }
-            let modes = String(sign) + String(repeating: String(mode), count: nicks.count)
-            send(IRCMessage(command: "MODE", params: [buffer.name, modes] + nicks))
+            sendModes(sign: sign, mode: mode, arguments: nicks, in: buffer)
         case .invite(let nick, let channel):
             guard let name = channel ?? (buffer.kind == .channel ? buffer.name : nil) else { return }
             send(IRCMessage(command: "INVITE", params: [nick, name]))
         case .ctcp(let target, let ctcpCommand, let argument):
-            send(IRCMessage(command: "PRIVMSG", params: [target, CTCP.encode(ctcpCommand, argument)]))
+            sendCTCP(ctcpCommand, argument: argument, to: target, from: buffer)
         case .raw(let line):
             sendRaw(line)
         case .quit(let reason):
@@ -1367,7 +1389,7 @@ public final class NetworkSession: Identifiable {
         }
     }
 
-    private func updateMember(_ nick: String, _ update: (inout Member) -> Void) {
+    func updateMember(_ nick: String, _ update: (inout Member) -> Void) {
         let key = fold(nick)
         for buffer in channels {
             guard var member = buffer.memberMap[key] else { continue }

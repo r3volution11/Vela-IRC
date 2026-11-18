@@ -97,6 +97,9 @@ struct MainWindowView: View {
         .sheet(item: $uiState.joinChannelNetwork) { networkID in
             JoinChannelSheet(networkID: networkID)
         }
+        .sheet(item: $uiState.kickRequest) { request in
+            KickReasonSheet(request: request)
+        }
         .confirmationDialog(
             "Remove \(uiState.networkPendingRemoval.flatMap { app.session(for: $0)?.displayName } ?? "network")?",
             isPresented: Binding(

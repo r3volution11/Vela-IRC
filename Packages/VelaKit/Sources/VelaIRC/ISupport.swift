@@ -37,6 +37,24 @@ public enum CaseMapping: String, Sendable, Hashable {
     }
 }
 
+/// How a server quiets someone: they stay in the channel but can't talk.
+public enum QuietMethod: Sendable, Hashable {
+    /// A list mode of its own, set with the mask: `+q *!*@host`.
+    case listMode(Character)
+    /// A ban whose mask starts with a mute extended ban type, such as
+    /// InspIRCd's `m:` (`+b m:*!*@host`) or UnrealIRCd's `~q:`.
+    case extban(String)
+
+    /// The channel mode and argument that quiet (or, removed, unquiet)
+    /// `mask`.
+    public func change(for mask: String) -> (mode: Character, argument: String) {
+        switch self {
+        case .listMode(let mode): (mode, mask)
+        case .extban(let prefix): ("b", prefix + mask)
+        }
+    }
+}
+
 /// RPL_ISUPPORT (005) state.
 public struct ISupport: Sendable, Hashable {
     public private(set) var tokens: [String: String] = [:]
@@ -85,6 +103,41 @@ public struct ISupport: Sendable, Hashable {
     public var kickLength: Int? { tokens["KICKLEN"].flatMap(Int.init) }
     /// Maximum mode changes with a parameter per MODE line (MODES=).
     public var modesPerLine: Int? { tokens["MODES"].flatMap(Int.init) }
+
+    /// How many mode changes with a parameter to send in one MODE line:
+    /// MODES=, or 3 (RFC 1459's limit) when the server doesn't say. `MODES`
+    /// without a value means no limit (`Int.max`); line length still applies.
+    public var modeChangesPerLine: Int {
+        guard let value = tokens["MODES"] else { return 3 }
+        guard !value.isEmpty else { return .max }
+        return max(1, Int(value) ?? 3)
+    }
+
+    /// EXTBAN=<prefix>,<types>: the text extended bans start with (`~` on
+    /// UnrealIRCd, `$` on Solanum, nothing on InspIRCd) and the type
+    /// letters the server knows. Nil when the server doesn't list them.
+    public var extendedBans: (prefix: String, types: Set<Character>)? {
+        guard let value = tokens["EXTBAN"], let comma = value.firstIndex(of: ",") else { return nil }
+        return (String(value[..<comma]), Set(value[value.index(after: comma)...]))
+    }
+
+    /// How to quiet someone (let them stay but not talk) on this server, or
+    /// nil when it can't be told:
+    ///
+    /// - `q` as a list mode in CHANMODES (and not a membership prefix), as
+    ///   on Solanum, Libera.Chat and OFTC: `+q mask`;
+    /// - otherwise a mute extended ban from EXTBAN: InspIRCd's `m:`
+    ///   (`+b m:mask`) or UnrealIRCd's `~q:` (`+b ~q:mask`).
+    public var quietMethod: QuietMethod? {
+        let modes = channelModes
+        if modes.list.contains("q"), !prefixModes.contains("q") { return .listMode("q") }
+        guard let extbans = extendedBans, modes.list.contains("b") else { return nil }
+        switch extbans.prefix {
+        case "" where extbans.types.contains("m"): return .extban("m:")
+        case "~" where extbans.types.contains("q"): return .extban("~q:")
+        default: return nil
+        }
+    }
     /// Prefix symbols usable for STATUSMSG (e.g. `@#chan`).
     public var statusMessagePrefixes: Set<Character> { Set(tokens["STATUSMSG"] ?? "") }
     /// The soju bouncer network ID of this connection (BOUNCER_NETID).

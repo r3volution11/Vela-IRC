@@ -134,6 +134,13 @@ struct InputBar: View {
         .onChange(of: uiState.drafts[buffer.id]) { _, draft in
             if let draft, draft != text { text = draft }
         }
+        // Mention from a user menu.
+        .onChange(of: uiState.mentionRequest, initial: true) { _, request in
+            guard let request, request.bufferID == buffer.id else { return }
+            uiState.mentionRequest = nil
+            insertion = ComposerInsertion(text: request.nick, isMention: true)
+            uiState.focusInput()
+        }
     }
 
     private var barTransition: AnyTransition {

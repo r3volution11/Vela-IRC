@@ -77,11 +77,15 @@ const settingKeysSwift = read('Packages/VelaKit/Sources/VelaStore/SettingKeys.sw
 const navigationSwift = read('Packages/VelaKit/Sources/VelaStore/NavigationSettings.swift')
 const settingsSwift = settingKeysSwift + '\n' + navigationSwift
 
-// Enums stored as strings: `public enum ChatLayout: String, … { case classic … }`
+// Enums stored as strings: `public enum ChatLayout: String, … { case classic … }`.
+// `enums` holds each one's values as written in settings.json; `enumCases`
+// maps its Swift case names to them (`case host = "*!*@host"`).
 const enums = new Map()
+const enumCases = new Map()
 for (const [, name, body] of settingsSwift.matchAll(/public enum (\w+): String[^{]*\{(.*?)\n\}/gs)) {
-  const cases = [...body.matchAll(/^\s*case (\w+)(?:\s*=\s*"([^"]*)")?\s*$/gm)].map((m) => m[2] ?? m[1])
-  enums.set(name, cases)
+  const cases = [...body.matchAll(/^\s*case (\w+)(?:\s*=\s*"([^"]*)")?\s*$/gm)].map((m) => ({ name: m[1], value: m[2] ?? m[1] }))
+  enums.set(name, cases.map((c) => c.value))
+  enumCases.set(name, new Map(cases.map((c) => [c.name, c.value])))
 }
 
 // `public static var chatLayout: SettingKey<ChatLayout> { .init("chat.layout", default: .grouped, summary: "…") }`
@@ -120,14 +124,15 @@ function settingDefault({ rawDefault, type }) {
   const element = listEnum(type)
   if (element && rawDefault.startsWith('[')) {
     const values = rawDefault.slice(1, -1).split(',').map((item) => item.trim()).filter(Boolean)
-    for (const value of values) {
-      if (!value.startsWith('.') || !enums.get(element).includes(value.slice(1))) fail(`unknown default ${value} for ${type}`)
-    }
-    return `[${values.map((value) => JSON.stringify(value.slice(1))).join(', ')}]`
+    const written = values.map((value) => (value.startsWith('.') ? enumCases.get(element).get(value.slice(1)) : undefined))
+    values.forEach((value, index) => {
+      if (written[index] === undefined) fail(`unknown default ${value} for ${type}`)
+    })
+    return `[${written.map((value) => JSON.stringify(value)).join(', ')}]`
   }
   if (rawDefault.startsWith('.')) {
-    const value = rawDefault.slice(1)
-    if (!enums.get(type)?.includes(value)) fail(`unknown default ${rawDefault} for ${type}`)
+    const value = enumCases.get(type)?.get(rawDefault.slice(1))
+    if (value === undefined) fail(`unknown default ${rawDefault} for ${type}`)
     return JSON.stringify(value)
   }
   if (rawDefault.startsWith('"')) return JSON.stringify(unescapeSwift(rawDefault.slice(1, -1)))
@@ -135,14 +140,15 @@ function settingDefault({ rawDefault, type }) {
   fail(`can't read default value ${rawDefault}`)
 }
 
-const escapeHTML = (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\{\{/g, '{&#123;')
+const escapeHTML = (text) =>
+  String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\{\{/g, '{&#123;').replace(/\*/g, '&#42;')
 
 function settingType({ type }) {
   // Stored as true/false; a missing key or "system" follows macOS.
   if (type === 'SystemFollowingBool') return 'Boolean, or <code>"system"</code> to follow macOS'
-  if (enums.has(type)) return `One of ${enums.get(type).map((value) => `<code>"${value}"</code>`).join(', ')}`
+  if (enums.has(type)) return `One of ${enums.get(type).map((value) => `<code>"${escapeHTML(value)}"</code>`).join(', ')}`
   const element = listEnum(type)
-  if (element) return `Array of any of ${enums.get(element).map((value) => `<code>"${value}"</code>`).join(', ')}`
+  if (element) return `Array of any of ${enums.get(element).map((value) => `<code>"${escapeHTML(value)}"</code>`).join(', ')}`
   return {
     String: 'String',
     Bool: 'Boolean',
@@ -188,6 +194,7 @@ const categoryNames = {
   highlight: 'Highlights',
   input: 'Input',
   connection: 'Connection',
+  moderation: 'Moderation',
   history: 'History',
   logging: 'Chat logs',
   navigation: 'Navigation',
@@ -196,9 +203,9 @@ const categoryNames = {
   translation: 'Translation',
 }
 
-/** Links other settings mentioned in a summary to their rows. */
+/** Links other settings mentioned in a summary to their rows. A `*` stays a star (ban masks like `*!*@host`), not emphasis. */
 const linkKeys = (text) =>
-  cell(text).replace(/\b([a-zA-Z]+\.[a-zA-Z]+)\b/g, (match) => (settingKeys.has(match) ? `[\`${match}\`](#${match})` : match))
+  cell(text).replace(/\*/g, '\\*').replace(/\b([a-zA-Z]+\.[a-zA-Z]+)\b/g, (match) => (settingKeys.has(match) ? `[\`${match}\`](#${match})` : match))
 
 const byCategory = new Map()
 for (const setting of settings) {

@@ -55,6 +55,16 @@ struct ComposerActions {
 struct ComposerInsertion: Equatable {
     let id = UUID()
     let text: String
+    /// `text` is a nick to mention: it's spaced (or followed by a colon)
+    /// for where the caret is (`mentionText(for:before:)`).
+    var isMention = false
+
+    /// A nick mentioned from a menu: `nick: ` to start a message,
+    /// ` nick ` after a word, `nick ` after a space.
+    static func mentionText(for nick: String, before preceding: String) -> String {
+        guard let last = preceding.last else { return "\(nick): " }
+        return last.isWhitespace ? "\(nick) " : " \(nick) "
+    }
 }
 
 /// The composer's multi-line editor: an `NSTextView` that grows from one line
@@ -161,7 +171,13 @@ struct ComposerTextView: NSViewRepresentable {
         }
         if let insertion, insertion.id != coordinator.lastInsertionID {
             coordinator.lastInsertionID = insertion.id
-            coordinator.insert(insertion.text)
+            if insertion.isMention {
+                let caret = textView.selectedRange().location
+                let preceding = (textView.string as NSString).substring(to: min(caret, (textView.string as NSString).length))
+                coordinator.insert(ComposerInsertion.mentionText(for: insertion.text, before: preceding))
+            } else {
+                coordinator.insert(insertion.text)
+            }
         }
         if focusRequest != coordinator.lastFocusRequest {
             coordinator.lastFocusRequest = focusRequest
