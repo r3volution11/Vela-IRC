@@ -138,8 +138,10 @@ struct AppActionTests {
         let start = Date()
         await #expect(throws: AppActionError.noConnectedNetworks) { try await app.setAway(nil) }
         await #expect(throws: AppActionError.noConnectedNetworks) { try await app.setBack() }
-        // Nothing was connecting, so nothing was waited for.
-        #expect(Date().timeIntervalSince(start) < 1)
+        // Nothing was connecting, so nothing was waited for. (A wait would
+        // take the 10 s connection timeout, twice; the margin is for a busy
+        // machine running other tests.)
+        #expect(Date().timeIntervalSince(start) < 5)
     }
 
     /// Siri may have just launched Vela: networks still connecting get a
