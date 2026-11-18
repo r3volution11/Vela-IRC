@@ -97,6 +97,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Reddit videos play inline.** `v.redd.it` links show the post's title, subreddit and author and play in place when you press ▶, in the **Player**, **Compact** and **Off** styles like other videos, with Expand, one video at a time and pausing out of view. A Reddit "GIF" (a video without sound) loops silently.
   - Vela can't tell from Reddit's public information whether a post is NSFW, so Reddit videos show no thumbnail or still frame before you press ▶ and never start by themselves. A post that Reddit sends to its age check is blocked as a page marked adult.
   - Links to Reddit posts show a link preview with the post's title, subreddit and author. Their videos don't play from the post link: Reddit only shows apps what a post holds with an account.
+- **[Supported media sites](https://velairc.app/reference/media-sites)**, a new page on the website, lists every site whose links Vela plays or shows inline (YouTube, Vimeo, Twitch, Streamable, Tenor, GIPHY, Imgur, Reddit and GitHub, plus image and video files anywhere), the links it recognizes on each, what it fetches, and the domain to write a site rule for. Sample links for every site are checked against the real sites each week and before every release.
 
 ### Changed
 
@@ -135,7 +136,8 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - Unblocking a site takes effect immediately, instead of after up to 15 minutes.
 - Cached link previews older than 30 days are deleted when Vela starts, so the cache no longer grows forever.
 - A playing video no longer reloads when its message is redrawn (it keeps playing) or when you scroll it away and back (it waits, paused, where you left it).
-- Links to Reddit posts showed "Reddit" as their title, with no description. Reddit answers apps with a page that only says "Reddit"; Vela now gets the post's title, subreddit and author from Reddit's oEmbed service.
+- Links to Reddit posts showed "Reddit" as their title, with no description. Reddit answers apps with a page that only says "Reddit"; Vela now gets the post's title, subreddit and author from Reddit's oEmbed service, for `redd.it` short links too.
+- Streamable videos show their thumbnail. Streamable gives its thumbnails' addresses without `https:`, and Vela skipped them.
 
 ## 0.1.0 - 2026-11-16
 

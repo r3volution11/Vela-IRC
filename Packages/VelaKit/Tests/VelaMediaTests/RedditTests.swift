@@ -63,8 +63,19 @@ import Testing
     }
 
     @Test func canonicalPostURL() {
-        #expect(RedditLinks.post(url("https://old.reddit.com/r/LoveTrash/comments/1xyw5ml/jet_powered_skateboard/?utm=x"))?.canonicalURL
-            == url("https://www.reddit.com/r/LoveTrash/comments/1xyw5ml/jet_powered_skateboard/"))
+        let post = RedditLinks.post(url("https://old.reddit.com/r/LoveTrash/comments/1xyw5ml/jet_powered_skateboard/?utm=x"))
+        #expect(post?.canonicalURL == url("https://www.reddit.com/r/LoveTrash/comments/1xyw5ml/jet_powered_skateboard/"))
+        #expect(post?.oEmbedURL == post?.canonicalURL)
+    }
+
+    /// Reddit's oEmbed refuses `reddit.com/comments/<id>`, so a post without
+    /// a subreddit in its address is asked about under `r/all`.
+    @Test func barePostAsksOEmbedUnderAnySubreddit() {
+        let post = RedditLinks.post(url("https://www.reddit.com/comments/1xyw5ml"))
+        #expect(post?.canonicalURL == url("https://www.reddit.com/comments/1xyw5ml/"))
+        #expect(post?.oEmbedURL == url("https://www.reddit.com/r/all/comments/1xyw5ml/"))
+        let profile = RedditLinks.post(url("https://www.reddit.com/user/downtune79/comments/1xyw5ml/"))
+        #expect(profile?.oEmbedURL == profile?.canonicalURL)
     }
 
     @Test(arguments: [
@@ -288,6 +299,24 @@ import Testing
         #expect(preview.kind == .page)
         #expect(preview.finalURL == url(post))
         #expect(preview.title == "Jet powered skateboard")
+    }
+
+    /// `redd.it/<id>` leads to `reddit.com/comments/<id>`, without the subreddit.
+    @Test func shortLinkToABarePostStillGetsTheTitleAndAuthor() async throws {
+        try routeVideo()
+        let bare = "https://www.reddit.com/comments/1xyw5ml"
+        server.route("https://redd.it/1xyw5ml", .redirect(to: bare, status: 301))
+        server.route(bare, .html(try Fixtures.string("reddit-challenge.html")))
+        let anySubreddit = OEmbedEndpoint.reddit(post: url("https://www.reddit.com/r/all/comments/1xyw5ml/"))!.absoluteString
+        server.route(anySubreddit, StubResponse(
+            headers: ["Content-Type": "application/json"], body: Data(try Fixtures.string("reddit-oembed.json").utf8)
+        ))
+        let preview = try await makeService().preview(for: url("https://redd.it/1xyw5ml"), policy: policy)
+        #expect(preview.kind == .page)
+        #expect(preview.finalURL == url(bare))
+        #expect(preview.title == "Jet powered skateboard")
+        #expect(preview.summary == "r/LoveTrash · Posted by u/downtune79")
+        #expect(server.requests(to: anySubreddit).count == 1)
     }
 
     @Test func blockedRedditIsNeverContacted() async {

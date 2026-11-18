@@ -119,7 +119,8 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 - **Inline images and animated GIFs.** Click one to view it full size.
 - **Link previews** with the page title, description, site name and thumbnail, accented with the page's own theme color.
-- **Video players** for YouTube, Vimeo, Twitch and Streamable. The player loads only when you press play, and you can expand it to fill the window.
+- **Video players** for YouTube, Vimeo, Twitch, Streamable and Reddit. The player loads only when you press play, and you can expand it to fill the window.
+- **GIFs from Tenor, GIPHY and Imgur** play inline, even from a link to the GIF's page. The website lists [every supported media site](https://velairc.app/reference/media-sites) and the links Vela recognizes on each; that list is generated from the code and checked against the real sites every week.
 - **Your choice of size:** Minimal, Standard or Large link previews, full or compact videos, and full-size or thumbnail images.
 - **Site rules and an adult-site filter:** show everything, text only or nothing per site. Adult sites' previews are hidden by default, checked on your Mac against a list bundled with Vela. Images can stay blurred until clicked.
 - **[mIRC](https://www.mirc.com) formatting:** bold, italic, underline, strikethrough, monospace, colors (including hex) and reverse.
@@ -244,6 +245,7 @@ Or open `Vela.xcodeproj` in Xcode (the project file, not the folder), choose the
 swift test --package-path Packages/VelaKit                    # unit tests (1,200+)
 VELA_LIVE_TESTS=1 swift test --package-path Packages/VelaKit \
   --filter "LiveNetwork|LiveSession"                          # live TLS + IRCv3 checks against public servers
+scripts/check-media-sites.sh                                  # check the supported media sites against the real sites
 scripts/demo-screenshot.sh build/Vela.app shot.png --theme Lighter --preset tabbed   # offscreen screenshot
 scripts/demo-screenshot.sh build/Vela.app shot.png --themes-dir my-themes --theme "Harbor"  # with themes from a folder
 ```
@@ -270,7 +272,7 @@ schemas/                 JSON Schema for theme files
 website/                 velairc.app (VitePress)
 docs/                    Theme authoring guide, credits, release process
 design/app-icon/         App icon generators and geometry (see its README)
-scripts/                 run, release, screenshot and icon export tools
+scripts/                 run, release, screenshot, icon export and media site check tools, git hooks
 ```
 
 ## Contributing

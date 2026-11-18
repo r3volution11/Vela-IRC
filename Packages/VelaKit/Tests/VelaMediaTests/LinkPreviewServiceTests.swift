@@ -489,6 +489,19 @@ import Testing
         #expect(preview.embed?.provider == .streamable)
         #expect(preview.title == "A clip")
         #expect(preview.siteName == "Streamable")
+        #expect(preview.imageURL == url("https://cdn.streamable.com/image/abc123.jpg"))
+    }
+
+    /// Streamable's oEmbed gives its thumbnails without a scheme.
+    @Test func protocolRelativeThumbnailIsHTTPS() async throws {
+        let endpoint = "https://api.streamable.com/oembed.json?url=" + OEmbedEndpoint.encode("https://streamable.com/abc123")
+        server.route(endpoint, .json(["title": "A clip", "thumbnail_url": "//cdn-cf-west.streamable.com/image/abc123.jpg?Expires=1"]))
+        let preview = try await makeService().preview(for: url("https://streamable.com/abc123"), policy: policy)
+        #expect(preview.imageURL == url("https://cdn-cf-west.streamable.com/image/abc123.jpg?Expires=1"))
+        #expect(preview.embed?.thumbnailURL == preview.imageURL)
+        #expect(PreviewFetcher.webURL("//") == nil)
+        #expect(PreviewFetcher.webURL("ftp://example.com/x.jpg") == nil)
+        #expect(PreviewFetcher.webURL("/relative/x.jpg") == nil)
     }
 
     @Test func twitchUsesPageOpenGraph() async throws {

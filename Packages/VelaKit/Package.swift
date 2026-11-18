@@ -23,6 +23,7 @@ let package = Package(
         .library(name: "VelaIntelligence", targets: ["VelaIntelligence"]),
         .library(name: "VelaIntents", targets: ["VelaIntents"]),
         .executable(name: "vela-theme-tool", targets: ["VelaThemeTool"]),
+        .executable(name: "vela-media-tool", targets: ["VelaMediaTool"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
@@ -93,6 +94,9 @@ let package = Package(
 
         // Generates schemas/vela-theme.schema.json and the docs token table.
         .executableTarget(name: "VelaThemeTool", dependencies: ["VelaTheme"]),
+
+        // Generates the website's supported media sites page from MediaSites.swift.
+        .executableTarget(name: "VelaMediaTool", dependencies: ["VelaMedia"]),
 
         .testTarget(name: "VelaFoundationTests", dependencies: ["VelaFoundation"]),
         .testTarget(name: "VelaIRCTests", dependencies: ["VelaIRC"]),

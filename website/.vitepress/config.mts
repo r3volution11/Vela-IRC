@@ -54,6 +54,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Theme tokens', link: '/reference/theme-tokens' },
       { text: 'Built-in themes', link: '/reference/built-in-themes' },
       { text: 'IRCv3 support', link: '/reference/ircv3' },
+      { text: 'Supported media sites', link: '/reference/media-sites' },
     ],
   },
   {

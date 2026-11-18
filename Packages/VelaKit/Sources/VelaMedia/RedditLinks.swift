@@ -52,8 +52,15 @@ enum RedditLinks {
         var community: String?
         /// The title as the address spells it ("jet_powered_skateboard").
         var slug: String?
-        /// `https://www.reddit.com/…/comments/<id>/<slug>/`, for oEmbed.
+        /// `https://www.reddit.com/…/comments/<id>/<slug>/`.
         var canonicalURL: URL
+        /// The address to ask Reddit's oEmbed about: `canonicalURL`, except
+        /// for a post without a subreddit or profile in its address
+        /// (`reddit.com/comments/<id>`, where `redd.it` short links lead).
+        /// Reddit's oEmbed refuses those, but finds a post by its id under
+        /// any subreddit, and its markup names the real one; so they're
+        /// asked about as `r/all`.
+        var oEmbedURL: URL
     }
 
     /// `reddit.com/r/<sub>/comments/<id>/<slug>`, `reddit.com/comments/<id>`
@@ -87,7 +94,13 @@ enum RedditLinks {
         components.host = "www.reddit.com"
         components.path = "/" + (prefix + ["comments", id] + (slug.map { [$0] } ?? [])).joined(separator: "/") + "/"
         guard let canonical = components.url else { return nil }
-        return Post(id: id, community: community, slug: slug, canonicalURL: canonical)
+        var oEmbed = canonical
+        if prefix.isEmpty {
+            components.path = "/r/all/comments/\(id)/"
+            guard let any = components.url else { return nil }
+            oEmbed = any
+        }
+        return Post(id: id, community: community, slug: slug, canonicalURL: canonical, oEmbedURL: oEmbed)
     }
 
     /// "jet_powered_skateboard" → "Jet powered skateboard": a title for when

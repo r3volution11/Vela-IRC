@@ -5,6 +5,12 @@
 #   scripts/release.sh --skip-notarize      # sign only (for testing the pipeline)
 #   scripts/release.sh --adhoc              # no Developer ID at all (local testing)
 #
+# Before archiving (after the quick certificate checks), it checks that the
+# media sites Vela supports still work (scripts/check-media-sites.sh) and stops
+# if one broke:
+#   --skip-media-check   don't check (say, a site is down for an afternoon)
+#   --media-check        check even with --adhoc, which otherwise skips it
+#
 # Requirements (one-time, see docs/RELEASING.md):
 #   • A "Developer ID Application" certificate in your login keychain
 #   • Notarization credentials stored with:
@@ -20,13 +26,18 @@ cd "${0:A:h}/.."
 
 notarize=1
 adhoc=0
+media_check_option=""
 for arg in "$@"; do
   case "$arg" in
     --skip-notarize) notarize=0 ;;
     --adhoc) adhoc=1; notarize=0 ;;
+    --skip-media-check) media_check_option=0 ;;
+    --media-check) media_check_option=1 ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
+# An ad hoc build is for trying things on this Mac, not for shipping.
+media_check=${media_check_option:-$(( adhoc ? 0 : 1 ))}
 
 profile="${VELA_NOTARY_PROFILE:-vela-notary}"
 out="build/release"
@@ -56,6 +67,24 @@ else
     xcrun notarytool history --keychain-profile "$profile" >/dev/null 2>&1 \
       || fail "Notarization profile \"$profile\" not found. Run: xcrun notarytool store-credentials $profile --apple-id <email> --team-id $team"
   fi
+fi
+
+# ---------------------------------------------------------------- media sites
+# Every live sample in MediaSites.swift must still resolve against the real
+# site (docs/RELEASING.md, "When the media check fails").
+if (( media_check )); then
+  step "Checking media sites (skip with --skip-media-check)"
+  failed_sites=$(mktemp -t vela-media-sites)
+  if ! scripts/check-media-sites.sh --failed-sites-file "$failed_sites"; then
+    broken=$(paste -sd , - < "$failed_sites" | sed 's/,/, /g')
+    rm -f "$failed_sites"
+    fail "The media sites check failed${broken:+ for $broken}, so no release was built. Update the site's sample or fix its resolver (see \"When the media check fails\" in docs/RELEASING.md), or rerun with --skip-media-check."
+  fi
+  rm -f "$failed_sites"
+elif [[ "$media_check_option" == 0 ]]; then
+  print -P "%F{yellow}warning:%f not checking media sites (--skip-media-check)"
+else
+  print "    Not checking media sites for an ad hoc build (add --media-check to check)."
 fi
 
 rm -rf "$out"

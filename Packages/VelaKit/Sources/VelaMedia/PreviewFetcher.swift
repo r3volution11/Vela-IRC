@@ -75,7 +75,7 @@ struct PreviewFetcher: Sendable {
 
         let post = RedditLinks.post(finalURL)
         embed.community = post?.community
-        if let post, let endpoint = OEmbedEndpoint.reddit(post: post.canonicalURL) {
+        if let post, let endpoint = OEmbedEndpoint.reddit(post: post.oEmbedURL) {
             if policy.allows(endpoint) {
                 switch try await attempt({ try await fetchOEmbed(endpoint, policy: policy) }) {
                 case .success(let oEmbed):
@@ -128,7 +128,7 @@ struct PreviewFetcher: Sendable {
         var author: String?
         var community = post.community
         var degraded = false
-        if let endpoint = OEmbedEndpoint.reddit(post: post.canonicalURL) {
+        if let endpoint = OEmbedEndpoint.reddit(post: post.oEmbedURL) {
             if policy.allows(endpoint) {
                 switch try await attempt({ try await fetchOEmbed(endpoint, policy: policy) }) {
                 case .success(let oEmbed):
@@ -588,9 +588,12 @@ struct PreviewFetcher: Sendable {
         return HTMLMetadataParser.isAdultRating(rating) || rating.lowercased().contains("rtalabel.org")
     }
 
-    /// An absolute `http(s)` URL from an oEmbed field.
+    /// An absolute `http(s)` URL from an oEmbed field. A protocol-relative
+    /// one (`//cdn.example/x.jpg`, as Streamable's thumbnails are) is https.
     static func webURL(_ raw: String?) -> URL? {
-        guard let raw, let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+        guard var text = raw?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+        if text.hasPrefix("//") { text = "https:" + text }
+        guard let url = URL(string: text),
               let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https", url.host() != nil
         else { return nil }
         return url

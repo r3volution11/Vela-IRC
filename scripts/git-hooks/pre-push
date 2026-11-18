@@ -1,0 +1,54 @@
+#!/bin/zsh
+# Git pre-push hook: when the commits you're pushing change media code, checks
+# that the media sites Vela supports still work (scripts/check-media-sites.sh)
+# and stops the push if one broke. Pushes that don't change media code aren't
+# slowed down: the hook only lists the files those commits touch.
+#
+# Install it with scripts/install-git-hooks.sh. Skip it for one push with
+# `git push --no-verify`. VELA_MEDIA_CHECK_DRY_RUN=1 shows what it would run.
+#
+# Git passes the remote's name and URL as arguments, and one line per ref on
+# stdin: <local ref> <local object> <remote ref> <remote object>.
+setopt err_exit pipe_fail no_unset extended_glob
+
+root=$(git rev-parse --show-toplevel)
+
+# Keep in step with the paths in .github/workflows/media-sites.yml.
+media_paths=(
+  Packages/VelaKit/Sources/VelaMedia
+  Packages/VelaKit/Sources/VelaUI/Embeds
+  Packages/VelaKit/Tests/VelaMediaTests
+  scripts/check-media-sites.sh
+)
+
+changed=()
+while read -r local_ref local_object remote_ref remote_object; do
+  # Deleting a remote branch pushes no commits.
+  [[ -z "$local_object" || "$local_object" == (0)## ]] && continue
+  if [[ "$remote_object" != (0)## ]] && git cat-file -e "$remote_object^{commit}" 2>/dev/null; then
+    commits=("$remote_object..$local_object")
+  else
+    # A new branch, or a remote that moved on: the commits no remote has yet.
+    commits=("$local_object" --not --remotes)
+  fi
+  # Only lists file names; never checks signatures (which can be slow).
+  changed+=(${(f)"$(git log --no-show-signature --format= --name-only --no-renames "${commits[@]}" -- "${media_paths[@]}" || true)"})
+done
+
+(( ${#changed} )) || exit 0
+
+changed=(${(u)changed})
+print "pre-push: the commits you're pushing change media code:"
+print -l -- "  "${^changed[1,8]}
+(( ${#changed} > 8 )) && print "  … and $(( ${#changed} - 8 )) more"
+print "pre-push: checking the media sites before pushing (skip with git push --no-verify)."
+
+# Run the check as an ordinary process: not inside this repository's git
+# environment (SwiftPM runs git in its own dependency checkouts) and without
+# the ref list on stdin.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_PREFIX
+if ! "$root/scripts/check-media-sites.sh" < /dev/null; then
+  print -u2 "pre-push: not pushing, because a media site check failed (see above)."
+  print -u2 "pre-push: fix it, or push anyway with git push --no-verify."
+  exit 1
+fi

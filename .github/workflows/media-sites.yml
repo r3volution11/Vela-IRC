@@ -1,0 +1,84 @@
+name: Media sites
+
+# Checks that the media sites Vela supports still work: every live sample link
+# in Packages/VelaKit/Sources/VelaMedia/MediaSites.swift is resolved against the
+# real site, the way Vela resolves it (scripts/check-media-sites.sh). A site
+# that changed how it works fails the run; the run's summary has the report.
+# What to do then: docs/RELEASING.md, "When the media check fails".
+#
+# It runs when media code changes, every Monday, and on demand (Actions →
+# Media sites → Run workflow, optionally for some sites only).
+#
+# When a scheduled run fails, GitHub emails the person who last changed the
+# cron schedule below, here the repository owner (subject to their settings
+# under Settings → Notifications → System → Actions). In a public repository,
+# GitHub also turns scheduled workflows off after 60 days without commits;
+# turn it back on from the Actions tab.
+
+on:
+  push:
+    branches: [main]
+    # Keep in step with media_paths in scripts/git-hooks/pre-push.
+    paths:
+      - 'Packages/VelaKit/Sources/VelaMedia/**'
+      - 'Packages/VelaKit/Sources/VelaUI/Embeds/**'
+      - 'Packages/VelaKit/Tests/VelaMediaTests/**'
+      - 'scripts/check-media-sites.sh'
+      - '.github/workflows/media-sites.yml'
+  pull_request:
+    paths:
+      - 'Packages/VelaKit/Sources/VelaMedia/**'
+      - 'Packages/VelaKit/Sources/VelaUI/Embeds/**'
+      - 'Packages/VelaKit/Tests/VelaMediaTests/**'
+      - 'scripts/check-media-sites.sh'
+      - '.github/workflows/media-sites.yml'
+  schedule:
+    # Mondays at 09:23 UTC.
+    - cron: '23 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      sites:
+        description: 'Only these sites, comma-separated ids from MediaSites.swift (e.g. tenor,giphy). Empty: all.'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: media-sites-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check media sites
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: Packages/VelaKit/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('Packages/VelaKit/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Check media sites
+        env:
+          VELA_LIVE_MEDIA_SITES: ${{ inputs.sites }}
+        run: scripts/check-media-sites.sh --verbose
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-sites-report
+          path: build/media-sites/
+          if-no-files-found: ignore
+          retention-days: 30

@@ -15,6 +15,8 @@ When someone posts a link, Vela can show what's behind it right in the conversat
 - **YouTube, Vimeo, Twitch, Streamable and Reddit** video links show the video's title, and (except on [Reddit](#reddit)) its thumbnail. Press **▶** to [play it right there](#videos).
 - **Video files** (`.mp4`, `.mov`) show a still frame. They never play until you click.
 
+[Supported media sites](/reference/media-sites) lists every site Vela knows, the links it recognizes on each, and what it fetches from them.
+
 Hover a message's previews and click the chevron to hide them, or right-click a preview and choose **Hide Previews**.
 
 The settings below are in **Settings → Media**, and most are in the [command palette](/guide/command-palette) too (type "media"). [Presets](/guide/presets) choose link, video and image sizes for you.
@@ -95,7 +97,7 @@ Links to GIFs on these sites play inline, even when the link is to the site's pa
 | **GIPHY** | Pages (`giphy.com/gifs/…`, `giphy.com/stickers/…`), `gph.is` short links, and files on `media.giphy.com` and `i.giphy.com` |
 | **Imgur** | `.gifv` links |
 
-Any other link to a `.gif`, `.webp` or `.apng` file plays inline as an [image](#images).
+Any other link to a `.gif`, `.webp` or `.apng` file plays inline as an [image](#images). For every link form, see [Supported media sites](/reference/media-sites#gifs).
 
 - **Small and smooth.** These sites keep a video copy of every GIF, usually a tenth of its size or less, and Vela plays that copy: silent, looping and without controls, just like a GIF. Stickers, which have see-through backgrounds, play from the GIF itself. If the video copy can't be loaded, Vela plays the GIF instead.
 - **Sized like images.** GIFs follow the [Images](#images) settings: **Full size**, up to the **Maximum image height**, or **Thumbnail**, which plays while the pointer is over it. A GIF bigger than **Largest image to load automatically** shows a chip that opens it in your browser.
@@ -184,7 +186,7 @@ Sites without a rule follow your other settings.
 - **A rule covers subdomains.** A rule for `example.com` also covers `img.example.com`, but not `badexample.com`.
 - **The most specific rule wins.** A rule for `i.example.com` beats one for `example.com`, so you can block a site but allow its image host, or the other way round.
 - **Your rules beat the adult list.**
-- **Video and GIF sites follow their main domain.** A rule for `youtube.com` also covers `youtu.be` links and YouTube's thumbnails. The same goes for `vimeo.com`, `twitch.tv` and `streamable.com`, and for `reddit.com`, whose rule also covers `redd.it` links, Reddit videos (`v.redd.it`), its images (`i.redd.it`, `preview.redd.it`) and its other media servers. Likewise `tenor.com` covers `media.tenor.com`, and `giphy.com` covers `gph.is` links and GIPHY's media servers.
+- **Video and GIF sites follow their main domain.** A rule for `youtube.com` also covers `youtu.be` links and YouTube's thumbnails. The same goes for `vimeo.com`, `twitch.tv` and `streamable.com`, and for `reddit.com`, whose rule also covers `redd.it` links, Reddit videos (`v.redd.it`), its images (`i.redd.it`, `preview.redd.it`) and its other media servers. Likewise `tenor.com` covers `media.tenor.com`, and `giphy.com` covers `gph.is` links and GIPHY's media servers. [Supported media sites](/reference/media-sites) lists the domains each site's rule covers.
 - **Rules apply wherever a site turns up:** a link to it, a redirect to it, or an image from it in another site's preview.
 
 ### From a preview

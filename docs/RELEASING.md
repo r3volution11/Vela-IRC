@@ -59,6 +59,7 @@ The release build you ship uses the same identity as the `build/Vela.app` that `
    (cd website && npm run docs:build && npm run docs:check)
    ```
    Then commit, push and wait for CI: `gh run list --limit 2`.
+   The **Media sites** workflow checks the sites Vela shows media from every Monday; if its last run failed, sort that out first. `scripts/release.sh` checks them again anyway.
 5. **Check the docs and screenshots.** Every user-facing change is documented on the site. If the UI changed, re-shoot with `website/scripts/screenshots.sh` and commit the images.
 6. **Try the Release build yourself:** `scripts/run.sh`, then use it for a bit. Release builds are optimized, and occasionally behave differently from the Debug build you develop with.
 
@@ -71,16 +72,18 @@ scripts/release.sh
 What it does:
 1. Reads the version from the project and warns if the working tree has uncommitted changes.
 2. Finds your **Developer ID Application** certificate and Team ID, and checks that the `vela-notary` profile exists.
-3. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`.
-4. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
-5. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
-6. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
-7. **Builds the DMG** (`Vela.app` plus an Applications shortcut), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
-8. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
+3. **Checks the media sites** with `scripts/check-media-sites.sh`: every sample link in `MediaSites.swift` is resolved against the real site, and the report is printed. If a site fails, the script stops before archiving and names the broken sites. See [When the media check fails](#when-the-media-check-fails).
+4. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`.
+5. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
+6. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
+7. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
+8. **Builds the DMG** (`Vela.app` plus an Applications shortcut), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
+9. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
 
 Notarization usually takes a few minutes. If Apple rejects a submission, the script prints Apple's log; the usual causes are an unsigned nested binary or a missing hardened-runtime flag. Options:
 - `--skip-notarize`: signs but doesn't notarize, for testing the pipeline.
-- `--adhoc`: no Developer ID at all, for testing on your own Mac only. Other Macs will refuse it.
+- `--adhoc`: no Developer ID at all, for testing on your own Mac only. Other Macs will refuse it. It skips the media check too, since nothing it builds ships; add `--media-check` to check anyway.
+- `--skip-media-check`: builds without checking the media sites. Use it when you've looked at the failure and it shouldn't hold up the release, such as a site that's down for an hour.
 
 ## Checking the build before you publish
 
@@ -136,6 +139,17 @@ gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build
 - **"No Developer ID Application certificate found":** the certificate isn't in the login keychain, or its private key is missing (it shows without a disclosure triangle in Keychain Access). Re-import your `.p12` backup.
 - **"Notarization profile not found":** run the `store-credentials` step again.
 - **Gatekeeper rejects the DMG on another Mac:** run `xcrun stapler validate` on both the DMG and the app inside it, and check that `spctl` says "Notarized Developer ID".
+
+## When the media check fails
+
+The check resolves each sample link in `Packages/VelaKit/Sources/VelaMedia/MediaSites.swift` the way Vela does, and fails a site when what it gets back isn't what the sample expects. The report (also in `build/media-sites/report.txt`) says what went wrong for each link, for example `✗ thumbnail: no thumbnail` or `✗ MP4 copy: HTTP 404`. Look at the failing link in a browser, then:
+
+- **The sample is gone** (the video was deleted, the GIF taken down): pick a new sample that will last, replace it in `MediaSites.swift`, and run `scripts/check-media-sites.sh --site <id>`. Nothing about Vela is broken.
+- **The site changed how it works** (a new address format, different page tags, a moved oEmbed endpoint): users are seeing it too. Fix the resolver in `VelaMedia`, with a unit test against a stubbed response, update the entry if the links or domains changed, and regenerate the docs page (see [CONTRIBUTING.md](../CONTRIBUTING.md#adding-or-changing-a-site)). Mention the fix in `CHANGELOG.md`.
+- **The site is down or slow right now:** each failing link is already tried three times, a few seconds apart. Run the check again later, or release with `--skip-media-check` if it can't wait.
+- **Every site fails:** check your connection. The check needs internet access.
+
+A site that keeps failing for reasons Vela can't fix is better dropped from `MediaSites.swift` and the recognizers than left broken; say so in the changelog.
 
 ## The adult-domain list
 
