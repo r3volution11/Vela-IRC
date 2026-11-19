@@ -44,6 +44,7 @@ public actor LinkPreviewService {
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
         configuration.httpMaximumConnectionsPerHost = 4
         configuration.waitsForConnectivity = false
+        MediaSessionHooks.apply(to: configuration)
         return URLSession(configuration: configuration)
     }
 

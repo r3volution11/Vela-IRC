@@ -49,6 +49,7 @@ public actor LoopingVideoLoader {
         configuration.urlCache = nil
         configuration.httpMaximumConnectionsPerHost = 6
         configuration.waitsForConnectivity = false
+        MediaSessionHooks.apply(to: configuration)
         return URLSession(configuration: configuration)
     }
 

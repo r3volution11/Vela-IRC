@@ -40,7 +40,8 @@ public struct VelaScenes: Scene {
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified(showsTitle: false))
         .defaultSize(width: 1180, height: 760)
-        .defaultLaunchBehavior(.presented)
+        // The scroll benchmark opens a window of its own.
+        .defaultLaunchBehavior(ScrollBenchmark.isActive ? .suppressed : .presented)
         // Always open the main window at launch. Restoring saved window
         // state could otherwise restore "no windows" after a crash or a
         // force quit, leaving Vela running with nothing on screen.
@@ -113,11 +114,15 @@ private final class AppInstances {
         UserDefaults.standard.register(defaults: ["NSTreatUnknownArgumentsAsOpen": "NO"])
         let arguments = ProcessInfo.processInfo.arguments
         let demo = UserDefaults.standard.bool(forKey: "VelaDemoMode") || arguments.contains("--demo")
+        // The scroll benchmark's media comes from local stand-ins, set up
+        // before anything can fetch.
+        if ScrollBenchmark.isActive { ScrollBenchmark.prepareMedia() }
         let app = demo ? AppModel.demo() : AppModel.live()
         if demo {
             DemoArguments.apply(arguments, to: app.settings)
             DemoArguments.selectBuffer(from: arguments, in: app)
         }
+        if ScrollBenchmark.isActive { ScrollBenchmark.prepare(app) }
         // Demo runs (screenshots, UI work) get their own temporary Themes
         // folder, so they never show or change the real one.
         let themeStore = ThemeStore(userThemesDirectory: demo ? DemoArguments.themesDirectory(for: arguments) : AppPaths.themesDirectory)
@@ -129,6 +134,8 @@ private final class AppInstances {
         AppDependencyManager.shared.add(dependency: services.intelligence)
         if SnapshotSupport.isActive {
             SnapshotSupport.scheduleOffscreenCapture(app: app, themeStore: themeStore, uiState: uiState, services: services)
+        } else if ScrollBenchmark.isActive {
+            ScrollBenchmark.schedule(app: app, themeStore: themeStore, uiState: uiState, services: services)
         }
         self.app = app
         self.themeStore = themeStore

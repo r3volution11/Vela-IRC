@@ -53,7 +53,7 @@ Start by running the release checks on their own:
 scripts/release.sh --preflight
 ```
 
-It runs every [preflight check](#preflight-checks) and builds nothing. It ends with a summary: each check with PASS, FAIL or SKIP, and for each failure what to do. Work through the steps below and run it again until it says **Ready to release**. `scripts/release.sh` runs the same checks before it builds anything, and refuses to build while one fails.
+It runs every [preflight check](#preflight-checks) and builds no release (only the scroll benchmark's own copy of Vela). It ends with a summary: each check with PASS, FAIL or SKIP, and for each failure what to do. Work through the steps below and run it again until it says **Ready to release**. `scripts/release.sh` runs the same checks before it builds anything, and refuses to build while one fails.
 
 The checks catch what can be checked. Deciding the version, writing the changelog and the release notes, and trying the build are still up to you:
 
@@ -67,7 +67,7 @@ The checks catch what can be checked. Deciding the version, writing the changelo
 3. **Refresh the adult-domain list:** `scripts/update-adult-domains.sh`. Check its summary; see [The adult-domain list](#the-adult-domain-list).
    - *Checked:* the list was refreshed since the previous release.
 4. **Commit, push and wait for CI.**
-   - *Checked:* you're on `main`, nothing is uncommitted, `origin/main` has your commit, and CI passed for exactly that commit. The checks also run the package tests, build and check the website, compare the generated files with the code, and check the media sites against the real sites.
+   - *Checked:* you're on `main`, nothing is uncommitted, `origin/main` has your commit, and CI passed for exactly that commit. The checks also run the package tests, build and check the website, compare the generated files with the code, check the media sites against the real sites, and check that scrolling costs no more than the [scroll benchmark](#scroll-benchmark)'s baseline allows.
 5. **Check the docs and screenshots.** Every user-facing change is documented on the site. If the UI changed, re-shoot with `website/scripts/screenshots.sh` and commit the images. *Not checked.*
 6. **Try the Release build yourself:** `scripts/run.sh`, then use it for a bit. Release builds are optimized, and occasionally behave differently from the Debug build you develop with. *Not checked.*
 7. **Write the release notes** (see [Publishing](#publishing)). *Not checked.*
@@ -81,7 +81,7 @@ scripts/release.sh
 What it does:
 1. Reads the version and build number from the Vela target's Release configuration.
 2. Finds your **Developer ID Application** certificate and Team ID, and checks that the `vela-notary` profile exists.
-3. **Runs the [preflight checks](#preflight-checks)** (`scripts/release-preflight.sh`): git, the version and changelog, CI, the adult-domain list, the generated files, the package tests, the website and the media sites. If one fails, it prints the summary and stops before archiving.
+3. **Runs the [preflight checks](#preflight-checks)** (`scripts/release-preflight.sh`): git, the version and changelog, CI, the adult-domain list, the generated files, the package tests, the website, the media sites and the scroll benchmark. If one fails, it prints the summary and stops before archiving.
 4. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`.
 5. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
 6. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
@@ -99,7 +99,7 @@ Notarization usually takes a few minutes. If Apple rejects a submission, the scr
 
 ### Preflight checks
 
-`scripts/release.sh --preflight` runs these on their own, and so does `scripts/release-preflight.sh`. They build no app and don't touch your files or branches: besides fetching `main` and the tags from `origin`, they write only to ignored folders (`build/release-preflight/` for logs and the SwiftPM build, `website/node_modules`, the website's build output).
+`scripts/release.sh --preflight` runs these on their own, and so does `scripts/release-preflight.sh`. They build no app other than the scroll benchmark's own copy, and don't touch your files or branches: besides fetching `main` and the tags from `origin`, they write only to ignored folders (`build/release-preflight/` for logs and the SwiftPM build, `build/benchmark/`, `website/node_modules`, the website's build output).
 
 "The previous release" below is the newest `v*` tag in HEAD's history, other than this version's own tag.
 
@@ -150,6 +150,14 @@ Files generated from the code must match what's committed. The checks compare wh
 - **Website.** In `website/`: `npm ci` if `node_modules` is missing, then `npm run docs:build` and `npm run docs:check`. *If it fails:* the check shows the errors; everything is in `build/release-preflight/website.log`. Fix them and check again with `(cd website && npm run docs:build && npm run docs:check)`.
 - **Media sites** (skipped for `--skip-media-check`, and for `--adhoc` unless you add `--media-check`). `scripts/check-media-sites.sh` resolves every live sample link in `MediaSites.swift` against the real site and prints its report. *If it fails:* it names the broken sites; see [When the media check fails](#when-the-media-check-fails). If a site is only down for a while, `--skip-media-check` lets the release go ahead.
 
+#### Scroll benchmark
+
+Skipped for `--skip-scroll-benchmark`, and for `--adhoc` unless you add `--scroll-benchmark`.
+
+- **Scroll benchmark.** `scripts/benchmark-scroll.sh --check` builds its own copy of Vela, scrolls a big channel in it three times in each mode, and compares the medians with `benchmarks/scroll-baseline.json` (see [Scroll benchmark](#scroll-benchmark)). It takes about 12 minutes. Its window is invisible and never takes the focus, so you can keep working; busy apps make the numbers noisier. It's skipped when there's no baseline yet, or when the baseline was recorded on another kind of Mac, display refresh rate, layout or window size, since the numbers wouldn't compare. *If it fails:*
+  - **Over budget:** the check lists the numbers. Everything is in `build/release-preflight/scroll-benchmark.log`, and each run in `build/release-preflight/scroll-benchmark/`. Find the change that made scrolling cost more ([profile it](#profiling-a-run)) and fix it. If the cost is intended, record a new baseline and commit it.
+  - **It didn't finish:** see the log, and run it again. To release anyway, `--skip-scroll-benchmark`.
+
 ### Post-build checks
 
 Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts it read-only (out of sight, in a temporary folder), checks the `Vela.app` inside as users get it, and unmounts it:
@@ -182,17 +190,19 @@ It expects the project's version and build number unless you give `--version` an
 
 | Option | What it does |
 | --- | --- |
-| `--preflight` | Runs only the preflight checks and builds nothing. It doesn't look for your certificate. The first thing to run when you prepare a release. |
+| `--preflight` | Runs only the preflight checks and builds no release. It doesn't look for your certificate. The first thing to run when you prepare a release. |
 | `--skip-notarize` | Signs with your Developer ID but doesn't notarize, for testing the pipeline. The post-build checks skip Gatekeeper and the stapled tickets. |
-| `--adhoc` | No Developer ID at all, for testing on your own Mac only; other Macs will refuse the app. Skips the git, version and CI checks, and the media check (add `--media-check` to run it). The post-build checks that apply still run. |
+| `--adhoc` | No Developer ID at all, for testing on your own Mac only; other Macs will refuse the app. Skips the git, version and CI checks, the media check (add `--media-check` to run it) and the scroll benchmark (add `--scroll-benchmark`). The post-build checks that apply still run. |
 | `--allow-dirty` | Lets uncommitted changes through the clean working tree check, for test builds. The check shows as skipped. |
 | `--skip-tests` | Skips the package tests. |
 | `--skip-ci-check` | Skips asking GitHub about CI, for instance when you're offline or GitHub is down. |
 | `--skip-media-check` | Skips the media sites check. Use it when you've looked at the failure and it shouldn't hold up the release, such as a site that's down for an hour. |
 | `--media-check` | Checks the media sites even with `--adhoc`. |
+| `--skip-scroll-benchmark` | Skips the scroll benchmark, which takes about 12 minutes. Use it when you've looked at a failure and it shouldn't hold up the release, or when the Mac is busy with something else. |
+| `--scroll-benchmark` | Runs the scroll benchmark even with `--adhoc`. |
 | `--skip-preflight` | Skips every preflight check. **Only for emergencies, and for dry runs you won't ship**: it prints a warning at the start and the end, and the post-build checks still run. After an emergency release, run `scripts/release.sh --preflight` as soon as you can. |
 
-`scripts/release-preflight.sh` takes `--adhoc`, `--allow-dirty`, `--skip-tests`, `--skip-ci-check`, `--skip-media-check` and `--media-check` too, and `--help` lists them.
+`scripts/release-preflight.sh` takes `--adhoc`, `--allow-dirty`, `--skip-tests`, `--skip-ci-check`, `--skip-media-check`, `--media-check`, `--skip-scroll-benchmark` and `--scroll-benchmark` too, and `--help` lists them.
 
 ## Checking the build before you publish
 
@@ -250,6 +260,59 @@ The check resolves each sample link in `Packages/VelaKit/Sources/VelaMedia/Media
 - **Every site fails:** check your connection. The check needs internet access.
 
 A site that keeps failing for reasons Vela can't fix is better dropped from `MediaSites.swift` and the recognizers than left broken; say so in the changelog.
+
+## Scroll benchmark
+
+Vela must scroll smoothly on the slowest Macs it supports: 2019–2020 Intel MacBook Pros and iMacs, and an M1 with 8 GB. `scripts/benchmark-scroll.sh` measures scrolling the same way every time, so you can tell whether a change made it cheaper or dearer:
+
+```sh
+scripts/benchmark-scroll.sh                      # build, 3 runs per mode, compare with the baseline
+scripts/benchmark-scroll.sh --update-baseline    # the same, then record the medians as the new baseline
+scripts/benchmark-scroll.sh --modes normal --runs 5 -- --bench-scenarios sweep
+scripts/benchmark-scroll.sh --no-build -- --preset classic --set chat.showAvatars=true
+```
+
+- **What runs.** An optimized Release build for this Mac's architecture, in `build/benchmark`, with a bundle id of its own (`io.github.r3volution11.Vela.bench`, named **Vela Bench**). It has its own sandbox, settings and Keychain, runs in demo mode and never touches your data or your running Vela. It's a background app (no Dock icon or menu bar), started from its executable rather than with `open`, and unregistered from LaunchServices afterwards.
+- **The channel.** About 2,000 lines over five days, generated from a fixed seed (`ScrollBenchmarkContent`): one-liners, long wrapped messages, mentions, IRC formatting, emoji, replies, reactions, joins, parts and quits with a 96-line netsplit, day dividers, photos, animated GIFs (plain files and GIPHY's MP4s), YouTube players and link cards. Previews, pictures, GIFs and thumbnails come from local stand-ins (`ScrollBenchmarkMedia`), so nothing is fetched and every run sees the same thing. The theme is Palenight, in a 1280×800 window on the display with the menu bar.
+- **The scrolling.** Synthetic trackpad swipes sent to the window (no accessibility permission needed), in five scenarios:
+  - `slow`: short swipes up, with a pause after each, as when reading back;
+  - `medium`: steady swipes that glide;
+  - `fling`: hard flings up to the top, then down to the bottom;
+  - `jump`: to the top and back to the bottom, as the Home and End keys do, three times;
+  - `sweep`: exactly 48 points every frame, 24,000 points up and back down. However long a frame takes, the next moves the list the same distance, so the work done depends on Vela, not on how fast the Mac is. `sweep-a11y` does it again with SwiftUI's accessibility on (see below).
+
+  A run takes about 100 seconds. **You won't see it or notice it:** the window is on screen and draws as usual, its display link ticking at the display's rate, but it's fully transparent and lets clicks through. Vela Bench is never activated and its window never becomes key, nothing is clicked, and the pointer stays where it is, so you can keep typing in another app. Runs measured this way do the same work as with the window showing (the same rows built, text drawn and instructions per frame, within 3%). To watch a run, pass `-- --bench-window visible`. (An inactive window gets no hover events, so hovering isn't measured; `-- --bench-pointer list` moves your pointer over the list anyway, and the script warns first.) Busy apps make the numbers noisier, so lighter work is better meanwhile. Plug in, and turn off Low Power Mode.
+- **The modes.** `normal`, and `lowend`: under `taskpolicy -b`, background priority on the slowest cores, which runs CPU-bound code about 2.9 times slower on an M5 Pro. It stands in for the slowest supported Macs. (`taskpolicy -c background` slows it down too, but by anywhere from 1.6 to 3 times between runs.)
+- **Accessibility.** As soon as any accessibility client looks at a window, SwiftUI builds accessibility for every row it lays out, from then on: VoiceOver, but also window managers, launchers and menu bar tools such as BetterTouchTool, Bartender, Alfred or Raycast. Scrolling then costs about twice as much, and many people have such a tool running. It can start in the middle of a run, so each scenario reports whether it was on (`a11y`), and the summary keeps those runs apart (`-a11y`). `sweep-a11y` turns it on deliberately, so both costs are measured every time.
+- **The numbers**, per scenario:
+  - frame intervals while the list moves (p50, p95, p99), frames over 1.5 and 2 times the refresh interval, and hitch time per second (Apple's measure: under 5 ms/s is good, over 10 is bad);
+  - CPU time per second, per 1,000 points scrolled and per frame the list moved in, and on Apple silicon instructions per frame. These depend least on the Mac and the display;
+  - the main thread's share, and memory (`phys_footprint`, peak and at the end).
+- **Results** go to `build/benchmark/results/<date-time>/`: each run's JSON and summary in `runs/`, and `summary.json` with the medians and the spread between runs.
+
+### Budgets
+
+`--check`, which the preflight check uses, fails when a median is over its budget against `benchmarks/scroll-baseline.json`. (Until a baseline is recorded, that file is a placeholder and the check is skipped.) The budgets are in `scripts/lib/benchmark-scroll.py`:
+
+| Number | Scenarios | Fails when it's over | Why |
+| --- | --- | --- | --- |
+| Instructions per frame | `sweep`, `sweep-a11y` | the baseline + 15% | Between runs it differs by about 2% on a quiet Mac, and by up to 8% while other apps are building. Real regressions are bigger: a body re-evaluated every frame cost 30% more. |
+| CPU time per frame | `sweep`, `sweep-a11y`, `normal` mode only | the baseline + 40% + 0.3 ms | The same work runs up to 30% slower when other apps are busy, and under `taskpolicy -b` it swings by a third, so `lowend` only reports it. Macs without instruction counts lean on this one. |
+| Peak memory | every run | the baseline + 25% + 25 MB | It varies by a few percent with what's cached when. |
+
+Hitches and frame times are compared and printed too, but never fail the check: they swing by half or more between runs whenever something else on the Mac wakes up. A baseline compares only with runs on the same kind of Mac, display refresh rate, layout and window size; otherwise the check is skipped and says why. To record one, run `scripts/benchmark-scroll.sh --update-baseline` on a quiet Mac, look at the summary, and commit `benchmarks/scroll-baseline.json`. Record a new one whenever a change is meant to cost more, or made scrolling cheaper, and say so in the commit.
+
+### Profiling a run
+
+Every scenario is a Points of Interest interval, so a trace shows where each one is. Record the benchmark under Instruments with `xctrace` (Time Profiler, SwiftUI or Animation Hitches), launching the app bundle so xctrace can tell it from your Vela:
+
+```sh
+app=build/benchmark/DerivedData/Build/Products/Release/Vela.app
+out=~/Library/Containers/io.github.r3volution11.Vela.bench/Data/tmp/profile.json
+xcrun xctrace record --template 'Time Profiler' --output build/benchmark/time.trace --no-prompt \
+  --launch -- "$app" --demo --scroll-benchmark --bench-output "$out" --bench-scenarios sweep,sweep-a11y
+open build/benchmark/time.trace
+```
 
 ## The adult-domain list
 

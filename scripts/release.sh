@@ -1,30 +1,34 @@
 #!/bin/zsh
 # Builds a signed, notarized, stapled Vela.dmg ready for a GitHub release.
 #
-#   scripts/release.sh --preflight          # only the release checks; builds nothing
+#   scripts/release.sh --preflight          # only the release checks; builds no release
 #   scripts/release.sh                      # Developer ID sign + notarize + staple
 #   scripts/release.sh --skip-notarize      # sign only (for testing the pipeline)
 #   scripts/release.sh --adhoc              # no Developer ID at all (local testing)
 #
 # Before archiving (after the quick certificate checks), it runs the preflight
 # checks (scripts/release-preflight.sh): git, version and changelog, CI, the
-# adult-domain list, generated files, the package tests, the website and the
-# media sites (scripts/check-media-sites.sh). If one fails, no release is
-# built. Once the DMG is made, notarized and stapled, scripts/verify-release.sh
+# adult-domain list, generated files, the package tests, the website, the
+# media sites (scripts/check-media-sites.sh) and the scroll benchmark
+# (scripts/benchmark-scroll.sh). If one fails, no release is built. Once the DMG is made, notarized and stapled, scripts/verify-release.sh
 # checks the app inside it, and a failure there stops the release too. A
 # summary of every check ends the output. See docs/RELEASING.md,
 # "Release checks", for what each check needs.
 #
 # Options:
-#   --preflight          Run only the preflight checks, and build nothing.
+#   --preflight          Run only the preflight checks, and build no release.
 #   --skip-notarize      Sign, but don't notarize (for testing the pipeline).
 #   --adhoc              No Developer ID at all (local testing). Skips the git,
-#                        version and CI checks, and the media check.
+#                        version and CI checks, the media check and the scroll
+#                        benchmark.
 #   --allow-dirty        Let uncommitted changes through (for testing).
 #   --skip-tests         Don't run the package tests.
 #   --skip-ci-check      Don't ask GitHub whether CI passed.
 #   --skip-media-check   Don't check the media sites (say, a site is down for an afternoon).
 #   --media-check        Check them even with --adhoc, which otherwise skips it.
+#   --skip-scroll-benchmark  Don't run the scroll benchmark (it takes about 12
+#                        minutes).
+#   --scroll-benchmark   Run it even with --adhoc, which otherwise skips it.
 #   --skip-preflight     Skip every preflight check. Only for emergencies, and
 #                        for dry runs you won't ship.
 #
@@ -55,7 +59,7 @@ for arg in "$@"; do
     --preflight) preflight_only=1 ;;
     --skip-preflight) skip_preflight=1 ;;
     --allow-dirty) allow_dirty=1; preflight_options+=("$arg") ;;
-    --skip-tests|--skip-ci-check|--skip-media-check|--media-check) preflight_options+=("$arg") ;;
+    --skip-tests|--skip-ci-check|--skip-media-check|--media-check|--skip-scroll-benchmark|--scroll-benchmark) preflight_options+=("$arg") ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -64,7 +68,7 @@ if (( preflight_only && skip_preflight )); then
   exit 2
 fi
 # An ad hoc build is for trying things on this Mac, not for shipping: the
-# preflight skips the git, version, CI and media checks.
+# preflight skips the git, version, CI and media checks and the scroll benchmark.
 if (( adhoc )); then
   preflight_options+=(--adhoc)
 fi
@@ -134,12 +138,14 @@ fi
 
 # ---------------------------------------------------------------- preflight
 # Git, version and changelog, CI, the adult-domain list, generated files, the
-# tests, the website and the media sites (docs/RELEASING.md, "Release checks").
+# tests, the website, the media sites and the scroll benchmark (docs/RELEASING.md,
+# "Release checks").
 if (( skip_preflight )); then
   print
   print -P "%F{red}%B!!! --skip-preflight: NONE of the release checks run. !!!%b%f"
   print -P "%F{red}    Nothing checks the branch, a clean and pushed tree, the version, the changelog, CI,%f"
-  print -P "%F{red}    the adult-domain list, the generated files, the tests, the website or the media sites.%f"
+  print -P "%F{red}    the adult-domain list, the generated files, the tests, the website, the media sites%f"
+  print -P "%F{red}    or the scroll benchmark.%f"
   print -P "%F{red}    Use it only in an emergency or for a build you won't ship. After an emergency release,%f"
   print -P "%F{red}    run scripts/release.sh --preflight as soon as you can.%f"
   print

@@ -51,6 +51,7 @@ public actor ImageLoader {
         configuration.urlCache = URLCache(memoryCapacity: 0, diskCapacity: 256 * 1024 * 1024, directory: nil)
         configuration.httpMaximumConnectionsPerHost = 6
         configuration.waitsForConnectivity = false
+        MediaSessionHooks.apply(to: configuration)
         return URLSession(configuration: configuration)
     }
 

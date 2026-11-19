@@ -29,6 +29,7 @@ Thanks for helping build Vela! This guide covers the basics.
   swift run --package-path Packages/VelaKit vela-theme-tool schema > schemas/vela-theme.schema.json
   ```
 - **Tests use Swift Testing** (`import Testing`). Protocol code should be covered by `MockTransport`-driven tests.
+- **Scrolling has a budget.** Vela must scroll smoothly on the slowest Macs it supports (2019–2020 Intel Macs, an 8 GB M1). If you change the message list, its rows or inline media, run `scripts/benchmark-scroll.sh` before and after: it scrolls a big, fixed channel in a Release build and compares the numbers with `benchmarks/scroll-baseline.json`. Its window is invisible and never takes the focus or the pointer, so you can keep working while it runs (about 12 minutes). See [docs/RELEASING.md](docs/RELEASING.md#scroll-benchmark).
 - Keep pull requests focused. One feature or fix per PR is easiest to review.
 
 ## Media sites

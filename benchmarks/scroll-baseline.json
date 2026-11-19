@@ -1,0 +1,850 @@
+{
+  "app": {
+    "build": "1",
+    "bundleID": "io.github.r3volution11.Vela.bench",
+    "version": "0.1.0"
+  },
+  "commit": "61f8cbf with the scroll benchmark added (uncommitted)",
+  "config": {
+    "accessibility": "auto",
+    "avatars": false,
+    "layout": "grouped",
+    "lines": 2000,
+    "mix": "full",
+    "pointer": "none",
+    "preset": "modern",
+    "theme": "Palenight",
+    "window": "1280x800",
+    "windowShown": false
+  },
+  "date": "2026-11-18T23:43:11Z",
+  "display": {
+    "name": "S27B80T",
+    "refreshHz": 60,
+    "scale": 2
+  },
+  "machine": {
+    "arch": "arm64",
+    "cores": 18,
+    "cpu": "Apple M5 Pro",
+    "memoryGB": 64,
+    "model": "Mac17,12",
+    "os": "Version 27.2.1 (Build 26B8132)"
+  },
+  "modes": {
+    "lowend": {
+      "appActive": false,
+      "lowPowerMode": false,
+      "memory": {
+        "endMB": {
+          "median": 404.14208984375
+        },
+        "peakMB": {
+          "median": 470.6733627319336
+        }
+      },
+      "runs": 3,
+      "scenarios": {
+        "fling": {
+          "activeS": {
+            "median": 47.6362518750102
+          },
+          "cpuMsPer1000Pt": {
+            "median": 154.58657562129528
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 62.44524722222222
+          },
+          "cpuMsPerS": {
+            "median": 943.4149605818985
+          },
+          "distancePt": {
+            "median": 290844.0
+          },
+          "durationS": {
+            "median": 47.657266291673295
+          },
+          "footprintPeakMB": {
+            "median": 429.59521484375
+          },
+          "frameMaxMs": {
+            "median": 299.2844583350234
+          },
+          "frameP50Ms": {
+            "median": 19.298041661386378
+          },
+          "frameP95Ms": {
+            "median": 143.00037499924656
+          },
+          "frameP99Ms": {
+            "median": 217.30454165663105
+          },
+          "frames": {
+            "median": 1028.0
+          },
+          "framesOver1_5x": {
+            "median": 495.0
+          },
+          "framesOver2x": {
+            "median": 466.0
+          },
+          "hitchMsPerS": {
+            "median": 636.9988632034319
+          },
+          "instructionsMPer1000Pt": {
+            "median": 572.4761574754543
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 233.84891469166666
+          },
+          "mainBusyPct": {
+            "median": 84.02419069023055
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 802.2871846235211
+          },
+          "movedFrames": {
+            "median": 664.0
+          },
+          "ticksPerS": {
+            "median": 21.69658649054029
+          }
+        },
+        "jump": {
+          "activeS": {
+            "median": 6.050432083342457
+          },
+          "cpuMsPer1000Pt": {
+            "median": 0.6912613966401422
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 51.29125000000023
+          },
+          "cpuMsPerS": {
+            "median": 50.24026961333442
+          },
+          "distancePt": {
+            "median": 574267.5
+          },
+          "durationS": {
+            "median": 8.000206666663871
+          },
+          "footprintPeakMB": {
+            "median": 397.8139419555664
+          },
+          "frameMaxMs": {
+            "median": 68.00066666619387
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP99Ms": {
+            "median": 25.954833341529593
+          },
+          "frames": {
+            "median": 355.0
+          },
+          "framesOver1_5x": {
+            "median": 5.0
+          },
+          "framesOver2x": {
+            "median": 3.0
+          },
+          "hitchMsPerS": {
+            "median": 22.258502779517435
+          },
+          "instructionsMPer1000Pt": {
+            "median": 2.6703054838644467
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 198.13533175
+          },
+          "mainBusyPct": {
+            "median": 4.256714374135559
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 43.61425477000172
+          },
+          "movedFrames": {
+            "median": 7.0
+          },
+          "ticksPerS": {
+            "median": 58.62348555997685
+          }
+        },
+        "medium": {
+          "activeS": {
+            "median": 16.851087291666772
+          },
+          "cpuMsPer1000Pt": {
+            "median": 542.0003415446356
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 20.178948799999997
+          },
+          "cpuMsPerS": {
+            "median": 744.4506892227145
+          },
+          "distancePt": {
+            "median": 23420.0
+          },
+          "durationS": {
+            "median": 17.12783683332964
+          },
+          "footprintPeakMB": {
+            "median": 310.9857482910156
+          },
+          "frameMaxMs": {
+            "median": 106.750999999349
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 50.09124999924097
+          },
+          "frameP99Ms": {
+            "median": 81.92045833857264
+          },
+          "frames": {
+            "median": 670.0
+          },
+          "framesOver1_5x": {
+            "median": 202.0
+          },
+          "framesOver2x": {
+            "median": 191.0
+          },
+          "hitchMsPerS": {
+            "median": 334.4724306183366
+          },
+          "instructionsMPer1000Pt": {
+            "median": 1738.9433143040137
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 64.0475398064
+          },
+          "mainBusyPct": {
+            "median": 72.44477291950652
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 679.7961171737056
+          },
+          "movedFrames": {
+            "median": 625.0
+          },
+          "ticksPerS": {
+            "median": 40.05175940636528
+          }
+        },
+        "slow": {
+          "activeS": {
+            "median": 16.28431820833066
+          },
+          "cpuMsPer1000Pt": {
+            "median": 1832.4927782497875
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 7.126136563876651
+          },
+          "cpuMsPerS": {
+            "median": 391.4556384096194
+          },
+          "distancePt": {
+            "median": 3526.0
+          },
+          "durationS": {
+            "median": 16.48679170833202
+          },
+          "footprintPeakMB": {
+            "median": 150.89186096191406
+          },
+          "frameMaxMs": {
+            "median": 70.64325000101235
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP99Ms": {
+            "median": 33.335083338897675
+          },
+          "frames": {
+            "median": 954.0
+          },
+          "framesOver1_5x": {
+            "median": 16.0
+          },
+          "framesOver2x": {
+            "median": 15.0
+          },
+          "hitchMsPerS": {
+            "median": 23.071281724092646
+          },
+          "instructionsMPer1000Pt": {
+            "median": 5868.851268292682
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 22.690317513157893
+          },
+          "mainBusyPct": {
+            "median": 38.554395947773465
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 363.8991248020656
+          },
+          "movedFrames": {
+            "median": 908.0
+          },
+          "ticksPerS": {
+            "median": 58.602190046129785
+          }
+        },
+        "sweep": {
+          "activeS": {
+            "median": 22.217981750000035
+          },
+          "cpuMsPer1000Pt": {
+            "median": 342.73553064711
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 16.450619999999986
+          },
+          "cpuMsPerS": {
+            "median": 723.1864455671555
+          },
+          "distancePt": {
+            "median": 47998.0
+          },
+          "durationS": {
+            "median": 22.680500041664345
+          },
+          "footprintPeakMB": {
+            "median": 400.84521484375
+          },
+          "frameMaxMs": {
+            "median": 78.97741667693481
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 39.28558333427645
+          },
+          "frameP99Ms": {
+            "median": 50.00262500834651
+          },
+          "frames": {
+            "median": 1017.0
+          },
+          "framesOver1_5x": {
+            "median": 275.0
+          },
+          "framesOver2x": {
+            "median": 244.0
+          },
+          "hitchMsPerS": {
+            "median": 235.58851904409406
+          },
+          "instructionsMPer1000Pt": {
+            "median": 996.2086948414517
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 47.816024935
+          },
+          "mainBusyPct": {
+            "median": 73.94674808685865
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 703.4649053399996
+          },
+          "movedFrames": {
+            "median": 1000.0
+          },
+          "ticksPerS": {
+            "median": 46.074821899002345
+          }
+        },
+        "sweep-a11y": {
+          "activeS": {
+            "median": 41.05246133332548
+          },
+          "cpuMsPer1000Pt": {
+            "median": 759.3458477436561
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 36.48356556556558
+          },
+          "cpuMsPerS": {
+            "median": 879.4043547869156
+          },
+          "distancePt": {
+            "median": 47998.0
+          },
+          "durationS": {
+            "median": 41.44519162499637
+          },
+          "footprintPeakMB": {
+            "median": 408.43896484375
+          },
+          "frameMaxMs": {
+            "median": 141.52833333355375
+          },
+          "frameP50Ms": {
+            "median": 37.77191665722057
+          },
+          "frameP95Ms": {
+            "median": 81.57650000066496
+          },
+          "frameP99Ms": {
+            "median": 98.2066666620085
+          },
+          "frames": {
+            "median": 1017.0
+          },
+          "framesOver1_5x": {
+            "median": 696.0
+          },
+          "framesOver2x": {
+            "median": 640.0
+          },
+          "hitchMsPerS": {
+            "median": 583.1642735704775
+          },
+          "instructionsMPer1000Pt": {
+            "median": 2693.6330752114673
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 129.41841876276277
+          },
+          "mainBusyPct": {
+            "median": 89.98857687503724
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 858.1522151425959
+          },
+          "movedFrames": {
+            "median": 999.0
+          },
+          "ticksPerS": {
+            "median": 25.117509635838033
+          }
+        }
+      },
+      "thermalState": 0
+    },
+    "normal": {
+      "appActive": false,
+      "lowPowerMode": false,
+      "memory": {
+        "endMB": {
+          "median": 406.6108627319336
+        },
+        "peakMB": {
+          "median": 465.4233856201172
+        }
+      },
+      "runs": 3,
+      "scenarios": {
+        "fling": {
+          "activeS": {
+            "median": 39.6524005416577
+          },
+          "cpuMsPer1000Pt": {
+            "median": 78.30350160032211
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 11.926883163265307
+          },
+          "cpuMsPerS": {
+            "median": 574.7438211268453
+          },
+          "distancePt": {
+            "median": 293066.0
+          },
+          "durationS": {
+            "median": 39.66493291666848
+          },
+          "footprintPeakMB": {
+            "median": 438.8140563964844
+          },
+          "frameMaxMs": {
+            "median": 50.90529166045599
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 16.675583334290422
+          },
+          "frameP99Ms": {
+            "median": 33.335083338897675
+          },
+          "frames": {
+            "median": 2258.0
+          },
+          "framesOver1_5x": {
+            "median": 78.0
+          },
+          "framesOver2x": {
+            "median": 78.0
+          },
+          "hitchMsPerS": {
+            "median": 45.92422370000947
+          },
+          "instructionsMPer1000Pt": {
+            "median": 696.6847877491028
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 103.98731360000001
+          },
+          "mainBusyPct": {
+            "median": 48.37501297826855
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 477.5347974015222
+          },
+          "movedFrames": {
+            "median": 1960.0
+          },
+          "ticksPerS": {
+            "median": 57.23571216544837
+          }
+        },
+        "jump": {
+          "activeS": {
+            "median": 6.067062124973745
+          },
+          "cpuMsPer1000Pt": {
+            "median": 0.40402354196515977
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 30.101874999999723
+          },
+          "cpuMsPerS": {
+            "median": 29.9632476937002
+          },
+          "distancePt": {
+            "median": 596042.0
+          },
+          "durationS": {
+            "median": 8.037012624990894
+          },
+          "footprintPeakMB": {
+            "median": 391.2202377319336
+          },
+          "frameMaxMs": {
+            "median": 34.80270833824761
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP99Ms": {
+            "median": 16.680833330610767
+          },
+          "frames": {
+            "median": 362.0
+          },
+          "framesOver1_5x": {
+            "median": 2.0
+          },
+          "framesOver2x": {
+            "median": 2.0
+          },
+          "hitchMsPerS": {
+            "median": 6.4206188779490665
+          },
+          "instructionsMPer1000Pt": {
+            "median": 2.9346788296797874
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 218.648979875
+          },
+          "mainBusyPct": {
+            "median": 2.3561200565138987
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 25.49591615208286
+          },
+          "movedFrames": {
+            "median": 8.0
+          },
+          "ticksPerS": {
+            "median": 59.55624747479842
+          }
+        },
+        "medium": {
+          "activeS": {
+            "median": 16.717641208320856
+          },
+          "cpuMsPer1000Pt": {
+            "median": 227.96173719947043
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 5.601448058761804
+          },
+          "cpuMsPerS": {
+            "median": 315.8188844187886
+          },
+          "distancePt": {
+            "median": 23417.0
+          },
+          "durationS": {
+            "median": 16.91851787500491
+          },
+          "footprintPeakMB": {
+            "median": 308.9232940673828
+          },
+          "frameMaxMs": {
+            "median": 33.335083338897675
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP99Ms": {
+            "median": 16.66783333348576
+          },
+          "frames": {
+            "median": 995.0
+          },
+          "framesOver1_5x": {
+            "median": 5.0
+          },
+          "framesOver2x": {
+            "median": 5.0
+          },
+          "hitchMsPerS": {
+            "median": 4.985250454257354
+          },
+          "instructionsMPer1000Pt": {
+            "median": 1910.443090660631
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 46.94317508289612
+          },
+          "mainBusyPct": {
+            "median": 29.551370376179214
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 284.0272260021158
+          },
+          "movedFrames": {
+            "median": 950.0
+          },
+          "ticksPerS": {
+            "median": 59.72322229614282
+          }
+        },
+        "slow": {
+          "activeS": {
+            "median": 16.234315875000902
+          },
+          "cpuMsPer1000Pt": {
+            "median": 748.9472190692395
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 2.8440625
+          },
+          "cpuMsPerS": {
+            "median": 160.30487905208676
+          },
+          "distancePt": {
+            "median": 3526.0
+          },
+          "durationS": {
+            "median": 16.432379499994568
+          },
+          "footprintPeakMB": {
+            "median": 152.26690673828125
+          },
+          "frameMaxMs": {
+            "median": 46.73187500156928
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP99Ms": {
+            "median": 16.667541669448838
+          },
+          "frames": {
+            "median": 972.0
+          },
+          "framesOver1_5x": {
+            "median": 2.0
+          },
+          "framesOver2x": {
+            "median": 2.0
+          },
+          "hitchMsPerS": {
+            "median": 2.8816648680209958
+          },
+          "instructionsMPer1000Pt": {
+            "median": 5663.80172616345
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 21.507798796336207
+          },
+          "mainBusyPct": {
+            "median": 15.991331208958732
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 146.13782930233583
+          },
+          "movedFrames": {
+            "median": 927.0
+          },
+          "ticksPerS": {
+            "median": 59.79055147581644
+          }
+        },
+        "sweep": {
+          "activeS": {
+            "median": 17.051022083338466
+          },
+          "cpuMsPer1000Pt": {
+            "median": 126.8246801950081
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 6.087330999999999
+          },
+          "cpuMsPerS": {
+            "median": 349.3594493618925
+          },
+          "distancePt": {
+            "median": 47998.0
+          },
+          "durationS": {
+            "median": 17.427163541666232
+          },
+          "footprintPeakMB": {
+            "median": 390.3452377319336
+          },
+          "frameMaxMs": {
+            "median": 33.335083338897675
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP99Ms": {
+            "median": 16.668083335389383
+          },
+          "frames": {
+            "median": 1017.0
+          },
+          "framesOver1_5x": {
+            "median": 6.0
+          },
+          "framesOver2x": {
+            "median": 6.0
+          },
+          "hitchMsPerS": {
+            "median": 5.865366422630009
+          },
+          "instructionsMPer1000Pt": {
+            "median": 974.1530135005625
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 46.757396342
+          },
+          "mainBusyPct": {
+            "median": 33.03166004456953
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 327.3638298257765
+          },
+          "movedFrames": {
+            "median": 1000.0
+          },
+          "ticksPerS": {
+            "median": 59.676951875357474
+          }
+        },
+        "sweep-a11y": {
+          "activeS": {
+            "median": 19.13450754166115
+          },
+          "cpuMsPer1000Pt": {
+            "median": 262.61919246635273
+          },
+          "cpuMsPerMovedFrame": {
+            "median": 12.617813813813815
+          },
+          "cpuMsPerS": {
+            "median": 638.2322583097878
+          },
+          "distancePt": {
+            "median": 47998.0
+          },
+          "durationS": {
+            "median": 19.519150541658746
+          },
+          "footprintPeakMB": {
+            "median": 411.0171127319336
+          },
+          "frameMaxMs": {
+            "median": 43.965249991742894
+          },
+          "frameP50Ms": {
+            "median": 16.667541669448838
+          },
+          "frameP95Ms": {
+            "median": 33.335083338897675
+          },
+          "frameP99Ms": {
+            "median": 33.335083338897675
+          },
+          "frames": {
+            "median": 1017.0
+          },
+          "framesOver1_5x": {
+            "median": 130.0
+          },
+          "framesOver2x": {
+            "median": 127.0
+          },
+          "hitchMsPerS": {
+            "median": 113.93423610427676
+          },
+          "instructionsMPer1000Pt": {
+            "median": 2559.5060304596027
+          },
+          "instructionsMPerMovedFrame": {
+            "median": 122.9741445945946
+          },
+          "mainBusyPct": {
+            "median": 63.20033205432265
+          },
+          "mainThreadCpuMsPerS": {
+            "median": 617.6457019847882
+          },
+          "movedFrames": {
+            "median": 1000.0
+          },
+          "ticksPerS": {
+            "median": 53.28100717192483
+          }
+        }
+      },
+      "thermalState": 0
+    }
+  },
+  "note": "Medians of scripts/benchmark-scroll.sh runs. Rewrite with scripts/benchmark-scroll.sh --update-baseline.",
+  "schema": 1
+}

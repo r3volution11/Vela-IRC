@@ -2,9 +2,10 @@
 # Checks that everything is ready for a Vela release. scripts/release.sh runs
 # it before archiving and stops if a check fails; run it on its own (or as
 # scripts/release.sh --preflight) while you prepare a release. It builds no
-# app and doesn't touch your files or branches: besides fetching main and the
-# tags from origin, it writes only to ignored folders (build/,
-# website/node_modules, the website's build output).
+# app (other than the scroll benchmark's own copy, in build/benchmark) and
+# doesn't touch your files or branches: besides fetching main and the tags
+# from origin, it writes only to ignored folders (build/, website/node_modules,
+# the website's build output).
 #
 #   scripts/release-preflight.sh                  # every check
 #   scripts/release-preflight.sh --skip-tests     # every check but swift test
@@ -30,22 +31,29 @@
 #   Website        npm ci (only if node_modules is missing), npm run docs:build,
 #                  npm run docs:check
 #   Media sites    scripts/check-media-sites.sh
+#   Scroll         scripts/benchmark-scroll.sh --check: scrolling costs no more
+#                  than benchmarks/scroll-baseline.json allows (about 12 minutes;
+#                  its window is invisible and never takes the focus).
 #
 # Every check runs, even after one fails, so you see everything to fix at once.
 #
 # Options:
 #   --adhoc              For an ad hoc build (scripts/release.sh --adhoc): skip the
-#                        git, version and CI checks, and the media check unless
-#                        --media-check is given.
+#                        git, version and CI checks, the media check unless
+#                        --media-check is given, and the scroll benchmark unless
+#                        --scroll-benchmark is given.
 #   --allow-dirty        Let uncommitted changes through (for testing the pipeline).
 #   --skip-tests         Don't run swift test.
 #   --skip-ci-check      Don't ask GitHub about CI.
 #   --skip-media-check   Don't check the media sites.
 #   --media-check        Check the media sites even with --adhoc.
+#   --skip-scroll-benchmark  Don't run the scroll benchmark.
+#   --scroll-benchmark   Run the scroll benchmark even with --adhoc.
 #   --results <file>     Append each result to <file> and leave the summary to the
 #                        caller (scripts/release.sh).
 #
-# Logs: build/release-preflight/ (swift test, the website build, the generators).
+# Logs: build/release-preflight/ (swift test, the website build, the generators,
+# the scroll benchmark).
 # SwiftPM builds in build/release-preflight/swift, away from Xcode's and your
 # editor's builds.
 #
@@ -63,6 +71,7 @@ allow_dirty=0
 run_tests=1
 ci_check=1
 media_check_option=""
+scroll_benchmark_option=""
 results=""
 
 usage() { sed -n '2,/^set -euo/p' "$script" | sed -e '$d' -e 's/^# \{0,1\}//'; }
@@ -75,6 +84,8 @@ while (( $# )); do
     --skip-ci-check) ci_check=0; shift ;;
     --skip-media-check) media_check_option=0; shift ;;
     --media-check) media_check_option=1; shift ;;
+    --skip-scroll-benchmark) scroll_benchmark_option=0; shift ;;
+    --scroll-benchmark) scroll_benchmark_option=1; shift ;;
     --results)
       [[ $# -ge 2 && -n "$2" ]] || { print -u2 "--results needs a file"; exit 2; }
       results="$2"; shift 2 ;;
@@ -84,6 +95,7 @@ while (( $# )); do
 done
 # An ad hoc build is for trying things on this Mac, not for shipping.
 media_check=${media_check_option:-$(( adhoc ? 0 : 1 ))}
+scroll_benchmark=${scroll_benchmark_option:-$(( adhoc ? 0 : 1 ))}
 
 work="$PWD/build/release-preflight"
 swift_scratch="$work/swift"
@@ -610,6 +622,52 @@ check_media_sites() {
   fi
 }
 
+# ---------------------------------------------------------------- scroll benchmark
+# Scrolling must cost no more than the baseline allows (the budgets are in
+# scripts/lib/benchmark-scroll.py). The benchmark builds its own copy of Vela
+# (build/benchmark) and compares the medians of its runs with the baseline,
+# which only means something on the kind of Mac and display it was recorded on.
+check_scroll_benchmark() {
+  check_section "Scroll benchmark"
+  if (( ! scroll_benchmark )); then
+    if [[ "$scroll_benchmark_option" == 0 ]]; then
+      check_skip "Scroll benchmark" "--skip-scroll-benchmark"
+    else
+      check_skip "Scroll benchmark" "ad hoc build (add --scroll-benchmark to run it)"
+    fi
+    return
+  fi
+  local baseline=benchmarks/scroll-baseline.json log="$work/scroll-benchmark.log" why
+  local -i scroll_status=0
+  if [[ ! -f "$baseline" ]] || grep -q '"placeholder": true' "$baseline"; then
+    check_skip "Scroll benchmark" "no baseline recorded in $baseline yet (scripts/benchmark-scroll.sh --update-baseline records one)"
+    return
+  fi
+  print "    Running scripts/benchmark-scroll.sh (about 12 minutes; its window is invisible and never takes the focus)…"
+  scripts/benchmark-scroll.sh --check --out "$work/scroll-benchmark" > "$log" 2>&1 || scroll_status=$?
+  case $scroll_status in
+    0)
+      check_pass "Scroll benchmark" "every budgeted number is within $baseline's budget" ;;
+    3)
+      why=$(grep -m 1 -E 'recorded on a different setup|No baseline' "$log" | sed 's/, so nothing is checked.*//' || print "nothing to compare with")
+      check_skip "Scroll benchmark" "${why%.}" ;;
+    1)
+      if grep -q '^Over budget' "$log"; then
+        check_fail "Scroll benchmark" "scrolling costs more than $baseline allows" \
+          "Find the change that made it slower (docs/RELEASING.md, \"Scroll benchmark\"; everything is in ${log#$PWD/}). If the cost is intended, record a new baseline with scripts/benchmark-scroll.sh --update-baseline and commit it."
+        sed -n '/^Over budget/,$p' "$log" | sed 1d | head -n 12 | indent
+      else
+        check_fail "Scroll benchmark" "the benchmark didn't finish" \
+          "See ${log#$PWD/}, or run scripts/benchmark-scroll.sh on its own. To release anyway, rerun with --skip-scroll-benchmark."
+        tail -n 8 "$log" | indent
+      fi ;;
+    *)
+      check_fail "Scroll benchmark" "scripts/benchmark-scroll.sh exited with $scroll_status" \
+        "See ${log#$PWD/}. To release anyway, rerun with --skip-scroll-benchmark."
+      tail -n 8 "$log" | indent ;;
+  esac
+}
+
 check_git
 check_version
 check_ci
@@ -618,6 +676,7 @@ check_generated
 check_tests
 check_website
 check_media_sites
+check_scroll_benchmark
 
 # With --results, the caller prints the summary and the verdict.
 if [[ -n "$results" ]]; then
