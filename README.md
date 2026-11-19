@@ -303,3 +303,7 @@ Vela builds on a lot of other people's work. Thank you to:
 - **Screenshot media:** *Big Buck Bunny* (© 2008 Blender Foundation, CC BY 3.0), an ESO image (ESO/VVVX survey, CC BY 4.0), and public-domain images and animations from NASA, ESA and the U.S. Air Force, via Wikimedia Commons, GIPHY and Tenor.
 
 The full list, with links and licenses, is at **[velairc.app/help/license](https://velairc.app/help/license)**.
+
+---
+
+<sub>Vela was made with the help of AI. Its source code is open, so anyone can read exactly what it does.</sub>

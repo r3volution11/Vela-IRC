@@ -21,6 +21,8 @@ The source code is at [github.com/r3volution11/Vela-IRC](https://github.com/r3vo
 
 Vela is a native Mac app, written in **[Swift](https://www.swift.org)** with **[SwiftUI](https://developer.apple.com/swiftui/)** and **[AppKit](https://developer.apple.com/documentation/appkit)**. It's built in [Xcode](https://developer.apple.com/xcode/), its unit tests use [Swift Testing](https://developer.apple.com/documentation/testing), and its app icon was made in [Icon Composer](https://developer.apple.com/icon-composer/).
 
+Vela was made with the help of AI. Its source code is open, so anyone can read exactly what it does.
+
 ### Apple frameworks {#apple-frameworks}
 
 | Framework | What Vela uses it for |
