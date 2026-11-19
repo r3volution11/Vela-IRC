@@ -63,7 +63,9 @@ nonisolated struct ScrollMetrics: Equatable, Sendable {
 /// resize, a font change — keeps the bottom in view, and any drift (lazy
 /// rows being re-measured, SwiftUI correcting its offset, the visible rect
 /// left below the last row by a re-estimated content height) is scrolled
-/// back.
+/// back. When the list itself gets shorter (the composer growing a line),
+/// it scrolls to the bottom anew, whatever SwiftUI reports
+/// (`mustScrollToBottomAnew`).
 ///
 /// Only the reader unpins the list, by scrolling up past the tolerance in a
 /// gesture. While unpinned nothing scrolls them (except sending a message,
@@ -137,6 +139,26 @@ nonisolated struct ScrollPinning: Sendable {
         }
     }
 
+    /// Whether the list must scroll to the bottom again even though `new`
+    /// says it's there: it got shorter while following the newest line.
+    ///
+    /// The composer growing a line, a reply bar or bottom tabs appearing
+    /// and the window getting shorter all take height from the list. Its
+    /// bottom anchor then moves the offset down by as much, and SwiftUI
+    /// reports the list at the bottom. But on the Mac that move can be lost:
+    /// it reaches the scroll view while the scroll view is still its old
+    /// height, where it would scroll past the end, so it's held at the old
+    /// end. The list then shows the newest line under its bottom edge (by as
+    /// much as it got shorter: under the composer) while every report says
+    /// it's at the bottom, and stays that way.
+    ///
+    /// Not while the reader scrolls: that moves the scroll view itself,
+    /// which brings SwiftUI's offset back in line.
+    func mustScrollToBottomAnew(from previous: ScrollMetrics?, to new: ScrollMetrics, driver: Driver) -> Bool {
+        guard isPinned, driver != .user, let previous else { return false }
+        return new.containerHeight < previous.containerHeight - 0.5
+    }
+
     /// A scroll gesture (and its momentum) ended: a reader who stopped near
     /// the bottom follows it again.
     mutating func gestureEnded() {
@@ -189,6 +211,11 @@ nonisolated struct BottomSettle: Equatable, Sendable {
     static let lateTries: [TimeInterval] = [0.5, 1, 2]
     /// Anchors the tries cycle through; `1` is `.bottom`.
     static let anchors: [CGFloat] = [0.9999, 1, 0.99995]
+    /// The anchor of a scroll to the bottom that SwiftUI must carry out
+    /// when its position is `.bottom` already (`MessageListView`'s
+    /// `scrollToBottom(anew:)`). Not the first try's, so that try isn't
+    /// ignored in turn.
+    static let anewAnchor: CGFloat = anchors[2]
 
     enum Step: Equatable, Sendable {
         /// Check again after `wait`.
@@ -204,10 +231,13 @@ nonisolated struct BottomSettle: Equatable, Sendable {
     private(set) var spent: TimeInterval = 0
     private(set) var tries = 0
     private(set) var lateTriesMade = 0
-    /// The anchor of the last scroll: the first, `.bottom`, before any try.
-    private(set) var lastAnchor: CGFloat = 1
+    /// The anchor of the last scroll: before any try, the first scroll's
+    /// (`.bottom`, unless it was `anewAnchor`).
+    private(set) var lastAnchor: CGFloat
 
-    init() {}
+    init(firstAnchor: CGFloat = 1) {
+        lastAnchor = firstAnchor
+    }
 
     private var inBudget: Bool { spent < Self.budget || tries < Self.minimumTries }
 

@@ -54,6 +54,7 @@ final class MessageListController {
     @ObservationIgnored private var programmaticScrollEnds = Date.distantPast
     @ObservationIgnored private var programmaticScrollGeneration = 0
     @ObservationIgnored private var followQueued = false
+    @ObservationIgnored private var followsAnew = false
 
     var isPinnedToBottom: Bool { pinning.isPinned }
     var metrics: ScrollMetrics? { pinning.metrics }
@@ -85,17 +86,32 @@ final class MessageListController {
         return endFrame.maxY
     }
 
-    /// Feeds new scroll geometry to the pinning logic. Returns true when the
-    /// list should scroll to the bottom.
-    func scrollGeometryChanged(_ metrics: ScrollMetrics) -> Bool {
-        let follow = pinning.update(metrics, driver: scrollDriver)
+    /// How the list should follow new scroll geometry.
+    enum Follow: Equatable {
+        /// Stay where it is.
+        case stay
+        /// Scroll to the bottom.
+        case scroll
+        /// Scroll to the bottom although SwiftUI says it's there
+        /// (`ScrollPinning.mustScrollToBottomAnew`).
+        case scrollAnew
+    }
+
+    /// Feeds new scroll geometry to the pinning logic. Says whether the list
+    /// should scroll to the bottom.
+    func scrollGeometryChanged(_ metrics: ScrollMetrics) -> Follow {
+        let previous = pinning.metrics
+        let driver = scrollDriver
+        let follow = pinning.update(metrics, driver: driver)
         syncAnchor()
-        return follow
+        if pinning.mustScrollToBottomAnew(from: previous, to: metrics, driver: driver) { return .scrollAnew }
+        return follow ? .scroll : .stay
     }
 
     /// Runs `scrollToBottom` once on the next main-actor turn, however many
     /// geometry changes ask for it before then, if the list is still pinned
-    /// and the reader isn't scrolling.
+    /// and the reader isn't scrolling. It's told to scroll anew when any of
+    /// them asked for that.
     ///
     /// Geometry changes are reported during layout. Scrolling from there
     /// changes the geometry being reported and lays the list out again in
@@ -104,16 +120,22 @@ final class MessageListController {
     /// keep re-requesting layout within one display cycle, which AppKit
     /// treats as a fatal loop. Following on the next turn lets each pass
     /// finish first.
-    func queueFollow(_ scrollToBottom: @escaping @MainActor () -> Void) {
+    func queueFollow(_ follow: Follow, _ scrollToBottom: @escaping @MainActor (_ anew: Bool) -> Void) {
+        guard follow != .stay else { return }
+        if follow == .scrollAnew { followsAnew = true }
         guard !followQueued else { return }
         followQueued = true
         Task { [weak self] in
             guard let self else { return }
+            let anew = self.followsAnew
             self.followQueued = false
+            self.followsAnew = false
             guard self.isPinnedToBottom, !self.isUserScrolling else { return }
-            // Got there meanwhile (the space after the last row came into view).
-            if let metrics = self.metrics, ScrollPinning.isAtBottom(metrics) { return }
-            scrollToBottom()
+            // Got there meanwhile (the space after the last row came into
+            // view), unless that's what SwiftUI says and can't be taken at
+            // its word.
+            if !anew, let metrics = self.metrics, ScrollPinning.isAtBottom(metrics) { return }
+            scrollToBottom(anew)
         }
     }
 

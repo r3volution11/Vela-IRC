@@ -172,6 +172,39 @@ struct ScrollPinningTests {
         #expect(pinning.isPinned)
     }
 
+    // MARK: The list getting shorter
+
+    /// The composer grew a line while the list followed the newest line.
+    /// SwiftUI reports the list at the bottom, anchored, but the scroll view
+    /// may not have moved: it scrolls there anew all the same.
+    @Test func gettingShorterWhilePinnedScrollsAnew() {
+        let before = at(distance: 0)
+        var pinning = pinning(pinned: true, at: before)
+        let shorter = at(distance: 0, container: 584)
+        let follow = pinning.update(shorter, driver: .idle)
+        #expect(!follow)
+        #expect(pinning.mustScrollToBottomAnew(from: before, to: shorter, driver: .idle))
+        // During a programmatic scroll too (the typing line easing in).
+        #expect(pinning.mustScrollToBottomAnew(from: before, to: shorter, driver: .programmatic))
+        // Not while the reader scrolls, which moves the scroll view itself.
+        #expect(!pinning.mustScrollToBottomAnew(from: before, to: shorter, driver: .user))
+        // Nor when the list got taller or only its content changed.
+        #expect(!pinning.mustScrollToBottomAnew(from: shorter, to: before, driver: .idle))
+        #expect(!pinning.mustScrollToBottomAnew(from: before, to: at(distance: 0, content: 3040), driver: .idle))
+        #expect(!pinning.mustScrollToBottomAnew(from: nil, to: shorter, driver: .idle))
+    }
+
+    /// Scrolled up, the list getting shorter leaves the reader alone.
+    @Test func gettingShorterWhileScrolledUpStays() {
+        let before = at(distance: 800)
+        var pinning = pinning(pinned: false, at: before)
+        let shorter = at(distance: 816, container: 584)
+        let follow = pinning.update(shorter, driver: .idle)
+        #expect(!follow)
+        #expect(!pinning.mustScrollToBottomAnew(from: before, to: shorter, driver: .idle))
+        #expect(!pinning.isPinned)
+    }
+
     // MARK: Programmatic scrolls
 
     @Test func programmaticFramesAreIgnoredThenSettled() {
@@ -304,6 +337,17 @@ struct BottomSettleTests {
         }
         #expect(anchor != 1)
         #expect(nudged.check(waited: 0.03, otherScrollUnderWay: false, atBottom: true) == .done(settleBack: true))
+        // A scroll made anew, off `.bottom`, settles back on it; its first
+        // try uses another anchor, so that isn't ignored either.
+        var anew = BottomSettle(firstAnchor: BottomSettle.anewAnchor)
+        #expect(BottomSettle.anewAnchor != 1)
+        #expect(anew.check(waited: 0.03, otherScrollUnderWay: false, atBottom: true) == .done(settleBack: true))
+        var anewTry = BottomSettle(firstAnchor: BottomSettle.anewAnchor)
+        guard case .scroll(let first) = anewTry.check(waited: 0.03, otherScrollUnderWay: false, atBottom: false) else {
+            Issue.record("didn't scroll")
+            return
+        }
+        #expect(first != BottomSettle.anewAnchor)
     }
 
     /// Time, not a count of tries: checks every 30 ms keep going for the

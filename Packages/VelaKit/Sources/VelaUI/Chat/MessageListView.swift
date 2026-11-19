@@ -19,12 +19,12 @@ import VelaTheme
 ///
 /// Scrolling follows `ScrollPinning`: the list opens at the bottom (or at
 /// the unread marker, per `chat.openAt`; see `ListLanding`) and stays pinned
-/// there — through new lines, media that loads late, reactions, resizes and
-/// style changes — until the reader scrolls up. Then nothing moves them and
-/// a "Jump to present" pill counts what's new. Sending a message always
-/// returns to the bottom. The bottom is always the space after the last row
-/// (`DisplayItemID.end`), never the content's bottom edge, which is partly
-/// estimated (see `scrollToBottom()`).
+/// there — through new lines, media that loads late, reactions, the composer
+/// growing, resizes and style changes — until the reader scrolls up. Then
+/// nothing moves them and a "Jump to present" pill counts what's new.
+/// Sending a message always returns to the bottom. The bottom is always the
+/// space after the last row (`DisplayItemID.end`), never the content's
+/// bottom edge, which is partly estimated (see `scrollToBottom()`).
 ///
 /// The typing line floats over the bottom of the list; the space under the
 /// last row grows to fit it only while someone is typing (`ListEndSpacing`).
@@ -220,8 +220,18 @@ struct MessageListView: View {
     /// Feeds where the list is to the pinning logic, which may ask to follow
     /// the newest line.
     private func positionChanged(_ metrics: ScrollMetrics) {
-        if controller.scrollGeometryChanged(metrics) {
-            controller.queueFollow { scrollToBottom() }
+        let follow = controller.scrollGeometryChanged(metrics)
+        if follow == .scrollAnew, !controller.isUserScrolling {
+            // The list got shorter (the composer grew a line). Right away,
+            // so the conversation moves up with the composer rather than a
+            // frame later. That's safe from here: scrolling doesn't change
+            // the list's height, so it can't ask for this again. And again
+            // on the next turn, in case this reached the scroll view before
+            // its new height did.
+            scrollToBottom(anew: true)
+        }
+        controller.queueFollow(follow) { anew in
+            scrollToBottom(anew: anew)
         }
         if controller.isPinnedToBottom {
             markAllSeen()
@@ -279,17 +289,30 @@ struct MessageListView: View {
     /// tried again until the spacer really is at the bottom of the visible
     /// rect (`BottomSettle`). Animated jumps skip the checks (they'd cut
     /// the animation short); their completion settles instead.
-    private func scrollToBottom(animated: Bool = false) {
-        position.scrollTo(id: DisplayItemID.end, anchor: .bottom)
+    ///
+    /// `anew` makes sure SwiftUI scrolls even when it holds the list is at
+    /// the bottom already, after the list got shorter
+    /// (`ScrollPinning.mustScrollToBottomAnew`). Only a position other than
+    /// its current one does that: `.bottom`, or when that's the current one,
+    /// a hair above it, then back.
+    private func scrollToBottom(animated: Bool = false, anew: Bool = false) {
+        var target = position
+        target.scrollTo(id: DisplayItemID.end, anchor: .bottom)
+        var anchor: CGFloat = 1
+        if anew, target == position {
+            anchor = BottomSettle.anewAnchor
+            target.scrollTo(id: DisplayItemID.end, anchor: UnitPoint(x: 0.5, y: anchor))
+        }
+        position = target
         controller.bottomCheck?.cancel()
         guard !animated else { return }
-        controller.bottomCheck = Task { await settleAtBottom() }
+        controller.bottomCheck = Task { await settleAtBottom(firstAnchor: anchor) }
     }
 
     /// Checks that the list got to the bottom and scrolls there again until
     /// it does, as `BottomSettle` says.
-    private func settleAtBottom() async {
-        var settle = BottomSettle()
+    private func settleAtBottom(firstAnchor: CGFloat) async {
+        var settle = BottomSettle(firstAnchor: firstAnchor)
         var lastCheck = Date()
         while true {
             try? await Task.sleep(for: .seconds(settle.wait))
