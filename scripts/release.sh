@@ -34,7 +34,9 @@
 #
 # Requirements (one-time, see docs/RELEASING.md):
 #   • A "Developer ID Application" certificate in your login keychain
-#   • Notarization credentials stored with:
+#   • Notarization credentials stored as the "vela-notary" profile, from an
+#     App Store Connect API team key (recommended) or an app-specific password:
+#       xcrun notarytool store-credentials vela-notary --key AuthKey_….p8 --key-id … --issuer …
 #       xcrun notarytool store-credentials vela-notary --apple-id … --team-id …
 #
 # Environment overrides:
@@ -132,7 +134,7 @@ else
   print "    team:     $team"
   if (( notarize )); then
     xcrun notarytool history --keychain-profile "$profile" >/dev/null 2>&1 \
-      || fail "Notarization profile \"$profile\" not found. Run: xcrun notarytool store-credentials $profile --apple-id <email> --team-id $team"
+      || fail "Notarization profile \"$profile\" not found. Store one with an App Store Connect API team key: xcrun notarytool store-credentials $profile --key <AuthKey_….p8> --key-id <key id> --issuer <issuer id> (or --apple-id <email> --team-id $team with an app-specific password). See docs/RELEASING.md."
   fi
 fi
 

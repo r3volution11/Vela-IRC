@@ -27,17 +27,29 @@ The release build you ship uses the same identity as the `build/Vela.app` that `
 
 1. **Join the Apple Developer Program** (paid, yearly) with the Apple ID you'll sign with. Distributing outside the Mac App Store needs a Developer ID certificate, and only members can create one. Note your **Team ID**: Membership details at [developer.apple.com/account](https://developer.apple.com/account). It's a 10-character code.
 2. **Create a Developer ID Application certificate.**
-   - In Xcode → Settings → Accounts, add your Apple ID and select your team.
+   - In Xcode → Settings → Accounts, add your Apple ID and select your team (not the free Personal Team).
    - Click **Manage Certificates…**, then **+**, then **Developer ID Application**. Only the account holder can create this certificate.
+   - **If Xcode says "This operation can only be performed by the account holder"** although you are: accept any pending agreement at [developer.apple.com/account](https://developer.apple.com/account), or create the certificate on the website instead.
+     1. In Keychain Access, choose **Keychain Access → Certificate Assistant → Request a Certificate From a Certificate Authority…**, enter your email and name, choose **Saved to disk** and save the request.
+     2. At developer.apple.com → **Certificates, IDs & Profiles** → **Certificates** → **+**, choose **Developer ID Application** with the **G2 Sub-CA**, upload the request, download the certificate and double-click it.
+     3. Install Apple's intermediate certificate too: the website doesn't, Xcode does. Without it the certificate shows as invalid. Download [DeveloperIDG2CA.cer](https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer) and double-click it.
    - It goes into your login keychain. Check it:
      ```sh
      security find-identity -v -p codesigning | grep "Developer ID Application"
      ```
-     You should see one line like `"Developer ID Application: Your Name (TEAMID)"`.
+     You should see one line like `"Developer ID Application: Your Name (TEAMID)"`. If that prints nothing, but `security find-identity -p codesigning` (without `-v`) lists it, the intermediate certificate is missing; see above.
    - **Back it up.** Export the certificate with its private key as a `.p12` from Keychain Access, and store it somewhere safe, such as your password manager. Losing the key means creating a new certificate.
-3. **Store notarization credentials.**
-   - Create an app-specific password at [account.apple.com](https://account.apple.com) → Sign-In and Security → App-Specific Passwords.
-   - Store it in your keychain under the profile name the release script uses:
+3. **Store notarization credentials** under the profile name the release script uses, `vela-notary`. Either way works; the script only uses the profile.
+   - **An App Store Connect API key (recommended).** It belongs to your developer team, works only for App Store Connect and notarization, and keeps your Apple ID's password out of it.
+     1. At [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → **Users and Access** → **Integrations** → **App Store Connect API**: the first time, click **Request Access** (the account holder approves it).
+     2. Under **Team Keys** (not Individual Keys), click **+**, name it (say, "Vela notarization") and give it the **Developer** role.
+     3. Download the `.p8` file (you can only download it once), and note its **Key ID** and the **Issuer ID** above the list.
+     4. Store it:
+        ```sh
+        xcrun notarytool store-credentials vela-notary --key ~/Downloads/AuthKey_<KEYID>.p8 --key-id <KEYID> --issuer <ISSUER-ID>
+        ```
+        Then keep the `.p8` in your password manager and delete the download: `notarytool` keeps its own copy in your keychain.
+   - **Or an app-specific password.** Quicker, but tied to your Apple ID, and app-specific passwords can also reach its iCloud mail, contacts and calendars. Create one at [account.apple.com](https://account.apple.com) → Sign-In and Security → App-Specific Passwords, then:
      ```sh
      xcrun notarytool store-credentials vela-notary --apple-id "<apple-id-email>" --team-id "<TEAMID>"
      ```
