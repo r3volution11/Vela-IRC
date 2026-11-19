@@ -4,6 +4,11 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ## Unreleased
 
+### Siri, Shortcuts and Apple Intelligence
+
+- **Name the network to Siri.** "Open #vela on Libera.Chat in Vela", or just "on Libera", picks the channel on that network when you're in channels with the same name on more than one. It works in every phrase that names a channel.
+- **Settings → Apple Intelligence** shows a fixed example phrase, using Vela's own channel, instead of the name of one of your channels.
+
 ## 1.0.0 - 2026-11-18
 
 The first public release of Vela, a native, deeply themable IRC client for macOS with inline media, IRCv3 and bouncer support, and on-device Apple Intelligence. It needs macOS 26 or later and runs on Apple silicon and Intel Macs.

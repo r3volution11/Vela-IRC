@@ -19,6 +19,26 @@ struct ChannelEntityTests {
         entities.map(\.name)
     }
 
+    // MARK: Naming the network
+
+    @Test func synonymsNameTheNetwork() {
+        #expect(ChannelEntity.synonyms(name: "#lantern-hollow", network: "Example.Net") == [
+            "#lantern-hollow on Example.Net", "lantern-hollow on Example.Net",
+            "#lantern-hollow on Example", "lantern-hollow on Example",
+        ])
+        // No short form when the network has no dot; a nick is said as is.
+        #expect(ChannelEntity.synonyms(name: "alice", network: "OFTC") == ["alice on OFTC"])
+        #expect(ChannelEntity.synonyms(name: "#vela", network: "").isEmpty)
+    }
+
+    @Test func synonymsSayWhichOfTwoSameNamedChannels() {
+        let libera = entity("#vela", "Libera.Chat")
+        let oftc = entity("#vela", "OFTC")
+        #expect(libera.displayRepresentation.synonyms.map { String(localized: $0) }.contains("#vela on Libera.Chat"))
+        #expect(Set(ChannelEntity.synonyms(name: libera.name, network: libera.network))
+            .isDisjoint(with: ChannelEntity.synonyms(name: oftc.name, network: oftc.network)))
+    }
+
     // MARK: Ranking
 
     @Test func exactNameBeatsLongerNames() {

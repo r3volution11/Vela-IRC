@@ -39,8 +39,30 @@ public struct ChannelEntity: AppEntity, IndexedEntity {
         DisplayRepresentation(
             title: "\(name)",
             subtitle: "\(network)",
-            image: .init(systemName: isPrivate ? "person.crop.circle" : "number")
+            image: .init(systemName: isPrivate ? "person.crop.circle" : "number"),
+            synonyms: Self.synonyms(name: name, network: network).map { LocalizedStringResource(stringLiteral: $0) }
         )
+    }
+
+    /// Other ways to say it that name the network, so "Open #vela on
+    /// Libera.Chat in Vela" (or "vela on Libera") opens the one on that
+    /// network when you're in #vela on more than one.
+    static func synonyms(name: String, network: String) -> [String] {
+        guard !network.isEmpty else { return [] }
+        var networks = [network]
+        // "Libera" for "Libera.Chat"
+        if let first = network.split(separator: ".").first.map(String.init), first.count >= 2, first != network {
+            networks.append(first)
+        }
+        var seen: Set<String> = []
+        var result: [String] = []
+        for network in networks {
+            for spoken in [name, bareName(name)] where !spoken.isEmpty {
+                let synonym = "\(spoken) on \(network)"
+                if seen.insert(synonym.lowercased()).inserted { result.append(synonym) }
+            }
+        }
+        return result
     }
 
     /// Spotlight gets the name and network only, never messages.

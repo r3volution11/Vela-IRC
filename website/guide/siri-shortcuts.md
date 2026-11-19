@@ -13,12 +13,14 @@ Vela works with Siri, the Shortcuts app and Spotlight without any setup. Ask Sir
 
 These phrases work as soon as Vela is installed. Say the channel's name where the phrase has one, such as "#vela": Siri knows the names of your channels and conversations, and keeps up as you join and leave them.
 
+If you're in channels with the same name on more than one network, add the network: "Open #vela on Libera.Chat in Vela", or just "on Libera". Without it, Siri asks which one you mean. Every phrase that names a channel works this way.
+
 | To | Say |
 | --- | --- |
 | Get a summary of what you missed | "Catch me up in Vela", "Catch me up on #vela in Vela", "What did I miss in Vela", "Summarize #vela in Vela" |
 | Hear who mentioned you | "Check my Vela mentions", "Check mentions in Vela", "Who mentioned me in Vela" |
 | Send a message | "Send a message with Vela", "Send a message to #vela with Vela", "Message #vela in Vela" |
-| Open a channel | "Open #vela in Vela", "Show #vela in Vela", "Go to #vela in Vela" |
+| Open a channel | "Open #vela in Vela", "Open #vela on Libera.Chat in Vela", "Show #vela in Vela", "Go to #vela in Vela" |
 | Set yourself away | "Set me away in Vela", "Mark me away in Vela" |
 | Come back | "Set me back in Vela", "I'm back in Vela" |
 | Clear your unread counts | "Mark everything as read in Vela", "Mark all as read in Vela" |

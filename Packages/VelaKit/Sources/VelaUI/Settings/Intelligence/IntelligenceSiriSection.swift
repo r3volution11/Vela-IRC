@@ -23,7 +23,7 @@ struct IntelligenceSiriSection: View {
                 detail: "Channel and conversation names only, never messages.",
                 isOn: $settings[.intelligenceSpotlightChannels]
             )
-            SiriPhrasesRow(phrases: phrases)
+            SiriPhrasesRow(phrases: Self.phrases)
             SettingsRow("Shortcuts", detail: "Use Vela's actions in your own shortcuts and automations.") {
                 Button("Open Shortcuts", action: Self.openShortcuts)
                     .buttonStyle(ThemedButtonStyle())
@@ -31,17 +31,16 @@ struct IntelligenceSiriSection: View {
         }
     }
 
-    /// What to say, using a channel you have where there is one.
-    private var phrases: [String] {
-        let channel = app.conversationBuffers.first { $0.kind == .channel }?.name ?? "#vela"
-        return [
-            "Catch me up in Vela",
-            "Check my Vela mentions",
-            "Send a message with Vela",
-            "Open \(channel) in Vela",
-            "Set me away in Vela",
-        ]
-    }
+    /// What to say. The example channel is Vela's own, #vela on Libera.Chat,
+    /// never one of the user's: an example sends people to the channel it
+    /// names.
+    static let phrases = [
+        "Catch me up in Vela",
+        "Check my Vela mentions",
+        "Send a message with Vela",
+        "Open #vela on Libera.Chat in Vela",
+        "Set me away in Vela",
+    ]
 
     static let shortcutsBundleID = "com.apple.shortcuts"
 
