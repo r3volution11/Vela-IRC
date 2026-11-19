@@ -19,7 +19,7 @@
 #
 # With --publish, once every check has passed, it tags the commit it built as
 # v<version>, pushes the tag to origin, creates the GitHub release with
-# Vela.dmg, Vela-<version>.dmg and SHA256SUMS, marked Latest, and checks that
+# Vela.dmg and SHA256SUMS, marked Latest, and checks that
 # the website's download link (releases/latest/download/Vela.dmg) gives this
 # DMG. The tag is signed when git has a signing key (user.signingkey or
 # tag.gpgSign), and annotated otherwise. The release notes are CHANGELOG.md's
@@ -64,7 +64,7 @@
 #   VELA_TEAM_ID         Apple Developer Team ID (auto-detected from the certificate)
 #   VELA_NOTARY_PROFILE  notarytool keychain profile (default: vela-notary)
 #
-# Output: build/release/Vela.dmg and build/release/Vela-<version>.dmg (+ SHA256SUMS),
+# Output: build/release/Vela.dmg (+ SHA256SUMS),
 # and with --publish (without --notes) build/release/release-notes.md
 set -euo pipefail
 invoked_from=$PWD
@@ -375,8 +375,16 @@ fi
 # ---------------------------------------------------------------- disk image
 step "Creating the disk image"
 # Vela.app and an Applications shortcut, in a window drawn like the website's
-# dark mode (scripts/make-dmg.sh, scripts/dmg/).
-scripts/make-dmg.sh "$app" "$out/Vela.dmg" "Vela $version"
+# dark mode (scripts/make-dmg.sh, scripts/dmg/). Every release is Vela.dmg, the
+# name the website's Download button links to. The mounted disk is "Vela", with
+# the major version from 2 on ("Vela 2"), like the app names of Bartender 5 or
+# Alfred 5: a new number marks a major release.
+major=${version%%.*}
+volume_name="Vela"
+if [[ "$major" == <-> ]] && (( major >= 2 )); then
+  volume_name="Vela $major"
+fi
+scripts/make-dmg.sh "$app" "$out/Vela.dmg" "$volume_name"
 if (( ! adhoc )); then
   codesign --sign "$identity" --timestamp "$out/Vela.dmg"
 fi
@@ -404,14 +412,12 @@ fi
 if ! scripts/verify-release.sh "$out/Vela.dmg" "${verify_options[@]}"; then
   show_summary
   print
-  fail "$out/Vela.dmg failed the post-build checks, so it wasn't copied to Vela-$version.dmg or added to SHA256SUMS. Fix what the summary lists, then build again."
+  fail "$out/Vela.dmg failed the post-build checks, so SHA256SUMS wasn't written. Fix what the summary lists, then build again."
 fi
 
-cp "$out/Vela.dmg" "$out/Vela-$version.dmg"
-(cd "$out" && shasum -a 256 Vela.dmg "Vela-$version.dmg" > SHA256SUMS)
+(cd "$out" && shasum -a 256 Vela.dmg > SHA256SUMS)
 step "Done"
 print "    $out/Vela.dmg"
-print "    $out/Vela-$version.dmg"
 sed 's/^/    /' "$out/SHA256SUMS"
 
 # ---------------------------------------------------------------- publish
@@ -431,7 +437,7 @@ release_url="https://github.com/$github_repo/releases/tag/$tag"
 latest_url="https://github.com/$github_repo/releases/latest/download/Vela.dmg"
 expected_location="https://github.com/$github_repo/releases/download/$tag/Vela.dmg"
 expected_sha=$(awk '$2 == "Vela.dmg" || $2 == "*Vela.dmg" { print $1 }' "$out/SHA256SUMS")
-assets=("$out/Vela.dmg" "$out/Vela-$version.dmg" "$out/SHA256SUMS")
+assets=("$out/Vela.dmg" "$out/SHA256SUMS")
 publish_steps=(tag push release link checksum)
 typeset -A publish_check=(
   tag "Tag $tag"
@@ -517,7 +523,7 @@ else
   finish_by_hand push "$tag is tagged here but isn't on $remote, so nothing was published."
 fi
 
-print "    Creating the release, with Vela.dmg, Vela-$version.dmg and SHA256SUMS…"
+print "    Creating the release, with Vela.dmg and SHA256SUMS…"
 if output=$(gh release create "$tag" "${assets[@]}" --repo "$github_repo" --verify-tag \
     --title "$release_title" --notes-file "$notes_file" --latest 2>&1); then
   check_pass "$publish_check[release]" "$release_url, marked Latest, notes from $notes_file"

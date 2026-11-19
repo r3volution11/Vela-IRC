@@ -37,7 +37,7 @@ test('a stored choice wins, then Global Privacy Control, then the time zone', ()
 test('Vela.dmg links are downloads', () => {
   for (const href of [
     'https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg',
-    'https://github.com/r3volution11/Vela-IRC/releases/download/v1.0.0/Vela-1.0.0.dmg',
+    'https://github.com/r3volution11/Vela-IRC/releases/download/v1.0.0/Vela.dmg',
   ]) {
     const event = eventForLink(href, BASE)
     assert.equal(event?.name, 'vela_download', href)

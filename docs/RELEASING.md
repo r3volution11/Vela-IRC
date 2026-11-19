@@ -7,7 +7,9 @@ The website's **Download** button points at `https://github.com/r3volution11/Vel
 - upload an asset named exactly `Vela.dmg`;
 - be marked as the latest release, not a pre-release.
 
-If no published release is marked latest, or the latest has no asset named `Vela.dmg`, that link returns 404. `--publish` takes care of both.
+If no published release is marked latest, or the latest has no asset named `Vela.dmg`, that link returns 404.
+
+A release has just the one disk image, with no version in its name: the release page already says which version it is. The mounted disk is named "Vela", and from version 2 on it carries the major version ("Vela 2"), so a major release looks like one. `--publish` takes care of both.
 
 ## Release builds and development builds
 
@@ -108,7 +110,7 @@ What it does:
 8. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
 9. **Builds the DMG** with `scripts/make-dmg.sh` (`Vela.app` plus an Applications shortcut, in a window drawn like the website; see [The disk image window](#the-disk-image-window)), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
 10. **Checks the DMG** as users get it, with the [post-build checks](#post-build-checks) (`scripts/verify-release.sh`). If one fails, it stops.
-11. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
+11. Writes `build/release/Vela.dmg` and `build/release/SHA256SUMS`.
 12. With `--publish`, **publishes** the release once every check has passed: the tag, the GitHub release and a check of the download. See [Publishing](#publishing).
 13. Prints a summary of every check and its result.
 
@@ -197,7 +199,7 @@ Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts 
 | Applications link | The DMG has its Applications shortcut. | Build again. |
 | Window layout | The DMG has its window background, layout (`.DS_Store`) and volume icon. | Build again with `scripts/release.sh`. |
 
-`--skip-notarize` skips the Gatekeeper and stapled-ticket checks, and `--adhoc` also skips the Developer ID check; the summary lists them as skipped. When a post-build check fails, `build/release/Vela.dmg` stays for you to look at, but `Vela-<version>.dmg` and `SHA256SUMS` aren't written.
+`--skip-notarize` skips the Gatekeeper and stapled-ticket checks, and `--adhoc` also skips the Developer ID check; the summary lists them as skipped. When a post-build check fails, `build/release/Vela.dmg` stays for you to look at, but `SHA256SUMS` isn't written.
 
 To check a DMG again, such as the one you downloaded after publishing:
 
@@ -273,7 +275,7 @@ Finder caches window layouts by volume name, so give each try a new name.
    - The tag is signed (`git tag -s`) when git has a signing key: `user.signingkey`, or `tag.gpgSign`. With an SSH key in 1Password, 1Password asks you to approve it.
    - Otherwise it's an annotated tag (`git tag -a`), and the script prints a note saying so.
 2. **Pushes** the tag to `origin`.
-3. **Creates the GitHub release** with `gh release create --verify-tag --latest`. It's titled `Vela <version>`, with the [release notes](#release-notes) and three files: `Vela.dmg` (for the website's Download button), `Vela-<version>.dmg` and `SHA256SUMS`.
+3. **Creates the GitHub release** with `gh release create --verify-tag --latest`. It's titled `Vela <version>`, with the [release notes](#release-notes) and two files: `Vela.dmg` and `SHA256SUMS`.
 4. **Checks the download.** `releases/latest/download/Vela.dmg` must redirect to `releases/download/v<version>/Vela.dmg`. It tries for about a minute, while GitHub catches up. Then the DMG downloaded from that link must match `SHA256SUMS`.
 
 Each step adds a PASS or FAIL line to the summary, under **Publish**. Only a notarized build that passed every check is published, so `--publish` doesn't go with `--preflight`, `--adhoc`, `--skip-notarize`, `--skip-preflight` or `--allow-dirty`. It also stops before building if the checkout changes while the preflight checks run, so the tag is always on the commit that was built.
@@ -287,7 +289,7 @@ The script stops and deletes nothing: not the tag, and not the release. After th
     v1.1.0 is on origin, but the GitHub release wasn't created. Nothing was deleted. To finish, run:
 
       cd '/Users/you/Projects/Vela IRC'
-      gh release create v1.1.0 build/release/Vela.dmg build/release/Vela-1.1.0.dmg build/release/SHA256SUMS --repo r3volution11/Vela-IRC --verify-tag --title 'Vela 1.1.0' --notes-file build/release/release-notes.md --latest
+      gh release create v1.1.0 build/release/Vela.dmg build/release/SHA256SUMS --repo r3volution11/Vela-IRC --verify-tag --title 'Vela 1.1.0' --notes-file build/release/release-notes.md --latest
       curl -sS -o /dev/null -w '%{redirect_url}\n' https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg
       curl -sSL https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg | shasum -a 256
 
@@ -316,7 +318,7 @@ If you built without `--publish`:
 v=1.1.0   # the version you built
 git tag -s "v$v" -m "Vela $v"     # tags HEAD, the commit you built; -a for an unsigned tag
 git push origin "v$v"
-gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build/release/SHA256SUMS \
+gh release create "v$v" build/release/Vela.dmg build/release/SHA256SUMS \
   --verify-tag --title "Vela $v" --notes-file release-notes.md --latest
 ```
 
