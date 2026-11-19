@@ -30,10 +30,7 @@ public struct DetectedLink: Sendable, Hashable {
 /// - wrappers such as `<https://…>`, `"https://…"` or `*https://…*` are excluded.
 public enum LinkDetector {
     public static func links(in text: String) -> [DetectedLink] {
-        // Cheap pre-check: most chat lines contain no links at all.
-        guard text.contains("://") || text.range(of: "www.", options: .caseInsensitive) != nil else {
-            return []
-        }
+        guard mayContainLinks(text) else { return [] }
         let detector = Self.detector
         let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
         var results: [DetectedLink] = []
@@ -66,6 +63,12 @@ public enum LinkDetector {
 
     // NSRegularExpression (and so NSDataDetector) is documented as immutable
     // and safe to use from multiple threads.
+    /// Cheap pre-check: most chat lines contain no links at all. False means
+    /// `links(in:)` finds nothing; true means it might.
+    public static func mayContainLinks(_ text: String) -> Bool {
+        text.contains("://") || text.range(of: "www.", options: .caseInsensitive) != nil
+    }
+
     private static let detector: NSDataDetector = {
         do {
             return try NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)

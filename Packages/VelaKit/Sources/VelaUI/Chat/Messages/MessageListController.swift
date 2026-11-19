@@ -38,8 +38,10 @@ final class MessageListController {
 
     /// Whether the list follows the newest line. See `ScrollPinning`.
     @ObservationIgnored private(set) var pinning = ScrollPinning()
-    /// New lines and sent messages since the last update.
-    @ObservationIgnored var lineTracker: LineTracker
+    /// New lines and sent messages since the last update. Started when the
+    /// list appears (`trackLines()`), not in `init`: SwiftUI makes a
+    /// controller every time the list's parent runs and keeps only the first.
+    @ObservationIgnored var lineTracker: LineTracker?
     @ObservationIgnored var topVisibleID: DisplayItemID?
     /// Where the space after the last row was last laid out, in content
     /// coordinates.
@@ -64,7 +66,11 @@ final class MessageListController {
     init(buffer: BufferModel, session: NetworkSession) {
         self.buffer = buffer
         self.session = session
-        lineTracker = LineTracker(lines: buffer.lines)
+    }
+
+    /// Starts noticing new lines from the ones there now; once.
+    func trackLines() {
+        if lineTracker == nil { lineTracker = LineTracker(lines: buffer.lines) }
     }
 
     /// Whether content-size changes keep the bottom in place. Observed (the
@@ -112,14 +118,38 @@ final class MessageListController {
     }
 
     /// Tracks scroll gestures; when one ends, a reader who stopped near the
-    /// bottom follows it again.
+    /// bottom follows it again, and the row under the pointer shows its
+    /// hover state.
     func scrollPhaseChanged(isUserScrolling scrolling: Bool) {
         let ended = isUserScrolling && !scrolling
         isUserScrolling = scrolling
         if ended {
             pinning.gestureEnded()
             syncAnchor()
+            if let pending = pendingHover {
+                pendingHover = nil
+                pending.apply(true)
+            }
         }
+    }
+
+    // MARK: Hover
+
+    /// A row the pointer came onto during a scroll; it shows its hover
+    /// state once the scroll ends.
+    @ObservationIgnored private var pendingHover: (row: UUID, apply: (Bool) -> Void)?
+
+    /// Passes a row's hover change on to `apply`, except while the reader
+    /// scrolls: rows passing under the pointer would each run again and
+    /// fade their toolbar in and out. Only the last row entered then is
+    /// remembered, for when the scroll ends; leaving a row always applies.
+    func hoverChanged(_ hovering: Bool, row: UUID, apply: @escaping (Bool) -> Void) {
+        if hovering, isUserScrolling {
+            pendingHover = (row, apply)
+            return
+        }
+        if pendingHover?.row == row { pendingHover = nil }
+        apply(hovering)
     }
 
     func pin() {
@@ -238,18 +268,115 @@ final class MessageListController {
     func toggleRun(_ id: UUID) {
         if expandedRuns.contains(id) { expandedRuns.remove(id) } else { expandedRuns.insert(id) }
     }
+
+    // MARK: Text
+
+    /// Bumped whenever message text renders differently (our nick, the
+    /// theme, fonts, formatting). Rows skip updates while their item is
+    /// unchanged, so it's part of what they compare (`DisplayItemRow`).
+    @ObservationIgnored private(set) var textGeneration = 0
+    @ObservationIgnored private var textInputs: (palette: MessageTextPalette, options: MessageTextOptions)?
+
+    /// Points `textCache` at the current palette and options; returns the
+    /// text generation. Cheap when nothing changed.
+    @discardableResult
+    func prepareText(palette: MessageTextPalette, options: MessageTextOptions) -> Int {
+        if let textInputs, textInputs.options == options, textInputs.palette == palette { return textGeneration }
+        if textInputs != nil { textGeneration &+= 1 }
+        textInputs = (palette, options)
+        textCache.prepare(palette: palette, options: options)
+        return textGeneration
+    }
+
+    // MARK: Links
+
+    @ObservationIgnored private var openURLAction: OpenURLAction?
+
+    /// Opens links in the list: channel links show or join the channel, the
+    /// rest go to the system. One action for the list's life: a new one
+    /// each time the list updated would update every link view under it.
+    func openURL(app: AppModel) -> OpenURLAction {
+        if let openURLAction { return openURLAction }
+        let action = OpenURLAction { [weak self, weak app] url in
+            guard let self, let app else { return .systemAction }
+            return self.open(url, app: app)
+        }
+        openURLAction = action
+        return action
+    }
+
+    private func open(_ url: URL, app: AppModel) -> OpenURLAction.Result {
+        guard let channel = ChannelLink.channel(from: url) else { return .systemAction }
+        if let existing = session.buffer(named: channel), existing.isJoined || !session.isConnected {
+            app.select(existing)
+        } else {
+            session.submit("/join \(channel)", in: buffer)
+        }
+        return .handled
+    }
+
+    // MARK: Row caches
+
+    private struct LabelEntry {
+        var text: String
+        var isRedacted: Bool
+        var isHighlight: Bool
+        var label: String
+    }
+
+    @ObservationIgnored private var accessibilityLabels: [UUID: LabelEntry] = [:]
+
+    /// A row's VoiceOver label, made by `make` once per line (and again if
+    /// its text, deletion or highlight changes). Rows set it every time
+    /// they're built, VoiceOver or not.
+    func accessibilityLabel(for line: ChatLine, make: () -> String) -> String {
+        if let entry = accessibilityLabels[line.id], entry.text == line.text,
+           entry.isRedacted == line.isRedacted, entry.isHighlight == line.isHighlight {
+            return entry.label
+        }
+        let label = make()
+        if accessibilityLabels.count >= 2_000 { accessibilityLabels.removeAll(keepingCapacity: true) }
+        accessibilityLabels[line.id] = LabelEntry(text: line.text, isRedacted: line.isRedacted, isHighlight: line.isHighlight, label: label)
+        return label
+    }
+
+    @ObservationIgnored private var runSummaries: [UUID: (count: Int, summary: String)] = [:]
+
+    /// A collapsed run's summary, made once per run as long as it doesn't
+    /// grow (its row runs again on hover).
+    func summary(of run: MembershipRun) -> String {
+        if let cached = runSummaries[run.id], cached.count == run.lines.count { return cached.summary }
+        let summary = run.summary
+        if runSummaries.count >= 500 { runSummaries.removeAll(keepingCapacity: true) }
+        runSummaries[run.id] = (run.lines.count, summary)
+        return summary
+    }
 }
 
 /// Fixed widths for timestamp columns (classic and columns layouts), so
 /// times line up whatever the format (`HH:mm`, `h:mm a`, `HH:mm:ss`…).
 enum TimestampMetrics {
-    private static var cache: [String: CGFloat] = [:]
+    private struct Key: Hashable {
+        var localeIdentifier: String
+        var pattern: String
+        var size: Double
+        var bracketed: Bool
+    }
+
+    private static var cache: [Key: CGFloat] = [:]
+    /// The last width asked for. Rows ask several times each, nearly
+    /// always for the same one; comparing is cheaper than hashing.
+    private static var last: (key: Key, width: CGFloat)?
 
     /// The widest time at `size` (default: `style.timestampFont`'s size).
     static func columnWidth(style: ChatStyle, bracketed: Bool, size: Double? = nil) -> CGFloat {
         let size = size ?? max(9, style.fontSize - 2)
-        let key = "\(style.timestampLocaleIdentifier)|\(style.timestampPattern)|\(size)|\(bracketed)"
-        if let cached = cache[key] { return cached }
+        let key = Key(localeIdentifier: style.timestampLocaleIdentifier, pattern: style.timestampPattern, size: size, bracketed: bracketed)
+        if let last, last.key == key { return last.width }
+        if let cached = cache[key] {
+            last = (key, cached)
+            return cached
+        }
         let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .regular)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
@@ -263,6 +390,7 @@ enum TimestampMetrics {
         }.max() ?? 36
         let width = ceil(widest) + 1
         cache[key] = width
+        last = (key, width)
         return width
     }
 }

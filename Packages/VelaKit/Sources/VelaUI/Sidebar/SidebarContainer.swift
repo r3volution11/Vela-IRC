@@ -23,11 +23,13 @@ struct SidebarContainer: View {
     /// Something in the rail, or in the floating tree, is being dragged.
     @State private var railReordering = false
     @State private var overlayReordering = false
+    /// The tree's width while its divider is dragged (see `PaneDivider`).
+    @State private var dragWidth: Double?
 
     var body: some View {
         let settings = app.settings
         let collapsed = settings[.sidebarCollapsed]
-        let width = SidebarMetrics.clampedWidth(settings[.sidebarWidth])
+        let width = SidebarMetrics.clampedWidth(dragWidth?.rounded() ?? settings[.sidebarWidth])
 
         ZStack(alignment: .topLeading) {
             if collapsed {
@@ -40,7 +42,7 @@ struct SidebarContainer: View {
             } else {
                 HStack(spacing: 0) {
                     SidebarTreeView()
-                    PaneDivider(width: width, range: SidebarMetrics.widthRange, edge: .leading) { newWidth in
+                    PaneDivider(width: width, range: SidebarMetrics.widthRange, edge: .leading, liveWidth: $dragWidth) { newWidth in
                         settings[.sidebarWidth] = newWidth.rounded()
                     }
                     .overlay {

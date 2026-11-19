@@ -17,10 +17,13 @@ struct EventRow: View {
     @Environment(\.chatStyle) private var style
     @Environment(MessageListController.self) private var controller
     let line: ChatLine
+    /// Not read: a new one makes the row run again and fetch its text anew.
+    var textGeneration = 0
 
     var body: some View {
+        let rendered = line.kind.isMembershipEvent ? nil : controller.textCache.rendered(line)
         EventRowLayout(time: line.time, symbol: line.kind.eventSymbol, symbolColorKey: line.kind.eventSymbolColorKey) {
-            LinkPointerText(eventText) { text in
+            LinkPointerText(eventText(rendered)) { text in
                 text
                     .font(line.kind == .motd ? style.monospaceFont(size: max(10, style.fontSize - 1)) : style.font(size: max(10, style.fontSize - 1)))
                     .foregroundStyle(theme[line.kind.eventTextColorKey])
@@ -31,19 +34,25 @@ struct EventRow: View {
             .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(line.time.formatted(date: .omitted, time: .shortened)), \(IRCFormatting.strip(line.text))")
-        .accessibilityActions { LinkAccessibilityActions(text: eventText) }
+        .accessibilityLabel(controller.accessibilityLabel(for: line) {
+            "\(line.time.formatted(date: .omitted, time: .shortened)), \(IRCFormatting.strip(line.text))"
+        })
+        .accessibilityActions {
+            if let rendered, !rendered.linkRuns.isEmpty {
+                LinkAccessibilityActions(links: rendered.linkRuns)
+            }
+        }
     }
 
     /// Membership events stay plain (no link-colored channel names); other
-    /// events keep formatting and clickable links. The leading nick is bold
-    /// and a `(user@host)` is dimmed.
-    private var eventText: AttributedString {
+    /// events keep formatting and clickable links (`rendered`). The leading
+    /// nick is bold and a `(user@host)` is dimmed.
+    private func eventText(_ rendered: RenderedText?) -> AttributedString {
         var text: AttributedString
-        if line.kind.isMembershipEvent {
-            text = AttributedString(IRCFormatting.strip(line.text))
+        if let rendered {
+            text = rendered.attributed
         } else {
-            text = controller.textCache.rendered(line).attributed
+            text = AttributedString(IRCFormatting.strip(line.text))
         }
         if let nick = line.nick, text.characters.starts(with: nick) {
             let end = text.characters.index(text.startIndex, offsetBy: nick.count)
@@ -177,7 +186,7 @@ struct MembershipRunRow: View {
 
     var body: some View {
         let expanded = controller.expandedRuns.contains(run.id)
-        let summary = run.summary
+        let summary = controller.summary(of: run)
         VStack(alignment: .leading, spacing: 0) {
             Button {
                 withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) { controller.toggleRun(run.id) }
@@ -200,7 +209,10 @@ struct MembershipRunRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .onHover { hovering = $0 }
+            .onHover { inside in
+                // Not while scrolling (see `MessageRow`).
+                controller.hoverChanged(inside, row: run.id) { if hovering != $0 { hovering = $0 } }
+            }
             .help(expanded ? "Hide \(run.lines.count) events" : "Show \(run.lines.count) events")
             .accessibilityLabel(summary)
             .accessibilityValue(expanded ? "Expanded" : "Collapsed")

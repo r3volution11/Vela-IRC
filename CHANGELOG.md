@@ -164,6 +164,19 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **One site rule covers all of Reddit.** A rule for `reddit.com` now also covers `redd.it` links, `v.redd.it` videos, `i.redd.it` and `preview.redd.it` images and Reddit's other media servers, and right-clicking a Reddit image offers `reddit.com`. Rules for `tenor.com` and `giphy.com` cover their media servers (and `gph.is` links) the same way.
 - Link previews are fetched once more after updating, so links to GIF sites, Reddit and sites behind bot checks that were saved as link previews show the new way.
 
+### Performance
+
+- **Smoother scrolling,** especially in long, busy channels and on older Macs. The message list no longer redoes its work on every frame as you scroll, and messages take less work to show as they scroll into view.
+- **Hover highlights wait until you stop scrolling.** Messages passing under the pointer while you scroll no longer light up or show their toolbar; the one under the pointer does as soon as you stop.
+- **Scrolling stays smooth with VoiceOver or other accessibility apps running** (window managers, BetterTouchTool, Bartender, Alfred and the like). They used to make Vela work out each message's language as it scrolled into view. VoiceOver's **Translate** action is now offered on other people's messages whose language Vela hasn't checked yet; choosing it translates the message, or tells you when there's nothing to translate.
+- **Resizing the sidebar or the member list is smoother.** The new width is saved once, when you let go of the divider, instead of at every step of the drag.
+- **Smoother scrolling past GIFs and animated images**, especially on Intel Macs and Macs with 8 GB of memory.
+  - Animated GIF, APNG and WebP images are decoded in the background at the size they're shown, instead of at full size while scrolling. Animations larger than 16 megapixels (was 40) show the "too large to show inline" chip, which opens them in your browser.
+  - **GIFs from Tenor, GIPHY and Imgur start a beat after they scroll into view.** Their first frame shows straight away, and ones you scroll quickly past never start, so a fast scroll doesn't stutter. Scrolling back to a GIF you just saw reuses its player.
+  - The pulsing box shown while an image loads no longer costs any work per frame. With Reduce Motion it stays still, as before.
+  - Messages without links skip the link-preview checks entirely.
+- **Less memory on Macs with 8 GB.** Vela keeps half as many images and rendered messages in memory there as on Macs with 16 GB or more, and when macOS runs low on memory, Vela lets go of images and messages that aren't on screen. Scrolling back to them may show them loading again.
+
 ### Fixed
 
 - **No more empty strip above the message box.** The last message now sits just above it. The "is typing…" line only takes up room while someone is typing; the conversation slides up gently to make space, and stays put if you've scrolled up. In the Modern layout, the typing line lines up with the messages, and **Jump to present** moves above it while it shows.
@@ -182,6 +195,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - Links to Reddit posts showed "Reddit" as their title, with no description. Reddit answers apps with a page that only says "Reddit"; Vela now gets the post's title, subreddit and author from Reddit's oEmbed service, for `redd.it` short links too.
 - Streamable videos show their thumbnail. Streamable gives its thumbnails' addresses without `https:`, and Vela skipped them.
 - A long, busy channel with videos and link previews could look empty when you switched to it, opened it or new messages arrived, until the next message came in. Its messages now always show, at the **New** line or the newest message.
+- After you change your nick, your new nick is highlighted in the messages that mention it straight away, and the old one no longer is. Messages already on screen used to keep highlighting the old nick.
 
 ## 0.1.0 - 2026-11-16
 

@@ -162,18 +162,32 @@ public struct ChatStyle: Equatable {
         Self.formatter(pattern: timestampPattern, localeIdentifier: timestampLocaleIdentifier).string(from: date)
     }
 
+    private struct FormatterKey: Hashable {
+        var pattern: String
+        var localeIdentifier: String
+    }
+
     /// Keyed by locale and pattern, so a changed clock or 24-hour setting
     /// gets a fresh formatter instead of reusing the old one.
-    @MainActor private static var formatters: [String: DateFormatter] = [:]
+    @MainActor private static var formatters: [FormatterKey: DateFormatter] = [:]
+    /// The last one used: rows ask for times several at a time, nearly
+    /// always in the same format.
+    @MainActor private static var lastFormatter: (key: FormatterKey, formatter: DateFormatter)?
 
     @MainActor
     private static func formatter(pattern: String, localeIdentifier: String) -> DateFormatter {
-        let key = "\(localeIdentifier)|\(pattern)"
-        if let cached = formatters[key] { return cached }
-        // Typing a custom pattern creates one per keystroke; don't keep them all.
-        if formatters.count >= 16 { formatters.removeAll() }
-        let formatter = TimestampFormat.formatter(pattern: pattern, locale: Locale(identifier: localeIdentifier))
-        formatters[key] = formatter
+        let key = FormatterKey(pattern: pattern, localeIdentifier: localeIdentifier)
+        if let lastFormatter, lastFormatter.key == key { return lastFormatter.formatter }
+        let formatter: DateFormatter
+        if let cached = formatters[key] {
+            formatter = cached
+        } else {
+            // Typing a custom pattern creates one per keystroke; don't keep them all.
+            if formatters.count >= 16 { formatters.removeAll() }
+            formatter = TimestampFormat.formatter(pattern: pattern, locale: Locale(identifier: localeIdentifier))
+            formatters[key] = formatter
+        }
+        lastFormatter = (key, formatter)
         return formatter
     }
 }

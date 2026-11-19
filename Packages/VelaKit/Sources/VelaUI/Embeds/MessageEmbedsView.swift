@@ -152,9 +152,10 @@ struct EmbedLink: Identifiable, Hashable {
 }
 
 enum EmbedLinkExtractor {
-    /// The distinct previewable links in a conversation line (memoized per line).
+    /// The distinct previewable links in a conversation line (memoized per
+    /// line, for lines that might have any).
     static func links(for line: ChatLine) -> [EmbedLink] {
-        guard line.kind.isConversation, !line.isRedacted else { return [] }
+        guard line.kind.isConversation, !line.isRedacted, mayContainLinks(line.text) else { return [] }
         if let memo = EmbedMemory.shared.links.value(for: line.id), memo.text == line.text {
             return memo.links
         }
@@ -168,6 +169,14 @@ enum EmbedLinkExtractor {
         }
         EmbedMemory.shared.links.insert((line.text, result), for: line.id)
         return result
+    }
+
+    /// Whether `text` (with IRC formatting) might hold a link. Most lines
+    /// have none, and this answers without stripping their formatting.
+    static func mayContainLinks(_ text: String) -> Bool {
+        if LinkDetector.mayContainLinks(text) { return true }
+        // Formatting codes (all below 0x20) can split "://" or "www.".
+        return text.utf8.contains { $0 < 0x20 } && LinkDetector.mayContainLinks(IRCFormatting.strip(text))
     }
 }
 

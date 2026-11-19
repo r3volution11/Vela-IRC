@@ -36,9 +36,10 @@ public actor ImageLoader {
 
     /// Single frames larger than this are refused to avoid decompression bombs.
     public static let maxPixelArea = 150_000_000
-    /// Animated images are decoded frame by frame at full size by the UI,
-    /// so their frames get a smaller budget.
-    public static let maxAnimatedPixelArea = 40_000_000
+    /// Animated images are decoded again for every frame they play (and GIF
+    /// sites' MP4s share the cap), so their frames get a smaller budget.
+    /// Larger ones show a "too large to show inline" chip.
+    public static let maxAnimatedPixelArea = 16_000_000
 
     public static func makeDefaultSession() -> URLSession {
         let configuration = URLSessionConfiguration.default
@@ -82,10 +83,11 @@ public actor ImageLoader {
 
     /// - Parameters:
     ///   - memoryLimit: Budget in bytes for cached encoded images; decoded
-    ///     thumbnails get the same budget separately.
+    ///     thumbnails get the same budget separately. 128 MB each by
+    ///     default, halved on Macs with 8 GB (`MemoryBudget`).
     public init(
         session: URLSession = ImageLoader.makeDefaultSession(),
-        memoryLimit: Int = 128 * 1024 * 1024,
+        memoryLimit: Int = MemoryBudget.scaled(128 * 1024 * 1024),
         userAgent: String = LinkPreviewService.defaultUserAgent
     ) {
         self.session = session
@@ -154,6 +156,12 @@ public actor ImageLoader {
     public func removeAllCachedImages() {
         images.removeAll()
         thumbnails.removeAll()
+    }
+
+    /// Keeps the most recently used `fraction` of each cache (memory pressure).
+    public func trimCaches(keeping fraction: Double) {
+        images.trim(keeping: fraction)
+        thumbnails.trim(keeping: fraction)
     }
 
     // MARK: - Loading

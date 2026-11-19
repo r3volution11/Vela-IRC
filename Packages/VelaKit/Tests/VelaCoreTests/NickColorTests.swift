@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import Foundation
+import Observation
 import Testing
 @testable import VelaCore
 import VelaFoundation
@@ -75,4 +76,26 @@ struct ConversationNickColorTests {
         #expect(channel.nickColorIndex(for: "jeebz", palette: wheel) == NickColorAssigner.preferredIndex(for: "jeebz", paletteSize: 12))
         #expect(channel.nickColorIndex(for: "lurker", palette: wheel) == NickColorAssigner.preferredIndex(for: "lurker", paletteSize: 12))
     }
+
+    /// Rows ask for colors in their bodies; the first one to ask (which
+    /// replays the conversation) mustn't start watching the lines and run
+    /// again on every new message.
+    @Test func askingDoesNotObserveTheLines() {
+        let (session, channel) = makeChannel()
+        say("jeebz", "a", in: session)
+        let changed = Flag()
+        withObservationTracking {
+            _ = channel.nickColorIndex(for: "jeebz", palette: wheel)
+        } onChange: {
+            changed.isSet = true
+        }
+        say("tomf", "b", in: session)
+        #expect(!changed.isSet)
+        // Still kept up to date.
+        #expect(channel.nickColorIndex(for: "tomf", palette: wheel) != channel.nickColorIndex(for: "jeebz", palette: wheel))
+    }
+}
+
+private final class Flag: @unchecked Sendable {
+    var isSet = false
 }

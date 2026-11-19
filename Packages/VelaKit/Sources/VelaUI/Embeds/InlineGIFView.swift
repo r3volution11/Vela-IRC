@@ -158,8 +158,9 @@ private struct LoopingGIFView: View {
     @State private var userPlayback: Bool?
     /// The GIF's spot is on screen; out of view it pauses.
     @State private var isVisible = true
-    /// The player exists. It is made the first time the GIF plays and kept
-    /// while paused (so it holds its frame), until the row goes away.
+    /// The player exists. It is made once the GIF has been on screen for
+    /// `playerDelay` and kept while paused (so it holds its frame), until
+    /// the row goes away.
     @State private var hasPlayer = false
     @State private var arrivedAsync = false
 
@@ -206,6 +207,10 @@ private struct LoopingGIFView: View {
             forPoints: compact ? InlineImageView.compactMaxWidth : max(InlineImageView.fullMaxWidth, maxImageHeight)
         )
     }
+
+    /// How long a GIF waits on screen before its player is made: rows that
+    /// fly past in a fling show their poster and never build one.
+    static let playerDelay: Duration = .milliseconds(200)
 
     private var pixelBudget: Int { Self.pixelBudget(compact: compact, maxImageHeight: maxImageHeight) }
     private var maxWidth: CGFloat { compact ? InlineImageView.compactMaxWidth : InlineImageView.fullMaxWidth }
@@ -260,8 +265,14 @@ private struct LoopingGIFView: View {
         }
         .task(id: LoadKey(videoURL: videoURL, pixelBudget: pixelBudget, policy: policy)) { await load() }
         .onScrollVisibilityChange(threshold: 0.2) { isVisible = $0 }
-        .onChange(of: shouldAnimate, initial: true) { _, animate in
-            if animate { hasPlayer = true }
+        .task(id: shouldAnimate) {
+            guard shouldAnimate, !hasPlayer else { return }
+            // Cancelled if the GIF stops playing or leaves first. A click on
+            // play starts it straight away.
+            if userPlayback != true {
+                do { try await Task.sleep(for: Self.playerDelay) } catch { return }
+            }
+            hasPlayer = true
         }
         .onAppear { isVisible = true }
         .onDisappear {
@@ -433,12 +444,12 @@ struct LoopingVideoView: NSViewRepresentable {
     }
 }
 
-/// `LoopingVideoView`'s view: an `AVPlayerLayer` fed by an `AVPlayerLooper`.
+/// `LoopingVideoView`'s view: an `AVPlayerLayer` fed by an `AVPlayerLooper`
+/// from `LoopingPlayerPool`.
 final class LoopingVideoNSView: NSView {
     private let playerLayer = AVPlayerLayer()
-    private var player: AVQueuePlayer?
-    private var looper: AVPlayerLooper?
-    private var fileURL: URL?
+    private var looping: LoopingPlayer?
+    private var player: AVQueuePlayer? { looping?.player }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -467,16 +478,11 @@ final class LoopingVideoNSView: NSView {
     }
 
     func update(fileURL: URL, isPlaying: Bool) {
-        if fileURL != self.fileURL {
+        if fileURL != looping?.fileURL {
             tearDown()
-            let player = AVQueuePlayer()
-            player.isMuted = true
-            player.preventsDisplaySleepDuringVideoPlayback = false
-            player.allowsExternalPlayback = false
-            looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: fileURL))
-            playerLayer.player = player
-            self.player = player
-            self.fileURL = fileURL
+            let looping = LoopingPlayerPool.shared.checkOut(fileURL)
+            playerLayer.player = looping.player
+            self.looping = looping
         }
         if isPlaying {
             if player?.rate == 0 { player?.play() }
@@ -485,13 +491,81 @@ final class LoopingVideoNSView: NSView {
         }
     }
 
+    /// Hands the player back to the pool, paused, for the next view of the
+    /// same file (scrolling back to the GIF).
     func tearDown() {
-        player?.pause()
+        guard let looping else { return }
+        looping.player.pause()
+        playerLayer.player = nil
+        self.looping = nil
+        LoopingPlayerPool.shared.checkIn(looping)
+    }
+}
+
+/// A muted `AVQueuePlayer` looping one file.
+final class LoopingPlayer {
+    let fileURL: URL
+    let player: AVQueuePlayer
+    private var looper: AVPlayerLooper?
+
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+        let player = AVQueuePlayer()
+        player.isMuted = true
+        player.preventsDisplaySleepDuringVideoPlayback = false
+        player.allowsExternalPlayback = false
+        looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: fileURL))
+        self.player = player
+    }
+
+    func invalidate() {
+        player.pause()
         looper?.disableLooping()
         looper = nil
-        player?.removeAllItems()
-        playerLayer.player = nil
-        player = nil
-        fileURL = nil
+        player.removeAllItems()
+    }
+}
+
+/// The few looping players most recently let go, by file, so a GIF scrolled
+/// back into view reuses its player instead of building another (setting up
+/// `AVPlayerLooper` is the expensive part).
+final class LoopingPlayerPool {
+    static let shared = LoopingPlayerPool()
+
+    /// Paused players hold little but their decoder; a handful covers
+    /// scrolling back and forth over the same GIFs.
+    let capacity: Int
+    /// Least recently returned first.
+    private(set) var idle: [LoopingPlayer] = []
+    private let makePlayer: @MainActor (URL) -> LoopingPlayer
+
+    init(capacity: Int = 3, makePlayer: @escaping @MainActor (URL) -> LoopingPlayer = { LoopingPlayer(fileURL: $0) }) {
+        self.capacity = capacity
+        self.makePlayer = makePlayer
+    }
+
+    /// A pooled player for `fileURL`, or a new one.
+    func checkOut(_ fileURL: URL) -> LoopingPlayer {
+        if let index = idle.lastIndex(where: { $0.fileURL == fileURL }) {
+            return idle.remove(at: index)
+        }
+        return makePlayer(fileURL)
+    }
+
+    /// Takes back a player no view shows any more.
+    func checkIn(_ player: LoopingPlayer) {
+        // One per file: the same GIF on two rows comes back twice.
+        if let index = idle.firstIndex(where: { $0.fileURL == player.fileURL }) {
+            idle.remove(at: index).invalidate()
+        }
+        idle.append(player)
+        while idle.count > capacity {
+            idle.removeFirst().invalidate()
+        }
+    }
+
+    func trim(for level: MemoryPressureLevel) {
+        for player in idle { player.invalidate() }
+        idle.removeAll()
     }
 }

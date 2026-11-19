@@ -91,6 +91,8 @@ When someone writes in another language, right-click the message (or hover it an
 
 **Translate** is offered for other people's messages in a language other than the one you translate into, when macOS can translate between the two. Your own messages are never translated.
 
+With VoiceOver, use the message's **Translate** action. It's also offered on other people's messages whose language Vela hasn't checked yet; if such a message turns out to need no translation, VoiceOver says so.
+
 While Vela works, the caption reads "Translating from Spanish…". If a translation fails, it reads "Couldn't translate from Spanish"; hover it for the reason, or click it and choose **Try Again**.
 
 ### Translate a channel automatically {#automatic}

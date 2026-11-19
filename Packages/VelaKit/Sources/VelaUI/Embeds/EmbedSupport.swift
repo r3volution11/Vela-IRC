@@ -18,6 +18,10 @@ import VelaTheme
 /// are actors, so asking them costs an async hop; rows that SwiftUI re-creates
 /// (scrolling a lazy list, switching buffers) seed their state from these
 /// memos instead and render known media on the first frame.
+///
+/// When full it drops the oldest quarter of the entries (or a tenth of the
+/// cost) at once, so a full cache costs one sort per batch rather than a
+/// scan per insert.
 struct MemoCache<Key: Hashable, Value> {
     private struct Entry {
         var value: Value
@@ -46,20 +50,43 @@ struct MemoCache<Key: Hashable, Value> {
 
     func peek(_ key: Key) -> Value? { entries[key]?.value }
 
+    var count: Int { entries.count }
+
     mutating func insert(_ value: Value, for key: Key, cost: Int = 1) {
         tick &+= 1
         if let old = entries[key] { totalCost -= old.cost }
         entries[key] = Entry(value: value, cost: cost, tick: tick)
         totalCost += cost
-        while entries.count > countLimit || (totalCost > costLimit && entries.count > 1) {
-            guard let oldest = entries.min(by: { $0.value.tick < $1.value.tick }) else { break }
-            totalCost -= oldest.value.cost
-            entries.removeValue(forKey: oldest.key)
-        }
+        guard entries.count > countLimit || totalCost > costLimit else { return }
+        trim(
+            toCount: entries.count > countLimit ? countLimit - countLimit / 4 : countLimit,
+            cost: totalCost > costLimit ? costLimit - costLimit / 10 : costLimit
+        )
     }
 
     mutating func removeValue(for key: Key) {
         if let old = entries.removeValue(forKey: key) { totalCost -= old.cost }
+    }
+
+    mutating func removeAll() {
+        entries.removeAll()
+        totalCost = 0
+    }
+
+    /// Drops the least recently used entries until at most `count` remain
+    /// and they cost at most `cost`. The newest entry always stays.
+    mutating func trim(toCount count: Int, cost: Int = .max) {
+        guard entries.count > count || totalCost > cost else { return }
+        for (key, entry) in entries.sorted(by: { $0.value.tick < $1.value.tick }) {
+            guard entries.count > 1, entries.count > count || totalCost > cost else { break }
+            totalCost -= entry.cost
+            entries.removeValue(forKey: key)
+        }
+    }
+
+    /// Keeps the most recently used `fraction` of the entries and their cost.
+    mutating func trim(keeping fraction: Double) {
+        trim(toCount: Int(Double(entries.count) * fraction), cost: Int(Double(totalCost) * fraction))
     }
 }
 
@@ -77,8 +104,11 @@ final class EmbedMemory {
     static let shared = EmbedMemory()
 
     private var previews = MemoCache<URL, LinkPreview>(countLimit: 500)
-    /// Decoded, downsampled images ready to draw (≈96 MB budget).
-    private var stills = MemoCache<StillImageKey, CGImage>(countLimit: 400, costLimit: 96 * 1024 * 1024)
+    /// Decoded, downsampled images ready to draw (96 MB, or 48 MB on a Mac
+    /// with 8 GB).
+    private(set) var stills = MemoCache<StillImageKey, CGImage>(
+        countLimit: 400, costLimit: MemoryBudget.scaled(96 * 1024 * 1024)
+    )
     /// Pixel sizes of images seen so far, to reserve their space up front.
     private var pixelSizes = MemoCache<URL, CGSize>(countLimit: 2_000)
     /// Images that failed to load, and why, so a re-created row shows its
@@ -88,7 +118,8 @@ final class EmbedMemory {
     /// blocked site), so a re-created row shows its chip on the first frame.
     /// `PreviewDecider` ignores it once the block is lifted.
     var fetchBlocks = MemoCache<URL, SiteBlock>(countLimit: 500)
-    /// Links detected per chat line.
+    /// Links detected per chat line, for lines that might have any
+    /// (`EmbedLinkExtractor.mayContainLinks`).
     var links = MemoCache<UUID, (text: String, links: [EmbedLink])>(countLimit: 2_000)
     /// GIF sites' MP4s on disk (`LoopingVideoLoader`), by video URL.
     private var loopingVideos = MemoCache<URL, LoadedLoopingVideo>(countLimit: 400)
@@ -137,6 +168,21 @@ final class EmbedMemory {
 
     func remember(loopingVideo video: LoadedLoopingVideo, for url: URL) {
         loopingVideos.insert(video, for: url)
+    }
+
+    /// Gives memory back under pressure. Decoded images go first; previews
+    /// (small, and dropping them makes rows jump) only when it's critical.
+    /// Pixel sizes, failures and file locations are tiny and always stay.
+    func trim(for level: MemoryPressureLevel) {
+        switch level {
+        case .warning:
+            stills.trim(keeping: level.keptFraction)
+            links.trim(keeping: level.keptFraction)
+        case .critical:
+            stills.removeAll()
+            links.removeAll()
+            previews.removeAll()
+        }
     }
 }
 
@@ -424,13 +470,13 @@ private struct EmbedFadeIn: ViewModifier {
     }
 }
 
-/// Space-holding box shown while an image or video loads.
+/// Space-holding box shown while an image or video loads. It pulses gently
+/// unless Reduce Motion is on.
 struct MediaPlaceholder: View {
     @Environment(\.theme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var systemImage = "photo"
     var cornerRadius: CGFloat = 8
-    @State private var pulse = false
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -444,12 +490,67 @@ struct MediaPlaceholder: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1)
             )
-            .opacity(pulse ? 0.6 : 1)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+            .overlay {
+                if !reduceMotion {
+                    PlaceholderPulse(color: theme.color(ThemeKey.chatBackground).nsColor.cgColor, cornerRadius: cornerRadius)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
             }
             .accessibilityLabel("Loading")
+    }
+}
+
+/// The placeholder's pulse: a layer of the chat background fading in and
+/// out over it (like dimming it to 60% and back). Core Animation runs it,
+/// so SwiftUI does no work per frame.
+private struct PlaceholderPulse: NSViewRepresentable {
+    let color: CGColor
+    let cornerRadius: CGFloat
+
+    func makeNSView(context: Context) -> PlaceholderPulseView {
+        let view = PlaceholderPulseView()
+        updateNSView(view, context: context)
+        return view
+    }
+
+    func updateNSView(_ view: PlaceholderPulseView, context: Context) {
+        guard let layer = view.layer else { return }
+        layer.backgroundColor = color
+        layer.cornerRadius = cornerRadius
+    }
+}
+
+final class PlaceholderPulseView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.cornerCurve = .continuous
+        layer?.opacity = 0
+        setAccessibilityElement(false)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func scrollWheel(with event: NSEvent) {
+        nextResponder?.scrollWheel(with: event)
+    }
+
+    // Leaving the window removes layer animations; add it back on return.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard window != nil, let layer, layer.animation(forKey: "pulse") == nil else { return }
+        let pulse = CABasicAnimation(keyPath: "opacity")
+        pulse.fromValue = 0
+        pulse.toValue = 0.4
+        pulse.duration = 0.9
+        pulse.autoreverses = true
+        pulse.repeatCount = .infinity
+        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        layer.add(pulse, forKey: "pulse")
     }
 }
 

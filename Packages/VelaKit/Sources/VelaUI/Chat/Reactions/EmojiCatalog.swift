@@ -168,6 +168,10 @@ enum EmojiRecents {
     private static let key = "Vela.recentEmoji"
     private static let limit = 24
 
+    /// `frequent`, kept until the next `record`: the hover toolbar asks
+    /// every time it's built.
+    private static var cachedFrequent: [String]?
+
     static var recent: [String] {
         UserDefaults.standard.stringArray(forKey: key) ?? []
     }
@@ -176,14 +180,17 @@ enum EmojiRecents {
         var list = recent.filter { $0 != emoji }
         list.insert(emoji, at: 0)
         UserDefaults.standard.set(Array(list.prefix(limit)), forKey: key)
+        cachedFrequent = nil
     }
 
     /// Recent emoji topped up with popular defaults.
     static func frequent(count: Int = 16) -> [String] {
+        if let cachedFrequent { return Array(cachedFrequent.prefix(count)) }
         var result = recent
         for emoji in EmojiCatalog.defaultFrequent where !result.contains(emoji) {
             result.append(emoji)
         }
+        cachedFrequent = result
         return Array(result.prefix(count))
     }
 }

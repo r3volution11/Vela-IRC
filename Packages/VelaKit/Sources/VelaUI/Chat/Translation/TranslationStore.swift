@@ -165,6 +165,27 @@ final class TranslationStore {
         return canTranslate(TranslationPair(source: source, target: context.target)) ? source : nil
     }
 
+    /// What `offer(for:in:context:)` says for a line, as far as it's known
+    /// without detecting its language.
+    enum KnownOffer: Equatable {
+        case translate(from: Locale.Language)
+        case none
+        /// Its language hasn't been looked at yet.
+        case unknown
+    }
+
+    /// `offer(for:in:context:)` from the languages already detected, for
+    /// VoiceOver's actions: rows are built with them whenever an
+    /// accessibility client runs, and detecting on the main thread for
+    /// each one slowed scrolling.
+    func knownOffer(for line: ChatLine, context: TranslationContext) -> KnownOffer {
+        guard line.kind.isConversation, !line.isSelf, !line.isRedacted else { return .none }
+        guard let detected = detections[line.id] else { return .unknown }
+        guard let source = detected, !source.isSameTranslationLanguage(as: context.target) else { return .none }
+        prepare(isDemo: context.isDemo)
+        return canTranslate(TranslationPair(source: source, target: context.target)) ? .translate(from: source) : .none
+    }
+
     /// The line's language, detected once and cached.
     func detectedLanguage(of line: ChatLine, in buffer: BufferModel?) -> Locale.Language? {
         if let cached = detections[line.id] { return cached }

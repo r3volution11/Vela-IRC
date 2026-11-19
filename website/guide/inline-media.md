@@ -99,6 +99,8 @@ In **Settings → Media → Images**:
 - **Size.** **Full size** shows images inline, up to the **Maximum image height** (320 points by default); taller ones are scaled down. **Thumbnail** keeps them small; click one to see it full size.
 - **Largest image to load automatically** (10 MB by default). Bigger images show a placeholder you can click.
 
+Animated images play at the size they're shown, decoded in the background so scrolling stays smooth. One larger than 16 megapixels, however small its file, shows a chip that opens it in your browser instead.
+
 GIFs follow these settings too.
 
 From the command palette: **Media: Full-Size Images** and **Image Thumbnails**.
@@ -119,7 +121,7 @@ Any other link to a `.gif`, `.webp` or `.apng` file plays inline as an [image](#
 
 - **Small and smooth.** These sites keep a video copy of every GIF, usually a tenth of its size or less, and Vela plays that copy: silent, looping and without controls, just like a GIF. Stickers, which have see-through backgrounds, play from the GIF itself. If the video copy can't be loaded, Vela plays the GIF instead.
 - **Sized like images.** GIFs follow the [Images](#images) settings: **Full size**, up to the **Maximum image height**, or **Thumbnail**, which plays while the pointer is over it. A GIF bigger than **Largest image to load automatically** shows a chip that opens it in your browser.
-- **Pause and play** with the **GIF** badge in the corner, or by right-clicking the GIF. GIFs pause while they're scrolled out of view. With **Reduce Motion** turned on in macOS, they show their first frame and a play button.
+- **Pause and play** with the **GIF** badge in the corner, or by right-clicking the GIF. A GIF starts a moment after it scrolls into view, showing its first frame until then, so scrolling quickly past GIFs stays smooth. GIFs pause while they're scrolled out of view. With **Reduce Motion** turned on in macOS, they show their first frame and a play button.
 - **Click a GIF** to see it larger (<kbd>Esc</kbd> closes it). The line underneath, such as **via GIPHY · giphy.com**, says where it's from; click it to open the GIF's page in your browser, or drag across it to select it.
 - **Your other settings apply** as they do to images: [blur](#blur), [site rules](#site-rules), the [adult-site filter](#adult-sites), **Load previews automatically** (a **Load GIF** button until you click it) and turning media off for a channel. On a site set to **Text only**, a GIF link gets a link preview with the GIF's title and no animation.
 

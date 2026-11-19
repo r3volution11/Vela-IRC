@@ -182,6 +182,10 @@ nonisolated enum BlurredMedia {
     /// Stand-in images by image URL, ready to draw.
     @MainActor static var memo = MemoCache<URL, CGImage>(countLimit: 300)
 
+    @MainActor static func trim(for level: MemoryPressureLevel) {
+        level == .critical ? memo.removeAll() : memo.trim(keeping: level.keptFraction)
+    }
+
     /// The remembered stand-in image for `url`, if `policy` lets it load.
     @MainActor static func memoized(_ url: URL, policy: MediaPolicy) -> CGImage? {
         guard policy.allowsImage(url) else { return nil }

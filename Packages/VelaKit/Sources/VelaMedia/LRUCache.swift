@@ -69,6 +69,21 @@ struct LRUCache<Key: Hashable, Value> {
         totalCost = 0
     }
 
+    /// Drops the least recently used entries until at most `count` remain
+    /// and they cost at most `cost` (memory pressure).
+    mutating func trim(toCount count: Int, cost: Int = .max) {
+        guard entries.count > count || totalCost > cost else { return }
+        for (key, _) in entries.sorted(by: { $0.value.lastAccess < $1.value.lastAccess }) {
+            guard entries.count > count || totalCost > cost else { break }
+            removeValue(for: key)
+        }
+    }
+
+    /// Keeps the most recently used `fraction` of the entries and their cost.
+    mutating func trim(keeping fraction: Double) {
+        trim(toCount: Int(Double(entries.count) * fraction), cost: Int(Double(totalCost) * fraction))
+    }
+
     private mutating func evictIfNeeded(protecting protected: Key) {
         while entries.count > countLimit || totalCost > costLimit {
             var oldestKey: Key?

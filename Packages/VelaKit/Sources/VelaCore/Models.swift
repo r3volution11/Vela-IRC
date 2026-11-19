@@ -334,8 +334,10 @@ public final class BufferModel: Identifiable, Hashable {
     public func nickColorIndex(for nick: String, palette: NickPaletteGeometry) -> Int {
         if nickColors?.palette.signature != palette.signature || nickColors?.palette.count != palette.count {
             // First use, or the theme changed: replay the conversation.
+            // From the lines' storage, not `lines`: this runs inside a row's
+            // body, which would then re-run on the next line to arrive.
             var assigner = NickColorAssigner(palette: palette)
-            for nick in lines.compactMap(Self.speaker(of:)) { assigner.noteSpeaker(nick) }
+            for nick in _lines.compactMap(Self.speaker(of:)) { assigner.noteSpeaker(nick) }
             nickColors = assigner
         }
         return nickColors?.index(for: nick) ?? 0

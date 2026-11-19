@@ -83,6 +83,24 @@ struct TranslationStoreTests {
         #expect(store.offer(for: englishLine, in: buffer, context: context(target: "es")) != nil)
     }
 
+    /// VoiceOver's actions never detect a language: unknown until something
+    /// else (a menu, automatic translation, the action itself) looks.
+    @Test func knownOffersNeverDetect() {
+        let store = makeStore(FakeTranslator())
+        #expect(store.knownOffer(for: spanishLine, context: context()) == .unknown)
+        #expect(store.knownOffer(for: englishLine, context: context()) == .unknown)
+        var mine = spanishLine
+        mine.isSelf = true
+        #expect(store.knownOffer(for: mine, context: context()) == .none)
+        #expect(store.knownOffer(for: ChatLine(kind: .join, nick: "marisol", text: spanishLine.text), context: context()) == .none)
+
+        _ = store.detectedLanguage(of: spanishLine, in: buffer)
+        _ = store.detectedLanguage(of: englishLine, in: buffer)
+        #expect(store.knownOffer(for: spanishLine, context: context()) == .translate(from: spanish))
+        #expect(store.knownOffer(for: englishLine, context: context()) == .none)
+        #expect(store.knownOffer(for: spanishLine, context: context()) == store.offer(for: spanishLine, in: buffer, context: context()).map { .translate(from: $0) })
+    }
+
     @Test func unsupportedPairsStopBeingOffered() async {
         let store = makeStore(FakeTranslator())
         // Not known yet: offered, and the pair gets checked.

@@ -665,14 +665,16 @@ nonisolated struct LinkClickTracker<Target> {
 
 // MARK: Accessibility
 
-/// VoiceOver actions that open each link in `text`, named for what the link
-/// shows ("Open https://swift.org", "Open #vela").
+/// VoiceOver actions that open each link, named for what the link shows
+/// ("Open https://swift.org", "Open #vela"). The links come ready-made
+/// (`RenderedText.linkRuns`): rows are built with their actions whenever an
+/// accessibility client is running.
 struct LinkAccessibilityActions: View {
     @Environment(\.openURL) private var openURL
-    let text: AttributedString
+    let links: [LinkRuns.Link]
 
     var body: some View {
-        ForEach(Array(LinkRuns.links(in: text).enumerated()), id: \.offset) { _, link in
+        ForEach(Array(links.enumerated()), id: \.offset) { _, link in
             Button("Open \(link.title)") { openURL(link.url) }
         }
     }

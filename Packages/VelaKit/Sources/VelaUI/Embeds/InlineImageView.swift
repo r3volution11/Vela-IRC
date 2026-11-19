@@ -21,6 +21,7 @@ struct InlineImageView: View {
     @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.embedBlur) private var blur
+    @Environment(\.displayScale) private var displayScale
 
     /// The link as posted (opened by "Open in Browser").
     let linkURL: URL
@@ -83,12 +84,14 @@ struct InlineImageView: View {
         ))
     }
 
-    /// Reloads when the image, its size, the policy or the blur changes.
+    /// Reloads when the image, its size, the policy or the blur changes
+    /// (or the display's scale, which animation frames are decoded for).
     private struct LoadKey: Equatable {
         var imageURL: URL
         var pixelBudget: Int
         var policy: MediaPolicy
         var blurred: Bool
+        var displayScale: CGFloat
     }
 
     private static func pixelBudget(compact: Bool, maxImageHeight: CGFloat) -> Int {
@@ -141,7 +144,8 @@ struct InlineImageView: View {
             imageURL: imageURL,
             pixelBudget: Self.pixelBudget(compact: compact, maxImageHeight: maxImageHeight),
             policy: policy,
-            blurred: blur.isBlurred
+            blurred: blur.isBlurred,
+            displayScale: displayScale
         )) { await load() }
         .onChange(of: shouldAnimate) { _, animate in
             animate ? player.play() : player.pause()
@@ -153,12 +157,19 @@ struct InlineImageView: View {
     private var imageContent: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         return ZStack {
-            if let frame = player.frame ?? still {
-                Image(decorative: frame, scale: 1)
+            if let still {
+                Image(decorative: still, scale: 1)
                     .resizable()
                     .interpolation(.high)
             } else {
                 theme[ThemeKey.embedPlaceholderBackground]
+            }
+            // Frames go straight to this view's layer; this body doesn't
+            // run for them.
+            if player.hasFrame {
+                AnimatedFrameView(player: player, cornerRadius: cornerRadius)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
         }
         .clipShape(shape)
@@ -240,7 +251,10 @@ struct InlineImageView: View {
             pixelSize = result.info.pixelSize
             still = result.image
             if result.info.isAnimated {
-                player.load(result.info.data, frameCount: result.info.frameCount)
+                let frameBudget = AnimatedFrames.pixelBudget(
+                    pixelSize: result.info.pixelSize, maxWidth: maxWidth, maxHeight: maxHeight, scale: displayScale
+                )
+                player.load(result.info.data, frameCount: result.info.frameCount, maxPixelSize: frameBudget)
                 isAnimated = true
                 if shouldAnimate { player.play() }
             }

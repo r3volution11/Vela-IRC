@@ -10,9 +10,12 @@ import VelaStore
 import VelaTheme
 
 /// One display item. Equatable so unchanged rows skip body evaluation when
-/// the list updates.
+/// the list updates; a new text generation (our nick changed, so mentions
+/// are highlighted elsewhere) runs them again.
 struct DisplayItemRow: View, Equatable {
     let item: DisplayItem
+    /// `MessageListController.textGeneration`.
+    var textGeneration = 0
 
     var body: some View {
         switch item {
@@ -24,9 +27,9 @@ struct DisplayItemRow: View, Equatable {
             CatchUpCardRow()
         case .line(let lineItem):
             if lineItem.line.kind.isConversation {
-                MessageRow(item: lineItem)
+                MessageRow(item: lineItem, textGeneration: textGeneration)
             } else {
-                EventRow(line: lineItem.line)
+                EventRow(line: lineItem.line, textGeneration: textGeneration)
             }
         case .membershipRun(let run):
             MembershipRunRow(run: run)
@@ -45,6 +48,8 @@ struct MessageRow: View {
     @Environment(MessageListController.self) private var controller
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let item: LineItem
+    /// Not read: a new one makes the row run again and fetch its text anew.
+    var textGeneration = 0
 
     @State private var isHovered = false
     @State private var isPickerOpen = false
@@ -78,7 +83,14 @@ struct MessageRow: View {
             }
             .contentShape(Rectangle())
             .onHover { hovering in
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.08)) { isHovered = hovering }
+                // Not while scrolling: the controller holds the change until
+                // the scroll ends.
+                controller.hoverChanged(hovering, row: line.id) { hovering in
+                    guard isHovered != hovering else { return }
+                    withAnimation(reduceMotion || controller.isUserScrolling ? nil : .easeOut(duration: 0.08)) {
+                        isHovered = hovering
+                    }
+                }
             }
             // Right-clicking the message's text opens it too.
             .selectableTextContextMenu {
@@ -310,14 +322,16 @@ struct GroupedMessageContent: View {
         if item.isContinuation {
             // The time on hover, right-aligned against the text column.
             // Always laid out (invisible otherwise): it gives the gutter the
-            // text's baseline.
-            Text(style.timestamp(line.time))
+            // text's baseline. Hidden, a space does that without formatting
+            // a time nobody sees.
+            let shown = placement.slot == .gutter && placement.isVisible
+            Text(shown ? style.timestamp(line.time) : " ")
                 .font(style.gutterTimestampFont)
                 .foregroundStyle(theme[ThemeKey.chatTimestamp])
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .frame(width: width, alignment: .trailing)
-                .opacity(placement.slot == .gutter && placement.isVisible ? 1 : 0)
+                .opacity(shown ? 1 : 0)
                 .accessibilityHidden(true)
         } else if style.showAvatars, placement.slot == .gutter {
             // Left with avatars: the time under the avatar, which then
@@ -636,7 +650,7 @@ private struct MessageAccessibilityModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Self.label(for: line, rendered: rendered))
+            .accessibilityLabel(controller.accessibilityLabel(for: line) { Self.label(for: line, rendered: rendered) })
             .accessibilityActions {
                 if controller.canReply(to: line) {
                     Button("Reply") { controller.reply(to: line, uiState: uiState) }
@@ -645,8 +659,8 @@ private struct MessageAccessibilityModifier: ViewModifier {
                     Button("Copy Text") { controller.copyText(of: line) }
                 }
                 TranslationAccessibilityActions(line: line)
-                if let rendered {
-                    LinkAccessibilityActions(text: rendered.attributed)
+                if let rendered, !rendered.linkRuns.isEmpty {
+                    LinkAccessibilityActions(links: rendered.linkRuns)
                 }
                 if controller.canDelete(line) {
                     Button("Delete Message") { controller.confirmDelete(line) }

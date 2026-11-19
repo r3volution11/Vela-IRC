@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import Foundation
+import Synchronization
 import VelaCore
 import VelaStore
 
@@ -412,11 +413,31 @@ nonisolated enum DayLabel {
             return String(localized: "Yesterday")
         }
         let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.timeZone = calendar.timeZone
-        formatter.locale = locale
-        formatter.setLocalizedDateFormatFromTemplate(sameYear ? "EEEEMMMMd" : "EEEEMMMMdyyyy")
-        return formatter.string(from: date)
+        return format(date, template: sameYear ? "EEEEMMMMd" : "EEEEMMMMdyyyy", calendar: calendar, locale: locale)
+    }
+
+    private struct FormatterKey: Hashable {
+        var template: String
+        var calendar: Calendar
+        var locale: Locale
+    }
+
+    /// Made once per template, calendar and locale: each divider asks, and
+    /// making a formatter takes longer than drawing the row.
+    private static let formatters = Mutex<[FormatterKey: DateFormatter]>([:])
+
+    private static func format(_ date: Date, template: String, calendar: Calendar, locale: Locale) -> String {
+        let key = FormatterKey(template: template, calendar: calendar, locale: locale)
+        return formatters.withLock { formatters in
+            if let cached = formatters[key] { return cached.string(from: date) }
+            let formatter = DateFormatter()
+            formatter.calendar = calendar
+            formatter.timeZone = calendar.timeZone
+            formatter.locale = locale
+            formatter.setLocalizedDateFormatFromTemplate(template)
+            if formatters.count >= 8 { formatters.removeAll() }
+            formatters[key] = formatter
+            return formatter.string(from: date)
+        }
     }
 }

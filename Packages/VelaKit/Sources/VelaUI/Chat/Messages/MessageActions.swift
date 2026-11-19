@@ -59,14 +59,16 @@ struct MessageHoverToolbar: View {
         }
         .padding(2)
         .background(
+            // The shadow on the shape alone: on the whole toolbar it would
+            // render the buttons offscreen to find their outline.
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(theme[ThemeKey.popoverBackground])
+                .shadow(color: shadowColor, radius: 5, y: 2)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(theme[ThemeKey.popoverBorder], lineWidth: 1)
         )
-        .shadow(color: shadowColor, radius: 5, y: 2)
     }
 
     private var shadowColor: Color {

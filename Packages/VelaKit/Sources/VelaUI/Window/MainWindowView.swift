@@ -22,6 +22,9 @@ struct MainWindowView: View {
     @Environment(\.appearsActive) private var appearsActive
     @Environment(\.chatStyle) private var style
 
+    /// The member list's width while its divider is dragged (see `PaneDivider`).
+    @State private var memberListDragWidth: Double?
+
     /// Stacked vertically inside the narrow rail, side by side whenever the
     /// sidebar (or the hover-expanded rail) is wide enough.
     private var trafficLightLayout: TrafficLightLayout {
@@ -50,10 +53,11 @@ struct MainWindowView: View {
                     width: settings[.memberListWidth],
                     range: 120...320,
                     edge: .trailing,
-                    colorKey: ThemeKey.memberListBorder
+                    colorKey: ThemeKey.memberListBorder,
+                    liveWidth: $memberListDragWidth
                 ) { settings[.memberListWidth] = $0 }
                 MemberListView(buffer: buffer, session: session)
-                    .frame(width: settings[.memberListWidth])
+                    .frame(width: memberListDragWidth ?? settings[.memberListWidth])
                     .transition(.move(edge: .trailing))
             }
         }
@@ -165,6 +169,10 @@ struct WindowConfigurator: NSViewRepresentable {
 }
 
 /// A themed 1-pt divider with a wider invisible grab area for resizing.
+///
+/// While dragging, the pane follows `liveWidth`; the width is saved
+/// (`onCommit`) once, when the drag ends. Saving on every step re-ran
+/// everything that reads settings, the whole chat included.
 struct PaneDivider: View {
     @Environment(\.theme) private var theme
     let width: Double
@@ -172,7 +180,9 @@ struct PaneDivider: View {
     /// The side of the divider the resized pane is on.
     let edge: HorizontalEdge
     var colorKey: String = ThemeKey.paneDivider
-    let onChange: (Double) -> Void
+    /// The pane's width during a drag; nil otherwise.
+    @Binding var liveWidth: Double?
+    let onCommit: (Double) -> Void
 
     @State private var dragStartWidth: Double?
 
@@ -191,9 +201,13 @@ struct PaneDivider: View {
                                 let start = dragStartWidth ?? width
                                 if dragStartWidth == nil { dragStartWidth = width }
                                 let delta = edge == .leading ? value.translation.width : -value.translation.width
-                                onChange(min(range.upperBound, max(range.lowerBound, start + delta)))
+                                liveWidth = min(range.upperBound, max(range.lowerBound, start + delta))
                             }
-                            .onEnded { _ in dragStartWidth = nil }
+                            .onEnded { _ in
+                                if let liveWidth { onCommit(liveWidth) }
+                                liveWidth = nil
+                                dragStartWidth = nil
+                            }
                     )
             }
             .zIndex(1)

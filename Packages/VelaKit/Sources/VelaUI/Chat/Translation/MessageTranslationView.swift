@@ -158,13 +158,48 @@ struct TranslationMessageMenuItems: View {
     }
 }
 
-/// The same, as VoiceOver actions on the message. Like menu content, it's
-/// only built when asked for, so rows don't detect languages up front.
+/// The same, as VoiceOver actions on the message. Unlike menu content,
+/// actions are built with every row while an accessibility client runs, so
+/// this never detects a language itself: a line looked at before offers
+/// Translate when the menu would; one not looked at yet offers it too, and
+/// looks when it's chosen.
 struct TranslationAccessibilityActions: View {
+    @Environment(TranslationStore.self) private var store
+    @Environment(\.translationContext) private var context
+    @Environment(MessageListController.self) private var controller
     let line: ChatLine
 
     var body: some View {
-        TranslationMessageMenuItems(line: line)
+        if let context, !line.isRedacted {
+            if store.state(for: line.id)?.isShowing == true {
+                Button("Hide Translation") { store.hide(line.id) }
+            } else {
+                switch store.knownOffer(for: line, context: context) {
+                case .translate(let source):
+                    Button("Translate") { store.translate(line, from: source, context: context) }
+                case .unknown:
+                    Button("Translate") { translateIfForeign(context: context) }
+                case .none:
+                    EmptyView()
+                }
+            }
+        }
+    }
+
+    /// Translate on a line whose language wasn't known: looks now, and
+    /// says so when there's nothing to translate.
+    private func translateIfForeign(context: TranslationContext) {
+        if let source = store.offer(for: line, in: controller.buffer, context: context) {
+            store.translate(line, from: source, context: context)
+            return
+        }
+        let detected = store.detectedLanguage(of: line, in: controller.buffer)
+        let message = if let detected, detected.isSameTranslationLanguage(as: context.target) {
+            "Already in \(context.target.translationDisplayName())"
+        } else {
+            "No translation for this message"
+        }
+        AccessibilityNotification.Announcement(message).post()
     }
 }
 

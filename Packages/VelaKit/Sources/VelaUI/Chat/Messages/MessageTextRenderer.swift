@@ -62,6 +62,28 @@ nonisolated struct MessageTextPalette: Equatable, Sendable {
     }
 }
 
+extension MessageTextPalette {
+    private struct Inputs: Equatable {
+        var theme: ResolvedTheme
+        var monospaceFont: Font
+    }
+
+    @MainActor private static var memo: (inputs: Inputs, palette: MessageTextPalette)?
+
+    /// `init(theme:style:)`, kept for the last theme and font. The message
+    /// list asks on every update, and mapping the 99 mIRC colors each time
+    /// adds up. An unchanged theme compares cheaply (its arrays and
+    /// dictionaries are the same storage).
+    @MainActor
+    static func cached(theme: ResolvedTheme, style: ChatStyle) -> MessageTextPalette {
+        let inputs = Inputs(theme: theme, monospaceFont: style.monospaceFont)
+        if let memo, memo.inputs == inputs { return memo.palette }
+        let palette = MessageTextPalette(theme: theme, style: style)
+        memo = (inputs, palette)
+        return palette
+    }
+}
+
 /// Everything besides the palette that changes how text renders.
 nonisolated struct MessageTextOptions: Equatable, Sendable {
     var renderFormatting = true
@@ -78,6 +100,9 @@ nonisolated struct RenderedText: Sendable {
     var links: [URL]
     /// One to three emoji and nothing else.
     var isEmojiOnly: Bool
+    /// The runs of `attributed` that are links, channel names included
+    /// (for VoiceOver's actions, made once here rather than per row).
+    var linkRuns: [LinkRuns.Link] = []
 }
 
 /// Turns IRC message text into an AttributedString: mIRC formatting, links,
@@ -110,12 +135,14 @@ nonisolated enum MessageTextRenderer {
         }
 
         let linkRanges = detected.map(\.range)
+        var hasLinks = !detected.isEmpty
         for channel in channelRanges(in: plain, types: options.channelTypes)
         where !linkRanges.contains(where: { $0.overlaps(channel) }) {
             guard let url = ChannelLink.url(for: String(plain[channel])),
                   let range = attributedRange(channel, in: plain, attributed: attributed) else { continue }
             attributed[range].link = url
             attributed[range].foregroundColor = palette.link
+            hasLinks = true
         }
 
         if highlightMentions, !options.selfNick.isEmpty {
@@ -131,7 +158,8 @@ nonisolated enum MessageTextRenderer {
             attributed: attributed,
             plain: plain,
             links: detected.map(\.url),
-            isEmojiOnly: EmojiDetection.isEmojiOnly(plain)
+            isEmojiOnly: EmojiDetection.isEmojiOnly(plain),
+            linkRuns: hasLinks ? LinkRuns.links(in: attributed) : []
         )
     }
 
@@ -274,17 +302,30 @@ nonisolated enum EmojiDetection {
 
 /// Memoizes rendered message text per line. Entries are dropped when the
 /// palette or options change (theme switch, font change, nick change).
+///
+/// When full, the least recently used half goes, so the rows around the
+/// one being read stay rendered. It holds 4,000 lines (2,000 on a Mac with
+/// 8 GB) and gives memory back under memory pressure.
 @MainActor
 final class MessageTextCache {
     private var palette: MessageTextPalette?
     private var options = MessageTextOptions()
     private var entries: [UUID: Entry] = [:]
-    private let capacity = 4_000
+    private var tick: UInt64 = 0
+    let capacity: Int
 
     private struct Entry {
         var text: String
         var rendered: RenderedText
+        var lastUse: UInt64
     }
+
+    init(capacity: Int = MemoryBudget.scaled(4_000)) {
+        self.capacity = max(2, capacity)
+        MemoryPressureMonitor.shared.register(self) { cache, level in cache.trim(for: level) }
+    }
+
+    var count: Int { entries.count }
 
     /// Call once per list update; cheap when nothing changed.
     func prepare(palette: MessageTextPalette, options: MessageTextOptions) {
@@ -295,13 +336,32 @@ final class MessageTextCache {
     }
 
     func rendered(_ line: ChatLine) -> RenderedText {
-        if let entry = entries[line.id], entry.text == line.text { return entry.rendered }
+        tick &+= 1
+        if let index = entries.index(forKey: line.id), entries.values[index].text == line.text {
+            entries.values[index].lastUse = tick
+            return entries.values[index].rendered
+        }
         guard let palette else {
             return RenderedText(attributed: AttributedString(line.text), plain: line.text, links: [], isEmojiOnly: false)
         }
         let rendered = MessageTextRenderer.render(line.text, palette: palette, options: options, highlightMentions: !line.isSelf)
-        if entries.count >= capacity { entries.removeAll(keepingCapacity: true) }
-        entries[line.id] = Entry(text: line.text, rendered: rendered)
+        if entries.count >= capacity { trim(keepingNewest: capacity / 2) }
+        entries[line.id] = Entry(text: line.text, rendered: rendered, lastUse: tick)
         return rendered
+    }
+
+    /// Half on a warning; everything when critical (rows on screen keep
+    /// the text they drew).
+    func trim(for level: MemoryPressureLevel) {
+        switch level {
+        case .warning: trim(keepingNewest: entries.count / 2)
+        case .critical: entries.removeAll()
+        }
+    }
+
+    private func trim(keepingNewest count: Int) {
+        guard entries.count > count else { return }
+        let oldest = entries.sorted { $0.value.lastUse < $1.value.lastUse }.prefix(entries.count - count)
+        for (id, _) in oldest { entries.removeValue(forKey: id) }
     }
 }

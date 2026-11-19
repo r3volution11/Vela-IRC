@@ -203,7 +203,7 @@ private struct ImageViewerView: View {
             case .image(let image):
                 still = NSImage(data: image.data)
                 if image.isAnimated {
-                    player.load(image.data, frameCount: image.frameCount)
+                    player.load(image.data, frameCount: image.frameCount, maxPixelSize: Self.framePixelBudget(for: image))
                     if !reduceMotion { player.play() }
                 }
             case .loopingVideo(_, let poster):
@@ -243,13 +243,28 @@ private struct ImageViewerView: View {
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
-        } else if let frame = player.frame {
-            Image(decorative: frame, scale: 1).resizable().interpolation(.high)
-        } else if let still {
-            Image(nsImage: still).resizable().interpolation(.high)
         } else {
-            theme[ThemeKey.embedPlaceholderBackground]
+            ZStack {
+                if let still {
+                    Image(nsImage: still).resizable().interpolation(.high)
+                } else {
+                    theme[ThemeKey.embedPlaceholderBackground]
+                }
+                if player.hasFrame {
+                    AnimatedFrameView(player: player, cornerRadius: 6)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
         }
+    }
+
+    /// Animation frames at their own size, but no bigger than the screen.
+    private static func framePixelBudget(for image: LoadedImage) -> Int {
+        let own = Int(max(image.pixelSize.width, image.pixelSize.height).rounded(.up))
+        guard let screen = NSScreen.main else { return own }
+        let screenPixels = Int((max(screen.frame.width, screen.frame.height) * screen.backingScaleFactor).rounded(.up))
+        return max(1, min(own, screenPixels))
     }
 
     private var toolbar: some View {

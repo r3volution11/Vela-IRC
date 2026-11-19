@@ -63,8 +63,8 @@ struct MessageListView: View {
             catchUpCardAfter: intelligence.catchUp.cards[buffer.id]?.anchor
         )
         let items = controller.displayCache.items(for: buffer.lines, options: options)
-        let _ = controller.textCache.prepare(
-            palette: MessageTextPalette(theme: theme, style: style),
+        let textGeneration = controller.prepareText(
+            palette: .cached(theme: theme, style: style),
             options: MessageTextOptions(
                 renderFormatting: style.renderFormatting,
                 selfNick: session.nick,
@@ -76,7 +76,7 @@ struct MessageListView: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 HistoryHeader(buffer: buffer, title: BufferTitle.title(for: buffer, in: session))
                 ForEach(items) { item in
-                    DisplayItemRow(item: item)
+                    DisplayItemRow(item: item, textGeneration: textGeneration)
                         .equatable()
                 }
                 // Room under the last row (and for the typing line), and the
@@ -96,7 +96,7 @@ struct MessageListView: View {
             .coordinateSpace(.named(Self.contentSpace))
             .themedScrollers()
         }
-        .scrollPosition($position)
+        .modifier(ListScrollPosition(position: $position))
         .defaultScrollAnchor(.bottom, for: .initialOffset)
         .defaultScrollAnchor(.bottom, for: .alignment)
         // Pinned: growth keeps the newest line in view. Loading history:
@@ -136,6 +136,7 @@ struct MessageListView: View {
             }
         }
         .onAppear {
+            controller.trackLines()
             listOpened(items)
         }
         .onDisappear {
@@ -163,7 +164,7 @@ struct MessageListView: View {
             .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: controller.showsJumpToPresent)
         }
         .environment(controller)
-        .environment(\.openURL, OpenURLAction(handler: open))
+        .environment(\.openURL, controller.openURL(app: app))
         .confirmationDialog(
             "Delete this message?",
             isPresented: Binding(
@@ -246,7 +247,7 @@ struct MessageListView: View {
     }
 
     private func linesChanged() {
-        let change = controller.lineTracker.update(buffer.lines)
+        guard let change = controller.lineTracker?.update(buffer.lines) else { return }
         if change.sentMessage {
             // Sending a message always returns to the present.
             controller.pin()
@@ -465,17 +466,17 @@ struct MessageListView: View {
         }
         controller.flash(lineID, reduceMotion: reduceMotion)
     }
+}
 
-    // MARK: Links
+/// The list's scroll position, applied in a body of its own. SwiftUI
+/// writes the position back as the list scrolls, and the body that applies
+/// it runs again each time; applied in the list's body, that was the whole
+/// list (every row compared, the environment rebuilt) on nearly every frame.
+private struct ListScrollPosition: ViewModifier {
+    @Binding var position: ScrollPosition
 
-    private func open(_ url: URL) -> OpenURLAction.Result {
-        guard let channel = ChannelLink.channel(from: url) else { return .systemAction }
-        if let existing = session.buffer(named: channel), existing.isJoined || !session.isConnected {
-            app.select(existing)
-        } else {
-            session.submit("/join \(channel)", in: buffer)
-        }
-        return .handled
+    func body(content: Content) -> some View {
+        content.scrollPosition($position)
     }
 }
 
