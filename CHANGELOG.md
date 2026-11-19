@@ -4,10 +4,6 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ## Unreleased
 
-### Installing
-
-- **A proper install window.** The disk image now opens to a window in Vela's dark Palenight look, with an arrow from Vela to your Applications folder. The mounted disk also shows Vela's icon.
-
 ## 1.0.0 - 2026-11-18
 
 The first public release of Vela, a native, deeply themable IRC client for macOS with inline media, IRCv3 and bouncer support, and on-device Apple Intelligence. It needs macOS 26 or later and runs on Apple silicon and Intel Macs.
