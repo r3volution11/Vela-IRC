@@ -41,11 +41,12 @@ The row of network tabs shows each network's connection status and a badge when 
 | --- | --- |
 | **Tab height** | From 22 to 40 points (28 by default). Text and padding scale with it. |
 | **Unread badges** | Unread and mention counts on tabs. |
-| **Close buttons** | A **×** on channel and conversation tabs when you hover them. |
+| **Close buttons** | A **×** in place of a tab's **#** or avatar when you point at it. Turn it off to close tabs only with a middle-click or from their menu. |
 
 ## Using tabs
 
 - **Click** a tab to switch to it; **right-click** it for the same actions as in the sidebar (mark as read, mute, inline media, translation, Catch Me Up, leave, close).
+- **Close** a channel or conversation tab with the **×** that takes the place of its **#** or avatar when you point at it. Only that spot closes the tab: a click anywhere else on it switches to it, and even a tab with a short name like **#dn** leaves plenty of room for that. A **middle-click** anywhere on a tab closes it too, and VoiceOver offers **Close Channel** or **Close Conversation** among each tab's actions.
 - **Drag** a tab along its row to move it: networks among networks, channels among the network's channels, and private conversations among its conversations. <kbd>Esc</kbd> cancels. The sidebar uses the same order. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).
 - <kbd>⌘1</kbd> to <kbd>⌘9</kbd> jump to the selected network's first nine channels and conversations.
 - When a row has more tabs than fit, it scrolls, fading at the edges, and a **»** menu lists them all.

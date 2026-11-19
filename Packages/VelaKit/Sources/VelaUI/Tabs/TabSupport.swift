@@ -39,13 +39,15 @@ enum TabMemory {
     }
 }
 
-/// Hover state shared by both rows (for separators and close buttons) and
-/// middle-click-to-close, which SwiftUI has no gesture for.
+/// Hover state shared by both rows (for separators and hover fills) and
+/// middle-click-to-close, which SwiftUI has no gesture for. Pointing at a
+/// tab's close slot is the slot's own state (`TabCloseSlot`), not this.
 @Observable
 final class TabInteraction {
     var hovered: TabKey?
 
     @ObservationIgnored private var monitor: Any?
+    @ObservationIgnored private var middleClickHandler: ((TabKey) -> Bool)?
 
     func setHovering(_ hovering: Bool, _ key: TabKey) {
         if hovering {
@@ -59,15 +61,25 @@ final class TabInteraction {
     /// over it. The click is swallowed only when `handler` returns true.
     func installMiddleClickMonitor(_ handler: @escaping (TabKey) -> Bool) {
         removeMiddleClickMonitor()
+        middleClickHandler = handler
         monitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseUp) { [weak self] event in
-            guard event.buttonNumber == 2, let key = self?.hovered else { return event }
-            return handler(key) ? nil : event
+            guard let self else { return event }
+            return handleOtherMouseUp(event)
         }
+    }
+
+    /// The monitor's decision: nil (swallowed) for a middle-click the
+    /// handler took, else the event, to go on as usual.
+    func handleOtherMouseUp(_ event: NSEvent) -> NSEvent? {
+        guard event.type == .otherMouseUp, event.buttonNumber == 2,
+              let key = hovered, let middleClickHandler else { return event }
+        return middleClickHandler(key) ? nil : event
     }
 
     func removeMiddleClickMonitor() {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
+        middleClickHandler = nil
     }
 }
 
@@ -90,6 +102,17 @@ enum TabActions {
             }
         }
         session.close(buffer)
+    }
+
+    /// A middle-click on tab `key`: closes a channel or query tab and
+    /// returns true. Networks and server consoles don't close (false).
+    static func middleClick(_ key: TabKey, app: AppModel) -> Bool {
+        guard case .buffer(let id) = key,
+              let session = app.session(for: id.networkID),
+              let buffer = session.buffer(id: id),
+              buffer.kind != .server else { return false }
+        close(buffer, in: session, app: app)
+        return true
     }
 
     /// Tabs reachable with ⌘1…⌘9: the network's channels, then queries.
@@ -124,6 +147,12 @@ enum TabDescriptions {
         return parts.joined(separator: ", ")
     }
 
+    /// The VoiceOver action that closes a channel or query tab, there
+    /// whether or not the pointer is on the tab.
+    static func closeAction(_ buffer: BufferModel) -> String {
+        buffer.kind == .channel ? "Close Channel" : "Close Conversation"
+    }
+
     static func bufferKind(_ buffer: BufferModel) -> String {
         switch buffer.kind {
         case .server: "Server console"
@@ -139,7 +168,7 @@ enum TabDescriptions {
 ///
 /// A tab is dragged by its label, not by everything drawn over it: the
 /// label carries `tabDragHandle(_:)`, so a drag can't start on the close
-/// button, while the row moves the whole tab with `tabReorderItem(_:)`.
+/// slot, while the row moves the whole tab with `tabReorderItem(_:)`.
 struct TabReorder<ID: Hashable> {
     let controller: ReorderController<ID>
     let id: ID

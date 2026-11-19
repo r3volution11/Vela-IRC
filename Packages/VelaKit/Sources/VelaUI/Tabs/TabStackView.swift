@@ -50,12 +50,7 @@ struct TabStackView: View {
         }
         .onAppear {
             interaction.installMiddleClickMonitor { [app] key in
-                guard case .buffer(let id) = key,
-                      let session = app.session(for: id.networkID),
-                      let buffer = session.buffer(id: id),
-                      buffer.kind != .server else { return false }
-                TabActions.close(buffer, in: session, app: app)
-                return true
+                TabActions.middleClick(key, app: app)
             }
         }
         .onDisappear { interaction.removeMiddleClickMonitor() }

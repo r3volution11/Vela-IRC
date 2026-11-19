@@ -24,6 +24,12 @@ struct TabContext {
 // MARK: Channel row
 
 /// A server-console, channel or query tab in the second row.
+///
+/// A channel or query tab starts with its glyph (`#`, `##` or an avatar)
+/// in a fixed slot, like a browser tab's icon. Pointing at the slot turns
+/// the glyph into a ×, and only the slot closes the tab: a click anywhere
+/// else on it selects it. Middle-click, the context menu and VoiceOver's
+/// Close action close it too.
 struct ChannelTab: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -46,9 +52,16 @@ struct ChannelTab: View {
     private var isServer: Bool { buffer.kind == .server }
     private var isClosable: Bool { !isServer }
     private var unread: Int { buffer.isMuted ? 0 : buffer.unreadCount }
-    private var showsClose: Bool { style.tabsShowCloseButtons && isClosable && context.isHovered }
+    /// The full name, for VoiceOver and the tooltip.
     private var title: String { BufferTitle.title(for: buffer, in: session) }
     private var isIconOnly: Bool { isServer && !showsNetworkName }
+
+    /// What the tab shows: a channel's type prefix moves into the slot.
+    private var displayName: (glyph: String, title: String) {
+        guard buffer.kind == .channel else { return ("", title) }
+        let split = session.splitChannelPrefix(buffer.name, maxLength: 2)
+        return (split.prefix.isEmpty ? "#" : split.prefix, split.prefix.isEmpty ? buffer.name : split.name)
+    }
 
     private var isDimmed: Bool {
         if !session.isConnected { return true }
@@ -77,7 +90,10 @@ struct ChannelTab: View {
     private var isEmphasized: Bool { buffer.highlightCount > 0 || unread > 0 }
 
     var body: some View {
-        Button(action: onSelect) { label }
+        let name = displayName
+        let slotInsets = isClosable ? metrics.closeSlotInsets(glyphWidth: glyphWidth(name.glyph)) : nil
+
+        Button(action: onSelect) { label(name, slotInsets: slotInsets) }
             .buttonStyle(TabButtonStyle())
             .focusEffectDisabled()
             .focused(focus, equals: .buffer(buffer.id))
@@ -87,20 +103,19 @@ struct ChannelTab: View {
             .accessibilityAddTraits(context.isSelected ? .isSelected : [])
             .accessibilityActions {
                 if isClosable {
-                    Button(buffer.kind == .channel ? "Close Channel" : "Close Conversation", action: onClose)
+                    Button(TabDescriptions.closeAction(buffer), action: onClose)
                 }
             }
             .tabMoveActions(reorder)
-            // The label starts drags; the close button over it doesn't.
+            // The label starts drags; the close slot over it doesn't.
             .tabDragHandle(reorder)
-            .background { chrome }
-            .overlay(alignment: .trailing) {
-                if showsClose {
-                    TabCloseButton(height: metrics.height, palette: palette, isSelected: context.isSelected, action: onClose)
-                        .padding(.trailing, max(3, metrics.horizontalPadding - metrics.height * 0.36))
-                        .transition(.opacity)
+            .overlay(alignment: .leading) {
+                if let slotInsets {
+                    closeSlot(glyph: name.glyph)
+                        .padding(.leading, slotInsets.leading)
                 }
             }
+            .background { chrome }
             .overlay(alignment: .trailing) {
                 TabSeparator(key: palette.separator, height: (metrics.height * 0.45).rounded())
                     .offset(x: (metrics.gap + 1) / 2)
@@ -114,25 +129,39 @@ struct ChannelTab: View {
             .help(helpText)
     }
 
-    private var label: some View {
-        HStack(spacing: metrics.spacing) {
-            icon
-            if !isIconOnly {
-                titleView
+    /// `slotInsets`: room for the close slot (drawn over the label, so its
+    /// clicks are its own), or nil for the server console, which has none.
+    private func label(_ name: (glyph: String, title: String), slotInsets: (leading: CGFloat, trailing: CGFloat)?) -> some View {
+        HStack(spacing: 0) {
+            if let slotInsets {
+                Color.clear.frame(width: metrics.closeSlot + slotInsets.trailing, height: metrics.closeSlot)
             }
-            if buffer.isMuted {
-                Image(systemName: "bell.slash.fill")
-                    .font(.system(size: max(8, metrics.fontSize - 3)))
-                    .foregroundStyle(theme[palette.dimText])
-                    .accessibilityHidden(true)
-            }
-            if let badge {
-                UnreadBadge(count: badge.count, isHighlight: badge.isHighlight, fontSize: metrics.badgeFontSize)
-                    .opacity(showsClose ? 0 : 1)
+            HStack(spacing: metrics.spacing) {
+                if isServer {
+                    Image(systemName: "server.rack")
+                        .font(.system(size: max(9, metrics.fontSize - 1), weight: .medium))
+                        .foregroundStyle(theme[textKey])
+                        .accessibilityHidden(true)
+                }
+                if !isIconOnly {
+                    titleView(name.title)
+                }
+                if buffer.isMuted {
+                    Image(systemName: "bell.slash.fill")
+                        .font(.system(size: max(8, metrics.fontSize - 3)))
+                        .foregroundStyle(theme[palette.dimText])
+                        .accessibilityHidden(true)
+                }
+                if let badge {
+                    UnreadBadge(count: badge.count, isHighlight: badge.isHighlight, fontSize: metrics.badgeFontSize)
+                }
             }
         }
-        .padding(.horizontal, isIconOnly ? metrics.horizontalPadding * 0.8 : metrics.horizontalPadding)
-        .frame(minWidth: isIconOnly ? metrics.height * 1.25 : metrics.minWidth)
+        .padding(.leading, slotInsets?.leading ?? (isIconOnly ? metrics.horizontalPadding * 0.8 : metrics.horizontalPadding))
+        .padding(.trailing, isIconOnly ? metrics.horizontalPadding * 0.8 : metrics.horizontalPadding)
+        // Short names leave the extra width after the title, keeping the
+        // close slot at the leading edge and the middle of the tab for selecting.
+        .frame(minWidth: isIconOnly ? metrics.height * 1.25 : metrics.minWidth, alignment: isIconOnly ? .center : .leading)
         .frame(height: metrics.height)
         // Tabs are always as wide as their content, never stretched by the row.
         .fixedSize(horizontal: true, vertical: false)
@@ -141,7 +170,7 @@ struct ChannelTab: View {
 
     /// The title reserves its semibold width, so tabs don't change size when
     /// their unread state changes.
-    private var titleView: some View {
+    private func titleView(_ title: String) -> some View {
         Text(title)
             .font(.system(size: metrics.fontSize, weight: .semibold))
             .lineLimit(1)
@@ -149,35 +178,39 @@ struct ChannelTab: View {
             .frame(maxWidth: metrics.maxLabelWidth)
             .overlay(alignment: .leading) {
                 Text(title)
-                    .font(.system(size: metrics.fontSize, weight: isEmphasized || context.isSelected ? .semibold : .regular))
+                    .font(.system(size: metrics.fontSize, weight: titleWeight))
                     .foregroundStyle(theme[textKey])
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-            .mask {
-                // Fade the end of the title under the close button when there's no badge to swap with.
-                HStack(spacing: 0) {
-                    Rectangle()
-                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: showsClose && badge == nil ? metrics.height * 0.75 : 0)
-                }
-            }
     }
 
-    @ViewBuilder
-    private var icon: some View {
-        switch buffer.kind {
-        case .server:
-            Image(systemName: "server.rack")
-                .font(.system(size: max(9, metrics.fontSize - 1), weight: .medium))
-                .foregroundStyle(theme[textKey])
-                .accessibilityHidden(true)
-        case .query:
-            AvatarView(nick: buffer.name, size: metrics.iconSize + 1)
-                .opacity(isDimmed && !context.isSelected ? 0.55 : 1)
-        case .channel:
-            EmptyView()
+    private var titleWeight: Font.Weight { isEmphasized || context.isSelected ? .semibold : .regular }
+
+    private func glyphWidth(_ glyph: String) -> CGFloat {
+        buffer.kind == .query ? metrics.iconSize + 1 : metrics.channelGlyphWidth(glyph)
+    }
+
+    private func closeSlot(glyph: String) -> some View {
+        TabCloseSlot(
+            size: metrics.closeSlot,
+            isEnabled: style.tabsShowCloseButtons,
+            isTabHovered: context.isHovered,
+            foreground: context.isSelected ? palette.selectedText : palette.unreadText,
+            action: onClose
+        ) {
+            if buffer.kind == .query {
+                AvatarView(nick: buffer.name, size: metrics.iconSize + 1)
+                    .opacity(isDimmed && !context.isSelected ? 0.55 : 1)
+            } else {
+                Text(glyph)
+                    .font(.system(size: metrics.fontSize, weight: titleWeight))
+                    .foregroundStyle(theme[textKey])
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
         }
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -365,30 +398,67 @@ struct ConnectionDot: View {
 
 // MARK: Row controls
 
-/// Close button shown over a hovered tab.
-struct TabCloseButton: View {
-    let height: CGFloat
-    let palette: TabPalette
-    let isSelected: Bool
+/// The slot at the start of a channel or query tab: the tab's glyph, and
+/// its close button. With the pointer over the slot (and only the slot)
+/// the glyph gives way to a ×; anywhere else on the tab just dims the glyph
+/// a little, so passing over tabs never puts a × under the pointer.
+///
+/// Its hover state is its own: pointing at it redraws this slot, not the
+/// row. With close buttons off (`tabs.showCloseButtons`) it's only the
+/// glyph, and clicks on it select the tab.
+struct TabCloseSlot<Glyph: View>: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.chatStyle) private var style
+    let size: CGFloat
+    let isEnabled: Bool
+    /// The pointer is somewhere on the tab.
+    let isTabHovered: Bool
+    /// Token for the ×: the tab's strongest text color, so it reads on the
+    /// tab's fill in every theme.
+    let foreground: String
     let action: () -> Void
+    @ViewBuilder let glyph: Glyph
 
-    @State private var hovering = false
+    @State private var isHovering = false
 
     var body: some View {
-        Button(action: action) {
-            TabToolLabel(
-                systemImage: "xmark",
-                size: max(14, (height * 0.58).rounded()),
-                foreground: isSelected ? palette.selectedText : palette.text,
-                hoverFill: palette.hoverFill,
-                isHovering: hovering,
-                weight: .bold
-            )
+        if isEnabled {
+            Button(action: action) {
+                ZStack {
+                    glyph
+                        .opacity(isHovering ? 0 : (isTabHovered ? 0.55 : 1))
+                    if isHovering {
+                        closeMark
+                    }
+                }
+                .frame(width: size, height: size)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(TabButtonStyle())
+            // One keyboard stop per tab: the tab, whose menu and actions close it.
+            .focusable(false)
+            .onHover { isHovering = $0 }
+            .animation(.easeOut(duration: 0.1), value: isHovering)
+            .animation(.easeOut(duration: 0.12), value: isTabHovered)
+            .help("Close Tab")
+        } else {
+            glyph
+                .frame(width: size, height: size)
+                .allowsHitTesting(false)
         }
-        .buttonStyle(TabButtonStyle())
-        .onHover { hovering = $0 }
-        .help("Close Tab")
-        .accessibilityHidden(true)
+    }
+
+    private var closeMark: some View {
+        let color = theme[foreground]
+        return Image(systemName: "xmark")
+            .font(.system(size: (size * 0.46).rounded(), weight: .bold))
+            .foregroundStyle(color)
+            .frame(width: size, height: size)
+            .background(
+                RoundedRectangle(cornerRadius: max(3, TabMetrics.radius(style, forHeight: size)), style: .continuous)
+                    .fill(color.opacity(theme.kind == .dark ? 0.18 : 0.12))
+            )
+            .transition(.opacity)
     }
 }
 

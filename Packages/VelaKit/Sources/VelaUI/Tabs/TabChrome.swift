@@ -44,6 +44,12 @@ struct TabMetrics: Equatable {
     var gap: CGFloat
     /// Inverse corners where an attached tab meets the conversation.
     var flare: CGFloat
+    /// Side of the square slot at the start of a channel or query tab. It
+    /// holds the tab's `#`, `##` or avatar, and is the tab's close button:
+    /// the × replaces the glyph in it, so nothing moves.
+    var closeSlot: CGFloat
+    /// Narrowest a tab gets, so a short name like `#dn` still leaves plenty
+    /// of tab to click that isn't the close slot.
     var minWidth: CGFloat
     var maxLabelWidth: CGFloat
 
@@ -62,8 +68,29 @@ struct TabMetrics: Equatable {
             flare = min(radius, (height * 0.3).rounded())
             gap = 0
         }
-        minWidth = (height * 1.8).rounded()
+        // Fits `##` at the tab's type and is an easy target, but no bigger:
+        // 16 pt at the smallest tabs, 18 from about 30 pt tall.
+        closeSlot = min(18, max(16, (fontSize * 1.4).rounded()))
+        // Past the slot, at least three slots' width that selects. The
+        // padding grows with the corner radius, so rounder tabs (and pills)
+        // keep the same clear area inside their curves.
+        minWidth = (horizontalPadding + closeSlot * 4).rounded()
         maxLabelWidth = max(120, height * 6)
+    }
+
+    /// Padding before the close slot and the space after it, for a glyph
+    /// `glyphWidth` wide. The slot is wider than most glyphs (a `#` is about
+    /// half of it), so the slack around the glyph comes out of the tab's
+    /// padding and spacing, and the glyph sits where it would without a slot.
+    func closeSlotInsets(glyphWidth: CGFloat) -> (leading: CGFloat, trailing: CGFloat) {
+        let slack = max(0, (closeSlot - glyphWidth) / 2)
+        return (max(3, (horizontalPadding - slack).rounded()), max(2, (spacing - slack).rounded()))
+    }
+
+    /// About how wide a channel's `#` or `##` is at the tab's type, capped
+    /// at the slot (`##` at the largest sizes is drawn a little smaller).
+    func channelGlyphWidth(_ prefix: String) -> CGFloat {
+        min(closeSlot, CGFloat(max(1, prefix.count)) * fontSize * 0.64)
     }
 
     /// Tab height for channel tabs, from `tabs.height`.
@@ -301,7 +328,7 @@ struct TabButtonStyle: ButtonStyle {
     }
 }
 
-/// Square-ish icon control used at the end of a row (+, », close).
+/// Square-ish icon control used at the end of a row (+, »).
 struct TabToolLabel: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style

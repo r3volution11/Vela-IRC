@@ -20,7 +20,7 @@ The first public release of Vela, a native, deeply themable IRC client for macOS
 
 ### Layouts and navigation
 
-- **Sidebar or tab stacks.** A compact sidebar that collapses to a thin rail, or Vivaldi-style two-level tab stacks at the top, in the title bar or above the message box, with corners from square to pill.
+- **Sidebar or tab stacks.** A compact sidebar that collapses to a thin rail, or Vivaldi-style two-level tab stacks at the top, in the title bar or above the message box, with corners from square to pill. Hover a tab's **#** to close it, or middle-click the tab.
 - **Three message layouts:** Classic, Modern grouped and Compact columns. Joins and parts can be shown, collapsed into one line or hidden.
 - **One-click presets.** Classic IRC, Modern Chat, Tabbed and Focus set up navigation, layout, density and media in one step, and never change your theme.
 - **Drag to reorder** networks and channels in the sidebar, the rail, the tab bars or Settings → Networks. The order is the same everywhere, and reordering channels updates the network's auto-join list. New channels go at the end; **Sort Channels A–Z** puts them in order.

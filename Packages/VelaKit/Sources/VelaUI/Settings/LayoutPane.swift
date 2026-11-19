@@ -63,7 +63,7 @@ struct LayoutPane: View {
                     format: SettingsFormat.points
                 )
                 SettingsToggle("Unread badges", detail: "Show unread and mention counts on tabs.", isOn: $settings[.tabsShowUnreadBadges])
-                SettingsToggle("Close buttons", detail: "Show a close button when hovering channel and conversation tabs.", isOn: $settings[.tabsShowCloseButtons])
+                SettingsToggle("Close buttons", detail: "A × takes the place of a tab's # or avatar when you point at it.", isOn: $settings[.tabsShowCloseButtons])
             }
             .opacity(usesTabs ? 1 : 0.6)
 
@@ -139,7 +139,9 @@ private struct TabRoundnessPreview: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
 
-    private let tabs: [(name: String, unread: Int)] = [("#vela", 0), ("#swift", 3), ("#macdev", 0), ("alice", 1)]
+    /// Three channels and a conversation (no `#`, an avatar). The third
+    /// shows its close button, as when the pointer is on its `#`.
+    private let tabs: [(isChannel: Bool, name: String, unread: Int)] = [(true, "vela", 0), (true, "swift", 3), (true, "macdev", 0), (false, "alice", 1)]
 
     var body: some View {
         let height = style.tabHeight
@@ -147,17 +149,32 @@ private struct TabRoundnessPreview: View {
         HStack(spacing: 6) {
             ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
                 let isActive = index == 0
-                HStack(spacing: 6) {
+                let foreground = isActive ? theme[ThemeKey.accentForeground] : theme[ThemeKey.buttonSecondaryForeground]
+                HStack(spacing: 4) {
+                    Group {
+                        if style.tabsShowCloseButtons, index == 2 {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(foreground)
+                                .frame(width: 16, height: 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: max(3, style.tabCornerRadius(forHeight: 16)), style: .continuous)
+                                        .fill(foreground.opacity(0.14))
+                                )
+                        } else if tab.isChannel {
+                            Text("#")
+                                .font(.system(size: 12, weight: isActive ? .semibold : .regular))
+                                .foregroundStyle(foreground)
+                        } else {
+                            AvatarView(nick: tab.name, size: 15)
+                        }
+                    }
+                    .frame(width: 16, height: 16)
                     Text(tab.name)
                         .font(.system(size: 12, weight: isActive ? .semibold : .regular))
-                        .foregroundStyle(isActive ? theme[ThemeKey.accentForeground] : theme[ThemeKey.buttonSecondaryForeground])
+                        .foregroundStyle(foreground)
                     if style.tabsShowUnreadBadges, tab.unread > 0 {
                         UnreadBadge(count: tab.unread, isHighlight: tab.unread == 1)
-                    }
-                    if style.tabsShowCloseButtons, index == 2 {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(theme[ThemeKey.buttonSecondaryForeground].opacity(0.7))
                     }
                 }
                 .padding(.horizontal, max(10, radius * 0.6 + 8))

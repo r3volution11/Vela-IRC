@@ -68,7 +68,7 @@ extension SettingKey where Value == Bool {
         .init("tabs.showUnreadBadges", default: true, summary: "Show unread counts on tabs.")
     }
     public static var tabsShowCloseButtons: SettingKey<Bool> {
-        .init("tabs.showCloseButtons", default: true, summary: "Show a close button on hover for channel and query tabs.")
+        .init("tabs.showCloseButtons", default: true, summary: "Turn the # or avatar at the start of a channel or query tab into a close button while the pointer is on it.")
     }
     public static var chatMonospace: SettingKey<Bool> {
         .init("chat.monospace", default: false,

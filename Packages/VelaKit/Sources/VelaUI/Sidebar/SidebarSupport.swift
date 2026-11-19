@@ -155,10 +155,13 @@ extension NetworkSession {
     }
 
     /// Splits a channel name into its type prefix (`#`, `&`…) and the rest.
-    func splitChannelPrefix(_ name: String) -> (prefix: String, name: String) {
-        guard let first = name.first, isupport.channelTypes.contains(first) || first == "#" else { return ("", name) }
-        let rest = name.dropFirst()
-        return (String(first), rest.isEmpty ? String(first) : String(rest))
+    /// `maxLength` allows a longer prefix: with 2, `##linux` is `##` and `linux`.
+    func splitChannelPrefix(_ name: String, maxLength: Int = 1) -> (prefix: String, name: String) {
+        let types = isupport.channelTypes
+        let prefix = name.prefix { types.contains($0) || $0 == "#" }.prefix(max(1, maxLength))
+        guard !prefix.isEmpty else { return ("", name) }
+        let rest = name.dropFirst(prefix.count)
+        return (String(prefix), rest.isEmpty ? name : String(rest))
     }
 }
 
