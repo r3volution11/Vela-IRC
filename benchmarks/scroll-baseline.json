@@ -4,7 +4,7 @@
     "bundleID": "io.github.r3volution11.Vela.bench",
     "version": "0.1.0"
   },
-  "commit": "61f8cbf with the scroll benchmark added (uncommitted)",
+  "commit": "20a2a02",
   "config": {
     "accessibility": "auto",
     "avatars": false,
@@ -17,7 +17,7 @@
     "window": "1280x800",
     "windowShown": false
   },
-  "date": "2026-11-18T23:43:11Z",
+  "date": "2026-11-19T00:35:56Z",
   "display": {
     "name": "S27B80T",
     "refreshHz": 60,
@@ -37,103 +37,103 @@
       "lowPowerMode": false,
       "memory": {
         "endMB": {
-          "median": 404.14208984375
+          "median": 408.0170669555664
         },
         "peakMB": {
-          "median": 470.6733627319336
+          "median": 472.18896484375
         }
       },
       "runs": 3,
       "scenarios": {
         "fling": {
           "activeS": {
-            "median": 47.6362518750102
+            "median": 44.35266241666977
           },
           "cpuMsPer1000Pt": {
-            "median": 154.58657562129528
+            "median": 138.96171772298132
           },
           "cpuMsPerMovedFrame": {
-            "median": 62.44524722222222
+            "median": 41.18695482546202
           },
           "cpuMsPerS": {
-            "median": 943.4149605818985
+            "median": 904.3797903023724
           },
           "distancePt": {
-            "median": 290844.0
+            "median": 289605.0
           },
           "durationS": {
-            "median": 47.657266291673295
+            "median": 44.37312687499798
           },
           "footprintPeakMB": {
-            "median": 429.59521484375
+            "median": 439.51708984375
           },
           "frameMaxMs": {
-            "median": 299.2844583350234
+            "median": 227.36550000263378
           },
           "frameP50Ms": {
-            "median": 19.298041661386378
+            "median": 16.667541669448838
           },
           "frameP95Ms": {
-            "median": 143.00037499924656
+            "median": 97.29070833418518
           },
           "frameP99Ms": {
-            "median": 217.30454165663105
+            "median": 158.48812500189524
           },
           "frames": {
-            "median": 1028.0
+            "median": 1279.0
           },
           "framesOver1_5x": {
-            "median": 495.0
+            "median": 526.0
           },
           "framesOver2x": {
-            "median": 466.0
+            "median": 494.0
           },
           "hitchMsPerS": {
-            "median": 636.9988632034319
+            "median": 516.3350763056914
           },
           "instructionsMPer1000Pt": {
-            "median": 572.4761574754543
+            "median": 527.6763692404684
           },
           "instructionsMPerMovedFrame": {
-            "median": 233.84891469166666
+            "median": 156.39834580698152
           },
           "mainBusyPct": {
-            "median": 84.02419069023055
+            "median": 80.4396178985548
           },
           "mainThreadCpuMsPerS": {
-            "median": 802.2871846235211
+            "median": 769.0481348548481
           },
           "movedFrames": {
-            "median": 664.0
+            "median": 974.0
           },
           "ticksPerS": {
-            "median": 21.69658649054029
+            "median": 28.856401911587817
           }
         },
         "jump": {
           "activeS": {
-            "median": 6.050432083342457
+            "median": 6.007158500011428
           },
           "cpuMsPer1000Pt": {
-            "median": 0.6912613966401422
+            "median": 0.6797580344830987
           },
           "cpuMsPerMovedFrame": {
-            "median": 51.29125000000023
+            "median": 67.5359999999993
           },
           "cpuMsPerS": {
-            "median": 50.24026961333442
+            "median": 50.02808901883416
           },
           "distancePt": {
-            "median": 574267.5
+            "median": 596118.0
           },
           "durationS": {
-            "median": 8.000206666663871
+            "median": 8.099769708322128
           },
           "footprintPeakMB": {
-            "median": 397.8139419555664
+            "median": 411.72021484375
           },
           "frameMaxMs": {
-            "median": 68.00066666619387
+            "median": 50.70487500051968
           },
           "frameP50Ms": {
             "median": 16.667541669448838
@@ -142,128 +142,128 @@
             "median": 16.667541669448838
           },
           "frameP99Ms": {
-            "median": 25.954833341529593
+            "median": 16.667541669448838
           },
           "frames": {
-            "median": 355.0
+            "median": 356.0
           },
           "framesOver1_5x": {
-            "median": 5.0
+            "median": 3.0
           },
           "framesOver2x": {
             "median": 3.0
           },
           "hitchMsPerS": {
-            "median": 22.258502779517435
+            "median": 11.21579223824157
           },
           "instructionsMPer1000Pt": {
-            "median": 2.6703054838644467
+            "median": 2.6176810044320082
           },
           "instructionsMPerMovedFrame": {
-            "median": 198.13533175
+            "median": 260.0744608333333
           },
           "mainBusyPct": {
-            "median": 4.256714374135559
+            "median": 4.210715398384832
           },
           "mainThreadCpuMsPerS": {
-            "median": 43.61425477000172
+            "median": 42.699806881554416
           },
           "movedFrames": {
-            "median": 7.0
+            "median": 6.0
           },
           "ticksPerS": {
-            "median": 58.62348555997685
+            "median": 58.94816586342856
           }
         },
         "medium": {
           "activeS": {
-            "median": 16.851087291666772
+            "median": 16.78434045834001
           },
           "cpuMsPer1000Pt": {
-            "median": 542.0003415446356
+            "median": 426.27557108762363
           },
           "cpuMsPerMovedFrame": {
-            "median": 20.178948799999997
+            "median": 11.729148760330576
           },
           "cpuMsPerS": {
-            "median": 744.4506892227145
+            "median": 587.6518930153467
           },
           "distancePt": {
-            "median": 23420.0
+            "median": 23464.0
           },
           "durationS": {
-            "median": 17.12783683332964
+            "median": 17.02050162499654
           },
           "footprintPeakMB": {
-            "median": 310.9857482910156
+            "median": 315.7670211791992
           },
           "frameMaxMs": {
-            "median": 106.750999999349
+            "median": 61.65762500313576
           },
           "frameP50Ms": {
             "median": 16.667541669448838
           },
           "frameP95Ms": {
-            "median": 50.09124999924097
+            "median": 33.335083338897675
           },
           "frameP99Ms": {
-            "median": 81.92045833857264
+            "median": 48.479083343409
           },
           "frames": {
-            "median": 670.0
+            "median": 906.0
           },
           "framesOver1_5x": {
-            "median": 202.0
+            "median": 92.0
           },
           "framesOver2x": {
-            "median": 191.0
+            "median": 83.0
           },
           "hitchMsPerS": {
-            "median": 334.4724306183366
+            "median": 106.42336134253497
           },
           "instructionsMPer1000Pt": {
-            "median": 1738.9433143040137
+            "median": 1560.3153273951584
           },
           "instructionsMPerMovedFrame": {
-            "median": 64.0475398064
+            "median": 41.98536564449541
           },
           "mainBusyPct": {
-            "median": 72.44477291950652
+            "median": 57.324481840633936
           },
           "mainThreadCpuMsPerS": {
-            "median": 679.7961171737056
+            "median": 534.7864710774556
           },
           "movedFrames": {
-            "median": 625.0
+            "median": 861.0
           },
           "ticksPerS": {
-            "median": 40.05175940636528
+            "median": 53.71787285590232
           }
         },
         "slow": {
           "activeS": {
-            "median": 16.28431820833066
+            "median": 16.26764775000629
           },
           "cpuMsPer1000Pt": {
-            "median": 1832.4927782497875
+            "median": 1516.6952083924016
           },
           "cpuMsPerMovedFrame": {
-            "median": 7.126136563876651
+            "median": 5.814547826086956
           },
           "cpuMsPerS": {
-            "median": 391.4556384096194
+            "median": 324.79372129571675
           },
           "distancePt": {
-            "median": 3526.0
+            "median": 3529.0
           },
           "durationS": {
-            "median": 16.48679170833202
+            "median": 16.49739666665846
           },
           "footprintPeakMB": {
-            "median": 150.89186096191406
+            "median": 150.71996307373047
           },
           "frameMaxMs": {
-            "median": 70.64325000101235
+            "median": 53.995916663552634
           },
           "frameP50Ms": {
             "median": 16.667541669448838
@@ -272,167 +272,167 @@
             "median": 16.667541669448838
           },
           "frameP99Ms": {
-            "median": 33.335083338897675
+            "median": 28.66712499235291
           },
           "frames": {
-            "median": 954.0
+            "median": 964.0
           },
           "framesOver1_5x": {
-            "median": 16.0
+            "median": 11.0
           },
           "framesOver2x": {
-            "median": 15.0
+            "median": 9.0
           },
           "hitchMsPerS": {
-            "median": 23.071281724092646
+            "median": 11.5362330100602
           },
           "instructionsMPer1000Pt": {
-            "median": 5868.851268292682
+            "median": 5763.536087535411
           },
           "instructionsMPerMovedFrame": {
-            "median": 22.690317513157893
+            "median": 22.6562164688196
           },
           "mainBusyPct": {
-            "median": 38.554395947773465
+            "median": 33.87244485127428
           },
           "mainThreadCpuMsPerS": {
-            "median": 363.8991248020656
+            "median": 302.11893033282956
           },
           "movedFrames": {
-            "median": 908.0
+            "median": 918.0
           },
           "ticksPerS": {
-            "median": 58.602190046129785
+            "median": 59.31962740119521
           }
         },
         "sweep": {
           "activeS": {
-            "median": 22.217981750000035
+            "median": 18.217753250006353
           },
           "cpuMsPer1000Pt": {
-            "median": 342.73553064711
+            "median": 252.8660152506354
           },
           "cpuMsPerMovedFrame": {
-            "median": 16.450619999999986
+            "median": 12.137062999999998
           },
           "cpuMsPerS": {
-            "median": 723.1864455671555
+            "median": 648.1954155103919
           },
           "distancePt": {
             "median": 47998.0
           },
           "durationS": {
-            "median": 22.680500041664345
+            "median": 18.72438883333234
           },
           "footprintPeakMB": {
-            "median": 400.84521484375
+            "median": 408.31396484375
           },
           "frameMaxMs": {
-            "median": 78.97741667693481
+            "median": 66.67016667779535
           },
           "frameP50Ms": {
             "median": 16.667541669448838
           },
           "frameP95Ms": {
-            "median": 39.28558333427645
+            "median": 33.33508332434576
           },
           "frameP99Ms": {
-            "median": 50.00262500834651
+            "median": 36.5941250056494
           },
           "frames": {
             "median": 1017.0
           },
           "framesOver1_5x": {
-            "median": 275.0
+            "median": 72.0
           },
           "framesOver2x": {
-            "median": 244.0
+            "median": 70.0
           },
           "hitchMsPerS": {
-            "median": 235.58851904409406
+            "median": 69.35761274409981
           },
           "instructionsMPer1000Pt": {
-            "median": 996.2086948414517
+            "median": 732.4023743905996
           },
           "instructionsMPerMovedFrame": {
-            "median": 47.816024935
+            "median": 35.153849166
           },
           "mainBusyPct": {
-            "median": 73.94674808685865
+            "median": 64.57757637714154
           },
           "mainThreadCpuMsPerS": {
-            "median": 703.4649053399996
+            "median": 626.1094610004203
           },
           "movedFrames": {
             "median": 1000.0
           },
           "ticksPerS": {
-            "median": 46.074821899002345
+            "median": 55.916377795796265
           }
         },
         "sweep-a11y": {
           "activeS": {
-            "median": 41.05246133332548
+            "median": 26.96826012499514
           },
           "cpuMsPer1000Pt": {
-            "median": 759.3458477436561
+            "median": 453.2429476228177
           },
           "cpuMsPerMovedFrame": {
-            "median": 36.48356556556558
+            "median": 21.754755000000003
           },
           "cpuMsPerS": {
-            "median": 879.4043547869156
+            "median": 790.5009446761503
           },
           "distancePt": {
             "median": 47998.0
           },
           "durationS": {
-            "median": 41.44519162499637
+            "median": 27.47257487499155
           },
           "footprintPeakMB": {
-            "median": 408.43896484375
+            "median": 411.4701919555664
           },
           "frameMaxMs": {
-            "median": 141.52833333355375
+            "median": 113.52662500576116
           },
           "frameP50Ms": {
-            "median": 37.77191665722057
+            "median": 16.667541669448838
           },
           "frameP95Ms": {
-            "median": 81.57650000066496
+            "median": 50.51054166688118
           },
           "frameP99Ms": {
-            "median": 98.2066666620085
+            "median": 67.48645834159106
           },
           "frames": {
             "median": 1017.0
           },
           "framesOver1_5x": {
-            "median": 696.0
+            "median": 417.0
           },
           "framesOver2x": {
-            "median": 640.0
+            "median": 368.0
           },
           "hitchMsPerS": {
-            "median": 583.1642735704775
+            "median": 363.94735717188036
           },
           "instructionsMPer1000Pt": {
-            "median": 2693.6330752114673
+            "median": 1572.497778219926
           },
           "instructionsMPerMovedFrame": {
-            "median": 129.41841876276277
+            "median": 75.55230065965966
           },
           "mainBusyPct": {
-            "median": 89.98857687503724
+            "median": 79.93126692382391
           },
           "mainThreadCpuMsPerS": {
-            "median": 858.1522151425959
+            "median": 767.171329402795
           },
           "movedFrames": {
-            "median": 999.0
+            "median": 1000.0
           },
           "ticksPerS": {
-            "median": 25.117509635838033
+            "median": 38.11073424184532
           }
         }
       },
@@ -443,103 +443,103 @@
       "lowPowerMode": false,
       "memory": {
         "endMB": {
-          "median": 406.6108627319336
+          "median": 392.82958984375
         },
         "peakMB": {
-          "median": 465.4233856201172
+          "median": 448.3296585083008
         }
       },
       "runs": 3,
       "scenarios": {
         "fling": {
           "activeS": {
-            "median": 39.6524005416577
+            "median": 39.58567254166701
           },
           "cpuMsPer1000Pt": {
-            "median": 78.30350160032211
+            "median": 59.279973015470105
           },
           "cpuMsPerMovedFrame": {
-            "median": 11.926883163265307
+            "median": 8.41332736943907
           },
           "cpuMsPerS": {
-            "median": 574.7438211268453
+            "median": 439.19577190949036
           },
           "distancePt": {
-            "median": 293066.0
+            "median": 292448.0
           },
           "durationS": {
-            "median": 39.66493291666848
+            "median": 39.61504666667315
           },
           "footprintPeakMB": {
-            "median": 438.8140563964844
+            "median": 429.9390106201172
           },
           "frameMaxMs": {
-            "median": 50.90529166045599
+            "median": 34.786000003805384
           },
           "frameP50Ms": {
             "median": 16.667541669448838
           },
           "frameP95Ms": {
-            "median": 16.675583334290422
+            "median": 16.667541669448838
           },
           "frameP99Ms": {
-            "median": 33.335083338897675
+            "median": 16.667541669448838
           },
           "frames": {
-            "median": 2258.0
+            "median": 2360.0
           },
           "framesOver1_5x": {
-            "median": 78.0
+            "median": 15.0
           },
           "framesOver2x": {
-            "median": 78.0
+            "median": 15.0
           },
           "hitchMsPerS": {
-            "median": 45.92422370000947
+            "median": 6.351420447923098
           },
           "instructionsMPer1000Pt": {
-            "median": 696.6847877491028
+            "median": 566.9658435208994
           },
           "instructionsMPerMovedFrame": {
-            "median": 103.98731360000001
+            "median": 80.44962513056093
           },
           "mainBusyPct": {
-            "median": 48.37501297826855
+            "median": 36.61514787591204
           },
           "mainThreadCpuMsPerS": {
-            "median": 477.5347974015222
+            "median": 360.5914217442377
           },
           "movedFrames": {
-            "median": 1960.0
+            "median": 2068.0
           },
           "ticksPerS": {
-            "median": 57.23571216544837
+            "median": 59.598566672552536
           }
         },
         "jump": {
           "activeS": {
-            "median": 6.067062124973745
+            "median": 6.053601999999955
           },
           "cpuMsPer1000Pt": {
-            "median": 0.40402354196515977
+            "median": 0.45673953643516196
           },
           "cpuMsPerMovedFrame": {
-            "median": 30.101874999999723
+            "median": 33.71862499999967
           },
           "cpuMsPerS": {
-            "median": 29.9632476937002
+            "median": 27.77565102421011
           },
           "distancePt": {
-            "median": 596042.0
+            "median": 589419.0
           },
           "durationS": {
-            "median": 8.037012624990894
+            "median": 8.03296983333712
           },
           "footprintPeakMB": {
-            "median": 391.2202377319336
+            "median": 389.9077377319336
           },
           "frameMaxMs": {
-            "median": 34.80270833824761
+            "median": 33.335083338897675
           },
           "frameP50Ms": {
             "median": 16.667541669448838
@@ -548,63 +548,63 @@
             "median": 16.667541669448838
           },
           "frameP99Ms": {
-            "median": 16.680833330610767
+            "median": 16.667541669448838
           },
           "frames": {
             "median": 362.0
           },
           "framesOver1_5x": {
-            "median": 2.0
+            "median": 1.0
           },
           "framesOver2x": {
-            "median": 2.0
+            "median": 1.0
           },
           "hitchMsPerS": {
-            "median": 6.4206188779490665
+            "median": 2.9678862823052996
           },
           "instructionsMPer1000Pt": {
-            "median": 2.9346788296797874
+            "median": 3.544134050799445
           },
           "instructionsMPerMovedFrame": {
-            "median": 218.648979875
+            "median": 259.277094
           },
           "mainBusyPct": {
-            "median": 2.3561200565138987
+            "median": 2.190101688403714
           },
           "mainThreadCpuMsPerS": {
-            "median": 25.49591615208286
+            "median": 23.166139426586362
           },
           "movedFrames": {
             "median": 8.0
           },
           "ticksPerS": {
-            "median": 59.55624747479842
+            "median": 59.629254178464905
           }
         },
         "medium": {
           "activeS": {
-            "median": 16.717641208320856
+            "median": 16.734329250000883
           },
           "cpuMsPer1000Pt": {
-            "median": 227.96173719947043
+            "median": 205.39328004103788
           },
           "cpuMsPerMovedFrame": {
-            "median": 5.601448058761804
+            "median": 5.041726128016789
           },
           "cpuMsPerS": {
-            "median": 315.8188844187886
+            "median": 284.367856918065
           },
           "distancePt": {
-            "median": 23417.0
+            "median": 23401.0
           },
           "durationS": {
-            "median": 16.91851787500491
+            "median": 16.935605541671976
           },
           "footprintPeakMB": {
-            "median": 308.9232940673828
+            "median": 305.5639190673828
           },
           "frameMaxMs": {
-            "median": 33.335083338897675
+            "median": 44.29987500770949
           },
           "frameP50Ms": {
             "median": 16.667541669448838
@@ -613,10 +613,10 @@
             "median": 16.667541669448838
           },
           "frameP99Ms": {
-            "median": 16.66783333348576
+            "median": 16.667541669448838
           },
           "frames": {
-            "median": 995.0
+            "median": 997.0
           },
           "framesOver1_5x": {
             "median": 5.0
@@ -625,51 +625,51 @@
             "median": 5.0
           },
           "hitchMsPerS": {
-            "median": 4.985250454257354
+            "median": 6.279106579953209
           },
           "instructionsMPer1000Pt": {
-            "median": 1910.443090660631
+            "median": 1588.3499600871758
           },
           "instructionsMPerMovedFrame": {
-            "median": 46.94317508289612
+            "median": 38.9203952
           },
           "mainBusyPct": {
-            "median": 29.551370376179214
+            "median": 27.953962570546064
           },
           "mainThreadCpuMsPerS": {
-            "median": 284.0272260021158
+            "median": 250.09568169011638
           },
           "movedFrames": {
-            "median": 950.0
+            "median": 953.0
           },
           "ticksPerS": {
-            "median": 59.72322229614282
+            "median": 59.582680399280534
           }
         },
         "slow": {
           "activeS": {
-            "median": 16.234315875000902
+            "median": 16.23426537499472
           },
           "cpuMsPer1000Pt": {
-            "median": 748.9472190692395
+            "median": 813.3650793650793
           },
           "cpuMsPerMovedFrame": {
-            "median": 2.8440625
+            "median": 3.0955253505933116
           },
           "cpuMsPerS": {
-            "median": 160.30487905208676
+            "median": 174.54503561606117
           },
           "distancePt": {
-            "median": 3526.0
+            "median": 3528.0
           },
           "durationS": {
-            "median": 16.432379499994568
+            "median": 16.440181125013623
           },
           "footprintPeakMB": {
-            "median": 152.26690673828125
+            "median": 127.89188385009766
           },
           "frameMaxMs": {
-            "median": 46.73187500156928
+            "median": 33.33508332434576
           },
           "frameP50Ms": {
             "median": 16.667541669448838
@@ -681,60 +681,60 @@
             "median": 16.667541669448838
           },
           "frames": {
-            "median": 972.0
+            "median": 974.0
           },
           "framesOver1_5x": {
-            "median": 2.0
+            "median": 1.0
           },
           "framesOver2x": {
-            "median": 2.0
+            "median": 1.0
           },
           "hitchMsPerS": {
-            "median": 2.8816648680209958
+            "median": 1.0235870013825974
           },
           "instructionsMPer1000Pt": {
-            "median": 5663.80172616345
+            "median": 5525.705864680852
           },
           "instructionsMPerMovedFrame": {
-            "median": 21.507798796336207
+            "median": 21.080209061688315
           },
           "mainBusyPct": {
-            "median": 15.991331208958732
+            "median": 17.793921960663877
           },
           "mainThreadCpuMsPerS": {
-            "median": 146.13782930233583
+            "median": 157.9468608195062
           },
           "movedFrames": {
             "median": 927.0
           },
           "ticksPerS": {
-            "median": 59.79055147581644
+            "median": 59.94155758805906
           }
         },
         "sweep": {
           "activeS": {
-            "median": 17.051022083338466
+            "median": 17.06769287500356
           },
           "cpuMsPer1000Pt": {
-            "median": 126.8246801950081
+            "median": 115.16519438309933
           },
           "cpuMsPerMovedFrame": {
-            "median": 6.087330999999999
+            "median": 5.527699000000002
           },
           "cpuMsPerS": {
-            "median": 349.3594493618925
+            "median": 316.8342711605912
           },
           "distancePt": {
             "median": 47998.0
           },
           "durationS": {
-            "median": 17.427163541666232
+            "median": 17.446657458334812
           },
           "footprintPeakMB": {
-            "median": 390.3452377319336
+            "median": 381.8921127319336
           },
           "frameMaxMs": {
-            "median": 33.335083338897675
+            "median": 50.0026249937946
           },
           "frameP50Ms": {
             "median": 16.667541669448838
@@ -743,7 +743,7 @@
             "median": 16.667541669448838
           },
           "frameP99Ms": {
-            "median": 16.668083335389383
+            "median": 16.667541669448838
           },
           "frames": {
             "median": 1017.0
@@ -755,57 +755,57 @@
             "median": 6.0
           },
           "hitchMsPerS": {
-            "median": 5.865366422630009
+            "median": 6.8361929473232825
           },
           "instructionsMPer1000Pt": {
-            "median": 974.1530135005625
+            "median": 728.5622077586567
           },
           "instructionsMPerMovedFrame": {
-            "median": 46.757396342
+            "median": 34.969528848
           },
           "mainBusyPct": {
-            "median": 33.03166004456953
+            "median": 31.05324264576933
           },
           "mainThreadCpuMsPerS": {
-            "median": 327.3638298257765
+            "median": 301.2711181240599
           },
           "movedFrames": {
             "median": 1000.0
           },
           "ticksPerS": {
-            "median": 59.676951875357474
+            "median": 59.61027219590189
           }
         },
         "sweep-a11y": {
           "activeS": {
-            "median": 19.13450754166115
+            "median": 17.417711250003777
           },
           "cpuMsPer1000Pt": {
-            "median": 262.61919246635273
+            "median": 199.54260594191425
           },
           "cpuMsPerMovedFrame": {
-            "median": 12.617813813813815
+            "median": 9.577646000000001
           },
           "cpuMsPerS": {
-            "median": 638.2322583097878
+            "median": 537.6927428395995
           },
           "distancePt": {
             "median": 47998.0
           },
           "durationS": {
-            "median": 19.519150541658746
+            "median": 17.8124888750026
           },
           "footprintPeakMB": {
-            "median": 411.0171127319336
+            "median": 399.12646484375
           },
           "frameMaxMs": {
-            "median": 43.965249991742894
+            "median": 50.00262500834651
           },
           "frameP50Ms": {
             "median": 16.667541669448838
           },
           "frameP95Ms": {
-            "median": 33.335083338897675
+            "median": 16.667541669448838
           },
           "frameP99Ms": {
             "median": 33.335083338897675
@@ -814,31 +814,31 @@
             "median": 1017.0
           },
           "framesOver1_5x": {
-            "median": 130.0
+            "median": 27.0
           },
           "framesOver2x": {
-            "median": 127.0
+            "median": 27.0
           },
           "hitchMsPerS": {
-            "median": 113.93423610427676
+            "median": 27.040985844374678
           },
           "instructionsMPer1000Pt": {
-            "median": 2559.5060304596027
+            "median": 1515.9458968290344
           },
           "instructionsMPerMovedFrame": {
-            "median": 122.9741445945946
+            "median": 72.762371156
           },
           "mainBusyPct": {
-            "median": 63.20033205432265
+            "median": 52.95938208434489
           },
           "mainThreadCpuMsPerS": {
-            "median": 617.6457019847882
+            "median": 519.2456295638613
           },
           "movedFrames": {
             "median": 1000.0
           },
           "ticksPerS": {
-            "median": 53.28100717192483
+            "median": 58.442141763855446
           }
         }
       },
