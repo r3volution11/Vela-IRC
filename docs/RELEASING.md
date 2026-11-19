@@ -1,11 +1,13 @@
 # Releasing Vela
 
-How to ship a signed, notarized Vela and publish it on GitHub, from a one-time setup to checking the download. The website's **Download** button points at `https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg`. Every release must therefore:
+How to ship a signed, notarized Vela and publish it on GitHub, from a one-time setup to checking the download. Once everything is ready, one command does the release: `scripts/release.sh --publish` builds, checks, tags and publishes it.
+
+The website's **Download** button points at `https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg`. Every release must therefore:
 
 - upload an asset named exactly `Vela.dmg`;
 - be marked as the latest release, not a pre-release.
 
-If no published release is marked latest, or the latest has no asset named `Vela.dmg`, that link returns 404.
+If no published release is marked latest, or the latest has no asset named `Vela.dmg`, that link returns 404. `--publish` takes care of both.
 
 ## Release builds and development builds
 
@@ -55,7 +57,9 @@ The release build you ship uses the same identity as the `build/Vela.app` that `
      ```
      `notarytool` asks for the password, and you never type it into a file.
    - Check it: `xcrun notarytool history --keychain-profile vela-notary`.
-4. **Do a dry run.** `scripts/release.sh --skip-notarize --skip-preflight` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work. `--skip-preflight` leaves out the [release checks](#release-checks), which would otherwise stop the build until everything is ready to ship; the post-build checks still run.
+4. **Set up the GitHub CLI:** `brew install gh`, then `gh auth login`. The CI checks and publishing use it.
+   - To sign release tags, set up signing in git, such as an SSH key in 1Password. Publishing signs the tag whenever git has a signing key (`user.signingkey`, or `tag.gpgSign`).
+5. **Do a dry run.** `scripts/release.sh --skip-notarize --skip-preflight` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work. `--skip-preflight` leaves out the [release checks](#release-checks), which would otherwise stop the build until everything is ready to ship; the post-build checks still run.
 
 ## Before each release
 
@@ -74,7 +78,7 @@ The checks catch what can be checked. Deciding the version, writing the changelo
    - Also bump `CURRENT_PROJECT_VERSION`, the build number, by 1 for every build you ship.
    - The easiest way is Xcode: Vela target → General → Version and Build.
    - *Checked:* both configurations agree, the version is newer than the previous release's, the build number is higher than that release's, and the tag `v<version>` isn't taken.
-2. **Finish the changelog.** In `CHANGELOG.md`, rename `## Unreleased` to `## <version> - <yyyy-mm-dd>`. Read it through as a user would, and move anything that isn't user-facing out. Start a new empty `## Unreleased` section above it for the next cycle.
+2. **Finish the changelog.** In `CHANGELOG.md`, rename `## Unreleased` to `## <version> - <yyyy-mm-dd>`. Read it through as a user would, and move anything that isn't user-facing out. Start a new empty `## Unreleased` section above it for the next cycle. The section also becomes the [release notes](#release-notes).
    - *Checked:* the newest version section has that heading and entries, and `## Unreleased` has none. Whether the entries read well is up to you.
 3. **Refresh the adult-domain list:** `scripts/update-adult-domains.sh`. Check its summary; see [The adult-domain list](#the-adult-domain-list).
    - *Checked:* the list was refreshed since the previous release.
@@ -82,32 +86,37 @@ The checks catch what can be checked. Deciding the version, writing the changelo
    - *Checked:* you're on `main`, nothing is uncommitted, `origin/main` has your commit, and CI passed for exactly that commit. The checks also run the package tests, build and check the website, compare the generated files with the code, check the media sites against the real sites, and check that scrolling costs no more than the [scroll benchmark](#scroll-benchmark)'s baseline allows.
 5. **Check the docs and screenshots.** Every user-facing change is documented on the site. If the UI changed, re-shoot with `website/scripts/screenshots.sh` and commit the images. *Not checked.*
 6. **Try the Release build yourself:** `scripts/run.sh`, then use it for a bit. Release builds are optimized, and occasionally behave differently from the Debug build you develop with. *Not checked.*
-7. **Write the release notes** (see [Publishing](#publishing)). *Not checked.*
+7. **Check the release notes.** They're made from the changelog section and a standard footer; see [Release notes](#release-notes). To write your own, pass `--notes <file>`.
+   - *Checked:* before it builds anything, `--publish` checks that the changelog section has entries, or that the `--notes` file isn't empty.
 
-## Building the release
+## Building and publishing the release
 
 ```sh
-scripts/release.sh
+scripts/release.sh --publish
 ```
+
+That's the whole release. It builds and checks Vela, then tags the commit it built, pushes the tag and publishes the GitHub release. Without `--publish`, it stops once the DMG is built and checked, and you [publish by hand](#publishing-by-hand).
 
 What it does:
 1. Reads the version and build number from the Vela target's Release configuration.
 2. Finds your **Developer ID Application** certificate and Team ID, and checks that the `vela-notary` profile exists.
-3. **Runs the [preflight checks](#preflight-checks)** (`scripts/release-preflight.sh`): git, the version and changelog, CI, the adult-domain list, the generated files, the package tests, the website, the media sites and the scroll benchmark. If one fails, it prints the summary and stops before archiving.
-4. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`.
-5. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
-6. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
-7. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
-8. **Builds the DMG** (`Vela.app` plus an Applications shortcut), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
-9. **Checks the DMG** as users get it, with the [post-build checks](#post-build-checks) (`scripts/verify-release.sh`). If one fails, it stops.
-10. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
-11. Prints a summary of every check and its result.
+3. With `--publish`, checks that `gh` is installed and signed in, and that there are [release notes](#release-notes). If not, it stops before building anything.
+4. **Runs the [preflight checks](#preflight-checks)** (`scripts/release-preflight.sh`): git, the version and changelog, CI, the adult-domain list, the generated files, the package tests, the website, the media sites and the scroll benchmark. If one fails, it prints the summary and stops before archiving.
+5. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`.
+6. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
+7. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
+8. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
+9. **Builds the DMG** (`Vela.app` plus an Applications shortcut), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
+10. **Checks the DMG** as users get it, with the [post-build checks](#post-build-checks) (`scripts/verify-release.sh`). If one fails, it stops.
+11. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
+12. With `--publish`, **publishes** the release once every check has passed: the tag, the GitHub release and a check of the download. See [Publishing](#publishing).
+13. Prints a summary of every check and its result.
 
 Notarization usually takes a few minutes. If Apple rejects a submission, the script prints Apple's log; the usual causes are an unsigned nested binary or a missing hardened-runtime flag. For testing the pipeline, `--skip-notarize` signs without notarizing, and `--adhoc` doesn't use your Developer ID at all; see [Options](#options).
 
 ## Release checks
 
-`scripts/release.sh` checks the release twice: the **preflight checks** before it builds anything, and the **post-build checks** on the finished DMG. Each check prints a PASS, FAIL or SKIP line as it runs; a failure says what's wrong and how to fix it. Every preflight check runs even after one fails, so you see everything to fix at once. The run ends with a summary of all of them, and any failure stops the release.
+`scripts/release.sh` checks the release twice: the **preflight checks** before it builds anything, and the **post-build checks** on the finished DMG. Each check prints a PASS, FAIL or SKIP line as it runs; a failure says what's wrong and how to fix it. Every preflight check runs even after one fails, so you see everything to fix at once. With `--publish`, the [publishing](#publishing) steps add their own lines. The run ends with a summary of all of them, and any failure stops the release.
 
 ### Preflight checks
 
@@ -203,6 +212,8 @@ It expects the project's version and build number unless you give `--version` an
 | Option | What it does |
 | --- | --- |
 | `--preflight` | Runs only the preflight checks and builds no release. It doesn't look for your certificate. The first thing to run when you prepare a release. |
+| `--publish` | Publishes the release on GitHub once it's built and every check has passed: the tag, the release and a check of the download. See [Publishing](#publishing). It doesn't go with `--preflight`, `--adhoc`, `--skip-notarize`, `--skip-preflight` or `--allow-dirty`. |
+| `--notes <file>` | With `--publish`: use this file as the release notes, instead of making them from the changelog. A relative path is from the folder you run the script in. |
 | `--skip-notarize` | Signs with your Developer ID but doesn't notarize, for testing the pipeline. The post-build checks skip Gatekeeper and the stapled tickets. |
 | `--adhoc` | No Developer ID at all, for testing on your own Mac only; other Macs will refuse the app. Skips the git, version and CI checks, the media check (add `--media-check` to run it) and the scroll benchmark (add `--scroll-benchmark`). The post-build checks that apply still run. |
 | `--allow-dirty` | Lets uncommitted changes through the clean working tree check, for test builds. The check shows as skipped. |
@@ -216,9 +227,11 @@ It expects the project's version and build number unless you give `--version` an
 
 `scripts/release-preflight.sh` takes `--adhoc`, `--allow-dirty`, `--skip-tests`, `--skip-ci-check`, `--skip-media-check`, `--media-check`, `--skip-scroll-benchmark` and `--scroll-benchmark` too, and `--help` lists them.
 
-## Checking the build before you publish
+## Trying the build
 
-The [post-build checks](#post-build-checks) have already checked the DMG's identity, version, architectures, sandbox, signature, notarization and stapling. What's left is to test what users will get, not your local build, with a real install:
+The [post-build checks](#post-build-checks) have already checked the DMG's identity, version, architectures, sandbox, signature, notarization and stapling. What's left is to test what users will get, not your local build, with a real install.
+
+With `--publish`, the release is public as soon as the checks pass, so do this right after, with the DMG from the release page. To try the build before anyone can download it, run `scripts/release.sh` without `--publish`, and [publish by hand](#publishing-by-hand) when you're happy with it.
 
 1. Quit any running Vela and copy `Vela.app` from the DMG to `/Applications`.
 2. Open it from there. On first launch, macOS asks for your Keychain password once per saved network password; see below.
@@ -233,29 +246,75 @@ After you've switched, delete `build/Vela.app`, or at least don't keep both copi
 
 ## Publishing
 
-```sh
-v=1.1.0   # the version you set
-git tag -s "v$v" -m "Vela $v"     # signed tag (1Password), or -a for unsigned
-git push origin "v$v"
-gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build/release/SHA256SUMS \
-  --title "Vela $v" --notes-file release-notes.md --latest
+`scripts/release.sh --publish` publishes the release once the build has passed every check, and never when one failed:
+
+1. **Tags** the commit it built as `v<version>`, with the message `Vela <version>`.
+   - The tag is signed (`git tag -s`) when git has a signing key: `user.signingkey`, or `tag.gpgSign`. With an SSH key in 1Password, 1Password asks you to approve it.
+   - Otherwise it's an annotated tag (`git tag -a`), and the script prints a note saying so.
+2. **Pushes** the tag to `origin`.
+3. **Creates the GitHub release** with `gh release create --verify-tag --latest`. It's titled `Vela <version>`, with the [release notes](#release-notes) and three files: `Vela.dmg` (for the website's Download button), `Vela-<version>.dmg` and `SHA256SUMS`.
+4. **Checks the download.** `releases/latest/download/Vela.dmg` must redirect to `releases/download/v<version>/Vela.dmg`. It tries for about a minute, while GitHub catches up. Then the DMG downloaded from that link must match `SHA256SUMS`.
+
+Each step adds a PASS or FAIL line to the summary, under **Publish**. Only a notarized build that passed every check is published, so `--publish` doesn't go with `--preflight`, `--adhoc`, `--skip-notarize`, `--skip-preflight` or `--allow-dirty`. It also stops before building if the checkout changes while the preflight checks run, so the tag is always on the commit that was built.
+
+### When a publishing step fails
+
+The script stops and deletes nothing: not the tag, and not the release. After the summary, under **Finish by hand**, it says what was done and prints the commands left, from the step that failed on. For example, if the push worked but creating the release didn't:
+
+```text
+==> Finish by hand
+    v1.1.0 is on origin, but the GitHub release wasn't created. Nothing was deleted. To finish, run:
+
+      cd '/Users/you/Projects/Vela IRC'
+      gh release create v1.1.0 build/release/Vela.dmg build/release/Vela-1.1.0.dmg build/release/SHA256SUMS --repo r3volution11/Vela-IRC --verify-tag --title 'Vela 1.1.0' --notes-file build/release/release-notes.md --latest
+      curl -sS -o /dev/null -w '%{redirect_url}\n' https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg
+      curl -sSL https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg | shasum -a 256
+
+    The first curl should print https://github.com/r3volution11/Vela-IRC/releases/download/v1.1.0/Vela.dmg,
+    and the second 5f3a…  - (Vela.dmg's line in build/release/SHA256SUMS).
 ```
 
-- **Release notes:** a short, friendly rewrite of the changelog section with highlights first. Link the full [changelog](https://velairc.app/changelog). Write it in `release-notes.md`, and don't commit that file.
+Fix what the failed check says, then run the commands. If `gh` made the release but couldn't finish it (say, an upload failed), the commands upload the files again and publish it instead.
+
+### Release notes
+
+Without `--notes`, the release notes are:
+
+1. the body of this version's section in `CHANGELOG.md`, without its `## <version>` heading. Relative links, such as `ROADMAP.md`, point at the file on GitHub as of the tag;
+2. then `scripts/release-notes-footer.md`: Requirements, Install and Learn more. It's the same for every release; edit it there.
+
+They're written to `build/release/release-notes.md` when the build starts (after the preflight checks), so you can read them while Vela builds.
+
+To write your own, such as a short, friendly rewrite with highlights first, pass the file: `scripts/release.sh --publish --notes ~/release-notes.md`. Link the full [changelog](https://velairc.app/changelog), and don't commit the file.
+
+### Publishing by hand
+
+If you built without `--publish`:
+
+```sh
+v=1.1.0   # the version you built
+git tag -s "v$v" -m "Vela $v"     # tags HEAD, the commit you built; -a for an unsigned tag
+git push origin "v$v"
+gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build/release/SHA256SUMS \
+  --verify-tag --title "Vela $v" --notes-file release-notes.md --latest
+```
+
+- **Release notes:** write `release-notes.md` from the changelog section and `scripts/release-notes-footer.md`, or as you like (see [Release notes](#release-notes)). Don't commit it.
 - **Don't** mark it as a pre-release: pre-releases aren't "latest", so the Download button would skip them.
 
 ## After publishing
 
-1. **Check the download:**
+1. **Check the download.** `--publish` has already checked that the website's link gives the new DMG and that it matches `SHA256SUMS`. After publishing by hand, check the link yourself:
    ```sh
    curl -sIL https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg | grep -i location
    ```
-   It should end in `/download/v<version>/Vela.dmg`. Then download it with a browser, check it with `scripts/verify-release.sh ~/Downloads/Vela.dmg --version <version> --build <build>`, and install it once more.
+   It should end in `/download/v<version>/Vela.dmg`. Either way, download it with a browser, check it with `scripts/verify-release.sh ~/Downloads/Vela.dmg --version <version> --build <build>`, and install it once more (see [Trying the build](#trying-the-build)).
 2. **Check the website:** the **Deploy Website** workflow runs on every push to `main`. Check that the changelog page shows the new version first, and that velairc.app's Download button gets the new DMG.
 3. **Start the next cycle:** make sure `CHANGELOG.md` has an empty `## Unreleased` section.
 
 ## If something goes wrong
 
+- **A publishing step fails:** nothing is deleted. Fix what the summary says, then run the commands the script printed under **Finish by hand** (see [When a publishing step fails](#when-a-publishing-step-fails)). Running `scripts/release.sh --publish` again would build everything again, and once the tag exists, its preflight stops it.
 - **A bad release:** don't delete the release. Ship a fixed version (bump the patch number) and mark it latest. If the build is harmful, delete only its DMG assets and say so in the release notes.
 - **"No Developer ID Application certificate found":** the certificate isn't in the login keychain, or its private key is missing (it shows without a disclosure triangle in Keychain Access). Re-import your `.p12` backup.
 - **"Notarization profile not found":** run the `store-credentials` step again.
