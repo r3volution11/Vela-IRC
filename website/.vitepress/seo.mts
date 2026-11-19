@@ -20,7 +20,7 @@ const TAGLINE = 'A modern, deeply themable IRC client for macOS'
 const SITE_DESCRIPTION =
   'Vela is a free, open-source, deeply themable IRC client for macOS, with inline media, IRCv3, bouncer support and VS Code-style themes.'
 
-/** The newest version in CHANGELOG.md ("## 0.1.0 - 2026-11-16"), if any. */
+/** The newest version in CHANGELOG.md ("## 1.0.0 - 2026-11-18"), if any. */
 function latestVersion(): string | undefined {
   try {
     const changelog = readFileSync(new URL('../../CHANGELOG.md', import.meta.url), 'utf8')

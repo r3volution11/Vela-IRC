@@ -1,6 +1,6 @@
 # Vela Roadmap
 
-## Milestone 1: a usable v1 (in progress)
+## Milestone 1: a usable v1 (shipped in 1.0.0)
 
 - [x] Project scaffold: Xcode app target, `VelaKit` package, CI, MPL-2.0
 - [x] Demo mode with offscreen screenshots (`scripts/demo-screenshot.sh`)
@@ -48,7 +48,7 @@
 - [x] **IRCv3 chat**
   - [x] Reactions, replies, typing indicators, redaction
   - [x] `chathistory` paging
-- [ ] **Bouncers:** [soju](https://soju.im) (`bouncer-networks`) and [ZNC](https://znc.in) (`playback`, `self-message`)
+- [x] **Bouncers:** [soju](https://soju.im) (`bouncer-networks`) and [ZNC](https://znc.in) (`playback`, `self-message`)
 - [x] **Settings window**
   - [x] Theme gallery
   - [x] Network editor with SASL and certificates
@@ -65,7 +65,7 @@
 ## Later
 
 - **Uploads:** paste or drag images, via IRCv3 FILEHOST (soju) and a custom uploader config
-- **Distribution:** notarized DMG with Sparkle auto-updates, then a Mac App Store build
+- **Distribution:** automatic updates with Sparkle, then a Mac App Store build
 - **Search:** message search UI on top of the existing FTS5 index
 - **iCloud sync** of networks, settings and themes
 - **Per-network/per-channel themes**

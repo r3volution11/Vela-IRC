@@ -5,7 +5,7 @@ How to ship a signed, notarized Vela and publish it on GitHub, from a one-time s
 - upload an asset named exactly `Vela.dmg`;
 - be marked as the latest release, not a pre-release.
 
-Until the first release is published, that link returns 404.
+If no published release is marked latest, or the latest has no asset named `Vela.dmg`, that link returns 404.
 
 ## Release builds and development builds
 
@@ -57,7 +57,7 @@ It runs every [preflight check](#preflight-checks) and builds no release (only t
 
 The checks catch what can be checked. Deciding the version, writing the changelog and the release notes, and trying the build are still up to you:
 
-1. **Pick the version.** Use [semantic versioning](https://semver.org): below 1.0, bump the minor version for features (0.2.0) and the patch for fixes only (0.2.1).
+1. **Pick the version.** Use [semantic versioning](https://semver.org): bump the major version for breaking changes to settings or theme files (2.0.0), the minor version for new features (1.1.0) and the patch for fixes only (1.0.1). Call out every breaking change in the changelog.
    - The version is `MARKETING_VERSION` in `Vela.xcodeproj/project.pbxproj` (the Vela target's Debug and Release configurations).
    - Also bump `CURRENT_PROJECT_VERSION`, the build number, by 1 for every build you ship.
    - The easiest way is Xcode: Vela target → General → Version and Build.
@@ -133,7 +133,7 @@ Skipped for `--adhoc` and `--skip-ci-check`. These checks ask GitHub with `gh`, 
 
 #### Adult-domain list
 
-- **Adult-domain list.** The list was refreshed since the previous release: its header has a later `# Date:` or a different upstream `# Commit:` than the list at the previous release's tag, or today's date. Before the first release, it must be at most 30 days old. *If it fails:* run `scripts/update-adult-domains.sh`, check its summary and commit the list; see [The adult-domain list](#the-adult-domain-list).
+- **Adult-domain list.** The list was refreshed since the previous release: its header has a later `# Date:` or a different upstream `# Commit:` than the list at the previous release's tag, or today's date. If there's no previous release, it must be at most 30 days old. *If it fails:* run `scripts/update-adult-domains.sh`, check its summary and commit the list; see [The adult-domain list](#the-adult-domain-list).
 
 #### Generated files
 
@@ -181,7 +181,7 @@ To check a DMG again, such as the one you downloaded after publishing:
 
 ```sh
 scripts/verify-release.sh build/release/Vela.dmg
-scripts/verify-release.sh ~/Downloads/Vela.dmg --version 0.2.0 --build 3 --team <TEAMID>
+scripts/verify-release.sh ~/Downloads/Vela.dmg --version 1.1.0 --build 2 --team <TEAMID>
 ```
 
 It expects the project's version and build number unless you give `--version` and `--build`, and any Developer ID team unless you give `--team` (or set `VELA_TEAM_ID`).
@@ -222,7 +222,7 @@ After you've switched, delete `build/Vela.app`, or at least don't keep both copi
 ## Publishing
 
 ```sh
-v=0.2.0   # the version you set
+v=1.1.0   # the version you set
 git tag -s "v$v" -m "Vela $v"     # signed tag (1Password), or -a for unsigned
 git push origin "v$v"
 gh release create "v$v" build/release/Vela.dmg "build/release/Vela-$v.dmg" build/release/SHA256SUMS \

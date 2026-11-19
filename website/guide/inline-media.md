@@ -238,10 +238,6 @@ Rules are stored in [`media.siteRules`](/reference/settings#media.siteRules), wi
 
 **Only load previews from sites listed here** is [`media.restrictToAllowed`](/reference/settings#media.restrictToAllowed).
 
-::: info Upgrading from Vela 0.1
-The **Blocked domains** and **Allowed domains** lists became site rules automatically: blocked domains are set to **Nothing** and allowed domains to **Everything**. Allowed domains now also get past the adult-site filter.
-:::
-
 ## Blur images until clicked {#blur}
 
 Turn on **Blur images until clicked** (in **Settings → Media → Restrictions**) and images, GIFs, link preview images, video thumbnails and video stills stay blurred, with **Click to show**, until you click them. The first click only reveals: it doesn't open the viewer or start the video. To hide something again, right-click it and choose **Blur Again**.

@@ -18,7 +18,7 @@ description: Download Vela for macOS, install it from the disk image, and keep i
 1. Download **[Vela.dmg](https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg)**. It's always the latest release.
 2. Open the downloaded file. A window with the Vela icon and your Applications folder appears.
 3. Drag **Vela** onto **Applications**.
-4. Eject the disk image, then open Vela from Applications, Launchpad or Spotlight.
+4. Eject the disk image, then open Vela from the Applications folder or Spotlight.
 
 Every release is signed with a Developer ID and notarized by Apple, so macOS opens it without a security warning. The first time, macOS may still ask you to confirm that you want to open an app downloaded from the internet. Click **Open**.
 
