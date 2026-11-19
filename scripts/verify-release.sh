@@ -220,4 +220,11 @@ else
   check_fail "Applications link" "the DMG has no Applications shortcut" "Rebuild it with scripts/release.sh."
 fi
 
+backgrounds=("$mountpoint"/.background.*(N))
+if [[ -f "$mountpoint/.DS_Store" && ${#backgrounds} -gt 0 && -f "$mountpoint/.VolumeIcon.icns" ]]; then
+  check_pass "Window layout" "background, icon positions and volume icon"
+else
+  check_fail "Window layout" "the DMG's window has no background, layout or volume icon" "Rebuild it with scripts/release.sh, which makes it with scripts/make-dmg.sh."
+fi
+
 finish

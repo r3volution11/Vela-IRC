@@ -106,7 +106,7 @@ What it does:
 6. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
 7. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
 8. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
-9. **Builds the DMG** (`Vela.app` plus an Applications shortcut), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
+9. **Builds the DMG** with `scripts/make-dmg.sh` (`Vela.app` plus an Applications shortcut, in a window drawn like the website; see [The disk image window](#the-disk-image-window)), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
 10. **Checks the DMG** as users get it, with the [post-build checks](#post-build-checks) (`scripts/verify-release.sh`). If one fails, it stops.
 11. Writes `build/release/Vela.dmg`, `build/release/Vela-<version>.dmg` and `build/release/SHA256SUMS`.
 12. With `--publish`, **publishes** the release once every check has passed: the tag, the GitHub release and a check of the download. See [Publishing](#publishing).
@@ -195,6 +195,7 @@ Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts 
 | Gatekeeper | `spctl -a -vvv` on the app says "Notarized Developer ID". | Notarization or stapling didn't work; build again and read Apple's log. |
 | Stapled ticket (app), (DMG) | `xcrun stapler validate` passes on the app and on the DMG. | As for Gatekeeper. |
 | Applications link | The DMG has its Applications shortcut. | Build again. |
+| Window layout | The DMG has its window background, layout (`.DS_Store`) and volume icon. | Build again with `scripts/release.sh`. |
 
 `--skip-notarize` skips the Gatekeeper and stapled-ticket checks, and `--adhoc` also skips the Developer ID check; the summary lists them as skipped. When a post-build check fails, `build/release/Vela.dmg` stays for you to look at, but `Vela-<version>.dmg` and `SHA256SUMS` aren't written.
 
@@ -243,6 +244,26 @@ With `--publish`, the release is public as soon as the checks pass, so do this r
 The release has the same bundle id as `build/Vela.app`, so it uses the same settings, networks and history. Your saved passwords stay in the Keychain, but they were created by a differently signed copy, so macOS asks once whether the release may use each one. Click **Always Allow**.
 
 After you've switched, delete `build/Vela.app`, or at least don't keep both copies around. Two apps with the same bundle id confuse Siri, Shortcuts and Spotlight about which one to open.
+
+## The disk image window
+
+The DMG opens to a window drawn like the website in dark mode: Palenight, the hero's glow and gradient "Vela", and an arrow from the app to the Applications folder. `scripts/make-dmg.sh` makes it, and `scripts/release.sh` runs it.
+
+- **`scripts/dmg/layout.json`** sets the window size and where the two icons go. Both of the files below read it.
+- **`scripts/dmg/background.swift`** draws the background at 1x and 2x. `make-dmg.sh` joins them into one TIFF.
+- **`scripts/dmg/settings.py`** lays out the window for [dmgbuild](https://github.com/dmgbuild/dmgbuild). dmgbuild writes Finder's layout file itself, so nothing scripts Finder, nothing appears on screen, and there are no permission prompts.
+- **The plates under the icons** are there because Finder draws the names "Vela" and "Applications" itself, and won't let a disk image choose their color. Over a background picture they're usually black, even in dark mode. The plates are a mid-tone that keeps black or white text readable.
+- **dmgbuild and its two dependencies** are pinned with hashes in `scripts/dmg/requirements.txt`. They install into `build/dmg-venv` the first time, which needs Python 3.10 or later (`brew install python`).
+  - To update them, pick versions that have been out for at least two weeks.
+  - Copy each version's wheel hash from PyPI.
+
+To try a change, build a DMG from any `Vela.app` and open it:
+
+```sh
+scripts/make-dmg.sh build/release/Vela.app /tmp/Vela-test.dmg "Vela test"
+```
+
+Finder caches window layouts by volume name, so give each try a new name.
 
 ## Publishing
 

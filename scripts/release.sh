@@ -242,6 +242,13 @@ if (( publish )); then
   print "    notes:    $notes_file ($notes_from)"
 fi
 
+# The disk image's tools (dmgbuild, scripts/make-dmg.sh), set up now so a
+# missing Python stops the release before the long build, not after it.
+if (( ! preflight_only )); then
+  scripts/make-dmg.sh --prepare \
+    || fail "Couldn't set up the disk image tools (scripts/make-dmg.sh --prepare); see its message above."
+fi
+
 # ---------------------------------------------------------------- preflight
 # Git, version and changelog, CI, the adult-domain list, generated files, the
 # tests, the website, the media sites and the scroll benchmark (docs/RELEASING.md,
@@ -367,12 +374,9 @@ fi
 
 # ---------------------------------------------------------------- disk image
 step "Creating the disk image"
-staging="$out/dmg"
-mkdir -p "$staging"
-cp -R "$app" "$staging/Vela.app"
-ln -s /Applications "$staging/Applications"
-hdiutil create -volname "Vela $version" -srcfolder "$staging" -ov -format UDZO -fs APFS "$out/Vela.dmg" -quiet
-rm -rf "$staging"
+# Vela.app and an Applications shortcut, in a window drawn like the website's
+# dark mode (scripts/make-dmg.sh, scripts/dmg/).
+scripts/make-dmg.sh "$app" "$out/Vela.dmg" "Vela $version"
 if (( ! adhoc )); then
   codesign --sign "$identity" --timestamp "$out/Vela.dmg"
 fi

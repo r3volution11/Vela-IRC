@@ -85,7 +85,9 @@ Open Vela once, so macOS registers its actions. If Vela's actions still don't ap
 
 ## macOS asks about the Keychain
 
-Vela keeps passwords, channel keys and client certificates in your login keychain. If macOS asks whether Vela may use confidential information stored in "io.github.r3volution11.Vela", enter your Mac password and click **Always Allow**. This can happen after Vela is updated (or when you build it yourself), because macOS checks which app is asking. If you click **Deny**, Vela can't read the password and logging in fails until you allow it.
+Vela keeps passwords, channel keys and client certificates in your login keychain, where macOS lets only the copy of Vela that saved them read them. Every release is signed by the same developer, so updating Vela never asks.
+
+macOS does ask, once for each saved password, when a differently signed copy saved them: for example, if you built Vela yourself and then installed a release. Enter your Mac password and click **Always Allow**, and it won't ask about that item again. If you click **Deny**, Vela can't read the password, and logging in fails until you allow it.
 
 ## A theme or settings.json has a mistake
 

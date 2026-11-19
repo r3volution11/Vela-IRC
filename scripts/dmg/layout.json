@@ -1,0 +1,9 @@
+{
+  "comment": "The disk image window, in points from its top-left corner. background.swift draws to it and settings.py lays the window out from it.",
+  "width": 660,
+  "height": 400,
+  "iconSize": 128,
+  "textSize": 13,
+  "app": [170, 196],
+  "applications": [490, 196]
+}
