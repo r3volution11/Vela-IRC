@@ -4,6 +4,7 @@ name: Media sites
 # in Packages/VelaKit/Sources/VelaMedia/MediaSites.swift is resolved against the
 # real site, the way Vela resolves it (scripts/check-media-sites.sh). A site
 # that changed how it works fails the run; the run's summary has the report.
+# Reddit's sites are skipped here (see the step below).
 # What to do then: docs/RELEASING.md, "When the media check fails".
 #
 # It runs when media code changes, every Monday, and on demand (Actions →
@@ -69,10 +70,17 @@ jobs:
           key: spm-${{ runner.os }}-${{ hashFiles('Packages/VelaKit/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
+      # Reddit refuses GitHub's hosted runners (HTTP 403, or an empty oEmbed
+      # answer), though it answers people's Macs. Its sites are left out here
+      # unless asked for by name; the release preflight checks them from the
+      # Mac that builds the release.
       - name: Check media sites
         env:
           VELA_LIVE_MEDIA_SITES: ${{ inputs.sites }}
-        run: scripts/check-media-sites.sh --verbose
+        run: |
+          skip=()
+          [[ -z "$VELA_LIVE_MEDIA_SITES" ]] && skip=(--skip-site reddit-videos --skip-site reddit-posts)
+          scripts/check-media-sites.sh --verbose "${skip[@]}"
 
       - name: Keep the report
         if: always()

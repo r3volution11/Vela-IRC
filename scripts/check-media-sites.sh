@@ -10,6 +10,8 @@
 # Options:
 #   --site <id>                  Check only this site; repeat for more. The ids are in
 #                                MediaSites.swift (or see --list).
+#   --skip-site <id>             Leave this site out; repeat for more. GitHub Actions
+#                                uses it for the sites that refuse its servers.
 #   --list                       List the sites, their link forms and sample links.
 #   --verbose                    Show swift test's output as it runs.
 #   --scratch-path <dir>         SwiftPM's build folder (default: Packages/VelaKit/.build).
@@ -29,6 +31,7 @@ script="${0:A}"
 cd "${0:A:h}/.."
 
 sites=()
+skipped_sites=()
 scratch=""
 failed_file=""
 verbose=0
@@ -43,6 +46,8 @@ while (( $# )); do
   case "$1" in
     --site) needs_value "$@"; sites+=("$2"); shift 2 ;;
     --site=*) sites+=("${1#*=}"); shift ;;
+    --skip-site) needs_value "$@"; skipped_sites+=("$2"); shift 2 ;;
+    --skip-site=*) skipped_sites+=("${1#*=}"); shift ;;
     --scratch-path) needs_value "$@"; scratch="$2"; shift 2 ;;
     --failed-sites-file) needs_value "$@"; failed_file="$2"; shift 2 ;;
     --verbose) verbose=1; shift ;;
@@ -65,6 +70,7 @@ report="$out/report.txt"
 log="$out/swift-test.log"
 environment=(VELA_LIVE_MEDIA_TESTS=1 "VELA_MEDIA_REPORT=$report")
 (( ${#sites} )) && environment+=("VELA_LIVE_MEDIA_SITES=${(j:,:)sites}")
+(( ${#skipped_sites} )) && environment+=("VELA_LIVE_MEDIA_SKIP_SITES=${(j:,:)skipped_sites}")
 command=(env "${environment[@]}" swift test "${swift_args[@]}" --filter LiveMediaSiteTests)
 
 if (( dry_run )); then

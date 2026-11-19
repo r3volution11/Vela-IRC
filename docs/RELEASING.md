@@ -270,6 +270,7 @@ The check resolves each sample link in `Packages/VelaKit/Sources/VelaMedia/Media
 - **The site changed how it works** (a new address format, different page tags, a moved oEmbed endpoint): users are seeing it too. Fix the resolver in `VelaMedia`, with a unit test against a stubbed response, update the entry if the links or domains changed, and regenerate the docs page (see [CONTRIBUTING.md](../CONTRIBUTING.md#adding-or-changing-a-site)). Mention the fix in `CHANGELOG.md`.
 - **The site is down or slow right now:** each failing link is already tried three times, a few seconds apart. Run the check again later, or release with `--skip-media-check` if it can't wait.
 - **Every site fails:** check your connection. The check needs internet access.
+- **Reddit in GitHub Actions:** Reddit refuses GitHub's hosted runners (HTTP 403, or an empty oEmbed answer) while answering people's Macs, so the **Media sites** workflow leaves `reddit-videos` and `reddit-posts` out (`--skip-site`) unless you name them when running it by hand. The release preflight checks them from your Mac.
 
 A site that keeps failing for reasons Vela can't fix is better dropped from `MediaSites.swift` and the recognizers than left broken; say so in the changelog.
 

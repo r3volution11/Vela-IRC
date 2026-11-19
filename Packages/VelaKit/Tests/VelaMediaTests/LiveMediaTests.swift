@@ -13,6 +13,7 @@ import Testing
 ///     scripts/check-media-sites.sh      # the same, with a readable report
 ///
 /// - `VELA_LIVE_MEDIA_SITES=tenor,giphy` checks only those sites (ids in `MediaSites`).
+/// - `VELA_LIVE_MEDIA_SKIP_SITES=reddit-posts` leaves those sites out.
 /// - `VELA_MEDIA_REPORT=<file>` appends each site's report to the file.
 /// - The older switches still work: `VELA_LIVE_GIF_TESTS=1` checks the GIF
 ///   sites and `VELA_LIVE_REDDIT_TESTS=1` the Reddit ones.
@@ -29,6 +30,10 @@ enum LiveMediaGate {
         if let only = environment["VELA_LIVE_MEDIA_SITES"]?.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }),
            !only.isEmpty {
             sites = sites.filter { only.contains($0.id) }
+        }
+        if let skipped = environment["VELA_LIVE_MEDIA_SKIP_SITES"]?.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }),
+           !skipped.isEmpty {
+            sites = sites.filter { !skipped.contains($0.id) }
         }
         return sites
     }()
