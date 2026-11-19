@@ -821,13 +821,24 @@ struct SettingsJSONSessionTests {
 
     @Test func validationFindsProblemsAndTheQuickFixFixesThem() async throws {
         let h = try harness("{\n    \"chat.fontSizee\": 13\n}\n")
-        try await Task.sleep(for: .milliseconds(300))
+        // Checking is debounced and runs in the background: wait for it
+        // rather than a fixed time, which a busy machine can overrun.
+        try await Self.waitUntil { h.session.diagnostics.contains { $0.kind == .unknownKey } }
         let problem = try #require(h.session.diagnostics.first { $0.kind == .unknownKey })
         #expect(problem.suggestedKey == "chat.fontSize")
         #expect(!h.session.textView.diagnostics.isEmpty)
         h.session.applyQuickFix(.init(range: problem.range, key: "chat.fontSize"))
         #expect(h.text == "{\n    \"chat.fontSize\": 13\n}\n")
-        try await Task.sleep(for: .milliseconds(400))
+        try await Self.waitUntil { h.session.diagnostics.isEmpty }
         #expect(h.session.diagnostics.isEmpty)
+    }
+
+    /// Polls `condition` until it holds or `timeout` passes.
+    private static func waitUntil(timeout: Duration = .seconds(5), _ condition: () -> Bool) async throws {
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+        while !condition(), clock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
     }
 }
