@@ -12,7 +12,8 @@
     "docs:dev": "node scripts/generate.mjs && vitepress dev",
     "docs:build": "node scripts/generate.mjs && vitepress build",
     "docs:preview": "vitepress preview",
-    "docs:check": "node scripts/check-site.mjs"
+    "docs:check": "node scripts/check-site.mjs",
+    "test": "node --test scripts/*.test.ts"
   },
   "devDependencies": {
     "vitepress": "^1.6.4"

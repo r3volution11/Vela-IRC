@@ -1,11 +1,11 @@
 ---
 title: Privacy
-description: Vela has no telemetry, analytics or accounts. Here's who Vela talks to, what link previews reveal, how on-device AI and Siri are handled, and what's stored on your Mac.
+description: The Vela app has no telemetry, analytics or accounts. Who Vela talks to, what link previews reveal, how on-device AI and Siri are handled, what's on your Mac, and what this site measures.
 ---
 
 # Privacy
 
-**Vela has no telemetry, no analytics, no crash reporting service and no accounts.** There is no Vela server: the app never phones home, and nobody but you knows how you use it.
+**The Vela app has no telemetry, no analytics, no crash reporting service and no accounts.** There is no Vela server: the app never phones home, and nobody but you knows how you use it. (This website is a separate matter: see [This website](#this-website).)
 
 ## Who Vela talks to
 
@@ -52,9 +52,20 @@ Outside the container, macOS keeps your channel and conversation names in Spotli
 
 Vela is sandboxed: it can only reach its own container and files you choose, such as a theme you import or a folder for chat logs. See [where files live](/help/troubleshooting#where-files-live) and [how to remove everything](/guide/install#uninstalling).
 
-## This website
+## This website {#this-website}
 
-velairc.app is a static site hosted on GitHub Pages. It sets no cookies and has no analytics or trackers; search runs entirely in your browser. GitHub may log visits as described in the [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement). The **Download** buttons link to Vela's releases on GitHub.
+velairc.app is a static site hosted on GitHub Pages. It uses **Google Analytics** to learn which pages help people and how many download Vela. That's the website only: the Vela app never sends anything to Google, or to anyone else.
+
+- **Visitors in the EU, EEA, UK and Switzerland are asked first.** Until you choose **Allow**, Google's code isn't loaded at all. The site judges where you are from your browser's time zone.
+- **Elsewhere it's on unless you turn it off** below. If your browser sends [Global Privacy Control](https://globalprivacycontrol.org), that counts as a no, wherever you are.
+- **What it counts:** the pages you view, how far you scroll, Vela downloads, links you follow to GitHub and other sites, which kind of code block you copy (its language, not the code), and the words you type into the site's search.
+- **What it doesn't do:** no ads, no advertising cookies, no Google signals and no cross-site tracking. Google Analytics doesn't keep your IP address.
+- **Cookies:** two first-party cookies from Google Analytics, `_ga` and `_ga_5N9PPPQBPR`, which last up to two years. Turning analytics off deletes them. Your choice itself is kept in your browser's local storage, not in a cookie.
+- **Google keeps the data for up to 14 months.** See [how Google uses data from sites that use its services](https://policies.google.com/technologies/partner-sites).
+
+<AnalyticsSettings />
+
+The site's search runs in your browser; only the words you search for are counted, as above. GitHub may log visits as described in the [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement). The **Download** buttons link to Vela's releases on GitHub.
 
 ## Open source
 

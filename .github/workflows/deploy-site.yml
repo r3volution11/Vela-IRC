@@ -53,6 +53,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The analytics rules: who is asked before measuring, which links count.
+      - name: Test
+        run: npm test
+
       # Generates the reference partials, then builds. VitePress fails the
       # build on any dead link.
       - name: Build

@@ -225,6 +225,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **No previews from your local network.** Vela never fetches previews from private, local or LAN addresses.
 - **Passwords and certificates** are stored in the macOS Keychain. Vela is sandboxed.
 - **On-device intelligence.** Catch me up summaries and translations are made on your Mac. Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
+- **The website is separate.** velairc.app uses Google Analytics, asks visitors in the EU, EEA, UK and Switzerland first, and honors Global Privacy Control. The app never does any of this. See [Privacy](https://velairc.app/help/privacy#this-website).
 
 ## Building from source
 

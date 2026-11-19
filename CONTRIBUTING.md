@@ -67,6 +67,25 @@ Thanks for helping build Vela! This guide covers the basics.
   ```
   The `pre-push` hook runs `scripts/check-media-sites.sh` only when the commits you're pushing change `Sources/VelaMedia`, `Sources/VelaUI/Embeds`, `Tests/VelaMediaTests` or the check script, and stops the push if a site fails. Other pushes only cost a `git log`. `git push --no-verify` skips it. The hook never commits or signs anything, so it works with signed commits.
 
+## Website analytics
+
+velairc.app uses Google Analytics. **The app has none, and must never get any:** no analytics, usage tracking or anything else that phones home.
+
+- **Where it lives:** `website/.vitepress/theme/analytics.ts` (loading, consent and events) and `analyticsRules.ts` (the rules, tested by `npm test` in `website/`). It runs only on velairc.app, never on a local preview.
+- **Consent:**
+  - Visitors whose time zone is in Europe get a banner, and Google's tag doesn't load until they choose **Allow**.
+  - Global Privacy Control counts as a no.
+  - Anyone can change their choice on the [Privacy page](https://velairc.app/help/privacy#this-website).
+  - `npm run docs:check` fails if a page loads Google's tag directly.
+- **Events:** Google's tag counts the first page view, scrolling and outbound clicks itself. `analytics.ts` adds:
+  - `page_view` for each page after the first;
+  - `vela_download` for a Vela.dmg link (`file_name`, `placement`);
+  - `github_repo_click` for other repository links (`link_type`, `placement`);
+  - `copy_code` (`code_language`);
+  - `search` (`search_term`, and `result_count`, at most 16).
+- **Try it:** add `?analytics=debug` to any URL. It works locally too. Events are logged to the console instead of sent, for as long as the tab stays open.
+- **When you change what's measured,** update the Privacy page's "This website" section to match.
+
 ## Contributing a theme
 
 1. Start from an existing theme in `Packages/VelaKit/Sources/VelaTheme/BuiltInThemes/`, or export one from Vela's theme editor.

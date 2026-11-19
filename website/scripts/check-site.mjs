@@ -1,7 +1,8 @@
 // Checks the built site (.vitepress/dist) before it's deployed: every page
 // has its own canonical URL, social tags and valid schema.org data; the home
-// page offers the download; the sitemap lists every page; and the files
-// GitHub Pages needs are present.
+// page offers the download; no page loads Google's tag before its consent
+// check runs; the sitemap lists every page; and the files GitHub Pages needs
+// are present.
 //
 //   npm run docs:build && npm run docs:check
 
@@ -81,6 +82,11 @@ for (const file of pages) {
   }
 
   if (page === 'index.html' && !html.includes(`href="${DOWNLOAD_URL}"`)) problem(page, 'no download link')
+
+  // Google's tag is loaded by theme/analytics.ts once a visitor may be
+  // measured. A tag written into the page itself would load for everyone,
+  // EU visitors who haven't answered included.
+  if (/googletagmanager\.com|google-analytics\.com/.test(html)) problem(page, "loads Google's tag directly; analytics.ts must load it after the consent check")
 }
 
 const sitemap = existsSync(join(dist, 'sitemap.xml')) ? readFileSync(join(dist, 'sitemap.xml'), 'utf8') : ''
