@@ -95,7 +95,7 @@ velairc.app uses Google Analytics. **The app has none, and must never get any:**
 
 ## Reporting bugs
 
-Use the bug report template. Include your macOS version, Vela version, and (if relevant) the IRC network or bouncer you were using. **Never paste passwords, SASL credentials or private logs.**
+Questions are best asked in **#vela** on Libera.Chat ([web chat](https://web.libera.chat/#vela)). For bugs, use the bug report template. Include your macOS version, Vela version, and (if relevant) the IRC network or bouncer you were using. **Never paste passwords, SASL credentials or private logs.**
 
 ## License
 

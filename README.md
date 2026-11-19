@@ -277,6 +277,10 @@ design/app-icon/         App icon generators and geometry (see its README)
 scripts/                 run, release, screenshot, icon export and media site check tools, git hooks
 ```
 
+## Getting help
+
+Ask in **#vela** on **Libera.Chat**, Vela's own channel: server `irc.libera.chat`, port 6697 with TLS, or [web chat](https://web.libera.chat/#vela). Report bugs and request features in [GitHub issues](https://github.com/r3volution11/Vela-IRC/issues/new/choose). The [user guide](https://velairc.app) covers every feature, and its [troubleshooting page](https://velairc.app/help/troubleshooting) the common problems.
+
 ## Contributing
 
 Contributions are welcome, especially themes. See [CONTRIBUTING.md](CONTRIBUTING.md). The [roadmap](ROADMAP.md) lists what's planned next, including image uploads, search, iCloud sync and auto-updates.

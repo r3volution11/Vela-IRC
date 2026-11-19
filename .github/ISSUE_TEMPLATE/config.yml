@@ -1,1 +1,8 @@
 blank_issues_enabled: false
+contact_links:
+  - name: "Ask a question in #vela on Libera.Chat"
+    url: https://web.libera.chat/#vela
+    about: "Vela's own IRC channel, for help and questions. In Vela, add irc.libera.chat (port 6697, TLS) and /join #vela."
+  - name: User guide and troubleshooting
+    url: https://velairc.app/help/troubleshooting
+    about: Answers to common problems, and how every feature works.

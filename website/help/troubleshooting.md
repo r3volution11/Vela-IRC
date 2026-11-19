@@ -5,6 +5,10 @@ description: Fix common Vela problems, such as connecting, TLS errors, ZNC login
 
 # Troubleshooting & FAQ
 
+::: tip Need a hand?
+Ask in **#vela** on **Libera.Chat**, Vela's own channel. See [Where can I get help?](#get-help)
+:::
+
 ## Can't connect {#cant-connect}
 
 Start with the network's **server console**: click the network's name in the sidebar (or its first tab). Vela writes connection errors there.
@@ -152,6 +156,15 @@ Not yet. Image uploads, a search window, iCloud sync, DCC and scripting are on t
 ### How do I register my nickname?
 
 Registration is handled by each network's services, usually NickServ. On Libera.Chat, for example, `/msg NickServ REGISTER yourpassword you@example.com`. Check your network's documentation. Once registered, set **Authentication** to **SASL PLAIN** in the network's settings so Vela logs you in automatically.
+
+### Where can I get help? {#get-help}
+
+Join **#vela** on **Libera.Chat**, Vela's own channel, and ask there.
+
+- **In Vela:** if you don't have Libera.Chat yet, add it as a network: server `irc.libera.chat`, port `6697`, **Use TLS** on. Then type `/join #vela`.
+- **In a browser:** [web.libera.chat/#vela](https://web.libera.chat/#vela).
+
+IRC is live chat, so stay a while if nobody answers right away.
 
 ### How do I report a bug or ask for a feature?
 

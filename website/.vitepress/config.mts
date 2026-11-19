@@ -153,7 +153,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: `Free and open source under the <a href="/help/license">Mozilla Public License 2.0</a>. <a href="${DOWNLOAD_URL}">Download Vela</a>. <a href="/help/privacy#this-website">Privacy</a>.`,
+      message: `Free and open source under the <a href="/help/license">Mozilla Public License 2.0</a>. <a href="${DOWNLOAD_URL}">Download Vela</a>. <a href="/help/privacy#this-website">Privacy</a>. Questions? Ask in <a href="/help/troubleshooting#get-help">#vela on Libera.Chat</a>.`,
       copyright: `Copyright © ${new Date().getFullYear()} Doug C. Hardester`,
     },
 
