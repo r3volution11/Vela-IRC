@@ -346,8 +346,9 @@ extension LinkSelectionTests {
             let app = AppModel.demo()
             let session = try #require(app.sessions.first)
             let buffer = session.ensureBuffer(name: "#dn", kind: .channel, persist: false)
+            let uiState = UIState()
             let interaction = TabInteraction()
-            interaction.installMiddleClickMonitor { TabActions.middleClick($0, app: app) }
+            interaction.installMiddleClickMonitor { TabActions.middleClick($0, app: app, uiState: uiState) }
             defer { interaction.removeMiddleClickMonitor() }
 
             // Not over a tab, or another button: the click goes on.
@@ -358,7 +359,13 @@ extension LinkSelectionTests {
             #expect(interaction.handleOtherMouseUp(right) === right)
             #expect(session.buffer(id: buffer.id) != nil)
 
-            // Over the tab: it closes, and the click is used up.
+            // Over the tab: the click is used up, and it does what the tab's ×
+            // does: #dn isn't joined, so it's removed, once you say so.
+            #expect(interaction.handleOtherMouseUp(try middleClick()) == nil)
+            #expect(uiState.channelConfirmation?.action == .remove)
+            #expect(uiState.channelConfirmation?.bufferID == buffer.id)
+            #expect(session.buffer(id: buffer.id) != nil)
+            app.settings[.channelsConfirmRemove] = false
             #expect(interaction.handleOtherMouseUp(try middleClick()) == nil)
             #expect(session.buffer(id: buffer.id) == nil)
         }
@@ -367,11 +374,14 @@ extension LinkSelectionTests {
             let app = AppModel.demo()
             let session = try #require(app.sessions.first)
             let count = session.allBuffers.count
-            #expect(!TabActions.middleClick(.buffer(session.serverBuffer.id), app: app))
-            #expect(!TabActions.middleClick(.network(session.id), app: app))
+            let uiState = UIState()
+            #expect(!TabActions.middleClick(.buffer(session.serverBuffer.id), app: app, uiState: uiState))
+            #expect(!TabActions.middleClick(.network(session.id), app: app, uiState: uiState))
             #expect(session.allBuffers.count == count)
+            // A conversation closes without asking.
             let query = session.ensureBuffer(name: "alice", kind: .query, persist: false)
-            #expect(TabActions.middleClick(.buffer(query.id), app: app))
+            #expect(TabActions.middleClick(.buffer(query.id), app: app, uiState: uiState))
+            #expect(uiState.channelConfirmation == nil)
             #expect(session.buffer(id: query.id) == nil)
         }
 
@@ -414,7 +424,8 @@ extension LinkSelectionTests {
             // The close slot isn't an element of its own: the tab's action is the way.
             #expect(all.filter { $0.role == .button }.count == 1, "\(all.map { "\($0.role?.rawValue ?? "-") \($0.label ?? "-")" })")
             let actions = tab.customActions
-            let close = try #require(actions.first { $0.name == "Close Channel" }, "\(actions.map(\.name))")
+            // #dn isn't joined, so its × removes it.
+            let close = try #require(actions.first { $0.name == "Remove Channel" }, "\(actions.map(\.name))")
             if let handler = close.handler {
                 _ = handler()
             } else if let target = close.target as? NSObject, let selector = close.selector {

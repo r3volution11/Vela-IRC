@@ -32,6 +32,9 @@ struct VelaCommands: Commands {
                 CommandMenuButton(commands.addNetwork)
                 CommandMenuButton(commands.joinChannel)
                 Divider()
+                CommandMenuButton(commands.reopenClosed)
+                RecentlyClosedMenu(commands: commands)
+                Divider()
                 CommandMenuButton(commands.showChatLogs)
             }
         }
@@ -97,6 +100,22 @@ private struct CommandItems<Content: View>: View {
             openWindow: openWindow,
             openSettings: openSettings
         )))
+    }
+}
+
+// MARK: - File
+
+/// File → Recently Closed: the channels you removed and conversations you
+/// closed, newest first ("#vela — Libera.Chat"). Choosing one reopens it.
+private struct RecentlyClosedMenu: View {
+    let commands: VelaCommandCatalog
+
+    var body: some View {
+        let items = commands.recentlyClosedCommands
+        Menu("Recently Closed") {
+            ForEach(items) { CommandMenuButton($0) }
+        }
+        .disabled(items.isEmpty)
     }
 }
 

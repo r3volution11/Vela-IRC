@@ -517,6 +517,14 @@ extension SettingKey where Value == Bool {
     public static var connectionAutoReconnect: SettingKey<Bool> {
         .init("connection.autoReconnect", default: true, summary: "Reconnect automatically after a dropped connection.")
     }
+    public static var channelsConfirmLeave: SettingKey<Bool> {
+        .init("channels.confirmLeave", default: true,
+              summary: "Ask before leaving a channel from its tab, its menu or the command palette. A channel you leave stays in the list so you can join it again. /part never asks.")
+    }
+    public static var channelsConfirmRemove: SettingKey<Bool> {
+        .init("channels.confirmRemove", default: true,
+              summary: "Ask before removing a channel from its tab, its menu or the command palette. Removing takes it out of the list and off its network's auto-join list; File → Recently Closed brings it back. /close never asks.")
+    }
 }
 
 // MARK: Moderation
@@ -760,6 +768,8 @@ public enum SettingsCatalog {
             SettingKey.inputSmartPunctuation.descriptor,
             SettingKey.inputWritingTools.descriptor,
             SettingKey.connectionAutoReconnect.descriptor,
+            SettingKey.channelsConfirmLeave.descriptor,
+            SettingKey.channelsConfirmRemove.descriptor,
             SettingKey.moderationBanMask.descriptor,
             SettingKey.moderationKickReason.descriptor,
             SettingKey.historyRetentionDays.descriptor,

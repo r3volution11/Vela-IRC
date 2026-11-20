@@ -74,6 +74,8 @@ struct MainWindowView: View {
         .themedWindowBorder()
         .background(WindowBackdrop())
         .background(WindowConfigurator(theme: theme, vibrancy: vibrancy, trafficLights: trafficLightLayout))
+        .background(WindowUndoManagerBridge(app: app))
+        .background { ChannelConfirmationDialog() }
         .ignoresSafeArea()
         .frame(minWidth: 640, minHeight: 420)
         .animation(.snappy(duration: 0.2), value: showMembers)

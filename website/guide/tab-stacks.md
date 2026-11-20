@@ -41,14 +41,16 @@ The row of network tabs shows each network's connection status and a badge when 
 | --- | --- |
 | **Tab height** | From 22 to 40 points (28 by default). Text and padding scale with it. |
 | **Unread badges** | Unread and mention counts on tabs. |
-| **Close buttons** | A **×** in place of a tab's **#** or avatar when you point at it. Turn it off to close tabs only with a middle-click or from their menu. |
+| **Close buttons** | A **×** in place of a tab's **#** or avatar when you point at it. Turn it off to use only a middle-click or the tab's menu. |
 
 ## Using tabs
 
 - **Click** a tab to switch to it; **right-click** it for the same actions as in the sidebar (mark as read, mute, inline media, translation, Catch Me Up, leave, close).
-- **Close** a channel or conversation tab with the **×** that takes the place of its **#** or avatar when you point at it. Only that spot closes the tab: a click anywhere else on it switches to it, and even a tab with a short name like **#dn** leaves plenty of room for that. A **middle-click** anywhere on a tab closes it too, and VoiceOver offers **Close Channel** or **Close Conversation** among each tab's actions.
+- **×** takes the place of a channel or conversation tab's **#** or avatar when you point at it. On a channel you're in, it **leaves** the channel: the tab stays, dimmed, so you can join again. On a channel you've left, it **removes** the tab. On a private conversation, it closes the conversation. Only that spot does this: a click anywhere else on the tab switches to it, and even a tab with a short name like **#dn** leaves plenty of room for that. A **middle-click** anywhere on a tab does the same as its **×**, and VoiceOver offers **Leave Channel**, **Remove Channel** or **Close Conversation** among each tab's actions.
+- Vela asks before leaving or removing a channel; see [Leave or remove](/guide/joining-channels#leave-or-remove) to turn that off.
+- **Closed a tab by mistake?** <kbd>⌘Z</kbd> puts it back right away, and **File → Reopen Closed Channel** (<kbd>⇧⌘T</kbd>) reopens removed channels and closed conversations, newest first. **File → Recently Closed** lists the last 20. A reopened tab goes back where it was.
 - **Drag** a tab along its row to move it: networks among networks, channels among the network's channels, and private conversations among its conversations. <kbd>Esc</kbd> cancels. The sidebar uses the same order. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).
-- <kbd>⌘1</kbd> to <kbd>⌘9</kbd> jump to the selected network's first nine channels and conversations.
+- <kbd>⌘1</kbd> to <kbd>⌘9</kbd> jump to the selected network's first nine channels and conversations, in the order their tabs are in. The console tab has no number.
 - When a row has more tabs than fit, it scrolls, fading at the edges, and a **»** menu lists them all.
 - The **+** at the end of a row joins a channel or adds a network.
 

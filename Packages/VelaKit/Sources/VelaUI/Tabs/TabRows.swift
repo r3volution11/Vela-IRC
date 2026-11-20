@@ -76,7 +76,7 @@ struct ChannelTabRow: View {
                             onSelect: { select(buffer) },
                             onClose: {
                                 interaction.setHovering(false, .buffer(buffer.id))
-                                TabActions.close(buffer, in: session, app: app)
+                                TabActions.close(buffer, app: app, uiState: uiState)
                             },
                             onHover: { interaction.setHovering($0, .buffer(buffer.id)) }
                         )

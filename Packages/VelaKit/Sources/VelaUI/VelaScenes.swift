@@ -112,6 +112,10 @@ private final class AppInstances {
         // arguments such as the "Lighter" in `--theme Lighter` as files to
         // open, and a launch that opens files skips the main window.
         UserDefaults.standard.register(defaults: ["NSTreatUnknownArgumentsAsOpen": "NO"])
+        // One main window, never in window tabs. This also keeps AppKit's
+        // View → Show Tab Bar items out of the menus, so they can't clash
+        // with Reopen Closed Channel (⇧⌘T).
+        NSWindow.allowsAutomaticWindowTabbing = false
         let arguments = ProcessInfo.processInfo.arguments
         let demo = UserDefaults.standard.bool(forKey: "VelaDemoMode") || arguments.contains("--demo")
         // The scroll benchmark's media comes from local stand-ins, set up

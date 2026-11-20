@@ -54,6 +54,8 @@ struct VelaCommandCatalog {
         static let toggleMemberList = KeyboardShortcut("m", modifiers: [.command, .shift])
         static let addNetwork = KeyboardShortcut("n", modifiers: [.command, .shift])
         static let joinChannel = KeyboardShortcut("j", modifiers: .command)
+        /// Safari's Reopen Last Closed Tab.
+        static let reopenClosed = KeyboardShortcut("t", modifiers: [.command, .shift])
         static let previousBuffer = KeyboardShortcut(.upArrow, modifiers: [.option, .command])
         static let nextBuffer = KeyboardShortcut(.downArrow, modifiers: [.option, .command])
         static let previousUnread = KeyboardShortcut(.upArrow, modifiers: [.shift, .option, .command])
@@ -502,17 +504,69 @@ struct VelaCommandCatalog {
             ) { app.setMediaEnabled(!mediaOn, for: buffer.id) },
             Self.blurCommand(app: app, bufferID: buffer.id),
         ]
-        if buffer.kind == .channel, buffer.isJoined {
-            commands.append(VelaCommand(
-                id: "channel.leave", category: .channel, title: "Leave \(buffer.name)",
-                keywords: ["part"], isEnabled: session.isConnected
-            ) { session.submit("/part \(buffer.name)", in: buffer) })
-        }
-        commands.append(VelaCommand(
-            id: "buffer.close", category: .buffer, title: "Close",
-            keywords: [buffer.name, buffer.kind == .channel ? "leave channel" : "close conversation"]
-        ) { app.close(buffer) })
+        commands += Self.membershipCommands(buffer: buffer, session: session, app: app, uiState: uiState)
         return commands
+    }
+
+    /// Leave #vela (or Join #vela) and Remove #vela for a channel; Close for
+    /// a conversation. Leave and Remove ask first while their settings are on.
+    /// Static so tests can build them without a window.
+    static func membershipCommands(buffer: BufferModel, session: NetworkSession, app: AppModel, uiState: UIState) -> [VelaCommand] {
+        guard buffer.kind == .channel else {
+            return [VelaCommand(
+                id: "buffer.close", category: .buffer, title: "Close",
+                keywords: [buffer.name, "close conversation", "query"]
+            ) { app.close(buffer) }]
+        }
+        let membership = session.isIn(buffer)
+            ? VelaCommand(
+                id: "channel.leave", category: .channel, title: "Leave \(buffer.name)",
+                keywords: ["part"]
+            ) { ChannelActions.leave(buffer, app: app, uiState: uiState) }
+            : VelaCommand(
+                id: "channel.rejoin", category: .channel, title: "Join \(buffer.name)",
+                keywords: ["rejoin", "enter"], isEnabled: session.isConnected
+            ) { session.submit("/join \(buffer.name)", in: buffer) }
+        return [
+            membership,
+            VelaCommand(
+                id: "channel.remove", category: .channel, title: "Remove \(buffer.name)",
+                keywords: ["close", "delete", "part", "auto-join"]
+            ) { ChannelActions.remove(buffer, app: app, uiState: uiState) },
+        ]
+    }
+
+    /// Reopens the channel or conversation closed last; again goes further
+    /// back. The menu names which kind it is.
+    var reopenClosed: VelaCommand { Self.reopenClosed(app: app) }
+
+    /// One command per recently closed channel or conversation, newest
+    /// first: File → Recently Closed, and "Reopen #vela (Libera.Chat)" in
+    /// the palette.
+    var recentlyClosedCommands: [VelaCommand] { Self.recentlyClosedCommands(app: app) }
+
+    /// Static so tests can build them without a window.
+    static func reopenClosed(app: AppModel) -> VelaCommand {
+        let latest = app.recentlyClosed.first
+        return VelaCommand(
+            id: "buffer.reopenClosed", category: .buffer, title: "Reopen Closed Channel",
+            menuTitle: latest?.kind == .query ? "Reopen Closed Conversation" : "Reopen Closed Channel",
+            shortcut: Shortcuts.reopenClosed,
+            keywords: ["undo close", "recently closed", "restore", "removed", "conversation", "query", "tab"],
+            isEnabled: latest != nil
+        ) { app.reopenLastClosed() }
+    }
+
+    static func recentlyClosedCommands(app: AppModel) -> [VelaCommand] {
+        app.recentlyClosed.map { closed in
+            let network = app.networkName(for: closed)
+            return VelaCommand(
+                id: "buffer.reopen.\(closed.id.description)", category: .buffer,
+                title: "Reopen \(closed.name) (\(network))",
+                menuTitle: app.menuTitle(for: closed),
+                keywords: ["recently closed", "restore", "undo close"]
+            ) { app.reopen(closed) }
+        }
     }
 
     /// "Blur Images" for one buffer, in the palette (the selected buffer)
@@ -638,6 +692,8 @@ struct VelaCommandCatalog {
         commands += [previousBuffer, nextBuffer, previousUnread, nextUnread, focusInput]
         commands.append(markAllAsRead)
         commands += selectedBufferCommands
+        commands.append(reopenClosed)
+        commands += recentlyClosedCommands
         commands += typingCommands + messageBoxBorderCommands
         commands += catchUpCommands
         commands += translationCommands

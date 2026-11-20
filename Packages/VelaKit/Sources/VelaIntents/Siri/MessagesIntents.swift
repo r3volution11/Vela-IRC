@@ -75,12 +75,13 @@ extension AppModel {
 
     /// Closes a private conversation opened for a message that wasn't sent,
     /// unless something new has happened in it meanwhile (only restored
-    /// scrollback, if any, is there).
+    /// scrollback, if any, is there). You didn't close it, so it isn't in
+    /// Recently Closed and can't be undone.
     private func closeUnusedConversation(_ id: BufferID) {
         guard let target = lookup(id), target.buffer.kind == .query,
               target.buffer.lines.allSatisfy(\.isHistory)
         else { return }
-        close(target.buffer)
+        close(target.buffer, reopenable: false)
     }
 
     /// The channel or conversation you're looking at, if any.

@@ -153,6 +153,10 @@ struct SiriSchemaTests {
             try await app.sendMessage("  ", to: [MessagePersonEntity(buffer: marisol, session: libera)])
         }
         #expect(libera.buffer(named: "marisol") === marisol)
+
+        // You didn't close the conversations Siri gave up on: they aren't
+        // in Recently Closed.
+        #expect(app.recentlyClosed.isEmpty)
     }
 
     // MARK: Spotlight

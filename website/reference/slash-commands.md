@@ -30,10 +30,10 @@ Any command Vela doesn't know is **sent to the server as typed**, so `/list`, `/
 | Command | Does |
 | --- | --- |
 | `/join <#channel>[,#other] [keys]` | Joins one or more channels, with keys if they need them: `/join #a,#b keyA,keyB`. Alias: `/j`. |
-| `/part [#channel] [reason]` | Leaves the current (or named) channel. Vela stops rejoining it automatically. Alias: `/leave`. |
+| `/part [#channel] [reason]` | Leaves the current (or named) channel, like **Leave Channel**: it stays in the list, dimmed, and Vela stops rejoining it automatically. It never asks first, and <kbd>⌘Z</kbd> joins it again. Alias: `/leave`. |
 | `/topic [#channel] [new topic]` | Shows the topic, or sets it if you add text. |
 | `/invite <nick> [#channel]` | Invites someone to the current (or named) channel. |
-| `/close` | Closes the current channel (leaving it) or conversation. Alias: `/wc`. |
+| `/close` | Removes the current channel, like **Remove Channel…** (leaving it, and taking it off the network's auto-join list), or closes the current conversation. It never asks first. <kbd>⌘Z</kbd> or <kbd>⇧⌘T</kbd> brings it back. Alias: `/wc`. |
 | `/clear` | Clears the messages shown in this channel. Your stored history isn't deleted. |
 
 ## You

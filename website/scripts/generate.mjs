@@ -194,6 +194,7 @@ const categoryNames = {
   highlight: 'Highlights',
   input: 'Input',
   connection: 'Connection',
+  channels: 'Channels',
   moderation: 'Moderation',
   history: 'History',
   logging: 'Chat logs',

@@ -20,6 +20,9 @@ public protocol SessionHost: AnyObject {
     /// The connection changed: its state, or whether Vela means to be
     /// connected (``NetworkSession/expectsConnection``). Optional.
     func sessionDidChangeConnection(_ session: NetworkSession)
+    /// A channel or conversation was opened: joined, messaged, reopened or
+    /// restored at launch. Optional.
+    func session(_ session: NetworkSession, didOpen buffer: BufferModel)
     /// You sent a message from the composer (not a command). Optional.
     func session(_ session: NetworkSession, didSendComposerMessageIn buffer: BufferModel)
     /// A line was added to `buffer` (live or replayed, never one loaded
@@ -90,6 +93,23 @@ public final class NetworkSession: Identifiable {
     @ObservationIgnored private var bouncerBatchIDs: Set<String> = []
     @ObservationIgnored private var lastTypingSent: [BufferID: (state: TypingState, at: Date)] = [:]
     @ObservationIgnored private var pendingRecords: [MessageRecord] = []
+    /// The latest write of a buffer's saved state; each waits for the one
+    /// before (see `writeBuffer`).
+    @ObservationIgnored private var bufferWrites: Task<Void, Never>?
+    /// Channels closed while joined whose PART the server hasn't confirmed
+    /// yet (folded names). What was said there meanwhile is dropped, so it
+    /// can't open the channel again.
+    @ObservationIgnored private var partingChannels: Set<String> = []
+    /// Channels you left or removed while disconnected from a bouncer, which
+    /// is still in them (folded names). When the bouncer rejoins one after
+    /// connecting, Vela parts it. Kept for this run of Vela only.
+    @ObservationIgnored private var pendingParts: Set<String> = []
+    /// Channels you rejoined or reopened while disconnected from a bouncer
+    /// (folded names), joined after connecting: Vela doesn't send JOINs to
+    /// bouncers otherwise, and the bouncer may have left them.
+    @ObservationIgnored private var pendingJoins: Set<String> = []
+    /// Where channel keys are read from. The app sets its own.
+    @ObservationIgnored var keychain: Keychain = .shared
     @ObservationIgnored private var highlightMatcher = HighlightMatcher(nick: "", words: [])
     @ObservationIgnored var ignoreMatcher = IgnoreMatcher(masks: [])
     /// CTCP requests you sent that haven't been answered yet.
@@ -324,6 +344,7 @@ public final class NetworkSession: Identifiable {
             }
             historyBatches.values.forEach { $0.buffer.isLoadingHistory = false }
             historyBatches = [:]
+            partingChannels = []
             if let reason {
                 lastError = reason
                 error("Disconnected: \(reason)", in: serverBuffer)
@@ -399,18 +420,25 @@ public final class NetworkSession: Identifiable {
         for channel in config.autoJoin {
             let folded = fold(channel.name)
             guard seen.insert(folded).inserted else { continue }
-            let key = channel.hasKey ? Keychain.shared.secret(account: Keychain.channelKeyAccount(networkID: id, channel: folded)) : nil
+            let key = channel.hasKey ? keychain.secret(account: Keychain.channelKeyAccount(networkID: id, channel: folded)) : nil
             toJoin.append((channel.name, key))
         }
         for buffer in channels where autoRejoin[buffer.id.foldedName] ?? true {
             if seen.insert(buffer.id.foldedName).inserted { toJoin.append((buffer.name, nil)) }
         }
-        // Bouncers rejoin channels themselves.
         if config.bouncerKind == .none {
             for (channel, key) in toJoin {
                 send(IRCMessage(command: "JOIN", params: key.map { [channel, $0] } ?? [channel]))
             }
+        } else {
+            // Bouncers rejoin channels themselves. Only channels you rejoined
+            // while disconnected need a JOIN (one the bouncer is still in
+            // ignores it).
+            for folded in pendingJoins.sorted() {
+                if let buffer = bufferIndex[folded] { sendJoin(buffer) }
+            }
         }
+        pendingJoins = []
         for command in config.performCommands {
             if let parsed = InputCommand.parse(command) { perform(parsed, in: serverBuffer, replyTo: nil) }
         }
@@ -518,6 +546,7 @@ public final class NetworkSession: Identifiable {
 
         let destination: BufferModel
         if isupport.isChannel(target) {
+            if isParting(target) { return }
             destination = ensureBuffer(name: target, kind: .channel)
         } else if fromSelf {
             destination = ensureBuffer(name: target, kind: .query)
@@ -572,6 +601,14 @@ public final class NetworkSession: Identifiable {
 
     private func handleJoin(_ message: IRCMessage, isHistory: Bool) {
         guard let source = message.source, let channel = message.param(0) else { return }
+        if isSelf(source.nick), !isHistory, pendingParts.remove(fold(channel)) != nil {
+            // The bouncer rejoined a channel you left or removed while you
+            // were disconnected: leave it now, and keep it closed or left.
+            send(IRCMessage(command: "PART", params: [channel]))
+            if buffer(named: channel) == nil { partingChannels.insert(fold(channel)) }
+            return
+        }
+        if !isSelf(source.nick), isParting(channel) { return }
         let buffer = ensureBuffer(name: channel, kind: .channel)
         let account = message.param(1).flatMap { $0 == "*" ? nil : $0 }
         let realname = message.param(2)
@@ -595,7 +632,12 @@ public final class NetworkSession: Identifiable {
     }
 
     private func handlePart(_ message: IRCMessage, isHistory: Bool) {
-        guard let source = message.source, let channel = message.param(0), let buffer = buffer(named: channel) else { return }
+        guard let source = message.source, let channel = message.param(0) else { return }
+        guard let buffer = buffer(named: channel) else {
+            // The server confirms leaving a channel you closed.
+            if isSelf(source.nick) { partingChannels.remove(fold(channel)) }
+            return
+        }
         let reason = message.param(1)
         if isSelf(source.nick), !isHistory {
             buffer.isJoined = false
@@ -1040,6 +1082,8 @@ public final class NetworkSession: Identifiable {
             requestSelection?(query)
             if let text { sendChat(text, to: query, replyTo: nil) }
         case .join(let channels, let keys):
+            // Joined on purpose: a part still waiting for a bouncer is off.
+            for channel in channels { pendingParts.remove(fold(channel)) }
             var params = [channels.joined(separator: ",")]
             if !keys.isEmpty { params.append(keys.joined(separator: ",")) }
             send(IRCMessage(command: "JOIN", params: params))
@@ -1052,9 +1096,11 @@ public final class NetworkSession: Identifiable {
                 error("/part must be used in a channel or with a channel name", in: buffer)
                 return
             }
-            autoRejoin[fold(name)] = false
-            if let partBuffer = self.buffer(named: name) { persistBuffer(partBuffer) }
-            send(IRCMessage(command: "PART", params: reason.map { [name, $0] } ?? [name]))
+            if let channel = self.buffer(named: name), channel.kind == .channel {
+                if let requestLeave { requestLeave(channel, reason) } else { leave(channel, reason: reason) }
+            } else {
+                send(IRCMessage(command: "PART", params: reason.map { [name, $0] } ?? [name]))
+            }
         case .nick(let newNick):
             send(IRCMessage(command: "NICK", params: [newNick]))
         case .topic(let channel, let text):
@@ -1106,7 +1152,7 @@ public final class NetworkSession: Identifiable {
         case .reconnect:
             reconnect()
         case .close:
-            close(buffer)
+            if let requestClose { requestClose(buffer) } else { close(buffer) }
         case .clear:
             buffer.lines.removeAll()
         case .ignore(let mask):
@@ -1130,6 +1176,14 @@ public final class NetworkSession: Identifiable {
 
     /// Set by the app so `/join` and `/query` can focus the new buffer.
     @ObservationIgnored public var requestSelection: ((BufferModel) -> Void)?
+    /// Set by the app so `/close` removes a channel (or closes a
+    /// conversation) the way the window does (see
+    /// `AppModel.close(_:reopenable:)`): the selection moves on, and it can
+    /// be undone and reopened. Without it, `/close` just closes.
+    @ObservationIgnored public var requestClose: ((BufferModel) -> Void)?
+    /// Set by the app so `/part` leaves the way Leave Channel does, and can
+    /// be undone. Without it, `/part` just leaves.
+    @ObservationIgnored public var requestLeave: ((BufferModel, String?) -> Void)?
 
     private func sendChat(_ text: String, to buffer: BufferModel, replyTo: ChatLine?, explicitTarget: String? = nil) {
         var tags: [String: String] = [:]
@@ -1222,25 +1276,164 @@ public final class NetworkSession: Identifiable {
         buffer.memberRank = { [isupport] in isupport.rank(ofSymbol: $0.topPrefix) }
         bufferIndex[key] = buffer
         buffers.append(buffer)
+        // Opened again on purpose (joined, reopened): no longer leaving it.
+        partingChannels.remove(key)
         sortBuffers()
         if persist { persistBuffer(buffer) }
         loadRecentScrollback(for: buffer)
+        host?.session(self, didOpen: buffer)
         return buffer
     }
 
+    /// Removes a channel or closes a conversation: leaves a joined channel,
+    /// takes the buffer out of the list and forgets its saved state. Its
+    /// messages stay on disk. The app goes through
+    /// `AppModel.close(_:reopenable:)`, which also moves the selection,
+    /// takes the channel off the auto-join list and remembers it for
+    /// reopening.
     public func close(_ buffer: BufferModel) {
         guard buffer.kind != .server else { return }
-        if buffer.kind == .channel && buffer.isJoined && isConnected {
-            send(IRCMessage(command: "PART", params: [buffer.name]))
+        let folded = buffer.id.foldedName
+        if buffer.kind == .channel {
+            if buffer.isJoined && isConnected {
+                send(IRCMessage(command: "PART", params: [buffer.name]))
+                partingChannels.insert(folded)
+            } else if !isConnected, isBouncer, rejoins(buffer) {
+                // The bouncer is still in it and rejoins it on the next
+                // connect: part it then. This lasts until Vela quits.
+                pendingParts.insert(folded)
+            }
+            pendingJoins.remove(folded)
         }
-        bufferIndex.removeValue(forKey: buffer.id.foldedName)
+        bufferIndex.removeValue(forKey: folded)
         buffers.removeAll { $0.id == buffer.id }
-        autoRejoin.removeValue(forKey: buffer.id.foldedName)
-        if let database {
-            let key = buffer.id.storeKey
-            Task { try? await database.deleteBuffer(key, keepMessages: true) }
-        }
+        autoRejoin.removeValue(forKey: folded)
+        let key = buffer.id.storeKey
+        writeBuffer { try await $0.deleteBuffer(key, keepMessages: true) }
         host?.sessionDidChangeUnreadCounts(self)
+    }
+
+    /// Leaves a channel but keeps it in the list, not joined, with its
+    /// history (`/part`, Leave Channel). It isn't rejoined on the next
+    /// connect, unless it's on the network's auto-join list.
+    ///
+    /// Disconnected from a bouncer, the PART waits: the bouncer is still in
+    /// the channel and rejoins it when Vela connects, so Vela parts it then.
+    func leave(_ channel: BufferModel, reason: String? = nil) {
+        guard channel.kind == .channel else { return }
+        let folded = channel.id.foldedName
+        let wasIn = isIn(channel)
+        autoRejoin[folded] = false
+        pendingJoins.remove(folded)
+        persistBuffer(channel)
+        if isConnected {
+            send(IRCMessage(command: "PART", params: reason.map { [channel.name, $0] } ?? [channel.name]))
+        } else if wasIn, isBouncer {
+            pendingParts.insert(folded)
+        }
+    }
+
+    /// Joins a channel you left again (undoing Leave): now when connected,
+    /// with its auto-join key if it has one, or on the next connect.
+    func rejoin(_ channel: BufferModel) {
+        guard channel.kind == .channel else { return }
+        let folded = channel.id.foldedName
+        autoRejoin[folded] = true
+        pendingParts.remove(folded)
+        persistBuffer(channel)
+        if isConnected {
+            sendJoin(channel)
+        } else if isBouncer {
+            pendingJoins.insert(folded)
+        }
+    }
+
+    /// Whether you're in `channel`, or will be once connected: what Leave
+    /// leaves. A channel you're not in (left, kicked, or not joined yet
+    /// while connected) shows dimmed, and closing it removes it.
+    public func isIn(_ channel: BufferModel) -> Bool {
+        guard channel.kind == .channel else { return false }
+        return channel.isJoined || (!isConnected && rejoins(channel))
+    }
+
+    /// Whether `buffer` is joined again on the next connect (`/part` says no).
+    func rejoins(_ buffer: BufferModel) -> Bool {
+        autoRejoin[buffer.id.foldedName] ?? true
+    }
+
+    /// A ZNC or soju network: the bouncer joins channels, not Vela.
+    var isBouncer: Bool { config.bouncerKind != .none }
+
+    /// Whether `channel` was closed while joined and the server hasn't
+    /// confirmed the PART yet.
+    private func isParting(_ channel: String) -> Bool {
+        !partingChannels.isEmpty && partingChannels.contains(fold(channel)) && buffer(named: channel) == nil
+    }
+
+    /// Sends JOIN for `channel`, with its auto-join key if it has one.
+    private func sendJoin(_ channel: BufferModel) {
+        let key = joinKey(forChannel: channel.id.foldedName)
+        send(IRCMessage(command: "JOIN", params: [channel.name] + (key.map { [$0] } ?? [])))
+    }
+
+    /// The key of `channel`'s auto-join entry (folded name), if it has one
+    /// stored.
+    func joinKey(forChannel folded: String) -> String? {
+        guard config.autoJoin.contains(where: { $0.hasKey && fold($0.name) == folded }) else { return nil }
+        return keychain.secret(account: Keychain.channelKeyAccount(networkID: id, channel: folded))
+    }
+
+    /// Takes `folded` off the auto-join list (removing a channel) and saves
+    /// networks.json. Returns where its entry was, to put it back.
+    func removeAutoJoin(_ folded: String) -> (index: Int, entry: AutoJoinChannel)? {
+        guard let index = config.autoJoin.firstIndex(where: { fold($0.name) == folded }) else { return nil }
+        let entry = config.autoJoin.remove(at: index)
+        // A second entry for it would join it again.
+        config.autoJoin.removeAll { fold($0.name) == folded }
+        host?.sessionDidChangeConfig(self)
+        return (index, entry)
+    }
+
+    /// Puts an auto-join entry back at `index` (reopening a removed channel)
+    /// and saves networks.json.
+    func restoreAutoJoin(_ entry: AutoJoinChannel, at index: Int) {
+        let folded = fold(entry.name)
+        guard !config.autoJoin.contains(where: { fold($0.name) == folded }) else { return }
+        config.autoJoin.insert(entry, at: min(max(0, index), config.autoJoin.count))
+        host?.sessionDidChangeConfig(self)
+    }
+
+    /// Puts back a channel or conversation that `close(_:)` removed, the way
+    /// `closed` describes it: in its old place among its siblings, muted or
+    /// not, read up to the same point and with the unread count it had. A
+    /// channel you were in is joined again now when connected (with its
+    /// auto-join key, if it has one), or on the next connect. Returns the
+    /// buffer that's already open instead, if the channel or conversation
+    /// was opened again meanwhile.
+    func reopen(_ closed: ClosedBuffer) -> BufferModel {
+        if let existing = buffer(named: closed.name) { return existing }
+        let buffer = ensureBuffer(name: closed.name, kind: closed.kind, persist: false)
+        buffer.isMuted = closed.isMuted
+        buffer.lastReadAt = closed.lastReadAt
+        buffer.unreadCount = closed.unreadCount
+        buffer.highlightCount = closed.highlightCount
+        if closed.unreadCount > 0 { buffer.unreadMarkerAfter = closed.lastReadAt ?? .distantPast }
+        if closed.kind == .channel {
+            let folded = buffer.id.foldedName
+            autoRejoin[folded] = closed.autoRejoin
+            pendingParts.remove(folded)
+            if closed.autoRejoin {
+                if isConnected {
+                    sendJoin(buffer)
+                } else if isBouncer {
+                    pendingJoins.insert(folded)
+                }
+            }
+        }
+        moveBuffer(buffer, toIndex: closed.index)
+        persistBuffer(buffer)
+        host?.sessionDidChangeUnreadCounts(self)
+        return buffer
     }
 
     /// Clears the unread counts and moves the read position to the newest
@@ -1363,7 +1556,7 @@ public final class NetworkSession: Identifiable {
     }
 
     private func persistBuffer(_ buffer: BufferModel) {
-        guard let database, buffer.kind != .server else { return }
+        guard database != nil, buffer.kind != .server else { return }
         let record = BufferRecord(
             networkID: id,
             name: buffer.name,
@@ -1375,7 +1568,24 @@ public final class NetworkSession: Identifiable {
             sortOrder: buffer.sortOrder,
             autoRejoin: autoRejoin[buffer.id.foldedName] ?? true
         )
-        Task { try? await database.upsertBuffer(record) }
+        writeBuffer { try await $0.upsertBuffer(record) }
+    }
+
+    /// Writes buffer state in the order it changes: each write waits for the
+    /// one before, so closing a channel and reopening it straight away (⌘Z)
+    /// can't save the reopened channel before deleting the closed one.
+    func writeBuffer(_ write: @escaping @Sendable (VelaDatabase) async throws -> Void) {
+        guard let database else { return }
+        let previous = bufferWrites
+        bufferWrites = Task {
+            await previous?.value
+            try? await write(database)
+        }
+    }
+
+    /// Waits for every buffer write made so far (tests).
+    func bufferWritesFinished() async {
+        await bufferWrites?.value
     }
 
     private func loadRecentScrollback(for buffer: BufferModel) {

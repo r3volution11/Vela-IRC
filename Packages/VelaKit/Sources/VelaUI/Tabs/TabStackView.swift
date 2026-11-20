@@ -24,13 +24,14 @@ import VelaTheme
 /// pill can't attach to an edge.
 struct TabStackView: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
     @Environment(\.chatStyle) private var style
     let placement: TabStackPlacement
 
     @State private var interaction = TabInteraction()
 
     var body: some View {
-        let session = app.selectedSession ?? app.sessions.first
+        let session = TabActions.shownSession(app: app)
         let showsServers = style.serverTabRow == .always || app.sessions.count > 1
 
         Group {
@@ -44,13 +45,13 @@ struct TabStackView: View {
             }
         }
         .environment(interaction)
-        .background { TabShortcutButtons(session: session) }
+        .background { TabShortcutButtons() }
         .onChange(of: app.selectedBufferID, initial: true) { _, id in
             TabMemory.record(id)
         }
         .onAppear {
-            interaction.installMiddleClickMonitor { [app] key in
-                TabActions.middleClick(key, app: app)
+            interaction.installMiddleClickMonitor { [app, uiState] key in
+                TabActions.middleClick(key, app: app, uiState: uiState)
             }
         }
         .onDisappear { interaction.removeMiddleClickMonitor() }

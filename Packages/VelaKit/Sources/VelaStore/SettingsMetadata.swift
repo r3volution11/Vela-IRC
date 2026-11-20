@@ -50,7 +50,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .history: ["history", "logging"]
         case .media: ["media"]
         case .notifications: ["notifications", "dock", "highlight"]
-        case .connection: ["connection"]
+        case .connection: ["connection", "channels"]
         case .moderation: ["moderation"]
         case .intelligence: ["intelligence", "translation"]
         }

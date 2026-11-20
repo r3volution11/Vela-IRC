@@ -75,7 +75,10 @@ struct SettingsEditorSearchTests {
         #expect(messages.contains("history.retentionDays"))
         #expect(messages.contains("logging.enabled"))
         #expect(!messages.contains("media.autoLoad"))
-        #expect(keys("@pane:networks") == ["connection.autoReconnect", "moderation.banMask", "moderation.kickReason"])
+        #expect(keys("@pane:networks") == [
+            "connection.autoReconnect", "channels.confirmLeave", "channels.confirmRemove",
+            "moderation.banMask", "moderation.kickReason",
+        ])
         #expect(keys("@pane:presets").isEmpty)
     }
 

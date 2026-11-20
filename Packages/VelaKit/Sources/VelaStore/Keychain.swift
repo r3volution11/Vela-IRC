@@ -4,6 +4,7 @@
 
 import Foundation
 import Security
+import Synchronization
 
 /// Errors thrown by ``Keychain``.
 public struct KeychainError: Error, Sendable, Equatable, CustomStringConvertible {
@@ -40,9 +41,23 @@ public final class Keychain: Sendable {
     }
 
     public let service: String
+    /// Where ``inMemory()`` keeps its passwords; nil for the real Keychain.
+    private let memory: MemorySecrets?
 
     public init(service: String) {
         self.service = service
+        self.memory = nil
+    }
+
+    private init(memory: MemorySecrets) {
+        self.service = "memory"
+        self.memory = memory
+    }
+
+    /// A keychain that keeps passwords and channel keys in memory and never
+    /// touches the real one, for tests. It has no client certificates.
+    public static func inMemory() -> Keychain {
+        Keychain(memory: MemorySecrets())
     }
 
     /// What a stored secret is for. Combined with a network ID (and, for
@@ -77,6 +92,7 @@ public final class Keychain: Sendable {
 
     /// Stores (or replaces) a secret for `account`.
     public func setSecret(_ secret: String, account: String) throws {
+        if let memory { return memory.set(secret, for: account) }
         let data = Data(secret.utf8)
         let query = baseQuery(account: account)
         let update: [CFString: Any] = [kSecValueData: data]
@@ -95,6 +111,7 @@ public final class Keychain: Sendable {
     /// The secret stored for `account`, or `nil` if there is none (or the
     /// Keychain is unavailable).
     public func secret(account: String) -> String? {
+        if let memory { return memory.secret(for: account) }
         var query = baseQuery(account: account)
         query[kSecReturnData] = true
         query[kSecMatchLimit] = kSecMatchLimitOne
@@ -107,11 +124,13 @@ public final class Keychain: Sendable {
 
     /// Deletes the secret for `account`; a missing item is not an error.
     public func deleteSecret(account: String) {
+        if let memory { return memory.set(nil, for: account) }
         SecItemDelete(baseQuery(account: account) as CFDictionary)
     }
 
     /// All account names stored under this service.
     public func accounts() -> [String] {
+        if let memory { return memory.accounts }
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
@@ -151,6 +170,7 @@ public final class Keychain: Sendable {
     /// ``NetworkConfig/clientCertificateRef``). Re-importing an identity that
     /// is already present returns the existing item's reference.
     public func importPKCS12(_ data: Data, password: String) throws -> Data {
+        guard memory == nil else { throw KeychainError(status: errSecUnimplemented, operation: "PKCS#12 import") }
         let options: [CFString: Any] = [kSecImportExportPassphrase: password]
         var rawItems: CFArray?
         let status = SecPKCS12Import(data as CFData, options as CFDictionary, &rawItems)
@@ -202,6 +222,7 @@ public final class Keychain: Sendable {
     /// Resolves a persistent reference to its identity, or `nil` if the item
     /// no longer exists.
     public func identity(persistentRef: Data) -> SecIdentity? {
+        guard memory == nil else { return nil }
         let query: [CFString: Any] = [
             kSecValuePersistentRef: persistentRef,
             kSecReturnRef: true,
@@ -218,6 +239,7 @@ public final class Keychain: Sendable {
     /// Every identity (certificate + private key) the user can pick as a
     /// client certificate, labelled for display.
     public func identities() -> [(label: String, persistentRef: Data)] {
+        guard memory == nil else { return [] }
         let query: [CFString: Any] = [
             kSecClass: kSecClassIdentity,
             kSecMatchLimit: kSecMatchLimitAll,
@@ -249,5 +271,22 @@ public final class Keychain: Sendable {
             return nil
         }
         return SecCertificateCopySubjectSummary(certificate) as String?
+    }
+}
+
+/// The passwords of a ``Keychain/inMemory()`` keychain.
+private final class MemorySecrets: Sendable {
+    private let secrets = Mutex<[String: String]>([:])
+
+    func secret(for account: String) -> String? {
+        secrets.withLock { $0[account] }
+    }
+
+    func set(_ secret: String?, for account: String) {
+        secrets.withLock { $0[account] = secret }
+    }
+
+    var accounts: [String] {
+        secrets.withLock { Array($0.keys) }
     }
 }

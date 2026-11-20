@@ -103,7 +103,7 @@ struct ChannelTab: View {
             .accessibilityAddTraits(context.isSelected ? .isSelected : [])
             .accessibilityActions {
                 if isClosable {
-                    Button(TabDescriptions.closeAction(buffer), action: onClose)
+                    Button(TabDescriptions.closeAction(buffer, in: session), action: onClose)
                 }
             }
             .tabMoveActions(reorder)

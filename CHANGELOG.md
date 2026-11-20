@@ -4,6 +4,18 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ## Unreleased
 
+### Layouts and navigation
+
+- **Leave or remove a channel.** A tab's **×** (or a middle-click) now leaves a channel you're in and keeps it in the list, dimmed, so **Join Channel** brings it back. On a channel you've left, **×** removes it. The menus have **Leave Channel** (or **Join Channel**) and **Remove Channel…**, and the command palette has **Leave**, **Join** and **Remove** for the selected channel.
+  - Removing a channel also takes it off the network's auto-join list, so it doesn't come back when you reconnect. Its messages stay in your history.
+  - Vela asks before leaving or removing a channel. **Don't ask again** in the question, or the switches in **Settings → Networks → Channels** (`channels.confirmLeave` and `channels.confirmRemove`), turn that off. `/part` leaves and `/close` removes without asking.
+  - Through a bouncer, leaving or removing parts the channel there too. If you weren't connected at the time, Vela parts it when the bouncer rejoins it on your next connection.
+- **Reopen what you closed.** **File → Reopen Closed Channel** (⇧⌘T) brings back the channel you removed or the conversation you closed last, and pressing it again goes further back. **File → Recently Closed** lists the last 20, and the command palette can reopen each one. A reopened channel returns to its old place, muted or not, with the **New** line where you left off, and goes back on the auto-join list with its key. The list lasts until you quit.
+- **Undo it.** Edit → Undo (⌘Z) right after leaving, removing or closing puts things back, and Redo (⇧⌘Z) does it again. It shares the message box's undo, so ⌘Z after typing undoes the typing first.
+- **`/close` in the sidebar** now moves to the next channel, like closing a tab does, instead of leaving an empty view.
+- **A channel you close stays closed** even when messages are still arriving as you leave it.
+- **⌘1–⌘9 now always match the tabs' order** after joining, closing or reordering.
+
 ### Siri, Shortcuts and Apple Intelligence
 
 - **Name the network to Siri.** "Open #vela on Libera.Chat in Vela", or just "on Libera", picks the channel on that network when you're in channels with the same name on more than one. It works in every phrase that names a channel.

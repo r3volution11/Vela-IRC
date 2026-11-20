@@ -36,6 +36,9 @@ public final class UIState {
     public var mentionRequest: MentionRequest?
     /// The "Kick with Reason…" sheet, when open.
     public var kickRequest: KickRequest?
+    /// "Leave #vela?" or "Remove #vela?", while it's asked
+    /// (`channels.confirmLeave`, `channels.confirmRemove`).
+    public var channelConfirmation: ChannelConfirmation?
 
     public init() {}
 
@@ -69,6 +72,23 @@ public struct KickRequest: Identifiable, Equatable {
         self.nicks = nicks
         self.ban = ban
         self.reason = reason
+    }
+}
+
+/// Leaving or removing a channel, waiting for you to confirm it.
+public struct ChannelConfirmation: Identifiable, Equatable {
+    public enum Action: Equatable {
+        case leave
+        case remove
+    }
+
+    public let id = UUID()
+    public let action: Action
+    public let bufferID: BufferID
+
+    public init(_ action: Action, bufferID: BufferID) {
+        self.action = action
+        self.bufferID = bufferID
     }
 }
 

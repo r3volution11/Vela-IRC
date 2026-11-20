@@ -46,6 +46,22 @@ struct NetworksPane: View {
             }
 
             SettingsSection(
+                "Channels",
+                footer: "A tab's × leaves a channel you're in, and removes one you've left. /part and /close never ask."
+            ) {
+                SettingsToggle(
+                    "Ask before leaving a channel",
+                    detail: "A channel you leave stays in the list, dimmed, so you can join it again.",
+                    isOn: $settings[.channelsConfirmLeave]
+                )
+                SettingsToggle(
+                    "Ask before removing a channel",
+                    detail: "Removing takes it out of the list and off the network's auto-join list. File → Recently Closed brings it back.",
+                    isOn: $settings[.channelsConfirmRemove]
+                )
+            }
+
+            SettingsSection(
                 "Moderation",
                 footer: "Used by Kick, Ban and Quiet in the user menu, and by /kick, /ban, /kickban and /quiet. Kick with Reason… lets you change the reason each time."
             ) {

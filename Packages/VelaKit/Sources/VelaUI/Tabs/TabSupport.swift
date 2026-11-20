@@ -90,35 +90,46 @@ enum TabActions {
         app.select(TabMemory.destination(in: session))
     }
 
-    /// Closes a channel or query tab. When it's the selected tab, its right
-    /// neighbor (or left, at the end) is selected first, like a browser.
-    static func close(_ buffer: BufferModel, in session: NetworkSession, app: AppModel) {
-        guard buffer.kind != .server else { return }
-        if app.selectedBufferID == buffer.id {
-            let tabs = session.allBuffers
-            if let index = tabs.firstIndex(where: { $0.id == buffer.id }) {
-                let neighbor = tabs.indices.contains(index + 1) ? tabs[index + 1] : tabs[max(0, index - 1)]
-                app.select(neighbor)
-            }
-        }
-        session.close(buffer)
+    /// A tab's ×: leaves a channel you're in, removes one you've left (each
+    /// asking first, by default), closes a conversation. A removed channel
+    /// or closed conversation's tab goes; if it was selected, its right
+    /// neighbor (or left, at the end) is selected, like a browser.
+    static func close(_ buffer: BufferModel, app: AppModel, uiState: UIState) {
+        ChannelActions.closeTab(buffer, app: app, uiState: uiState)
     }
 
-    /// A middle-click on tab `key`: closes a channel or query tab and
-    /// returns true. Networks and server consoles don't close (false).
-    static func middleClick(_ key: TabKey, app: AppModel) -> Bool {
+    /// A middle-click on tab `key`: does what its × does and returns true.
+    /// Networks and server consoles don't close (false).
+    static func middleClick(_ key: TabKey, app: AppModel, uiState: UIState) -> Bool {
         guard case .buffer(let id) = key,
               let session = app.session(for: id.networkID),
               let buffer = session.buffer(id: id),
               buffer.kind != .server else { return false }
-        close(buffer, in: session, app: app)
+        close(buffer, app: app, uiState: uiState)
         return true
     }
 
     /// Tabs reachable with ⌘1…⌘9: the network's channels, then queries.
+    /// The console has no number, so ⌘1 is the first channel.
     static func shortcutTargets(in session: NetworkSession?) -> [BufferModel] {
         guard let session, !session.isBouncerControl else { return [] }
         return session.buffers
+    }
+
+    /// The network whose channels the tab stack shows: the selected one, or
+    /// the first.
+    static func shownSession(app: AppModel) -> NetworkSession? {
+        app.selectedSession ?? app.sessions.first
+    }
+
+    /// ⌘`number`: selects the shown network's `number`th channel or
+    /// conversation, as the tabs are now. False if there's none.
+    @discardableResult
+    static func selectShortcutTarget(_ number: Int, app: AppModel) -> Bool {
+        let targets = shortcutTargets(in: shownSession(app: app))
+        guard targets.indices.contains(number - 1) else { return false }
+        app.select(targets[number - 1])
+        return true
     }
 }
 
@@ -147,10 +158,11 @@ enum TabDescriptions {
         return parts.joined(separator: ", ")
     }
 
-    /// The VoiceOver action that closes a channel or query tab, there
-    /// whether or not the pointer is on the tab.
-    static func closeAction(_ buffer: BufferModel) -> String {
-        buffer.kind == .channel ? "Close Channel" : "Close Conversation"
+    /// The VoiceOver action that does what a channel or query tab's × does,
+    /// there whether or not the pointer is on the tab: "Leave Channel",
+    /// "Remove Channel" or "Close Conversation".
+    static func closeAction(_ buffer: BufferModel, in session: NetworkSession) -> String {
+        ChannelActions.closeAction(for: buffer, in: session)?.title ?? "Close"
     }
 
     static func bufferKind(_ buffer: BufferModel) -> String {
@@ -282,23 +294,22 @@ enum TabDrawOrder {
 }
 
 /// Hidden ⌘1…⌘9 buttons; present only while the tab stack is on screen.
+///
+/// Each press looks up its tab when it's pressed. SwiftUI keeps calling the
+/// action a shortcut button had when its shortcut was registered, so tabs
+/// captured when the view was drawn went stale as channels were joined,
+/// closed and moved (⌘6 kept going to what used to be the sixth tab).
 struct TabShortcutButtons: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
-    let session: NetworkSession?
 
     var body: some View {
-        let targets = TabActions.shortcutTargets(in: session)
         ZStack {
             ForEach(1...9, id: \.self) { number in
-                let index = number - 1
-                Button("Select Tab \(number)") {
-                    guard targets.indices.contains(index) else { return }
-                    app.select(targets[index])
-                    uiState.focusInput()
+                Button("Select Tab \(number)") { [app, uiState] in
+                    if TabActions.selectShortcutTarget(number, app: app) { uiState.focusInput() }
                 }
                 .keyboardShortcut(KeyEquivalent(Character(String(number))), modifiers: .command)
-                .disabled(!targets.indices.contains(index))
             }
         }
         .frame(width: 0, height: 0)

@@ -25,7 +25,7 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | Next conversation | <kbd>⌥⌘↓</kbd> |
 | Previous conversation with unread messages | <kbd>⌥⇧⌘↑</kbd> |
 | Next conversation with unread messages | <kbd>⌥⇧⌘↓</kbd> |
-| Channel or conversation 1–9 of the current network (tab stacks) | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
+| Channel or conversation 1–9 of the current network, in tab order (tab stacks) | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
 | Move between tabs, when a tab row has keyboard focus | <kbd>←</kbd> <kbd>→</kbd> <kbd>Home</kbd> <kbd>End</kbd> |
 
 ## View
@@ -44,6 +44,9 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | --- | --- |
 | Add Network… | <kbd>⇧⌘N</kbd> |
 | Join Channel… | <kbd>⌘J</kbd> |
+| Reopen the channel you removed or the conversation you closed last (again to go further back) | <kbd>⇧⌘T</kbd> |
+| Undo leaving, removing or closing, right after (Edit → Undo) | <kbd>⌘Z</kbd> |
+| Redo it | <kbd>⇧⌘Z</kbd> |
 | Cancel dragging a network, channel or tab (it goes back where it was) | <kbd>Esc</kbd> |
 
 ## The message field
@@ -55,6 +58,7 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | Complete a nick, `#channel`, `/command` or `:emoji:` (again for the next match) | <kbd>Tab</kbd> |
 | Previous / next message you sent in this channel | <kbd>↑</kbd> / <kbd>↓</kbd> |
 | Cancel a reply or a pending multi-line paste | <kbd>Esc</kbd> |
+| Undo typing (and, after it, leaving or closing a channel) | <kbd>⌘Z</kbd> |
 | Emoji & Symbols (macOS) | <kbd>⌃⌘Space</kbd> |
 | Show Spelling and Grammar | <kbd>⌘:</kbd> |
 | Check Document Now (check the message's spelling) | <kbd>⌘;</kbd> |

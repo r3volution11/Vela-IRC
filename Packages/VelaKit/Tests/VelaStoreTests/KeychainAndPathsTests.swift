@@ -54,6 +54,23 @@ import Testing
         keychain.deleteSecret(account: account)  // deleting a missing item is fine
     }
 
+    /// For tests: passwords and channel keys in memory, no certificates.
+    @Test func inMemoryKeychain() throws {
+        let keychain = Keychain.inMemory()
+        let network = UUID()
+        let account = Keychain.channelKeyAccount(networkID: network, channel: "#secret")
+        #expect(keychain.secret(account: account) == nil)
+        try keychain.setSecret("hunter2", account: account)
+        try keychain.setSecret("other", account: Keychain.account(networkID: UUID(), purpose: .saslPassword))
+        #expect(keychain.secret(account: account) == "hunter2")
+        #expect(Keychain.inMemory().secret(account: account) == nil)
+        keychain.deleteSecrets(networkID: network)
+        #expect(keychain.secret(account: account) == nil)
+        #expect(keychain.accounts().count == 1)
+        #expect(keychain.identities().isEmpty)
+        #expect(throws: KeychainError.self) { _ = try keychain.importPKCS12(Data(), password: "") }
+    }
+
     @Test func missingItemsReturnNil() {
         let keychain = Keychain(service: "io.github.r3volution11.Vela.tests.\(UUID().uuidString)")
         #expect(keychain.secret(account: "nobody") == nil)

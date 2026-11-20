@@ -34,17 +34,19 @@ struct BufferContextMenuItems: View {
             CatchUpBufferMenuItems(buffer: buffer, session: session)
             Divider()
             if buffer.kind == .channel {
-                if buffer.isJoined {
-                    Button("Leave Channel") { session.submit("/part \(buffer.name)", in: buffer) }
+                // Leave keeps it in the list, dimmed; Remove takes it out.
+                if session.isIn(buffer) {
+                    Button("Leave Channel") { ChannelActions.leave(buffer, app: app, uiState: uiState) }
                 } else {
                     Button("Join Channel") { session.submit("/join \(buffer.name)", in: buffer) }
                         .disabled(!session.isConnected)
                 }
+                Button("Remove Channel…") { ChannelActions.remove(buffer, app: app, uiState: uiState) }
             } else {
                 Button("Whois \(buffer.name)") { session.submit("/whois \(buffer.name)", in: buffer) }
                     .disabled(!session.isConnected)
+                Button("Close Conversation") { app.close(buffer) }
             }
-            Button(buffer.kind == .channel ? "Close Channel" : "Close Conversation") { app.close(buffer) }
         }
     }
 }

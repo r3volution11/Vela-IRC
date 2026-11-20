@@ -56,6 +56,17 @@ public final class AppModel: SessionHost {
     public internal(set) var showsOfflineMark = false
     /// The Dock badge, offline mark and bounce bookkeeping (AppModel+Dock.swift).
     @ObservationIgnored var dock = DockState()
+    /// Channels you removed and conversations you closed, newest first, at
+    /// most ``recentlyClosedLimit``. Kept in memory only: quitting forgets
+    /// them. See AppModel+RecentlyClosed.swift.
+    public internal(set) var recentlyClosed: [ClosedBuffer] = []
+    /// The main window's undo manager, set by the scene layer. Leaving,
+    /// removing and closing are registered there, on the same stack as
+    /// typing in the message box, so ⌘Z puts things back.
+    @ObservationIgnored public weak var undoManager: UndoManager?
+    /// The undo manager's target for each buffer's undo and redo, so they
+    /// can be dropped when the buffer comes back some other way.
+    @ObservationIgnored var closeUndoTargets: [BufferID: CloseUndoTarget] = [:]
 
     /// Whether the main window is key; drives unread counting.
     public var isWindowActive = true {
@@ -358,21 +369,6 @@ public final class AppModel: SessionHost {
         if !isDemo { UserDefaults.standard.set(buffer.id.description, forKey: "Vela.lastSelectedBuffer") }
     }
 
-    /// Closes a channel or query and, if it was selected, selects its
-    /// neighbor (or the server buffer) so the view never shows a closed buffer.
-    public func close(_ buffer: BufferModel) {
-        guard let session = session(for: buffer.id.networkID), buffer.kind != .server else { return }
-        if selectedBufferID == buffer.id {
-            let siblings = session.allBuffers
-            let index = siblings.firstIndex { $0.id == buffer.id } ?? 0
-            let neighbor = siblings.indices.contains(index + 1) ? siblings[index + 1] : siblings[max(0, index - 1)]
-            session.close(buffer)
-            select(neighbor.id == buffer.id ? session.serverBuffer : neighbor)
-        } else {
-            session.close(buffer)
-        }
-    }
-
     public func select(bufferID: BufferID) {
         guard let buffer = session(for: bufferID.networkID)?.buffer(id: bufferID) else { return }
         select(buffer)
@@ -445,6 +441,7 @@ public final class AppModel: SessionHost {
             sessions.removeAll { $0.id == id }
         }
         if selectedBufferID?.networkID == id { selectedBufferID = nil }
+        forgetClosed(inNetwork: id)
         for purpose in [Keychain.SecretPurpose.serverPassword, .saslPassword, .nickServPassword] {
             keychain.deleteSecret(account: Keychain.account(networkID: id, purpose: purpose))
         }
@@ -479,9 +476,19 @@ public final class AppModel: SessionHost {
 
     private func makeSession(for config: NetworkConfig) -> NetworkSession {
         let session = NetworkSession(config: config, database: database)
-        session.host = self
-        session.requestSelection = { [weak self] buffer in self?.select(buffer) }
+        wire(session)
         return session
+    }
+
+    /// Connects `session` to the app: its host, the keychain its channel
+    /// keys are in, and what `/join`, `/query`, `/part` and `/close` do in
+    /// the window.
+    private func wire(_ session: NetworkSession) {
+        session.host = self
+        session.keychain = keychain
+        session.requestSelection = { [weak self] buffer in self?.select(buffer) }
+        session.requestClose = { [weak self] buffer in self?.close(buffer) }
+        session.requestLeave = { [weak self] channel, reason in self?.leave(channel, reason: reason) }
     }
 
     private func sortSessions() {
@@ -796,7 +803,7 @@ public final class AppModel: SessionHost {
     // MARK: Demo support
 
     func installDemoSessions(_ demoSessions: [NetworkSession]) {
-        for session in demoSessions { session.host = self }
+        for session in demoSessions { wire(session) }
         sessions = demoSessions
         if let buffer = demoSessions.first?.buffer(named: "#vela") ?? demoSessions.first?.channels.first { select(buffer) }
     }
