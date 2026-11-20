@@ -19,7 +19,7 @@ Reactions appear as chips under the message, each with a count; yours are highli
 
 Hover a message and click the **reply** arrow, or right-click the message and choose **Reply**. From the keyboard, pick the message (<kbd>⌥⌘2</kbd>, then <kbd>↑</kbd> and <kbd>↓</kbd>) and press <kbd>R</kbd>. A bar above the message field shows who you're replying to (<kbd>Esc</kbd> cancels). Your reply appears with a small quote of the original above it; click the quote to jump to the original message.
 
-**On servers without reply support** (Libera.Chat, and most bouncers), **Reply** answers the usual IRC way instead: it puts the person's nick in the message field, as in `marisol: `, and your message goes out as a normal one. That works in channels; in a private conversation there's no one else to address, so **Reply** isn't offered there.
+**On servers without reply support** (Libera.Chat, and most bouncers), **Reply** answers the usual IRC way instead: it puts the sender's nick in the message field, as in `marisol: `, and your message goes out as a normal one. That works on any message, in channels and private conversations alike.
 
 ## Typing indicators
 

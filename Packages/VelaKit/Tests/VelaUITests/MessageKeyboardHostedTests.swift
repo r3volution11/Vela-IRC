@@ -414,6 +414,13 @@ extension LinkSelectionTests {
             #expect(hosted.composer?.string == "marisol: ")
             #expect(hosted.window.firstResponder === hosted.composer)
             #expect(hosted.uiState.focusedArea == .messageBox)
+
+            // Any message: your own too, after what's already typed.
+            let mine = ChatLine(time: Date(), kind: .message, nick: "doug", text: "one of mine", isSelf: true)
+            hosted.buffer.insertSorted([mine])
+            try await focusMessages(hosted)
+            try await press(.r, in: hosted, settling: 300)
+            #expect(hosted.composer?.string == "marisol: doug ")
         }
 
         @Test func cAndCommandCCopyTheText() async throws {
