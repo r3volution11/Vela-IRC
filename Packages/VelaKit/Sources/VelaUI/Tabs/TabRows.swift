@@ -78,7 +78,8 @@ struct ChannelTabRow: View {
                                 interaction.setHovering(false, .buffer(buffer.id))
                                 TabActions.close(buffer, app: app, uiState: uiState)
                             },
-                            onHover: { interaction.setHovering($0, .buffer(buffer.id)) }
+                            onHover: { interaction.setHovering($0, .buffer(buffer.id)) },
+                            closeTitle: TabDescriptions.closeAction(buffer, in: session, app: app)
                         )
                         // In the title bar, a drag on a tab is the tab's, never the window's.
                         .excludedFromWindowDragRegion()

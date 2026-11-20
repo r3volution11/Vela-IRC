@@ -98,7 +98,7 @@ IRC is simple, open and everywhere, but IRC clients on the Mac have stood still.
   - Place them **at the top**, **in the title bar** or **above the input**.
   - Corners range from square to pill.
   - The network row hides automatically when you're on a single network.
-- **Leave, remove and reopen:** a tab's × leaves a channel and keeps it in the list, dimmed. **Remove Channel…** takes it out, and off the network's auto-join list. ⌘Z undoes either, and ⇧⌘T or **File → Recently Closed** reopens removed channels and closed conversations where they were.
+- **Leave, remove and reopen:** **Leave Channel** keeps a channel in the list, dimmed; a tab's × and **Remove Channel…** take it out, and off the network's auto-join list. Through ZNC or soju, leaving detaches the channel instead, so the bouncer stays in it and keeps its history, and a detached channel can be hidden. ⌘Z undoes each, and ⇧⌘T or **File → Recently Closed** reopens removed and hidden channels and closed conversations where they were.
 - **Message layouts:**
   - **Classic** — `[12:01] <nick> text`
   - **Modern grouped** — one name header per run of messages

@@ -57,9 +57,9 @@ public final class AppModel: SessionHost {
     public internal(set) var showsOfflineMark = false
     /// The Dock badge, offline mark and bounce bookkeeping (AppModel+Dock.swift).
     @ObservationIgnored var dock = DockState()
-    /// Channels you removed and conversations you closed, newest first, at
-    /// most ``recentlyClosedLimit``. Kept in memory only: quitting forgets
-    /// them. See AppModel+RecentlyClosed.swift.
+    /// Channels you removed or hid and conversations you closed, newest
+    /// first, at most ``recentlyClosedLimit``. Kept in memory only: quitting
+    /// forgets them. See AppModel+RecentlyClosed.swift.
     public internal(set) var recentlyClosed: [ClosedBuffer] = []
     /// The main window's undo manager, set by the scene layer. Leaving,
     /// removing and closing are registered there, on the same stack as
@@ -310,6 +310,8 @@ public final class AppModel: SessionHost {
             child.bouncerNetworkID = network.id
             child.autoJoin = []
             child.performCommands = []
+            child.pendingParts = []
+            child.pendingDetaches = []
             child.sortOrder = session.config.sortOrder
             child.createdAt = Date()
             child.modifiedAt = Date()
@@ -430,6 +432,12 @@ public final class AppModel: SessionHost {
 
     public func updateNetwork(_ config: NetworkConfig, secrets: NetworkSecrets?) {
         var config = keepingPosition(config)
+        // Parts and detaches waiting for the bouncer are the session's: the
+        // network editor's copy may be older.
+        if let live = session(for: config.id)?.config {
+            config.pendingParts = live.pendingParts
+            config.pendingDetaches = live.pendingDetaches
+        }
         if let secrets { storeSecrets(secrets, for: &config) }
         networkStore.upsert(config)
         session(for: config.id)?.updateConfig(config)

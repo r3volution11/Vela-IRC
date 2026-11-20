@@ -144,7 +144,7 @@ enum BufferTitle {
     static func subtitle(for buffer: BufferModel, in session: NetworkSession) -> String? {
         switch buffer.kind {
         case .channel:
-            buffer.topic.map { IRCFormatting.strip($0) } ?? (buffer.isJoined ? "No topic" : "Not joined")
+            buffer.topic.map { IRCFormatting.strip($0) } ?? (buffer.isJoined ? "No topic" : buffer.isDetached ? "Detached" : "Not joined")
         case .query:
             buffer.member(named: buffer.name)?.userHost ?? session.displayName
         case .server:

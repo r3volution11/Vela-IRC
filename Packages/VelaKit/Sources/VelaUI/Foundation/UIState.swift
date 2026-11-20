@@ -37,7 +37,8 @@ public final class UIState {
     /// The "Kick with Reason…" sheet, when open.
     public var kickRequest: KickRequest?
     /// "Leave #vela?" or "Remove #vela?", while it's asked
-    /// (`channels.confirmLeave`, `channels.confirmRemove`).
+    /// (`channels.confirmLeave`, `channels.confirmRemove`). Leaving through a
+    /// bouncer is a detach, asked the same way.
     public var channelConfirmation: ChannelConfirmation?
 
     public init() {}
@@ -78,7 +79,11 @@ public struct KickRequest: Identifiable, Equatable {
 /// Leaving or removing a channel, waiting for you to confirm it.
 public struct ChannelConfirmation: Identifiable, Equatable {
     public enum Action: Equatable {
+        /// Part, and keep the channel in the list (no bouncer).
         case leave
+        /// Leave it in Vela, and keep it on the bouncer, detached.
+        case detach
+        /// Part, and take it out of the list.
         case remove
     }
 

@@ -44,6 +44,8 @@ struct InputBar: View {
         case connecting
         case offline
         case notJoined
+        /// Left here but kept on the bouncer.
+        case detached
     }
 
     private var availability: Availability {
@@ -52,7 +54,7 @@ struct InputBar: View {
         case .connecting, .registering: return .connecting
         case .connected: break
         }
-        if buffer.kind == .channel && !buffer.isJoined { return .notJoined }
+        if buffer.kind == .channel && !buffer.isJoined { return buffer.isDetached ? .detached : .notJoined }
         return .ready
     }
 
@@ -61,6 +63,7 @@ struct InputBar: View {
         case .offline: return "Offline — reconnect to send"
         case .connecting: return "Connecting to \(session.displayName)…"
         case .notJoined: return "Not in channel — /join to rejoin"
+        case .detached: return "Left here, still on your bouncer — join to catch up"
         case .ready:
             switch buffer.kind {
             case .channel, .query: return "Message \(buffer.name)"
@@ -199,9 +202,9 @@ struct InputBar: View {
             StatusActionButton(title: "Reconnect", systemImage: "bolt.horizontal.circle", help: "Connect to \(session.displayName)") {
                 session.connect()
             }
-        case .notJoined:
+        case .notJoined, .detached:
             StatusActionButton(title: "Join", systemImage: "arrow.right.circle", help: "Join \(buffer.name)") {
-                session.submit("/join \(buffer.name)", in: buffer)
+                app.rejoin(buffer)
             }
         case .connecting:
             ProgressView()

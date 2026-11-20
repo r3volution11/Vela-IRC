@@ -61,12 +61,14 @@ struct NetworkEditorView: View {
                                 ThemedTextField("Network name", text: $draft.name, accessibilityName: "Network name")
                             }
                         }
+                        hiddenChannelsSection
                     } else {
                         serverSection(problems)
                         identitySection(problems)
                         authenticationSection(problems)
                         bouncerSection
                         channelsSection
+                        hiddenChannelsSection
                     }
                     performSection
                     listsSection
@@ -375,6 +377,43 @@ struct NetworkEditorView: View {
                 Spacer()
             }
             .padding(10)
+        }
+    }
+
+    /// Detached bouncer channels taken out of the list (Hide Channel), each
+    /// with Show and Join. They act at once, not on Save: the channel's
+    /// already on the bouncer.
+    @ViewBuilder
+    private var hiddenChannelsSection: some View {
+        if case .existing(let id) = target, let session = app.session(for: id), !session.hiddenChannels.isEmpty {
+            SettingsSection(
+                "Hidden channels",
+                footer: "Channels you left here and hid. \(session.bouncerName) is still in them and keeps their history. Show puts one back in the list; Join also joins it, to catch up."
+            ) {
+                ForEach(session.hiddenChannels) { hidden in
+                    HStack(spacing: 8) {
+                        Text(hidden.name)
+                            .font(.system(size: 13, design: .monospaced))
+                            .foregroundStyle(theme[ThemeKey.settingsForeground])
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer(minLength: 8)
+                        Button("Show") { app.show(hidden, selecting: false) }
+                            .buttonStyle(ThemedButtonStyle())
+                            .help("Put \(hidden.name) back in the list, still detached")
+                            .accessibilityLabel("Show \(hidden.name)")
+                        Button("Join") {
+                            if let channel = app.show(hidden, selecting: false) { app.rejoin(channel) }
+                        }
+                        .buttonStyle(ThemedButtonStyle())
+                        .disabled(!session.isConnected)
+                        .help("Put \(hidden.name) back in the list and join it")
+                        .accessibilityLabel("Join \(hidden.name)")
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                }
+            }
         }
     }
 

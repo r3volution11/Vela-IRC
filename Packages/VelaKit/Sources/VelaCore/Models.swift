@@ -205,6 +205,10 @@ public final class BufferModel: Identifiable, Hashable {
     public internal(set) var topicSetBy: String?
     public internal(set) var modes: String?
     public internal(set) var isJoined = false
+    /// A channel detached on a bouncer: the bouncer stays in it and keeps
+    /// its history, but Vela isn't in it (`isJoined` is false) until it's
+    /// joined again. It shows dimmed, like a channel you left.
+    public internal(set) var isDetached = false
     public internal(set) var unreadCount = 0
     public internal(set) var highlightCount = 0
     /// Lines newer than this are "unread" (drives the unread marker).

@@ -104,6 +104,17 @@ public struct NetworkConfig: Codable, Sendable, Identifiable, Hashable {
     public var highlightWords: [String]
     public var ignoreMasks: [String]
 
+    /// Bouncer channels you removed while Vela wasn't connected to the
+    /// bouncer, which is still in them. Vela parts each after it next
+    /// registers, and drops it from the list once the PART is sent. Kept
+    /// here so it outlasts quitting Vela. The session owns it: the network
+    /// editor never changes it.
+    public var pendingParts: [String]
+    /// Bouncer channels you left (detached) while Vela wasn't connected to
+    /// the bouncer. Vela asks the bouncer to detach each after it next
+    /// registers, and drops it from the list once that's sent.
+    public var pendingDetaches: [String]
+
     public var sortOrder: Int
     public var createdAt: Date
     public var modifiedAt: Date
@@ -135,6 +146,8 @@ public struct NetworkConfig: Codable, Sendable, Identifiable, Hashable {
         bouncerNetworkID: String? = nil,
         highlightWords: [String] = [],
         ignoreMasks: [String] = [],
+        pendingParts: [String] = [],
+        pendingDetaches: [String] = [],
         sortOrder: Int = 0,
         createdAt: Date = Date(),
         modifiedAt: Date? = nil,
@@ -162,6 +175,8 @@ public struct NetworkConfig: Codable, Sendable, Identifiable, Hashable {
         self.bouncerNetworkID = bouncerNetworkID
         self.highlightWords = highlightWords
         self.ignoreMasks = ignoreMasks
+        self.pendingParts = pendingParts
+        self.pendingDetaches = pendingDetaches
         self.sortOrder = sortOrder
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt ?? createdAt
@@ -181,6 +196,7 @@ public struct NetworkConfig: Codable, Sendable, Identifiable, Hashable {
         case autoJoin, performCommands, autoConnect
         case bouncerKind, parentNetworkID, bouncerNetworkID
         case highlightWords, ignoreMasks
+        case pendingParts, pendingDetaches
         case sortOrder, createdAt, modifiedAt
 
         var key: AnyCodingKey { AnyCodingKey(rawValue) }
@@ -240,6 +256,8 @@ public struct NetworkConfig: Codable, Sendable, Identifiable, Hashable {
             bouncerNetworkID: value(.bouncerNetworkID, as: String.self),
             highlightWords: value(.highlightWords) ?? [],
             ignoreMasks: value(.ignoreMasks) ?? [],
+            pendingParts: value(.pendingParts) ?? [],
+            pendingDetaches: value(.pendingDetaches) ?? [],
             sortOrder: value(.sortOrder) ?? 0,
             createdAt: createdAt,
             modifiedAt: date(.modifiedAt) ?? createdAt,
@@ -278,6 +296,9 @@ public struct NetworkConfig: Codable, Sendable, Identifiable, Hashable {
         try container.encodeIfPresent(bouncerNetworkID, forKey: Field.bouncerNetworkID.key)
         try container.encode(highlightWords, forKey: Field.highlightWords.key)
         try container.encode(ignoreMasks, forKey: Field.ignoreMasks.key)
+        // Usually empty, so usually left out.
+        try container.encodeIfPresent(pendingParts.isEmpty ? nil : pendingParts, forKey: Field.pendingParts.key)
+        try container.encodeIfPresent(pendingDetaches.isEmpty ? nil : pendingDetaches, forKey: Field.pendingDetaches.key)
         try container.encode(sortOrder, forKey: Field.sortOrder.key)
         try container.encode(ISODate.string(from: createdAt), forKey: Field.createdAt.key)
         try container.encode(ISODate.string(from: modifiedAt), forKey: Field.modifiedAt.key)

@@ -113,6 +113,7 @@ extension LinkSelectionTests {
 
         /// One tab at the top-left of its window, as the channel row draws it.
         private struct Harness: View {
+            @Environment(AppModel.self) private var app
             @Environment(\.chatStyle) private var style
             let buffer: BufferModel
             let session: NetworkSession
@@ -147,7 +148,8 @@ extension LinkSelectionTests {
                     ),
                     onSelect: { recorder.selects += 1 },
                     onClose: { recorder.closes += 1 },
-                    onHover: { _ in }
+                    onHover: { _ in },
+                    closeTitle: TabDescriptions.closeAction(buffer, in: session, app: app)
                 )
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { recorder.width = $0 }
                 .coordinateSpace(.named(reorder.coordinateSpace))

@@ -46,6 +46,9 @@ struct ChannelTab: View {
     let onSelect: () -> Void
     let onClose: () -> Void
     let onHover: (Bool) -> Void
+    /// What the × does, for VoiceOver and its tooltip ("Remove Channel",
+    /// "Leave Channel", "Hide Channel"…; see `TabDescriptions.closeAction`).
+    var closeTitle = "Close"
 
     private var metrics: TabMetrics { context.metrics }
     private var palette: TabPalette { context.palette }
@@ -103,7 +106,7 @@ struct ChannelTab: View {
             .accessibilityAddTraits(context.isSelected ? .isSelected : [])
             .accessibilityActions {
                 if isClosable {
-                    Button(TabDescriptions.closeAction(buffer, in: session), action: onClose)
+                    Button(closeTitle, action: onClose)
                 }
             }
             .tabMoveActions(reorder)
@@ -197,6 +200,7 @@ struct ChannelTab: View {
             isEnabled: style.tabsShowCloseButtons,
             isTabHovered: context.isHovered,
             foreground: context.isSelected ? palette.selectedText : palette.unreadText,
+            help: closeTitle,
             action: onClose
         ) {
             if buffer.kind == .query {
@@ -416,6 +420,8 @@ struct TabCloseSlot<Glyph: View>: View {
     /// Token for the ×: the tab's strongest text color, so it reads on the
     /// tab's fill in every theme.
     let foreground: String
+    /// The ×'s tooltip: what it does.
+    var help = "Close Tab"
     let action: () -> Void
     @ViewBuilder let glyph: Glyph
 
@@ -440,7 +446,7 @@ struct TabCloseSlot<Glyph: View>: View {
             .onHover { isHovering = $0 }
             .animation(.easeOut(duration: 0.1), value: isHovering)
             .animation(.easeOut(duration: 0.12), value: isTabHovered)
-            .help("Close Tab")
+            .help(help)
         } else {
             glyph
                 .frame(width: size, height: size)

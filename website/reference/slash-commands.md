@@ -29,11 +29,11 @@ Any command Vela doesn't know is **sent to the server as typed**, so `/list`, `/
 
 | Command | Does |
 | --- | --- |
-| `/join <#channel>[,#other] [keys]` | Joins one or more channels, with keys if they need them: `/join #a,#b keyA,keyB`. Alias: `/j`. |
-| `/part [#channel] [reason]` | Leaves the current (or named) channel, like **Leave Channel**: it stays in the list, dimmed, and Vela stops rejoining it automatically. It never asks first, and <kbd>⌘Z</kbd> joins it again. Alias: `/leave`. |
+| `/join <#channel>[,#other] [keys]` | Joins one or more channels, with keys if they need them: `/join #a,#b keyA,keyB`. A channel you left goes back on the network's auto-join list, joined with its key if you don't type one. Through a bouncer, it reattaches a detached channel and shows a hidden one. Alias: `/j`. |
+| `/part [#channel] [reason]` | Leaves the current (or named) channel, like **Leave Channel** on a network without a bouncer: it stays in the list, dimmed, and comes off the auto-join list, so Vela stops rejoining it. Through a bouncer it really parts too, so the bouncer forgets the channel; to keep it on the bouncer, use **Leave Channel**, which detaches it. It never asks first, and <kbd>⌘Z</kbd> joins it again. Alias: `/leave`. |
 | `/topic [#channel] [new topic]` | Shows the topic, or sets it if you add text. |
 | `/invite <nick> [#channel]` | Invites someone to the current (or named) channel. |
-| `/close` | Removes the current channel, like **Remove Channel…** (leaving it, and taking it off the network's auto-join list), or closes the current conversation. It never asks first. <kbd>⌘Z</kbd> or <kbd>⇧⌘T</kbd> brings it back. Alias: `/wc`. |
+| `/close` | Removes the current channel, like **Remove Channel…** (leaving it, and taking it off the network's auto-join list; a bouncer forgets it too), or closes the current conversation. It never asks first. <kbd>⌘Z</kbd> or <kbd>⇧⌘T</kbd> brings it back. Alias: `/wc`. |
 | `/clear` | Clears the messages shown in this channel. Your stored history isn't deleted. |
 
 ## You

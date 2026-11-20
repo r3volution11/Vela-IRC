@@ -90,10 +90,12 @@ enum TabActions {
         app.select(TabMemory.destination(in: session))
     }
 
-    /// A tab's ×: leaves a channel you're in, removes one you've left (each
-    /// asking first, by default), closes a conversation. A removed channel
-    /// or closed conversation's tab goes; if it was selected, its right
-    /// neighbor (or left, at the end) is selected, like a browser.
+    /// A tab's ×: removes a channel (asking first, by default), or, through
+    /// a bouncer, leaves it on the bouncer, detached, and hides it once it's
+    /// detached (see `ChannelActions.closeAction`); closes a conversation. A
+    /// removed or hidden channel or closed conversation's tab goes; if it
+    /// was selected, its right neighbor (or left, at the end) is selected,
+    /// like a browser.
     static func close(_ buffer: BufferModel, app: AppModel, uiState: UIState) {
         ChannelActions.closeTab(buffer, app: app, uiState: uiState)
     }
@@ -153,16 +155,17 @@ enum TabDescriptions {
     static func bufferValue(_ buffer: BufferModel, in session: NetworkSession) -> String {
         var parts = activity(unread: buffer.isMuted ? 0 : buffer.unreadCount, highlights: buffer.highlightCount)
         if buffer.isMuted { parts.append("muted") }
-        if buffer.kind == .channel && !buffer.isJoined { parts.append("not joined") }
+        if buffer.kind == .channel && !buffer.isJoined { parts.append(buffer.isDetached ? "detached" : "not joined") }
         if !session.isConnected { parts.append(connection(session.connectionState).lowercased()) }
         return parts.joined(separator: ", ")
     }
 
-    /// The VoiceOver action that does what a channel or query tab's × does,
-    /// there whether or not the pointer is on the tab: "Leave Channel",
-    /// "Remove Channel" or "Close Conversation".
-    static func closeAction(_ buffer: BufferModel, in session: NetworkSession) -> String {
-        ChannelActions.closeAction(for: buffer, in: session)?.title ?? "Close"
+    /// The VoiceOver action and tooltip for what a channel or query tab's ×
+    /// does, there whether or not the pointer is on the tab: "Remove
+    /// Channel", "Leave Channel" (through a bouncer), "Hide Channel" or
+    /// "Close Conversation".
+    static func closeAction(_ buffer: BufferModel, in session: NetworkSession, app: AppModel) -> String {
+        ChannelActions.closeAction(for: buffer, in: session, app: app)?.title ?? "Close"
     }
 
     static func bufferKind(_ buffer: BufferModel) -> String {

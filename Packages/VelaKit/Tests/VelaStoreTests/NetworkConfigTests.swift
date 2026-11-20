@@ -71,6 +71,24 @@ import VelaFoundation
         #expect(reencoded["name"] == .string("Future"))
     }
 
+    /// What waits for a bouncer is saved only while there's something.
+    @Test func pendingPartsAndDetaches() throws {
+        var config = try decode(##"{"nick": "v", "pendingParts": ["#gone"], "pendingDetaches": ["#quiet", "#busy"]}"##)
+        #expect(config.pendingParts == ["#gone"])
+        #expect(config.pendingDetaches == ["#quiet", "#busy"])
+        #expect(config.additionalFields.isEmpty)
+        var encoded = try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(config))
+        #expect(encoded["pendingParts"] == .array([.string("#gone")]))
+        #expect(encoded["pendingDetaches"] == .array([.string("#quiet"), .string("#busy")]))
+
+        config.pendingParts = []
+        config.pendingDetaches = []
+        encoded = try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(config))
+        #expect(encoded["pendingParts"] == nil)
+        #expect(encoded["pendingDetaches"] == nil)
+        #expect(try decode("{}").pendingParts.isEmpty)
+    }
+
     @Test func autoJoinAcceptsStringsAndObjects() throws {
         let config = try decode(##"{"nick": "v", "autoJoin": ["#vela", {"name": "#secret", "hasKey": true}, {"name": "#x"}]}"##)
         #expect(config.autoJoin == [

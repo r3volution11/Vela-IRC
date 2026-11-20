@@ -6,65 +6,94 @@ import SwiftUI
 import VelaCore
 import VelaStore
 
-/// Leaving, removing and closing from the window: a tab's ×, middle-click,
-/// VoiceOver, the context menus and the command palette.
+/// Leaving, removing, hiding and closing from the window: a tab's ×,
+/// middle-click, VoiceOver, the context menus and the command palette.
 ///
-/// - **Leave** parts a channel and keeps it in the list, dimmed.
-/// - **Remove** takes a channel out of the list and off its network's
-///   auto-join list; it goes to Recently Closed.
-/// - **Close** takes a private conversation out of the list; it goes to
-///   Recently Closed too.
+/// On a network without a bouncer:
+/// - **Leave** parts a channel and keeps it in the list, dimmed. It comes
+///   off the auto-join list; **Join** puts it back.
+/// - **Remove** parts it and takes it out of the list and off the auto-join
+///   list; it goes to Recently Closed. A tab's × does this.
 ///
-/// Leave and Remove ask first while `channels.confirmLeave` and
-/// `channels.confirmRemove` are on. `/part` and `/close` never ask (they go
-/// straight to `AppModel`). Each can be undone with ⌘Z.
+/// Through a bouncer (ZNC or soju):
+/// - **Leave** detaches the channel: the bouncer stays in it and keeps its
+///   history, and Vela shows it dimmed. **Join** reattaches it. A tab's ×
+///   does this, unless `channels.bouncerCloseRemoves` is on.
+/// - **Hide** takes a detached channel out of the list, leaving it on the
+///   bouncer. A tab's × on a detached channel does this.
+/// - **Remove** parts it, so the bouncer forgets it too.
+///
+/// **Close** takes a private conversation out of the list. Leave and Remove
+/// ask first while `channels.confirmLeave` and `channels.confirmRemove` are
+/// on. `/part` and `/close` never ask (they go straight to `AppModel`), and
+/// `/part` really parts, even through a bouncer. Each can be undone with ⌘Z.
 @MainActor
 enum ChannelActions {
     /// What a tab's ×, a middle-click or VoiceOver's close action does.
     enum CloseAction: Equatable {
-        /// A channel you're in: leave it, keeping it in the list.
-        case leave
-        /// A channel you're not in (left, kicked): take it out of the list.
+        /// Part a channel and take it out of the list.
         case remove
+        /// Through a bouncer: leave the channel in Vela, keeping it on the
+        /// bouncer, detached.
+        case detach
+        /// Through a bouncer: take a detached channel out of the list.
+        case hide
         /// A private conversation: close it.
         case closeConversation
 
+        /// The name it goes by in menus and for VoiceOver.
         var title: String {
             switch self {
-            case .leave: "Leave Channel"
             case .remove: "Remove Channel"
+            case .detach: "Leave Channel"
+            case .hide: "Hide Channel"
             case .closeConversation: "Close Conversation"
             }
         }
     }
 
-    static func closeAction(for buffer: BufferModel, in session: NetworkSession) -> CloseAction? {
+    /// What closing `buffer`'s tab does. On a network without a bouncer, it
+    /// leaves and removes a channel. Through a bouncer, it leaves a channel
+    /// you're in (detaching it), hides a detached one and removes one
+    /// you're not in; with `removesOnBouncer` (`channels.bouncerCloseRemoves`)
+    /// it always removes.
+    static func closeAction(for buffer: BufferModel, in session: NetworkSession, removesOnBouncer: Bool) -> CloseAction? {
         switch buffer.kind {
-        case .server: nil
-        case .query: .closeConversation
-        case .channel: session.isIn(buffer) ? .leave : .remove
+        case .server: return nil
+        case .query: return .closeConversation
+        case .channel:
+            guard session.isBouncer, !removesOnBouncer else { return .remove }
+            if session.isIn(buffer) { return .detach }
+            return session.canHide(buffer) ? .hide : .remove
         }
     }
 
-    /// A tab's ×, a middle-click or VoiceOver's close action: leaves a
-    /// channel you're in, removes one you've left, closes a conversation.
+    static func closeAction(for buffer: BufferModel, in session: NetworkSession, app: AppModel) -> CloseAction? {
+        closeAction(for: buffer, in: session, removesOnBouncer: app.settings[.channelsBouncerCloseRemoves])
+    }
+
+    /// A tab's ×, a middle-click or VoiceOver's close action (see
+    /// `closeAction(for:in:app:)`).
     static func closeTab(_ buffer: BufferModel, app: AppModel, uiState: UIState) {
         guard let session = app.session(for: buffer.id.networkID),
-              let action = closeAction(for: buffer, in: session) else { return }
+              let action = closeAction(for: buffer, in: session, app: app) else { return }
         switch action {
-        case .leave: leave(buffer, app: app, uiState: uiState)
         case .remove: remove(buffer, app: app, uiState: uiState)
+        case .detach: leave(buffer, app: app, uiState: uiState)
+        case .hide: hide(buffer, app: app)
         case .closeConversation: app.close(buffer)
         }
     }
 
-    /// Leave Channel, asking first while `channels.confirmLeave` is on.
+    /// Leave Channel, asking first while `channels.confirmLeave` is on: a
+    /// part on a network without a bouncer, a detach through one.
     static func leave(_ channel: BufferModel, app: AppModel, uiState: UIState) {
-        guard channel.kind == .channel else { return }
+        guard channel.kind == .channel, let session = app.session(for: channel.id.networkID) else { return }
+        let action: ChannelConfirmation.Action = session.isBouncer ? .detach : .leave
         if app.settings[.channelsConfirmLeave] {
-            uiState.channelConfirmation = ChannelConfirmation(.leave, bufferID: channel.id)
+            uiState.channelConfirmation = ChannelConfirmation(action, bufferID: channel.id)
         } else {
-            app.leave(channel)
+            perform(action, on: channel, app: app)
         }
     }
 
@@ -78,44 +107,62 @@ enum ChannelActions {
         }
     }
 
-    /// Leaves or removes the channel `request` asked about, now you've said
-    /// yes. "Don't ask again" turns its setting off.
+    /// Hide Channel: a detached bouncer channel out of the list. It doesn't
+    /// ask: nothing changes on the bouncer, and it's easy to get back.
+    static func hide(_ channel: BufferModel, app: AppModel) {
+        app.hide(channel)
+    }
+
+    /// Join Channel on a channel you left or detached.
+    static func join(_ channel: BufferModel, app: AppModel) {
+        app.rejoin(channel)
+    }
+
+    /// Leaves, detaches or removes the channel `request` asked about, now
+    /// you've said yes. "Don't ask again" turns its setting off.
     static func confirm(_ request: ChannelConfirmation, dontAskAgain: Bool, app: AppModel) {
         if dontAskAgain {
-            app.settings[request.action == .leave ? .channelsConfirmLeave : .channelsConfirmRemove] = false
+            app.settings[request.action == .remove ? .channelsConfirmRemove : .channelsConfirmLeave] = false
         }
         guard let channel = app.session(for: request.bufferID.networkID)?.buffer(id: request.bufferID) else { return }
-        switch request.action {
+        perform(request.action, on: channel, app: app)
+    }
+
+    private static func perform(_ action: ChannelConfirmation.Action, on channel: BufferModel, app: AppModel) {
+        switch action {
         case .leave: app.leave(channel)
+        case .detach: app.detach(channel)
         case .remove: app.close(channel)
         }
     }
 
     // MARK: Wording
 
-    /// "Leave #vela?"
+    /// "Leave #vela?" or "Remove #vela?"
     static func question(for request: ChannelConfirmation, app: AppModel) -> String {
         let name = app.session(for: request.bufferID.networkID)?.buffer(id: request.bufferID)?.name ?? "this channel"
-        return request.action == .leave ? "Leave \(name)?" : "Remove \(name)?"
+        return request.action == .remove ? "Remove \(name)?" : "Leave \(name)?"
     }
 
-    /// What leaving or removing it does.
+    /// What leaving, detaching or removing it does.
     static func explanation(for request: ChannelConfirmation, app: AppModel) -> String {
         let session = app.session(for: request.bufferID.networkID)
-        let bouncer = session.map { $0.config.bouncerKind != .none } ?? false
         switch request.action {
         case .leave:
-            return bouncer
-                ? "You'll stop receiving its messages, and your bouncer leaves it too. It stays in the list so you can join it again."
-                : "You'll stop receiving its messages. It stays in the list so you can join it again."
+            return "You'll stop receiving its messages, and Vela won't join it when you connect. It stays in the list so you can join it again."
+        case .detach:
+            return "Your bouncer stays in the channel and keeps its history; join it again to catch up."
         case .remove:
             let network = session?.displayName ?? "the network"
-            return "It's taken out of the list and \(network)'s channels\(bouncer ? ", and your bouncer leaves it" : ""). File → Recently Closed brings it back."
+            let bouncer = session?.isBouncer ?? false
+            return bouncer
+                ? "Your bouncer leaves it too and forgets it, and it's taken out of the list and \(network)'s channels. File → Recently Closed brings it back."
+                : "It's taken out of the list and \(network)'s channels. File → Recently Closed brings it back."
         }
     }
 
     static func confirmTitle(_ action: ChannelConfirmation.Action) -> String {
-        action == .leave ? "Leave" : "Remove"
+        action == .remove ? "Remove" : "Leave"
     }
 }
 

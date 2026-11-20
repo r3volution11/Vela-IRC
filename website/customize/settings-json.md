@@ -153,3 +153,5 @@ Whether there's a border at all is a separate setting, [`appearance.messageBoxBo
 ## networks.json
 
 Your networks are kept in `networks.json` in the same folder. You can edit it by hand while Vela is quit, but the [network editor](/guide/adding-a-network) is easier. It never contains passwords: those are in your Keychain.
+
+A bouncer network can have `pendingParts` and `pendingDetaches`: channels you removed or [left](/guide/joining-channels#through-a-bouncer) while Vela wasn't connected to the bouncer. Vela parts or detaches each on the bouncer after it next connects, then takes it off the list.

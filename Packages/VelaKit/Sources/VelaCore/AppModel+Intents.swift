@@ -280,8 +280,12 @@ extension AppModel {
         try await waitForConnection(session, timeout: connectionTimeout)
         let buffer = session.ensureBuffer(name: name, kind: .channel)
         if !buffer.isJoined {
-            let key = key?.trimmingCharacters(in: .whitespaces)
-            let params = if let key, !key.isEmpty { [buffer.name, key] } else { [buffer.name] }
+            // Like /join: a channel you left goes back on the auto-join list,
+            // with its key, and a detach waiting for the bouncer is off.
+            let typed = key?.trimmingCharacters(in: .whitespaces)
+            let key = typed.flatMap { $0.isEmpty ? nil : $0 } ?? session.joinKey(forChannel: buffer.id.foldedName)
+            session.prepareToJoin(buffer.id.foldedName)
+            let params = if let key { [buffer.name, key] } else { [buffer.name] }
             session.send(IRCMessage(command: "JOIN", params: params))
             if isDemo { buffer.isJoined = true }
         }

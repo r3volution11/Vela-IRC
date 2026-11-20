@@ -508,9 +508,10 @@ struct VelaCommandCatalog {
         return commands
     }
 
-    /// Leave #vela (or Join #vela) and Remove #vela for a channel; Close for
-    /// a conversation. Leave and Remove ask first while their settings are on.
-    /// Static so tests can build them without a window.
+    /// Leave #vela (or Join #vela), Hide #vela (a detached bouncer channel)
+    /// and Remove #vela for a channel; Close for a conversation. Leave and
+    /// Remove ask first while their settings are on; through a bouncer,
+    /// Leave detaches. Static so tests can build them without a window.
     static func membershipCommands(buffer: BufferModel, session: NetworkSession, app: AppModel, uiState: UIState) -> [VelaCommand] {
         guard buffer.kind == .channel else {
             return [VelaCommand(
@@ -518,23 +519,46 @@ struct VelaCommandCatalog {
                 keywords: [buffer.name, "close conversation", "query"]
             ) { app.close(buffer) }]
         }
-        let membership = session.isIn(buffer)
+        var commands = [session.isIn(buffer)
             ? VelaCommand(
                 id: "channel.leave", category: .channel, title: "Leave \(buffer.name)",
-                keywords: ["part"]
+                keywords: session.isBouncer ? ["part", "detach", "bouncer"] : ["part"]
             ) { ChannelActions.leave(buffer, app: app, uiState: uiState) }
             : VelaCommand(
                 id: "channel.rejoin", category: .channel, title: "Join \(buffer.name)",
-                keywords: ["rejoin", "enter"], isEnabled: session.isConnected
-            ) { session.submit("/join \(buffer.name)", in: buffer) }
-        return [
-            membership,
-            VelaCommand(
-                id: "channel.remove", category: .channel, title: "Remove \(buffer.name)",
-                keywords: ["close", "delete", "part", "auto-join"]
-            ) { ChannelActions.remove(buffer, app: app, uiState: uiState) },
-        ]
+                keywords: ["rejoin", "enter", "attach", "reattach"], isEnabled: session.isConnected
+            ) { ChannelActions.join(buffer, app: app) }]
+        if session.canHide(buffer) {
+            commands.append(VelaCommand(
+                id: "channel.hide", category: .channel, title: "Hide \(buffer.name)",
+                keywords: ["close", "detached", "bouncer"]
+            ) { ChannelActions.hide(buffer, app: app) })
+        }
+        commands.append(VelaCommand(
+            id: "channel.remove", category: .channel, title: "Remove \(buffer.name)",
+            keywords: ["close", "delete", "part", "auto-join"]
+        ) { ChannelActions.remove(buffer, app: app, uiState: uiState) })
+        return commands
     }
+
+    /// "Show #vela (Libera.Chat)" for each hidden channel on every network,
+    /// in the palette. One hidden this run is already there, as its Recently
+    /// Closed command.
+    var hiddenChannelCommands: [VelaCommand] { Self.hiddenChannelCommands(app: app) }
+
+    static func hiddenChannelCommands(app: AppModel) -> [VelaCommand] {
+        let inRecentlyClosed = Set(app.recentlyClosed.map(\.id))
+        return app.hiddenChannels.compactMap { hidden, session in
+            guard !inRecentlyClosed.contains(hidden.id) else { return nil }
+            return VelaCommand(
+                id: showCommandID(hidden.id), category: .channel,
+                title: "Show \(hidden.name) (\(session.displayName))",
+                keywords: ["hidden", "unhide", "detached", "bouncer"]
+            ) { app.show(hidden) }
+        }
+    }
+
+    private static func showCommandID(_ id: BufferID) -> String { "channel.show.\(id.description)" }
 
     /// Reopens the channel or conversation closed last; again goes further
     /// back. The menu names which kind it is.
@@ -557,9 +581,18 @@ struct VelaCommandCatalog {
         ) { app.reopenLastClosed() }
     }
 
+    /// A hidden channel's is "Show #vela (Libera.Chat)" in the palette.
     static func recentlyClosedCommands(app: AppModel) -> [VelaCommand] {
         app.recentlyClosed.map { closed in
             let network = app.networkName(for: closed)
+            if closed.wasHidden {
+                return VelaCommand(
+                    id: showCommandID(closed.id), category: .channel,
+                    title: "Show \(closed.name) (\(network))",
+                    menuTitle: app.menuTitle(for: closed),
+                    keywords: ["recently closed", "hidden", "unhide", "detached", "restore", "undo hide"]
+                ) { app.reopen(closed) }
+            }
             return VelaCommand(
                 id: "buffer.reopen.\(closed.id.description)", category: .buffer,
                 title: "Reopen \(closed.name) (\(network))",
@@ -694,6 +727,7 @@ struct VelaCommandCatalog {
         commands += selectedBufferCommands
         commands.append(reopenClosed)
         commands += recentlyClosedCommands
+        commands += hiddenChannelCommands
         commands += typingCommands + messageBoxBorderCommands
         commands += catchUpCommands
         commands += translationCommands

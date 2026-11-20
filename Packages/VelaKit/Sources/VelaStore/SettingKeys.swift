@@ -519,11 +519,15 @@ extension SettingKey where Value == Bool {
     }
     public static var channelsConfirmLeave: SettingKey<Bool> {
         .init("channels.confirmLeave", default: true,
-              summary: "Ask before leaving a channel from its tab, its menu or the command palette. A channel you leave stays in the list so you can join it again. /part never asks.")
+              summary: "Ask before leaving a channel from its menu or the command palette, or from its tab through a bouncer. A channel you leave stays in the list so you can join it again; through a bouncer (ZNC or soju), the bouncer stays in it and keeps its history. /part never asks.")
     }
     public static var channelsConfirmRemove: SettingKey<Bool> {
         .init("channels.confirmRemove", default: true,
-              summary: "Ask before removing a channel from its tab, its menu or the command palette. Removing takes it out of the list and off its network's auto-join list; File → Recently Closed brings it back. /close never asks.")
+              summary: "Ask before removing a channel from its tab, its menu or the command palette. Removing leaves it and takes it out of the list and off its network's auto-join list, and a bouncer forgets it too; File → Recently Closed brings it back. /close never asks.")
+    }
+    public static var channelsBouncerCloseRemoves: SettingKey<Bool> {
+        .init("channels.bouncerCloseRemoves", default: false,
+              summary: "Through a bouncer (ZNC or soju), make a channel tab's × and middle-click remove the channel, so the bouncer leaves and forgets it too. Off, they leave the channel only in Vela: the bouncer stays in it, detached, and keeps its history.")
     }
 }
 
@@ -770,6 +774,7 @@ public enum SettingsCatalog {
             SettingKey.connectionAutoReconnect.descriptor,
             SettingKey.channelsConfirmLeave.descriptor,
             SettingKey.channelsConfirmRemove.descriptor,
+            SettingKey.channelsBouncerCloseRemoves.descriptor,
             SettingKey.moderationBanMask.descriptor,
             SettingKey.moderationKickReason.descriptor,
             SettingKey.historyRetentionDays.descriptor,

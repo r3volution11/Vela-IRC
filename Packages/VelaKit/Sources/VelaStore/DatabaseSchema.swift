@@ -114,6 +114,18 @@ extension VelaDatabase {
                 """)
         }
 
+        // Channels detached on a bouncer, hidden from the list, or left
+        // with the auto-join entry they had (`BufferRecord`).
+        migrator.registerMigration("v3-detached-hidden-left-channels") { db in
+            try db.execute(sql: """
+                ALTER TABLE buffers ADD COLUMN is_detached INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE buffers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE buffers ADD COLUMN left_auto_join_name TEXT;
+                ALTER TABLE buffers ADD COLUMN left_auto_join_has_key INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE buffers ADD COLUMN left_auto_join_index INTEGER NOT NULL DEFAULT 0;
+                """)
+        }
+
         return migrator
     }
 }

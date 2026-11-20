@@ -289,20 +289,49 @@ struct RecentlyClosedTests {
         try keychain.setSecret("hunter2", account: account)
         join(session, "#a", "#Secret", "#c")
 
-        // Leaving keeps it on the list.
+        // Leaving takes it off the list too, until it's joined again (see
+        // BouncerChannelTests).
         app.leave(try fixture.buffer("#c"))
-        #expect(session.config.autoJoin.map(\.name) == ["#a", "#Secret", "#c"])
+        #expect(session.config.autoJoin.map(\.name) == ["#a", "#Secret"])
 
         app.close(try fixture.buffer("#secret"))
-        #expect(session.config.autoJoin.map(\.name) == ["#a", "#c"])
-        #expect(try fixture.savedNetworks().first?.autoJoin.map(\.name) == ["#a", "#c"])
+        #expect(session.config.autoJoin.map(\.name) == ["#a"])
+        #expect(try fixture.savedNetworks().first?.autoJoin.map(\.name) == ["#a"])
         #expect(keychain.secret(account: account) == nil)
 
         app.reopenLastClosed()
-        #expect(session.config.autoJoin == [AutoJoinChannel(name: "#a"), AutoJoinChannel(name: "#Secret", hasKey: true), AutoJoinChannel(name: "#c")])
-        #expect(try fixture.savedNetworks().first?.autoJoin.map(\.name) == ["#a", "#Secret", "#c"])
+        #expect(session.config.autoJoin == [AutoJoinChannel(name: "#a"), AutoJoinChannel(name: "#Secret", hasKey: true)])
+        #expect(try fixture.savedNetworks().first?.autoJoin.map(\.name) == ["#a", "#Secret"])
         #expect(keychain.secret(account: account) == "hunter2")
         #expect(session.joinKey(forChannel: "#secret") == "hunter2")
+    }
+
+    /// Removing a channel you'd left takes its remembered entry and key
+    /// away; reopening it keeps it left, its entry remembered, not back on
+    /// the list.
+    @Test func removingAndReopeningAChannelYouLeft() throws {
+        let keychain = Keychain.inMemory()
+        let fixture = makeApp(autoJoin: [AutoJoinChannel(name: "#a"), AutoJoinChannel(name: "#secret", hasKey: true)], keychain: keychain)
+        let (app, session) = (fixture.app, fixture.session)
+        let account = Keychain.channelKeyAccount(networkID: session.id, channel: "#secret")
+        try keychain.setSecret("hunter2", account: account)
+        join(session, "#a", "#secret")
+        app.leave(try fixture.buffer("#secret"))
+        #expect(session.config.autoJoin.map(\.name) == ["#a"])
+        #expect(keychain.secret(account: account) == "hunter2")
+
+        app.close(try fixture.buffer("#secret"))
+        #expect(keychain.secret(account: account) == nil)
+        #expect(session.joinKey(forChannel: "#secret") == nil)
+
+        app.reopenLastClosed()
+        let secret = try fixture.buffer("#secret")
+        #expect(!session.rejoins(secret))
+        #expect(session.config.autoJoin.map(\.name) == ["#a"])
+        #expect(keychain.secret(account: account) == "hunter2")
+        #expect(session.joinKey(forChannel: "#secret") == "hunter2")
+        session.rejoin(secret)
+        #expect(session.config.autoJoin.map(\.name) == ["#a", "#secret"])
     }
 
     /// Against a scripted server: Remove parts the channel, what was said
@@ -365,9 +394,10 @@ struct RecentlyClosedTests {
 
     // MARK: Bouncers
 
-    /// Removing or leaving a channel while disconnected from a bouncer
-    /// can't part it. When the bouncer rejoins it after connecting, Vela
-    /// parts it then, and a removed channel doesn't come back.
+    /// Removing a channel, or parting it (`/part`, `AppModel.leave`), while
+    /// disconnected from a bouncer can't part it. Vela parts it after the
+    /// next registration, and the bouncer's joins into it as Vela connects
+    /// neither bring a removed channel back nor rejoin a parted one.
     @Test func aBouncersReplayedJoinIsParted() async throws {
         let factory = MockTransportFactory { transport, _ in
             transport.setResponder { line in

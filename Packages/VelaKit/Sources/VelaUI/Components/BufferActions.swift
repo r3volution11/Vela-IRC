@@ -34,12 +34,17 @@ struct BufferContextMenuItems: View {
             CatchUpBufferMenuItems(buffer: buffer, session: session)
             Divider()
             if buffer.kind == .channel {
-                // Leave keeps it in the list, dimmed; Remove takes it out.
+                // Leave keeps it in the list, dimmed (through a bouncer, it
+                // stays on the bouncer, detached); Hide takes a detached
+                // channel out of the list; Remove takes it out everywhere.
                 if session.isIn(buffer) {
                     Button("Leave Channel") { ChannelActions.leave(buffer, app: app, uiState: uiState) }
                 } else {
-                    Button("Join Channel") { session.submit("/join \(buffer.name)", in: buffer) }
+                    Button("Join Channel") { ChannelActions.join(buffer, app: app) }
                         .disabled(!session.isConnected)
+                    if session.canHide(buffer) {
+                        Button("Hide Channel") { ChannelActions.hide(buffer, app: app) }
+                    }
                 }
                 Button("Remove Channel…") { ChannelActions.remove(buffer, app: app, uiState: uiState) }
             } else {

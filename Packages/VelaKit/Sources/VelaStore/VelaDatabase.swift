@@ -313,7 +313,8 @@ public final class VelaDatabase: Sendable {
                 db,
                 sql: """
                     SELECT network_id, folded_name, name, kind, last_read_at, is_pinned, is_muted, sort_order,
-                           auto_rejoin
+                           auto_rejoin, is_detached, is_hidden,
+                           left_auto_join_name, left_auto_join_has_key, left_auto_join_index
                     FROM buffers WHERE network_id = ?
                     ORDER BY sort_order, folded_name
                     """,
@@ -328,8 +329,9 @@ public final class VelaDatabase: Sendable {
                 sql: """
                     INSERT INTO buffers
                         (network_id, folded_name, name, kind, last_read_at, is_pinned, is_muted, sort_order,
-                         auto_rejoin)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         auto_rejoin, is_detached, is_hidden,
+                         left_auto_join_name, left_auto_join_has_key, left_auto_join_index)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT (network_id, folded_name) DO UPDATE SET
                         name = excluded.name,
                         kind = excluded.kind,
@@ -337,12 +339,19 @@ public final class VelaDatabase: Sendable {
                         is_pinned = excluded.is_pinned,
                         is_muted = excluded.is_muted,
                         sort_order = excluded.sort_order,
-                        auto_rejoin = excluded.auto_rejoin
+                        auto_rejoin = excluded.auto_rejoin,
+                        is_detached = excluded.is_detached,
+                        is_hidden = excluded.is_hidden,
+                        left_auto_join_name = excluded.left_auto_join_name,
+                        left_auto_join_has_key = excluded.left_auto_join_has_key,
+                        left_auto_join_index = excluded.left_auto_join_index
                     """,
                 arguments: [
                     buffer.networkID.uuidString, buffer.foldedName, buffer.name, buffer.kind,
                     buffer.lastReadAt?.timeIntervalSince1970, buffer.isPinned, buffer.isMuted, buffer.sortOrder,
-                    buffer.autoRejoin,
+                    buffer.autoRejoin, buffer.isDetached, buffer.isHidden,
+                    buffer.leftAutoJoin?.entry.name, buffer.leftAutoJoin?.entry.hasKey ?? false,
+                    buffer.leftAutoJoin?.index ?? 0,
                 ]
             )
         }
@@ -519,6 +528,13 @@ public final class VelaDatabase: Sendable {
     private static func buffer(from row: Row) -> BufferRecord? {
         guard let networkID = UUID(uuidString: row["network_id"]) else { return nil }
         let lastRead: Double? = row["last_read_at"]
+        let leftName: String? = row["left_auto_join_name"]
+        let leftAutoJoin = leftName.map { name in
+            LeftAutoJoin(
+                entry: AutoJoinChannel(name: name, hasKey: row["left_auto_join_has_key"]),
+                index: row["left_auto_join_index"]
+            )
+        }
         return BufferRecord(
             networkID: networkID,
             name: row["name"],
@@ -528,7 +544,10 @@ public final class VelaDatabase: Sendable {
             isPinned: row["is_pinned"],
             isMuted: row["is_muted"],
             sortOrder: row["sort_order"],
-            autoRejoin: row["auto_rejoin"]
+            autoRejoin: row["auto_rejoin"],
+            isDetached: row["is_detached"],
+            isHidden: row["is_hidden"],
+            leftAutoJoin: leftAutoJoin
         )
     }
 

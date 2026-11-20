@@ -273,6 +273,32 @@ import Testing
         #expect(try await db.messageCount() == 1)
     }
 
+    /// Detached, hidden and left channels keep that across a relaunch.
+    @Test func detachedHiddenAndLeftChannels() async throws {
+        let db = try VelaDatabase.inMemory()
+        let detached = BufferRecord(networkID: network, name: "#quiet", foldedName: "#quiet", kind: "channel", sortOrder: 0, isDetached: true)
+        let hidden = BufferRecord(networkID: network, name: "#busy", foldedName: "#busy", kind: "channel", sortOrder: 1, isDetached: true, isHidden: true)
+        let left = BufferRecord(
+            networkID: network, name: "#Secret", foldedName: "#secret", kind: "channel", sortOrder: 2, autoRejoin: false,
+            leftAutoJoin: LeftAutoJoin(entry: AutoJoinChannel(name: "#Secret", hasKey: true), index: 3)
+        )
+        for record in [detached, hidden, left] { try await db.upsertBuffer(record) }
+        #expect(try await db.buffers(networkID: network) == [detached, hidden, left])
+
+        // Joined again: all three cleared.
+        var rejoined = left
+        rejoined.leftAutoJoin = nil
+        rejoined.autoRejoin = true
+        try await db.upsertBuffer(rejoined)
+        var shown = hidden
+        shown.isHidden = false
+        try await db.upsertBuffer(shown)
+        let reloaded = try await db.buffers(networkID: network)
+        #expect(reloaded.first { $0.foldedName == "#secret" }?.leftAutoJoin == nil)
+        #expect(reloaded.first { $0.foldedName == "#busy" }?.isHidden == false)
+        #expect(reloaded.first { $0.foldedName == "#busy" }?.isDetached == true)
+    }
+
     @Test func bufferRecordDecodingToleratesMissingKeys() throws {
         let id = UUID()
         let json = ##"{"networkID": "\##(id.uuidString)", "foldedName": "#vela", "name": "#Vela", "kind": "channel"}"##
@@ -281,9 +307,14 @@ import Testing
         #expect(!record.isPinned)
         #expect(record.sortOrder == 0)
         #expect(record.lastReadAt == nil)
+        #expect(!record.isDetached)
+        #expect(!record.isHidden)
+        #expect(record.leftAutoJoin == nil)
 
         var parted = record
         parted.autoRejoin = false
+        parted.isDetached = true
+        parted.leftAutoJoin = LeftAutoJoin(entry: AutoJoinChannel(name: "#Vela"), index: 2)
         let roundTripped = try JSONDecoder().decode(BufferRecord.self, from: JSONEncoder().encode(parted))
         #expect(roundTripped == parted)
     }

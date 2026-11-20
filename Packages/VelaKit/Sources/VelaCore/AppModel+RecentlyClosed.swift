@@ -5,9 +5,9 @@
 import Foundation
 import VelaStore
 
-/// A channel you removed or a conversation you closed, with what it takes
-/// to put it back as it was. It holds no live objects, so it outlasts the
-/// buffer and its tab. See ``AppModel/recentlyClosed``.
+/// A channel you removed or hid, or a conversation you closed, with what it
+/// takes to put it back as it was. It holds no live objects, so it outlasts
+/// the buffer and its tab. See ``AppModel/recentlyClosed``.
 nonisolated public struct ClosedBuffer: Identifiable, Hashable, Sendable {
     /// The buffer it was. Reopening it gets the same id, so its drafts,
     /// sent-message history and per-channel settings are still there.
@@ -30,12 +30,18 @@ nonisolated public struct ClosedBuffer: Identifiable, Hashable, Sendable {
     public let wasJoined: Bool
     /// Whether it was the selected channel or conversation.
     public let wasSelected: Bool
-    /// A channel: its entry in the network's auto-join list, and where it was.
+    /// A channel: its entry in the network's auto-join list, and where it
+    /// was. For a channel you'd left, the entry it had before.
     public let autoJoin: AutoJoinChannel?
     public let autoJoinIndex: Int?
     /// A channel: its key, taken out of the Keychain while it's removed and
     /// written back when it's reopened. Kept in memory only.
     let key: String?
+    /// A channel detached on a bouncer.
+    public var wasDetached = false
+    /// A channel hidden rather than removed (Hide Channel): it's still on
+    /// the bouncer, detached, and reopening it shows it again.
+    public var wasHidden = false
 }
 
 /// The undo manager's target for one buffer's undo and redo.
@@ -53,10 +59,11 @@ extension AppModel {
     public static let recentlyClosedLimit = 20
 
     /// Takes a channel or conversation out of the list: Remove Channel, or
-    /// Close Conversation. A joined channel is left first, and a channel
-    /// comes off its network's auto-join list (its key comes out of the
-    /// Keychain). If it was selected, its neighbor to the right (or left, at
-    /// the end) is selected, like a browser tab.
+    /// Close Conversation. A joined channel is left first (on a bouncer,
+    /// one Vela isn't in is parted too, so the bouncer forgets it), and a
+    /// channel comes off its network's auto-join list (its key comes out of
+    /// the Keychain). If it was selected, its neighbor to the right (or
+    /// left, at the end) is selected, like a browser tab.
     ///
     /// It's remembered in ``recentlyClosed`` for ⇧⌘T and File → Recently
     /// Closed, and ⌘Z puts it back, unless `reopenable` is false (a
@@ -70,7 +77,7 @@ extension AppModel {
         if reopenable {
             // Its key goes before its entry, which says it has one.
             let account = Keychain.channelKeyAccount(networkID: session.id, channel: buffer.id.foldedName)
-            let removed = buffer.kind == .channel ? session.removeAutoJoin(buffer.id.foldedName) : nil
+            let removed = buffer.kind == .channel ? session.takeAutoJoin(buffer.id.foldedName) : nil
             var key: String?
             if removed?.entry.hasKey == true {
                 key = keychain.secret(account: account)
@@ -79,18 +86,15 @@ extension AppModel {
             closed = closedBuffer(buffer, in: session, autoJoin: removed, key: key)
             remember(closed!)
         }
-        if selectedBufferID == buffer.id {
-            let tabs = session.allBuffers
-            let index = tabs.firstIndex { $0.id == buffer.id } ?? 0
-            let neighbor = tabs.indices.contains(index + 1) ? tabs[index + 1] : tabs[max(0, index - 1)]
-            select(neighbor.id == buffer.id ? session.serverBuffer : neighbor)
-        }
+        selectNeighbor(of: buffer, in: session)
         session.close(buffer)
         if let closed { registerUndoClose(closed) }
     }
 
-    /// Leaves a channel but keeps it in the list, dimmed (Leave Channel,
-    /// `/part`). ⌘Z joins it again.
+    /// Leaves a channel but keeps it in the list, dimmed: Leave Channel on a
+    /// network without a bouncer, and `/part` everywhere. It comes off the
+    /// network's auto-join list, so it stays left when you reconnect, and
+    /// joining it again puts the entry back. ⌘Z joins it again.
     public func leave(_ channel: BufferModel, reason: String? = nil) {
         guard channel.kind == .channel,
               let session = session(for: channel.id.networkID),
@@ -98,6 +102,68 @@ extension AppModel {
         else { return }
         session.leave(channel, reason: reason)
         registerUndo("Leave Channel", for: channel.id) { app, id in app.undoLeave(id) }
+    }
+
+    /// Leave Channel through a bouncer: Vela leaves the channel, the bouncer
+    /// stays in it and keeps its history, and the channel stays in the list,
+    /// dimmed (see `NetworkSession.detach(_:)`). ⌘Z joins it again, which
+    /// reattaches it.
+    public func detach(_ channel: BufferModel) {
+        guard channel.kind == .channel,
+              let session = session(for: channel.id.networkID),
+              session.isBouncer,
+              session.buffer(id: channel.id) === channel
+        else { return }
+        session.detach(channel)
+        registerUndo("Leave Channel", for: channel.id) { app, id in app.undoLeave(id, detaching: true) }
+    }
+
+    /// Hide Channel: takes a detached bouncer channel out of the list
+    /// (tabs, sidebar and rail) without parting it. It goes in Recently
+    /// Closed, so ⇧⌘T and ⌘Z show it again, and the network's settings and
+    /// the command palette can show it too.
+    public func hide(_ channel: BufferModel) {
+        guard let session = session(for: channel.id.networkID),
+              session.canHide(channel)
+        else { return }
+        var closed = closedBuffer(channel, in: session, autoJoin: nil, key: nil)
+        closed.wasHidden = true
+        remember(closed)
+        selectNeighbor(of: channel, in: session)
+        session.hide(channel)
+        registerUndoClose(closed)
+    }
+
+    /// Join Channel on a channel you left or detached: joins it with its key,
+    /// puts a left channel back on the auto-join list, and has the bouncer
+    /// reattach a detached one and play back what you missed.
+    public func rejoin(_ channel: BufferModel) {
+        guard channel.kind == .channel,
+              let session = session(for: channel.id.networkID),
+              session.buffer(id: channel.id) === channel
+        else { return }
+        session.rejoin(channel)
+    }
+
+    /// Puts a hidden channel back in the list, still detached, and selects it
+    /// if `selecting`. Returns it.
+    @discardableResult
+    public func show(_ hidden: HiddenChannel, selecting: Bool = true) -> BufferModel? {
+        guard let session = session(for: hidden.id.networkID) else { return nil }
+        if let closed = recentlyClosed.first(where: { $0.id == hidden.id }) {
+            // Hidden this run: back as it was, unread counts and all.
+            dropUndo(for: closed.id)
+            return restore(closed, selecting: selecting)
+        }
+        let channel = session.showHiddenChannel(hidden.id)
+        if selecting, let channel { select(channel) }
+        return channel
+    }
+
+    /// Every network's hidden channels, with the network, for the command
+    /// palette.
+    public var hiddenChannels: [(channel: HiddenChannel, session: NetworkSession)] {
+        sessions.flatMap { session in session.hiddenChannels.map { (channel: $0, session: session) } }
     }
 
     /// Reopens the channel or conversation closed last (⇧⌘T). Again goes
@@ -147,7 +213,7 @@ extension AppModel {
     private func closedBuffer(
         _ buffer: BufferModel,
         in session: NetworkSession,
-        autoJoin: (index: Int, entry: AutoJoinChannel)?,
+        autoJoin: LeftAutoJoin?,
         key: String?
     ) -> ClosedBuffer {
         let siblings = session.bufferSiblings(of: buffer)
@@ -166,8 +232,19 @@ extension AppModel {
             wasSelected: selectedBufferID == buffer.id,
             autoJoin: autoJoin?.entry,
             autoJoinIndex: autoJoin?.index,
-            key: key
+            key: key,
+            wasDetached: buffer.isDetached
         )
+    }
+
+    /// If `buffer` is selected, selects its neighbor to the right (or left,
+    /// at the end), like closing a browser tab.
+    private func selectNeighbor(of buffer: BufferModel, in session: NetworkSession) {
+        guard selectedBufferID == buffer.id else { return }
+        let tabs = session.allBuffers
+        let index = tabs.firstIndex { $0.id == buffer.id } ?? 0
+        let neighbor = tabs.indices.contains(index + 1) ? tabs[index + 1] : tabs[max(0, index - 1)]
+        select(neighbor.id == buffer.id ? session.serverBuffer : neighbor)
     }
 
     /// Puts `closed` first, once, and keeps the newest ``recentlyClosedLimit``.
@@ -181,7 +258,8 @@ extension AppModel {
 
     /// Reopens `closed` (or finds it already open again) and takes it off
     /// the list: its key and auto-join entry go back first, so it's joined
-    /// with the key.
+    /// with the key. A channel you'd left gets its entry back only when
+    /// it's joined again; a hidden one is shown, still detached.
     @discardableResult
     private func restore(_ closed: ClosedBuffer, selecting: Bool) -> BufferModel? {
         recentlyClosed.removeAll { $0.id == closed.id }
@@ -191,7 +269,11 @@ extension AppModel {
                 try? keychain.setSecret(key, account: Keychain.channelKeyAccount(networkID: session.id, channel: closed.id.foldedName))
             }
             if let entry = closed.autoJoin, let index = closed.autoJoinIndex {
-                session.restoreAutoJoin(entry, at: index)
+                if closed.autoRejoin {
+                    session.restoreAutoJoin(entry, at: index)
+                } else {
+                    session.rememberLeftAutoJoin(LeftAutoJoin(entry: entry, index: index), for: closed.id.foldedName)
+                }
             }
         }
         let buffer = session.reopen(closed)
@@ -201,8 +283,9 @@ extension AppModel {
 
     // MARK: Undo
 
-    private static func undoName(_ kind: BufferKind) -> String {
-        kind == .channel ? "Remove Channel" : "Close Conversation"
+    private static func undoName(_ closed: ClosedBuffer) -> String {
+        if closed.kind != .channel { return "Close Conversation" }
+        return closed.wasHidden ? "Hide Channel" : "Remove Channel"
     }
 
     private func undoTarget(for id: BufferID) -> CloseUndoTarget {
@@ -223,30 +306,32 @@ extension AppModel {
         undoManager.setActionName(name)
     }
 
-    /// Edit → Undo Remove Channel (or Close Conversation). The action
-    /// carries its own copy of `closed`, so it works even after the list
-    /// has let go of it.
+    /// Edit → Undo Remove Channel (Hide Channel, Close Conversation). The
+    /// action carries its own copy of `closed`, so it works even after the
+    /// list has let go of it.
     private func registerUndoClose(_ closed: ClosedBuffer) {
-        registerUndo(Self.undoName(closed.kind), for: closed.id) { app, _ in app.undoClose(closed) }
+        registerUndo(Self.undoName(closed), for: closed.id) { app, _ in app.undoClose(closed) }
     }
 
     /// Puts a closed buffer back exactly as it was: selected only if it was.
-    /// Redo closes it again.
+    /// Redo closes (or hides) it again.
     private func undoClose(_ closed: ClosedBuffer) {
         guard restore(closed, selecting: closed.wasSelected) != nil else { return }
-        registerUndo(Self.undoName(closed.kind), for: closed.id) { app, id in
+        registerUndo(Self.undoName(closed), for: closed.id) { app, id in
             guard let buffer = app.session(for: id.networkID)?.buffer(id: id) else { return }
-            app.close(buffer)
+            if closed.wasHidden { app.hide(buffer) } else { app.close(buffer) }
         }
     }
 
-    /// Joins a channel you left again. Redo leaves it again.
-    private func undoLeave(_ id: BufferID) {
+    /// Joins a channel you left or detached again (with its key, back on
+    /// the auto-join list, reattached on the bouncer). Redo leaves it again
+    /// the same way.
+    private func undoLeave(_ id: BufferID, detaching: Bool = false) {
         guard let session = session(for: id.networkID), let channel = session.buffer(id: id) else { return }
         session.rejoin(channel)
         registerUndo("Leave Channel", for: id) { app, id in
             guard let channel = app.session(for: id.networkID)?.buffer(id: id) else { return }
-            app.leave(channel)
+            if detaching { app.detach(channel) } else { app.leave(channel) }
         }
     }
 

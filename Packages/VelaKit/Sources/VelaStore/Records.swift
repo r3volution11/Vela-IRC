@@ -107,6 +107,17 @@ public struct BufferRecord: Codable, Sendable, Hashable {
     /// Whether the channel should be rejoined on the next connect. The
     /// session clears it when the user `/part`s.
     public var autoRejoin: Bool
+    /// A channel detached on a bouncer (ZNC or soju): the bouncer stays in
+    /// it and keeps its history, but doesn't send it to Vela until it's
+    /// joined again. The bouncer doesn't join Vela into it after a
+    /// reconnect, so this is the only record of it.
+    public var isDetached: Bool
+    /// A detached channel taken out of Vela's list (Hide Channel). It stays
+    /// on the bouncer, and the row keeps its state for when it's shown.
+    public var isHidden: Bool
+    /// A channel left on a network without a bouncer: the auto-join entry
+    /// it had and where, so joining it again puts the entry back.
+    public var leftAutoJoin: LeftAutoJoin?
 
     public init(
         networkID: UUID,
@@ -117,7 +128,10 @@ public struct BufferRecord: Codable, Sendable, Hashable {
         isPinned: Bool = false,
         isMuted: Bool = false,
         sortOrder: Int = 0,
-        autoRejoin: Bool = true
+        autoRejoin: Bool = true,
+        isDetached: Bool = false,
+        isHidden: Bool = false,
+        leftAutoJoin: LeftAutoJoin? = nil
     ) {
         self.networkID = networkID
         self.name = name
@@ -128,6 +142,9 @@ public struct BufferRecord: Codable, Sendable, Hashable {
         self.isMuted = isMuted
         self.sortOrder = sortOrder
         self.autoRejoin = autoRejoin
+        self.isDetached = isDetached
+        self.isHidden = isHidden
+        self.leftAutoJoin = leftAutoJoin
     }
 
     public var key: BufferKey {
@@ -136,6 +153,7 @@ public struct BufferRecord: Codable, Sendable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case networkID, name, foldedName, kind, lastReadAt, isPinned, isMuted, sortOrder, autoRejoin
+        case isDetached, isHidden, leftAutoJoin
     }
 
     /// Only `networkID` and `foldedName` are required; everything else has
@@ -152,7 +170,23 @@ public struct BufferRecord: Codable, Sendable, Hashable {
             isPinned: try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false,
             isMuted: try container.decodeIfPresent(Bool.self, forKey: .isMuted) ?? false,
             sortOrder: try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0,
-            autoRejoin: try container.decodeIfPresent(Bool.self, forKey: .autoRejoin) ?? true
+            autoRejoin: try container.decodeIfPresent(Bool.self, forKey: .autoRejoin) ?? true,
+            isDetached: try container.decodeIfPresent(Bool.self, forKey: .isDetached) ?? false,
+            isHidden: try container.decodeIfPresent(Bool.self, forKey: .isHidden) ?? false,
+            leftAutoJoin: try container.decodeIfPresent(LeftAutoJoin.self, forKey: .leftAutoJoin)
         )
+    }
+}
+
+/// The auto-join entry of a channel you left, and its place in the
+/// network's auto-join list (see ``BufferRecord/leftAutoJoin``). Its key,
+/// if it has one, stays in the Keychain.
+public struct LeftAutoJoin: Codable, Sendable, Hashable {
+    public var entry: AutoJoinChannel
+    public var index: Int
+
+    public init(entry: AutoJoinChannel, index: Int) {
+        self.entry = entry
+        self.index = index
     }
 }

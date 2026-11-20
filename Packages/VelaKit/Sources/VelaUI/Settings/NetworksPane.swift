@@ -47,17 +47,22 @@ struct NetworksPane: View {
 
             SettingsSection(
                 "Channels",
-                footer: "A tab's × leaves a channel you're in, and removes one you've left. /part and /close never ask."
+                footer: "A tab's × leaves and removes a channel. Through a bouncer, it leaves the channel only in Vela: the bouncer stays in it, detached, and a second × hides it. /part and /close never ask."
             ) {
                 SettingsToggle(
                     "Ask before leaving a channel",
-                    detail: "A channel you leave stays in the list, dimmed, so you can join it again.",
+                    detail: "A channel you leave stays in the list, dimmed, so you can join it again. Through a bouncer, the bouncer stays in it and keeps its history.",
                     isOn: $settings[.channelsConfirmLeave]
                 )
                 SettingsToggle(
                     "Ask before removing a channel",
-                    detail: "Removing takes it out of the list and off the network's auto-join list. File → Recently Closed brings it back.",
+                    detail: "Removing takes it out of the list and off the network's auto-join list, and your bouncer forgets it. File → Recently Closed brings it back.",
                     isOn: $settings[.channelsConfirmRemove]
+                )
+                SettingsToggle(
+                    "Closing a channel removes it from the bouncer",
+                    detail: "Through ZNC or soju, a tab's × and middle-click remove the channel, so the bouncer leaves it too, instead of keeping it there, detached.",
+                    isOn: $settings[.channelsBouncerCloseRemoves]
                 )
             }
 

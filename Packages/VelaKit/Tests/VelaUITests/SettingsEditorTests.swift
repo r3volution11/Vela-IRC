@@ -76,7 +76,7 @@ struct SettingsEditorSearchTests {
         #expect(messages.contains("logging.enabled"))
         #expect(!messages.contains("media.autoLoad"))
         #expect(keys("@pane:networks") == [
-            "connection.autoReconnect", "channels.confirmLeave", "channels.confirmRemove",
+            "connection.autoReconnect", "channels.confirmLeave", "channels.confirmRemove", "channels.bouncerCloseRemoves",
             "moderation.banMask", "moderation.kickReason",
         ])
         #expect(keys("@pane:presets").isEmpty)
