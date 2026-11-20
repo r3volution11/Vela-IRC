@@ -121,7 +121,7 @@ Vela is sandboxed, so everything lives in its container:
 | `settings.json` | Your [settings](/customize/settings-json) |
 | `networks.json` | Your networks (never passwords) |
 | `Themes/` | Your own themes |
-| `vela.sqlite` | Message history, read positions and cached link previews |
+| `vela.sqlite` | Your channels and read positions, plus message history and cached link previews if [Save message history](/guide/messages-and-layouts#scrollback-and-history) is on |
 | `Logs/` | [Chat logs](/guide/chat-logs), if you turned them on and didn't choose another folder |
 
 **Settings → Advanced → ⋯ → Reveal Data Folder** opens it in Finder. Passwords, channel keys and certificates are in your login keychain, under `io.github.r3volution11.Vela`.
@@ -158,7 +158,7 @@ Not yet. Download the latest version from the [Install](/guide/install#updating)
 
 ### Can I upload images, search my history or sync between Macs?
 
-Not yet. Image uploads, a search window, iCloud sync, DCC and scripting are on the [roadmap](https://github.com/r3volution11/Vela-IRC/blob/main/ROADMAP.md). Your history is already stored with a full-text index, ready for search.
+Not yet. Image uploads, a search window, iCloud sync, DCC and scripting are on the [roadmap](https://github.com/r3volution11/Vela-IRC/blob/main/ROADMAP.md). While **Save message history** is on, your history is stored with a full-text index, ready for search.
 
 ### How do I register my nickname?
 

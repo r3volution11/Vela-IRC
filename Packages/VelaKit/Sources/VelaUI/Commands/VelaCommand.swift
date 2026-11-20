@@ -41,6 +41,7 @@ struct VelaCommand: Identifiable {
         case channel = "Channel"
         case chat = "Chat"
         case go = "Go"
+        case help = "Help"
         case layout = "Layout"
         case media = "Media"
         case navigation = "Navigation"

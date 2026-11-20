@@ -165,7 +165,10 @@ struct MessagesPane: View {
 
             typingSection
 
-            SettingsSection("Memory", footer: "Older messages stay on disk and load as you scroll up.") {
+            SettingsSection("Memory", footer: settings[.historySave]
+                ? "Older messages stay on disk and load as you scroll up."
+                : "Older messages load from the server as you scroll up, if it keeps history."
+            ) {
                 SettingsMenuRow(
                     title: "Messages kept in memory",
                     detail: "Per channel or conversation.",
@@ -178,17 +181,7 @@ struct MessagesPane: View {
                 )
             }
 
-            SettingsSection("History", footer: "Older messages are removed from this Mac when Vela starts.") {
-                SettingsMenuRow(
-                    title: "Keep messages",
-                    selection: $settings[.historyRetentionDays],
-                    options: Self.options(
-                        [0, 7, 30, 90, 180, 365, 730],
-                        current: settings[.historyRetentionDays],
-                        label: AdvancedPane.retentionLabel
-                    )
-                )
-            }
+            HistorySection()
 
             ChatLogsSection()
         }

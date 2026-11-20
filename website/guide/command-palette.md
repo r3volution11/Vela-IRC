@@ -32,7 +32,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Tabs** | Move to Top, Move to Title Bar, Move to Bottom, Always Show Server Row |
 | **Layout** | Classic, Modern Grouped, Compact Columns |
 | **Preset** | Classic IRC, Modern Chat, Tabbed, Focus |
-| **Chat** | Toggle Timestamps, Timestamps on the Left / on the Right / at the Top / at the Bottom (for the layout you're using), Toggle Monospace Font, Toggle Nick Colors, Toggle Nick Colors in Messages, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages, Open Channels at Newest Messages, Show New Line, Save Chat Logs, Show Chat Logs |
+| **Chat** | Toggle Timestamps, Timestamps on the Left / on the Right / at the Top / at the Bottom (for the layout you're using), Toggle Monospace Font, Toggle Nick Colors, Toggle Nick Colors in Messages, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages, Open Channels at Newest Messages, Show New Line, Save Message History, Delete Saved History…, Save Chat Logs, Show Chat Logs |
 | **Media** | Load Previews Automatically, Toggle Link Previews, Minimal / Standard / Large Link Previews, Play Videos Inline, Compact Videos, Videos as Links, Full-Size Images, Image Thumbnails, Hide Adult Site Previews, Blur Images Until Clicked |
 | **Text** | Bigger, Smaller, Actual Size |
 | **Typing** | Check Spelling While Typing, Check Grammar, Correct Spelling Automatically, Use Text Replacements, Use Smart Quotes and Dashes, Use Writing Tools, Message Box Border: None / Subtle / Accent When Typing |
@@ -43,6 +43,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Translate Messages Automatically, Catch Me Up, Don't Log This Channel (while chat logs are on), Close (a conversation), Reopen Closed Channel, and Reopen _#channel_ (_network_) for each one in File → Recently Closed |
 | **Channel** | Join…, Leave _#channel_ or Join _#channel_, Hide _#channel_ (a channel detached on a bouncer), Remove _#channel_, and Show _#channel_ (_network_) for each [hidden channel](/guide/joining-channels#hidden-channels) |
 | **Network** | Add Network…, Sort Channels A–Z (for the network you're in), and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |
+| **Help** | What's New in Vela |
 
 Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, "nsfw" finds Hide Adult Site Previews, "alphabetical" finds Sort Channels A–Z, "summary" finds Catch Me Up, and "autocorrect" finds Correct Spelling Automatically.
 

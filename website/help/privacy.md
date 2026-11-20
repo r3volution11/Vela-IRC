@@ -44,13 +44,17 @@ This is how IRC works in any client, but it's worth knowing:
 
 Everything stays on your Mac, inside Vela's sandbox container:
 
-- **Message history** in a local database, kept forever unless you set **Settings → Messages → History → Keep messages**.
-- **Chat logs**, only if you turn them on (they're off by default): plain-text copies of your channels and conversations, unencrypted, in Vela's folder or one you choose. Vela never sends them anywhere, but a folder you choose may sync if it's in iCloud Drive or a similar service. See [Chat logs](/guide/chat-logs#privacy).
-- **Link previews** you've loaded. Page previews are refreshed after a week, and cached previews older than 30 days are deleted when Vela starts.
+- **Message history, only if you turn it on.** **Save message history** in **Settings → Messages → History** is off by default: messages, reactions and link previews are kept in memory while Vela is open, and gone when it quits. A bouncer or server that keeps history fills them in again when you connect. Turned on, they're saved in a local database, kept forever unless you set **Keep messages**. See [Scrollback and history](/guide/messages-and-layouts#scrollback-and-history).
+  - If you used Vela before this setting existed, your history is still being saved, as before. Turn it off whenever you like.
+  - Turning it off asks whether to delete what's already saved. **Delete Saved History…**, under the setting, deletes it any time.
+- **Your channels and where you stopped reading,** saved either way: each channel and conversation you have open, its read position, whether it's muted, its place in the sidebar and whether to rejoin it. That's how unread counts, the **New** line and Catch me up work after a restart. No messages are part of it.
+- **Chat logs**, only if you turn them on (they're off by default). They're separate from message history: plain-text copies of your channels and conversations, unencrypted, in Vela's folder or one you choose, that Vela never loads back. Vela never sends them anywhere, but a folder you choose may sync if it's in iCloud Drive or a similar service. See [Chat logs](/guide/chat-logs#privacy).
+- **Link previews and images** you've loaded, while message history is saved: page previews in the database, refreshed after a week (cached previews older than 30 days are deleted when Vela starts), and images in Vela's cache folder. With history off, they're kept in memory and loaded again after a restart.
+- **Drafts** you haven't sent, in memory while Vela is open.
 - **Settings, networks and themes** as plain files you can read.
 - **Passwords, channel keys and client certificates** in your macOS Keychain, never in plain files.
 
-Outside the container, macOS keeps your channel and conversation names in Spotlight's index (as search results unless you turn off **Show channels in Spotlight**, and on macOS 27 also hidden from results, for Siri), and the translation languages you've downloaded.
+Outside the container, macOS keeps your channel and conversation names in Spotlight's index (as search results unless you turn off **Show channels in Spotlight**, and on macOS 27 also hidden from results, for Siri), the translation languages you've downloaded, and the notifications you allow until you clear them from Notification Center.
 
 Vela is sandboxed: it can only reach its own container and files you choose, such as a theme you import or a folder for chat logs. See [where files live](/help/troubleshooting#where-files-live) and [how to remove everything](/guide/install#uninstalling).
 

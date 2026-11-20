@@ -80,6 +80,13 @@ struct VelaCommands: Commands {
                 NetworkMenuItems(commands: commands)
             }
         }
+
+        // Help → What's New in Vela.
+        CommandGroup(after: .help) {
+            CommandItems(app: app, themeStore: themeStore, uiState: uiState) { commands in
+                CommandMenuButton(commands.whatsNew)
+            }
+        }
     }
 }
 

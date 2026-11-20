@@ -41,6 +41,29 @@ public actor ImageLoader {
     /// Larger ones show a "too large to show inline" chip.
     public static let maxAnimatedPixelArea = 16_000_000
 
+    /// How much the HTTP cache keeps on disk while it's on.
+    public static let diskCacheCapacity = 256 * 1024 * 1024
+
+    /// The HTTP cache image downloads share, in the app's Caches folder.
+    /// It holds the images themselves and their addresses, so it follows
+    /// `history.save` (see ``setDiskCacheEnabled(_:)``). Nothing is kept in
+    /// memory: ``ImageLoader`` keeps its own decoded copies.
+    public static let httpCache = URLCache(memoryCapacity: 0, diskCapacity: diskCacheCapacity, directory: nil)
+
+    /// Turns the on-disk image cache on or off. Off, nothing new is written
+    /// and what's there is trimmed away; images load again after a relaunch.
+    public static func setDiskCacheEnabled(_ enabled: Bool) {
+        let capacity = enabled ? diskCacheCapacity : 0
+        guard httpCache.diskCapacity != capacity else { return }
+        httpCache.diskCapacity = capacity
+        if !enabled { httpCache.removeAllCachedResponses() }
+    }
+
+    /// Empties the on-disk image cache ("Delete Saved History").
+    public static func removeDiskCache() {
+        httpCache.removeAllCachedResponses()
+    }
+
     public static func makeDefaultSession() -> URLSession {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 15
@@ -48,8 +71,9 @@ public actor ImageLoader {
         configuration.httpCookieAcceptPolicy = .never
         configuration.httpShouldSetCookies = false
         configuration.httpCookieStorage = nil
-        // Let HTTP caching avoid re-downloading images across launches.
-        configuration.urlCache = URLCache(memoryCapacity: 0, diskCapacity: 256 * 1024 * 1024, directory: nil)
+        // Let HTTP caching avoid re-downloading images across launches,
+        // while history is saved.
+        configuration.urlCache = httpCache
         configuration.httpMaximumConnectionsPerHost = 6
         configuration.waitsForConnectivity = false
         MediaSessionHooks.apply(to: configuration)

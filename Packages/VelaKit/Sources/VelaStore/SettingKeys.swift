@@ -598,10 +598,17 @@ extension SettingKey where Value == [String] {
     }
 }
 
+extension SettingKey where Value == Bool {
+    public static var historySave: SettingKey<Bool> {
+        .init("history.save", default: false,
+              summary: "Save messages, reactions and link previews on this Mac, so they're still there after Vela restarts. Off, they're kept in memory only while Vela is open; your channels, read positions and channel settings are still saved. Macs with history from before this setting existed keep saving it.")
+    }
+}
+
 extension SettingKey where Value == Int {
     public static var historyRetentionDays: SettingKey<Int> {
         .init("history.retentionDays", default: 0,
-              summary: "Delete stored messages older than this many days. 0 keeps history forever.")
+              summary: "Delete saved messages older than this many days when Vela starts. 0 keeps saved history forever.")
     }
 }
 
@@ -785,6 +792,7 @@ public enum SettingsCatalog {
             SettingKey.channelsBouncerCloseRemoves.descriptor,
             SettingKey.moderationBanMask.descriptor,
             SettingKey.moderationKickReason.descriptor,
+            SettingKey.historySave.descriptor,
             SettingKey.historyRetentionDays.descriptor,
             SettingKey.loggingEnabled.descriptor,
             SettingKey.loggingMaxFileSizeMB.descriptor,

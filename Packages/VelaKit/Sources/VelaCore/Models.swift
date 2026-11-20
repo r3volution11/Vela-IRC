@@ -237,6 +237,10 @@ public final class BufferModel: Identifiable, Hashable {
     internal var reactionMap: [String: [(emoji: String, nicks: [String])]] = [:]
     @ObservationIgnored internal var typingExpiry: [String: Date] = [:]
     @ObservationIgnored internal var selfNick: () -> String = { "" }
+    /// The newest line received here since launch (live or replayed, not
+    /// loaded from disk), where missed messages are fetched from while
+    /// history isn't saved.
+    @ObservationIgnored internal var newestReceivedAt: Date?
 
     public init(id: BufferID, name: String, kind: BufferKind) {
         self.id = id

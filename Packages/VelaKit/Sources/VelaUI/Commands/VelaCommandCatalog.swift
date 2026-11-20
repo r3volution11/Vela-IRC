@@ -417,6 +417,16 @@ struct VelaCommandCatalog {
         ) { [context] in ThemeFileActions.openSettingsFile(context.app.settings) }
     }
 
+    // MARK: Help
+
+    /// Opens "What's New in Vela" (Help menu and palette).
+    var whatsNew: VelaCommand {
+        VelaCommand(
+            id: "help.whatsNew", category: .help, title: "What's New in Vela",
+            keywords: ["changelog", "release notes", "update", "version", "news", "changes"]
+        ) { [context] in context.openWindow(id: WindowID.whatsNew) }
+    }
+
     // MARK: Go
 
     var previousBuffer: VelaCommand {
@@ -732,6 +742,7 @@ struct VelaCommandCatalog {
         commands += typingCommands + messageBoxBorderCommands
         commands += catchUpCommands
         commands += translationCommands
+        commands += historyCommands
         commands += chatLogCommands
         commands += accentCommands
         commands += appIconCommands
@@ -740,6 +751,7 @@ struct VelaCommandCatalog {
         for session in app.sessions {
             commands += networkCommands(for: session)
         }
+        commands.append(whatsNew)
         commands.append(commandPalette)
         return commands
     }

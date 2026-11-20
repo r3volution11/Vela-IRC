@@ -33,7 +33,9 @@ Vela doesn't update itself yet (automatic updates are on the [roadmap](https://g
 1. Quit Vela (<kbd>⌘Q</kbd>).
 2. Download the latest **Vela.dmg** and drag Vela into Applications again. Choose **Replace** when asked.
 
-Your networks, settings, themes and history are kept. They live outside the app, so replacing it doesn't touch them. The [changelog](/changelog) lists what changed in each release.
+Your networks, settings, themes and saved history are kept. They live outside the app, so replacing it doesn't touch them.
+
+The first time the new version opens, **What's New in Vela** shows what changed in it, with anything you need to know first, such as a setting that works differently now. Press <kbd>Return</kbd> or <kbd>Esc</kbd> to close it, and choose **Help → What's New in Vela** (or **Help: What's New in Vela** in the [command palette](/guide/command-palette)) to see it again. The [changelog](/changelog) lists what changed in every release.
 
 ## Uninstalling
 

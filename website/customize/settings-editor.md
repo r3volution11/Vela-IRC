@@ -90,7 +90,7 @@ A key Vela doesn't know, perhaps a typo or a setting from a newer version, is li
 
 ### Reset all settings {#reset-all}
 
-**⋯ → Reset All Settings…** asks "Reset all settings to their defaults?" and says how many settings it will remove. **Reset All Settings** removes them from settings.json; **Cancel** keeps everything. Unknown keys are kept, and your networks, themes and message history aren't affected.
+**⋯ → Reset All Settings…** asks "Reset all settings to their defaults?" and says how many settings it will remove. **Reset All Settings** removes them from settings.json; **Cancel** keeps everything. Unknown keys are kept, and your networks, themes and saved message history aren't affected. **Save message history** goes back to its default, off, so new messages aren't saved until you turn it on again; the confirmation says so when it's on.
 
 ## The JSON view {#json-view}
 

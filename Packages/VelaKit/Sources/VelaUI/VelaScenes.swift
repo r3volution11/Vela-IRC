@@ -79,12 +79,24 @@ public struct VelaScenes: Scene {
         .defaultSize(width: 760, height: 680)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
+
+        // Opened after an update (WhatsNewLaunch) and from the Help menu.
+        Window("What's New in Vela", id: WindowID.whatsNew) {
+            WhatsNewView()
+                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 560, height: 640)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
     }
 }
 
 public enum WindowID {
     public static let main = "main"
     public static let themeEditor = "theme-editor"
+    public static let whatsNew = "whats-new"
 }
 
 extension View {
@@ -219,6 +231,7 @@ private struct VelaEnvironmentModifier: ViewModifier {
                 themeStore.start()
                 app.start()
                 ShowRequestRouter.shared?.installIfNeeded(openWindow)
+                await WhatsNewLaunch.openIfNeeded(app: app, openWindow: openWindow)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
                 guard isPrimary else { return }

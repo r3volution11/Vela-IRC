@@ -191,6 +191,7 @@ public enum SettingsMetadata {
         "translation.language": "Translate Into",
         "input.spellCheck": "Check Spelling",
         "input.grammarCheck": "Check Grammar",
+        "history.save": "Save Message History",
         "history.retentionDays": "Keep Messages (Days)",
         "dock.showOffline": "Show Offline Mark",
         "logging.enabled": "Save Chat Logs",

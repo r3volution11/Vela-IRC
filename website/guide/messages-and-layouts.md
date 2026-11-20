@@ -121,8 +121,17 @@ In settings.json these are [`chat.openAt`](/reference/settings#chat.openAt) (`"f
 
 ## Scrollback and history
 
-Vela stores your messages on your Mac in a local database. Each channel keeps the most recent **1,000** messages in memory (**Messages kept in memory**); scroll up and older messages load from disk, then from the server if it supports [`chathistory`](/reference/ircv3).
+Each channel keeps the most recent **1,000** messages in memory (**Messages kept in memory**). Scroll up and older messages load from disk, if you save history, then from the server if it supports [`chathistory`](/reference/ircv3).
 
-To limit how much history is kept, set **Settings → Messages → History → Keep messages** (from a week to two years). Older messages are removed when Vela starts. By default history is kept forever. In settings.json it's [`history.retentionDays`](/reference/settings#history.retentionDays), which takes any number of days.
+**Save message history**, in **Settings → Messages → History**, decides whether messages are kept on your Mac:
 
-For a copy you can keep, search or open in other apps, turn on [chat logs](/guide/chat-logs): plain-text files, one folder per network.
+- **Off** (the default for new installs): messages, reactions and link previews live in memory while Vela is open. When you connect again, a [bouncer](/guide/bouncers) or a server with `chathistory` sends the latest messages, and older ones as you scroll up. Without one, a channel starts empty after a restart.
+- **On:** they're saved in a local database on your Mac, as Vela always did before this setting existed. If you used Vela then, it's on for you, so nothing changed.
+
+Either way, Vela saves your channels and conversations, where you stopped reading, and whether each is muted, so unread counts, the **New** line and [Catch me up](/guide/apple-intelligence#catch-me-up) still work with what a bouncer replays. In settings.json it's [`history.save`](/reference/settings#history.save); in the [command palette](/guide/command-palette), **Chat: Save Message History**.
+
+**Turning it off** asks what to do with the history already saved: **Delete Saved History** removes it from your Mac, and **Keep What's Saved** leaves it, so it still shows in your channels while nothing new is added. **Delete Saved History…**, under the setting, removes saved messages, reactions and link previews whenever you like. Your channels, read positions, settings and chat logs stay, and the messages on screen stay until you quit.
+
+To limit how much saved history is kept, set **Keep messages** (from a week to two years). Older messages are removed when Vela starts. By default saved history is kept forever. In settings.json it's [`history.retentionDays`](/reference/settings#history.retentionDays), which takes any number of days. It applies while history is saved, and to history you kept when you turned saving off.
+
+For a copy you can keep, search or open in other apps, turn on [chat logs](/guide/chat-logs): plain-text files, one folder per network. They're separate from message history: a log is a copy for you, which Vela never loads back, and it's written whether or not history is saved.

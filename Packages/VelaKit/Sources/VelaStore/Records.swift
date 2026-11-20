@@ -190,3 +190,39 @@ public struct LeftAutoJoin: Codable, Sendable, Hashable {
         self.index = index
     }
 }
+
+/// Which kinds of history are saved on disk (see
+/// ``VelaDatabase/savedHistory()``). Buffer state isn't history: it's
+/// saved either way.
+public struct SavedHistory: Sendable, Hashable {
+    public var hasMessages: Bool
+    public var hasReactions: Bool
+    public var hasLinkPreviews: Bool
+
+    public init(hasMessages: Bool = false, hasReactions: Bool = false, hasLinkPreviews: Bool = false) {
+        self.hasMessages = hasMessages
+        self.hasReactions = hasReactions
+        self.hasLinkPreviews = hasLinkPreviews
+    }
+
+    /// Nothing saved: "Delete Saved History" has nothing to delete.
+    public var isEmpty: Bool { !hasMessages && !hasReactions && !hasLinkPreviews }
+}
+
+/// Row counts of the database's tables (``VelaDatabase/storageCounts()``).
+public struct StorageCounts: Sendable, Hashable {
+    public var messages: Int
+    /// Messages in the full-text index.
+    public var fullTextEntries: Int
+    public var reactions: Int
+    public var linkPreviews: Int
+    public var buffers: Int
+
+    public init(messages: Int = 0, fullTextEntries: Int = 0, reactions: Int = 0, linkPreviews: Int = 0, buffers: Int = 0) {
+        self.messages = messages
+        self.fullTextEntries = fullTextEntries
+        self.reactions = reactions
+        self.linkPreviews = linkPreviews
+        self.buffers = buffers
+    }
+}

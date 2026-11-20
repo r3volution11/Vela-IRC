@@ -8,7 +8,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 - **Leave or remove a channel.** The menus have **Leave Channel** (or **Join Channel**) and **Remove Channel…**, and the command palette has **Leave**, **Join** and **Remove** for the selected channel.
   - **Leave Channel** parts the channel and keeps it in the list, dimmed, so **Join Channel** brings it back. It also comes off the network's auto-join list, so it stays left when you reconnect; joining it again puts it back where it was, with its key.
-  - **Remove Channel…** parts the channel and takes it out of the list and off the auto-join list, so it doesn't come back when you reconnect. Its messages stay in your history.
+  - **Remove Channel…** parts the channel and takes it out of the list and off the auto-join list, so it doesn't come back when you reconnect. If you save message history, its messages stay in it.
   - A tab's **×** (or a middle-click) leaves and removes a channel in one step, like **Remove Channel…**. Its tooltip and VoiceOver action say what it does.
   - Vela asks before leaving or removing a channel. **Don't ask again** in the question, or the switches in **Settings → Networks → Channels** (`channels.confirmLeave` and `channels.confirmRemove`), turn that off. `/part` leaves and `/close` removes without asking.
 - **Leave a channel and keep it on your bouncer.** Through ZNC or soju, **Leave Channel**, a tab's **×** and a middle-click detach the channel: the bouncer stays in it and keeps its history, and Vela shows it dimmed, even after you quit and reopen Vela. **Join Channel** reattaches it and catches up on what you missed. If the bouncer doesn't confirm, the network's console says so, and Vela never parts the channel instead.
@@ -51,6 +51,16 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Catch Me Up in the right-click menu and the command palette is always there** while Catch me up is on. With nothing new it says so on a card, and the palette notes "nothing new" or "earlier summary".
 - **A clear message when the conversation's language isn't supported,** without the System Settings button meant for your Mac's language.
 - **Offer Catch me up in busy channels turns it off everywhere:** the button, the right-click menu, the command palette and open cards, and Siri says it's turned off.
+
+### Privacy
+
+- **Saving your chat history is now your choice.** **Save message history** in Settings → Messages → History (`history.save`) is off for new installs: messages, reactions and link previews stay in memory while Vela is open, and a bouncer or server that keeps history fills them in again after a restart. Your channels and where you stopped reading are still saved, so unread counts and Catch me up work as before.
+  - **If you already use Vela, nothing changes:** your history is still being saved, and **Keep messages** still applies. Turn it off any time.
+  - Turning it off asks whether to delete what's already saved or keep it. **Delete Saved History…** removes saved messages, reactions and link previews whenever you like. [Chat logs](https://velairc.app/guide/chat-logs) are separate, and stay off unless you turn them on.
+
+### Updates
+
+- **What's New after an update.** The first time a new version of Vela opens, it shows what changed, with anything you need to know first. **Help → What's New in Vela** shows it again.
 
 ## 1.0.0 - 2026-11-18
 

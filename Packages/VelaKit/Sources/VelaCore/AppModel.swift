@@ -69,6 +69,21 @@ public final class AppModel: SessionHost {
     /// can be dropped when the buffer comes back some other way.
     @ObservationIgnored var closeUndoTargets: [BufferID: CloseUndoTarget] = [:]
 
+    /// What history is saved on disk: messages, reactions, link previews.
+    /// Read from the database when the model is made (a few index lookups)
+    /// and refreshed by ``refreshSavedHistory()``. With saving off, saved
+    /// messages still load (``HistoryStorage/loadOnly``). See
+    /// AppModel+History.swift.
+    public internal(set) var savedHistory: SavedHistory
+    /// Whether the link preview cache in the database is used (`history.save`).
+    @ObservationIgnored let previewDiskCache: PreviewDiskCacheSwitch
+    /// Facts kept between launches: the version What's New last showed,
+    /// one-time migrations and the notices they leave.
+    public let launchRecord: LaunchRecord
+    /// Whether Vela had run on this Mac before this launch (its database
+    /// was already there). What's New isn't shown to a new install.
+    public internal(set) var isExistingInstall = false
+
     /// Whether the main window is key; drives unread counting.
     public var isWindowActive = true {
         didSet {
@@ -97,6 +112,7 @@ public final class AppModel: SessionHost {
         keychain: Keychain = .shared,
         previewService: LinkPreviewService? = nil,
         notifier: Notifier? = nil,
+        launchRecord: LaunchRecord? = nil,
         isDemo: Bool = false
     ) {
         self.settings = settings
@@ -104,7 +120,13 @@ public final class AppModel: SessionHost {
         self.database = database
         self.keychain = keychain
         self.isDemo = isDemo
-        self.previewService = previewService ?? LinkPreviewService(cache: database.map(DatabasePreviewCache.init))
+        self.launchRecord = launchRecord ?? .inMemory()
+        self.savedHistory = (try? database?.savedHistoryNow()) ?? SavedHistory()
+        let previewDiskCache = PreviewDiskCacheSwitch(isOn: settings[.historySave])
+        self.previewDiskCache = previewDiskCache
+        self.previewService = previewService ?? LinkPreviewService(
+            cache: database.map { DatabasePreviewCache(database: $0, diskCache: previewDiskCache) }
+        )
         self.notifier = notifier ?? (isDemo ? SilentNotifier() : UserNotificationNotifier())
         // Logs go next to settings.json by default: Vela's data folder, or
         // demo mode's temporary one (where nothing is logged anyway).
@@ -118,6 +140,9 @@ public final class AppModel: SessionHost {
 
     /// The production configuration rooted in Application Support.
     public static func live() -> AppModel {
+        // Before anything creates them: has Vela run on this Mac before?
+        let isExistingInstall = [AppPaths.databaseURL, AppPaths.networksURL, AppPaths.settingsURL]
+            .contains { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
         let database: VelaDatabase?
         var startupError: String?
         do {
@@ -130,11 +155,20 @@ public final class AppModel: SessionHost {
         do { try networkStore.load() } catch { startupError = "Couldn't read networks.json: \(error.localizedDescription)" }
         let settings = SettingsStore(fileURL: AppPaths.settingsURL)
         settings.applyMigrations()
+        // Upgraders keep saving history (history.save), before anything
+        // reads the setting.
+        let launchRecord = LaunchRecord.userDefaults()
+        let savedHistory = database.flatMap { try? $0.savedHistoryNow() }
+        HistorySaveMigration.run(settings: settings, savedHistory: savedHistory, record: launchRecord, version: appVersion)
+        // Before any image loads (start() keeps it in step afterwards).
+        ImageLoader.setDiskCacheEnabled(settings[.historySave])
         let model = AppModel(
             settings: settings,
             networkStore: networkStore,
-            database: database
+            database: database,
+            launchRecord: launchRecord
         )
+        model.isExistingInstall = isExistingInstall
         model.lastError = startupError
         return model
     }
@@ -186,6 +220,7 @@ public final class AppModel: SessionHost {
         }
         observeSystem()
         observeDockSettings()
+        observeHistorySetting()
         chatLogs.start(networkIDs: Set(networkStore.networks.map(\.id)))
         updateDock()
         pruneHistoryIfNeeded()
@@ -823,12 +858,15 @@ public final class AppModel: SessionHost {
     }
 }
 
-/// Stores LinkPreview values in the SQLite cache.
+/// Stores LinkPreview values in the SQLite cache, while `history.save` is
+/// on (``PreviewDiskCacheSwitch``). Off, previews stay in the preview
+/// service's memory and are fetched again after a relaunch.
 nonisolated struct DatabasePreviewCache: LinkPreviewCache {
     let database: VelaDatabase
+    let diskCache: PreviewDiskCacheSwitch
 
     func cachedPreview(for url: URL) async -> LinkPreview? {
-        guard let data = try? await database.cachedPreviewJSON(url: url.absoluteString) else { return nil }
+        guard diskCache.isOn, let data = try? await database.cachedPreviewJSON(url: url.absoluteString) else { return nil }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         guard let preview = try? decoder.decode(LinkPreview.self, from: data) else { return nil }
@@ -838,6 +876,7 @@ nonisolated struct DatabasePreviewCache: LinkPreviewCache {
     }
 
     func storePreview(_ preview: LinkPreview) async {
+        guard diskCache.isOn else { return }
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(preview) else { return }

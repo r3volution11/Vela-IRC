@@ -442,6 +442,78 @@ public final class VelaDatabase: Sendable {
         }
     }
 
+    // MARK: Saved history
+
+    /// What's saved besides buffer state (`history.save`): whether any
+    /// messages, reactions or cached link previews are on disk. Each is an
+    /// `EXISTS` check, cheap on any size of database.
+    public func savedHistory() async throws -> SavedHistory {
+        try await writer.read(Self.savedHistory(in:))
+    }
+
+    /// ``savedHistory()`` without suspending, for launch, before the first
+    /// window: a few index lookups.
+    public func savedHistoryNow() throws -> SavedHistory {
+        try writer.read(Self.savedHistory(in:))
+    }
+
+    private static func savedHistory(in db: Database) throws -> SavedHistory {
+        func exists(_ table: String) throws -> Bool {
+            try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM \(table))") ?? false
+        }
+        return SavedHistory(
+            hasMessages: try exists("messages"),
+            hasReactions: try exists("reactions"),
+            hasLinkPreviews: try exists("link_previews")
+        )
+    }
+
+    /// Deletes every saved message, its full-text index, every reaction and
+    /// every cached link preview, then compacts the file so the deleted text
+    /// doesn't linger in free pages or the write-ahead log. Buffer state
+    /// (channels, read positions, mute, order) is kept.
+    ///
+    /// The index is emptied in one step rather than row by row through its
+    /// delete trigger, so this stays quick on a large history.
+    public func deleteSavedHistory() async throws {
+        try await writer.write { db in
+            let trigger = "messages_fts_delete"
+            let triggerSQL = try String.fetchOne(
+                db,
+                sql: "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = ?",
+                arguments: [trigger]
+            )
+            if triggerSQL != nil { try db.execute(sql: "DROP TRIGGER \(trigger)") }
+            try db.execute(sql: "DELETE FROM messages")
+            try db.execute(sql: "INSERT INTO messages_fts (messages_fts) VALUES ('delete-all')")
+            if let triggerSQL { try db.execute(sql: triggerSQL) }
+            try db.execute(sql: "DELETE FROM reactions")
+            try db.execute(sql: "DELETE FROM link_previews")
+        }
+        // What's left (buffer state) is small, so this is quick.
+        try await writer.vacuum()
+        try await writer.writeWithoutTransaction { db in
+            _ = try db.checkpoint(.truncate)
+        }
+    }
+
+    /// Row counts of every table (diagnostics, tests). `fullTextEntries` is
+    /// the number of messages in the full-text index.
+    public func storageCounts() async throws -> StorageCounts {
+        try await writer.read { db in
+            func count(_ table: String) throws -> Int {
+                try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM \(table)") ?? 0
+            }
+            return StorageCounts(
+                messages: try count("messages"),
+                fullTextEntries: try count("messages_fts_docsize"),
+                reactions: try count("reactions"),
+                linkPreviews: try count("link_previews"),
+                buffers: try count("buffers")
+            )
+        }
+    }
+
     // MARK: Row mapping
 
     private static let messageColumnNames = [

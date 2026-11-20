@@ -128,6 +128,7 @@ struct MainWindowView: View {
         } message: {
             Text("Its settings, saved passwords and message history on this Mac will be deleted.")
         }
+        .historyDialogs($uiState.historyDialog)
     }
 }
 

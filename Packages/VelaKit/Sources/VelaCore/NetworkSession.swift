@@ -31,6 +31,10 @@ public protocol SessionHost: AnyObject {
     /// `line` was deleted (IRCv3 `REDACT`) by `nick`, for chat logs. Optional.
     func session(_ session: NetworkSession, didRedact line: ChatLine, by nick: String?, reason: String?, at time: Date, isHistory: Bool, in buffer: BufferModel)
     var behavior: SessionBehavior { get }
+    /// Whether messages are saved to and loaded from the database
+    /// (`history.save`). Read for every line, so keep it cheap. Optional:
+    /// hosts that don't say save and load, as Vela always used to.
+    var historyStorage: HistoryStorage { get }
 }
 
 /// User preferences that influence protocol behavior.
@@ -99,9 +103,12 @@ public final class NetworkSession: Identifiable {
     @ObservationIgnored private var bouncerBatchIDs: Set<String> = []
     @ObservationIgnored private var lastTypingSent: [BufferID: (state: TypingState, at: Date)] = [:]
     @ObservationIgnored private var pendingRecords: [MessageRecord] = []
-    /// The latest write of a buffer's saved state; each waits for the one
-    /// before (see `writeBuffer`).
+    /// The latest database write; each waits for the one before (see
+    /// `writeBuffer`).
     @ObservationIgnored private var bufferWrites: Task<Void, Never>?
+    /// The newest line received since launch that history would save, in
+    /// any buffer (see ``catchUpPoint(for:received:)``).
+    @ObservationIgnored private var newestReceivedAt: Date?
     /// Channels Vela sent PART for (removed, or parted on a bouncer after
     /// connecting) whose PART the server hasn't confirmed yet (folded
     /// names). A bouncer's join into one meanwhile is ignored, and what was
@@ -479,9 +486,10 @@ public final class NetworkSession: Identifiable {
             if let parsed = InputCommand.parse(command) { perform(parsed, in: serverBuffer, replyTo: nil) }
         }
         if supports("znc.in/playback") {
+            let received = newestReceivedAt
             Task { [weak self] in
-                guard let self, let database = self.database else { return }
-                let since = (try? await database.newestMessageTime(networkID: self.id)) ?? .distantPast
+                guard let self, self.database != nil else { return }
+                let since = await self.catchUpPoint(for: nil, received: received) ?? .distantPast
                 let stamp = since == .distantPast ? "0" : String(Int(since.timeIntervalSince1970))
                 self.sendRaw("PRIVMSG *playback :PLAY * \(stamp)")
             }
@@ -858,8 +866,9 @@ public final class NetworkSession: Identifiable {
                 at: message.serverTime ?? Date(), isHistory: isHistory, in: buffer
             )
         }
+        // Only saved messages have a row to flag (none when nothing loads).
         let key = buffer.id.storeKey
-        if let database { Task { try? await database.markRedacted(msgid: msgid, in: key) } }
+        if historyStorage.loads { writeBuffer { try await $0.markRedacted(msgid: msgid, in: key) } }
     }
 
     private func handleBouncer(_ message: IRCMessage) {
@@ -1041,10 +1050,11 @@ public final class NetworkSession: Identifiable {
         guard supportsChatHistory, buffer.kind != .server else { return }
         let limit = historyLimit
         let target = buffer.name
+        // Read before your own JOIN line is added (see catchUpPoint(for:received:)).
+        let received = buffer.newestReceivedAt
         Task { [weak self] in
             guard let self else { return }
-            let newest = try? await self.database?.newestMessageTime(in: buffer.id.storeKey)
-            if let newest {
+            if let newest = await self.catchUpPoint(for: buffer, received: received) {
                 self.sendRaw("CHATHISTORY AFTER \(target) timestamp=\(IRCTime.format(newest)) \(limit)")
             } else {
                 self.sendRaw("CHATHISTORY LATEST \(target) * \(limit)")
@@ -1053,18 +1063,40 @@ public final class NetworkSession: Identifiable {
     }
 
     /// Asks ZNC's playback module for what was said in `channel` after the
-    /// newest line Vela has from it. ZNC doesn't play a channel back by
-    /// itself when it reattaches one for a client with `znc.in/playback`.
+    /// newest line Vela has from it (see ``catchUpPoint(for:received:)``).
+    /// ZNC doesn't play a channel back by itself when it reattaches one for
+    /// a client with `znc.in/playback`.
     private func requestPlayback(for channel: BufferModel) {
         guard supports("znc.in/playback") else { return }
         let target = channel.name
-        let key = channel.id.storeKey
+        // Read before your own JOIN line is added.
+        let received = channel.newestReceivedAt
         Task { [weak self] in
             guard let self else { return }
-            let newest = try? await self.database?.newestMessageTime(in: key)
+            let newest = await self.catchUpPoint(for: channel, received: received)
             let stamp = newest.map { String(Int($0.timeIntervalSince1970)) } ?? "0"
             self.sendRaw("PRIVMSG *playback :PLAY \(target) \(stamp)")
         }
+    }
+
+    /// Where to fetch missed messages from after connecting: the newest line
+    /// of `buffer` (of the whole network when nil) that Vela saved or
+    /// received. While history isn't saved, only lines received since
+    /// launch count, so a relaunch asks for the latest messages rather than
+    /// for those after what was saved long ago. Nil asks for the latest.
+    ///
+    /// `received` is the buffer's (or network's) `newestReceivedAt`, read
+    /// before adding the line that prompted the fetch: your own JOIN mustn't
+    /// count, or the messages you missed while away would be skipped.
+    private func catchUpPoint(for buffer: BufferModel?, received: Date?) async -> Date? {
+        guard historyStorage.saves, let database else { return received }
+        let saved: Date?
+        if let buffer {
+            saved = try? await database.newestMessageTime(in: buffer.id.storeKey)
+        } else {
+            saved = try? await database.newestMessageTime(networkID: id)
+        }
+        return [saved, received].compactMap { $0 }.max()
     }
 
     private var historyLimit: Int {
@@ -1080,7 +1112,7 @@ public final class NetworkSession: Identifiable {
         buffer.isLoadingHistory = true
         let oldest = buffer.lines.first?.time ?? Date()
         let pageSize = 150
-        if let database, let records = try? await database.messages(in: buffer.id.storeKey, before: oldest, limit: pageSize), !records.isEmpty {
+        if let database = historyReader, let records = try? await database.messages(in: buffer.id.storeKey, before: oldest, limit: pageSize), !records.isEmpty {
             buffer.insertSorted(records.map(ChatLine.init(record:)))
             await loadReactions(for: records.compactMap(\.msgid), in: buffer)
             if records.count >= pageSize {
@@ -1105,7 +1137,7 @@ public final class NetworkSession: Identifiable {
     }
 
     private func loadReactions(for msgids: [String], in buffer: BufferModel) async {
-        guard let database, !msgids.isEmpty,
+        guard let database = historyReader, !msgids.isEmpty,
               let reactions = try? await database.reactions(in: buffer.id.storeKey, msgids: msgids) else { return }
         for reaction in reactions {
             buffer.setReaction(msgid: reaction.msgid, nick: reaction.nick, emoji: reaction.emoji, active: true)
@@ -1328,9 +1360,13 @@ public final class NetworkSession: Identifiable {
 
     private func applyReaction(emoji: String, msgid: String, nick: String, active: Bool, in buffer: BufferModel) {
         buffer.setReaction(msgid: msgid, nick: nick, emoji: emoji, active: active)
-        guard let database else { return }
+        // New reactions are saved only with history; a removed one also
+        // leaves history saved earlier.
+        let storage = historyStorage
+        guard storage.saves || (!active && storage.loads) else { return }
         let key = buffer.id.storeKey
-        Task { try? await database.setReaction(ReactionRecord(msgid: msgid, nick: nick, emoji: emoji), in: key, active: active) }
+        let reaction = ReactionRecord(msgid: msgid, nick: nick, emoji: emoji)
+        writeBuffer { try await $0.setReaction(reaction, in: key, active: active) }
     }
 
     // MARK: Typing
@@ -1751,9 +1787,12 @@ public final class NetworkSession: Identifiable {
         writeBuffer { try await $0.upsertBuffer(record) }
     }
 
-    /// Writes buffer state in the order it changes: each write waits for the
-    /// one before, so closing a channel and reopening it straight away (⌘Z)
-    /// can't save the reopened channel before deleting the closed one.
+    /// Writes to the database in the order the session makes its writes:
+    /// each waits for the one before. Buffer state is saved whole, so a mute
+    /// saved after a read position must land after it, and closing a channel
+    /// and reopening it straight away (⌘Z) can't save the reopened channel
+    /// before deleting the closed one. Saved messages, reactions and
+    /// redactions go through it too.
     func writeBuffer(_ write: @escaping @Sendable (VelaDatabase) async throws -> Void) {
         guard let database else { return }
         let previous = bufferWrites
@@ -1763,13 +1802,15 @@ public final class NetworkSession: Identifiable {
         }
     }
 
-    /// Waits for every buffer write made so far (tests).
+    /// Waits for every write made so far (tests).
     func bufferWritesFinished() async {
         await bufferWrites?.value
     }
 
+    /// Loads a new buffer's newest saved lines. Nothing is read while
+    /// history isn't saved (unless history saved earlier was kept).
     private func loadRecentScrollback(for buffer: BufferModel) {
-        guard let database else { return }
+        guard let database = historyReader else { return }
         let key = buffer.id.storeKey
         historyLoads.begin()
         Task { [weak self] in
@@ -1803,6 +1844,7 @@ public final class NetworkSession: Identifiable {
         guard buffer.append(line, limit: host?.behavior.scrollbackInMemory ?? 1000) else { return }
         host?.session(self, didAdd: line, to: buffer)
         if buffer.kind != .server || line.kind.isConversation {
+            noteReceived(line, in: buffer)
             enqueue(line.record(networkID: id, bufferName: buffer.id.foldedName))
         }
         guard !line.isSelf else { return }
@@ -1891,8 +1933,20 @@ public final class NetworkSession: Identifiable {
 
     // MARK: Persistence batching
 
+    /// `history.save`, as the host has it.
+    private var historyStorage: HistoryStorage { host?.historyStorage ?? .saveAndLoad }
+
+    /// The database, while saved history may be read from it.
+    private var historyReader: VelaDatabase? { historyStorage.loads ? database : nil }
+
+    /// Remembers the newest line that would be saved (see ``catchUpPoint(for:received:)``).
+    private func noteReceived(_ line: ChatLine, in buffer: BufferModel) {
+        if buffer.newestReceivedAt.map({ line.time > $0 }) ?? true { buffer.newestReceivedAt = line.time }
+        if newestReceivedAt.map({ line.time > $0 }) ?? true { newestReceivedAt = line.time }
+    }
+
     private func enqueue(_ record: MessageRecord) {
-        guard database != nil else { return }
+        guard database != nil, historyStorage.saves else { return }
         pendingRecords.append(record)
         guard flushTask == nil else { return }
         flushTask = Task { [weak self] in
@@ -1903,10 +1957,19 @@ public final class NetworkSession: Identifiable {
 
     private func flushPendingRecords() {
         flushTask = nil
-        guard let database, !pendingRecords.isEmpty else { return }
         let records = pendingRecords
         pendingRecords = []
-        Task { try? await database.append(records) }
+        // Saving may have been turned off while these waited.
+        guard historyStorage.saves, !records.isEmpty else { return }
+        writeBuffer { _ = try await $0.append(records) }
+    }
+
+    /// Writes lines still waiting for the next batch, and waits until every
+    /// write made so far is done (tests).
+    func flushPendingRecordsNow() async {
+        flushTask?.cancel()
+        flushPendingRecords()
+        await bufferWritesFinished()
     }
 
     // MARK: Helpers

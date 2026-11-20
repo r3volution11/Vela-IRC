@@ -148,6 +148,7 @@ struct SettingsEditorView: View {
             message: "This removes \(known.count) \(known.count == 1 ? "setting" : "settings") from settings.json."
                 + (unknown > 0 ? " Unknown settings are kept." : "")
                 + " Networks, themes and message history aren't affected."
+                + (app.settings[.historySave] ? " Save message history turns off, so new messages won't be saved until you turn it on again." : "")
         ) {
             Button("Reset All Settings") {
                 for key in known { app.settings.setValue(nil, forKey: key) }

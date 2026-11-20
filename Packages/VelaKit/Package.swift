@@ -84,11 +84,13 @@ let package = Package(
         ),
 
         // SwiftUI views and scenes. Resources/AppIcons holds the Dock icons
-        // (design/app-icon/build.sh writes them).
+        // (design/app-icon/build.sh writes them). Resources/CHANGELOG.md is
+        // a symbolic link to the repository's CHANGELOG.md, for What's New;
+        // SwiftPM and Xcode both copy the file it points to.
         .target(
             name: "VelaUI",
             dependencies: ["VelaCore", "VelaTheme", "VelaMedia", "VelaIRC", "VelaStore", "VelaIntelligence", "VelaIntents"],
-            resources: [.copy("Resources/AppIcons")],
+            resources: [.copy("Resources/AppIcons"), .copy("Resources/CHANGELOG.md")],
             swiftSettings: mainActorByDefault
         ),
 

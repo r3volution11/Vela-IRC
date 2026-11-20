@@ -39,7 +39,7 @@ New channels and conversations go at the end of their network's list. Drag them 
 Right-click a channel in the sidebar or tabs:
 
 - **Leave Channel** parts the channel but keeps it in the list, dimmed, with its history. It comes off the network's auto-join list too, so it stays left when you reconnect. **Join Channel** rejoins it and puts it back on the list where it was, with its key.
-- **Remove Channel…** leaves the channel if you're in it and takes it out of the list. It also comes off the network's auto-join list, and its key comes out of your Keychain. Its messages stay in your history on disk.
+- **Remove Channel…** leaves the channel if you're in it and takes it out of the list. It also comes off the network's auto-join list, and its key comes out of your Keychain. If you [save message history](/guide/messages-and-layouts#scrollback-and-history), its messages stay in it on disk.
 
 A tab's **×** (or a middle-click) leaves and removes a channel in one step, like **Remove Channel…**. For a private conversation, **×** and **Close Conversation** close it.
 

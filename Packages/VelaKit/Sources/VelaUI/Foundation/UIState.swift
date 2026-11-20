@@ -40,6 +40,9 @@ public final class UIState {
     /// (`channels.confirmLeave`, `channels.confirmRemove`). Leaving through a
     /// bouncer is a detach, asked the same way.
     public var channelConfirmation: ChannelConfirmation?
+    /// A question about saved message history, asked in the main window
+    /// (from the command palette). Settings asks in its own window.
+    var historyDialog: HistoryDialog?
 
     public init() {}
 

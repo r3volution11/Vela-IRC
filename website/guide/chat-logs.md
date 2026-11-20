@@ -7,7 +7,7 @@ description: Save plain-text logs of your channels and conversations, one folder
 
 Vela can keep a plain-text copy of your channels and private conversations: one folder for each network, with a file for each channel or conversation. Logs hold what people wrote, the way they wrote it, so you can search them, keep them or open them in any text editor.
 
-Chat logs are **off by default**. Vela's [message history](/guide/messages-and-layouts#scrollback-and-history) works without them; logs are an extra copy, in files you own.
+Chat logs are **off by default**. They're separate from Vela's [message history](/guide/messages-and-layouts#scrollback-and-history) (**Save message history**), which is what Vela shows when you scroll up and is off by default too. Logs are a copy for you, in files you own; Vela writes them whether or not it saves history, and never loads them back.
 
 ## Turning logs on
 
@@ -130,7 +130,7 @@ If Vela can't write a log, for example because the disk is full or it no longer 
 
 ## Privacy
 
-Logs are plain text on your Mac, unencrypted, readable by anything that can read your files. Vela doesn't send them anywhere. If you choose a folder that syncs, such as one in iCloud Drive or Dropbox, your logs sync with it. Delete a log, or the whole `Logs` folder, whenever you like.
+Logs are plain text on your Mac, unencrypted, readable by anything that can read your files. Vela doesn't send them anywhere. Turning off **Save message history**, or deleting saved history, doesn't touch them: turn off **Save chat logs** to stop them. If you choose a folder that syncs, such as one in iCloud Drive or Dropbox, your logs sync with it. Delete a log, or the whole `Logs` folder, whenever you like.
 
 Logs in Vela's folder are removed with Vela's data when you [uninstall](/guide/install#uninstalling) it; logs in a folder you chose stay there.
 

@@ -147,7 +147,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **Bouncers:**
   - **[ZNC](https://znc.in):** server-password login, `self-message`, `playback`, server-time.
   - **[soju](https://soju.im):** your bouncer's networks appear automatically, and history comes from `chathistory`.
-- **Scrollback:** stored locally in SQLite with full-text indexing. Older history is paged in from disk, then from the server.
+- **Scrollback:** kept in memory, or, with **Save message history** on, stored locally in SQLite with full-text indexing. Older history is paged in from disk, then from the server.
 
 ### Fast to drive
 
@@ -221,6 +221,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 ## Privacy
 
 - **No telemetry, analytics or accounts.** Vela talks only to the IRC servers you add.
+- **Message history is saved only if you want.** **Save message history** (`history.save`) is off for new installs: messages, reactions and link previews stay in memory while Vela runs, and a bouncer or `chathistory` server fills them in again. Your channels and read positions are saved either way. Turned on, history goes in a local SQLite database, and **Delete Saved History…** removes it any time. Plain-text chat logs are a separate opt-in.
 - **Link previews** fetch the linked page or image, which reveals your IP address to that site. You can control this:
   - Turn previews off entirely, or switch to click-to-load.
   - Disable media for a network or channel.

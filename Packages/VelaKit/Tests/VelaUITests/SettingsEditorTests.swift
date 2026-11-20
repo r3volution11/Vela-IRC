@@ -57,7 +57,7 @@ struct SettingsEditorSearchTests {
         #expect(keys("@category:messages") == keys("@category:chat"))
         // History holds stored messages and chat logs.
         let history: Set<String> = [
-            "history.retentionDays", "logging.enabled", "logging.maxFileSizeMB", "logging.keepFiles",
+            "history.save", "history.retentionDays", "logging.enabled", "logging.maxFileSizeMB", "logging.keepFiles",
             "logging.includeEvents", "logging.includeServer", "logging.excludedBuffers",
         ]
         #expect(Set(keys("@category:history")) == history)

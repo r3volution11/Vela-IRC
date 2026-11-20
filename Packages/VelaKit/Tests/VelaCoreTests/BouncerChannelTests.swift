@@ -333,12 +333,14 @@ struct BouncerChannelTests {
         #expect(session.buffer(named: "*status") == nil)
 
         // Join Channel: a JOIN reattaches it, and ZNC's playback module is
-        // asked for what was missed.
+        // asked for what was missed: everything after the newest line Vela
+        // has from the channel (here, "You left #vela here").
+        let leftAt = try #require(vela.newestReceivedAt)
         app.rejoin(vela)
         try await waitUntil { vela.isJoined }
         #expect(!vela.isDetached)
         #expect(wired.sent.contains("JOIN #vela"))
-        try await waitUntil { wired.sent.contains("PRIVMSG *playback :PLAY #vela 0") }
+        try await waitUntil { wired.sent.contains("PRIVMSG *playback :PLAY #vela \(Int(leftAt.timeIntervalSince1970))") }
         #expect(!wired.sent.contains { $0.hasPrefix("PART") })
     }
 
