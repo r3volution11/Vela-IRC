@@ -655,7 +655,7 @@ extension SettingKey where Value == SystemFollowingBool {
 extension SettingKey where Value == Bool {
     public static var intelligenceCatchUp: SettingKey<Bool> {
         .init("intelligence.catchUp", default: true,
-              summary: "Offer \"Catch me up\": an on-device Apple Intelligence summary of what you missed in a busy channel.")
+              summary: "Offer \"Catch me up\": an on-device Apple Intelligence summary of what you missed in a busy channel. Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri.")
     }
     public static var intelligenceSpotlightChannels: SettingKey<Bool> {
         .init("intelligence.spotlightChannels", default: true,

@@ -5,10 +5,12 @@
 import SwiftUI
 import VelaCore
 import VelaIntelligence
+import VelaStore
 
-/// "Catch Me Up" in a channel's or conversation's context menu, when
-/// something in it is unread and Apple Intelligence is ready. Opens the
-/// buffer at its New marker with the summary card.
+/// "Catch Me Up" in a channel's or conversation's context menu, while Catch
+/// me up is on and Apple Intelligence is ready. Opens the buffer at its New
+/// marker with the summary card; with nothing new, the card shows the
+/// latest summary again or says there's nothing new.
 struct CatchUpBufferMenuItems: View {
     @Environment(AppModel.self) private var app
     @Environment(IntelligenceServices.self) private var intelligence
@@ -17,8 +19,8 @@ struct CatchUpBufferMenuItems: View {
 
     var body: some View {
         if CatchUpEligibility.canOffer(
+            isEnabled: app.settings[.intelligenceCatchUp],
             status: intelligence.availability.status,
-            hasUnread: CatchUpActions.hasUnread(buffer, app: app),
             kind: buffer.kind
         ) {
             Button("Catch Me Up") {

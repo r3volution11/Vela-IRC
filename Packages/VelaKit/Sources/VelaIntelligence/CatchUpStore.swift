@@ -51,6 +51,10 @@ public final class CatchUpCard {
     /// Lines in the stretch being summarized (the header's "N messages").
     public var messageCount: Int { request.lines.count }
 
+    /// The time of the newest line in the stretch; nil for a card saying
+    /// there's nothing new.
+    public var coversThrough: Date? { request.lines.last?.time }
+
     /// The summary so far, complete or not.
     public var summary: CatchUpSummary? {
         switch phase {
@@ -62,6 +66,11 @@ public final class CatchUpCard {
 
     public var isRunning: Bool {
         if case .running = phase { true } else { false }
+    }
+
+    /// Asked for with nothing new to summarize: the card says so.
+    public var isNothingNew: Bool {
+        phase == .failed(.nothingToSummarize)
     }
 }
 
@@ -89,6 +98,12 @@ nonisolated public struct CatchUpReveal: Equatable, Sendable {
 /// Catch me up summaries for the whole app: the open card per buffer and
 /// finished summaries cached per buffer and range, shared by the cards and
 /// the Siri / Shortcuts intent. One per app, owned by ``IntelligenceServices``.
+///
+/// A card stays open until it's dismissed, replaced by a newer stretch, its
+/// buffer closes or Catch me up is turned off. Going to another buffer
+/// leaves it, and its summary keeps being written. Each buffer's latest
+/// stretch is also remembered for the session (see ``reopen(_:reveal:)``),
+/// so its summary stays reachable after the buffer is read.
 @Observable
 public final class CatchUpStore {
     /// Open cards, by buffer. Changes only when a card opens or closes;
@@ -102,6 +117,15 @@ public final class CatchUpStore {
     @ObservationIgnored private var cacheOrder: [CatchUpRangeKey] = []
     @ObservationIgnored private var jobs: [CatchUpRangeKey: Job] = [:]
     @ObservationIgnored private let cacheLimit: Int
+    /// Each buffer's latest stretch, newest last; as many as the cache holds.
+    @ObservationIgnored private var stretches: [BufferID: Stretch] = [:]
+    @ObservationIgnored private var stretchOrder: [BufferID] = []
+
+    /// A stretch a card was opened for: what to summarize and where it sat.
+    private struct Stretch {
+        let request: CatchUpRequest
+        let marker: Date?
+    }
 
     public init(summarizer: any ConversationSummarizer, cacheLimit: Int = 24) {
         self.summarizer = summarizer
@@ -122,21 +146,55 @@ public final class CatchUpStore {
     /// Shows the card for `request`'s buffer and summarizes it, at once
     /// from the cache when this stretch was summarized before. A card
     /// that's already open for the same stretch is kept (and revealed).
+    /// With no lines, the card says there's nothing new.
     ///
     /// - Parameters:
     ///   - marker: The buffer's New marker; see ``CatchUpCard/marker``.
     ///   - reveal: Ask the message list to scroll to the card.
     public func open(_ request: CatchUpRequest, marker: Date? = nil, reveal: Bool = true) {
         let key = CatchUpRangeKey(request)
-        if let card = cards[request.bufferID], card.key == key, !isFailed(card) {
+        if let card = cards[request.bufferID], card.key == key, !isFailed(card) || card.isNothingNew {
             if reveal { self.reveal = CatchUpReveal(bufferID: request.bufferID) }
             return
         }
         if let old = cards[request.bufferID] { detach(old.key) }
-        let card = CatchUpCard(request: request, marker: marker, phase: .running(nil))
+        let card: CatchUpCard
+        if request.lines.isEmpty {
+            card = CatchUpCard(request: request, marker: marker, phase: .failed(.nothingToSummarize))
+        } else {
+            card = CatchUpCard(request: request, marker: marker, phase: .running(nil))
+            remember(request, marker: marker)
+        }
         cards[request.bufferID] = card
-        start(card)
+        if !request.lines.isEmpty { start(card) }
         if reveal { self.reveal = CatchUpReveal(bufferID: request.bufferID) }
+    }
+
+    /// Shows the buffer's card again, for when nothing is new: the open
+    /// one (revealed), or one for the latest stretch summarized there this
+    /// session, from the cache (or summarized again if it never finished).
+    /// Returns false when there's neither.
+    @discardableResult
+    public func reopen(_ bufferID: BufferID, reveal: Bool = true) -> Bool {
+        if let card = cards[bufferID], !card.isNothingNew {
+            if reveal { self.reveal = CatchUpReveal(bufferID: bufferID) }
+            return true
+        }
+        guard let stretch = stretches[bufferID] else { return false }
+        open(stretch.request, marker: stretch.marker, reveal: reveal)
+        return true
+    }
+
+    /// Whether ``reopen(_:reveal:)`` has a summary to show for the buffer.
+    public func hasEarlierSummary(for bufferID: BufferID) -> Bool {
+        if let card = cards[bufferID], !card.isNothingNew { return true }
+        return stretches[bufferID] != nil
+    }
+
+    /// The latest stretch summarized in the buffer this session, for Siri
+    /// when nothing in it is new any more.
+    public func latestRequest(for bufferID: BufferID) -> CatchUpRequest? {
+        stretches[bufferID]?.request
     }
 
     /// Summarizes again, ignoring the cache: `request` is usually the same
@@ -152,23 +210,41 @@ public final class CatchUpStore {
         forget(card.key)
         card.replace(with: request, marker: marker)
         forget(card.key)
+        guard !request.lines.isEmpty else {
+            card.phase = .failed(.nothingToSummarize)
+            return
+        }
+        remember(request, marker: marker)
         // Always a fresh job: one Siri is still waiting on keeps going for it.
         card.phase = .running(startJob(request, key: card.key).latest)
     }
 
     /// Closes the buffer's card and stops its summary (unless Siri is
-    /// waiting for the same one). A finished summary stays cached. Called
-    /// when the reader dismisses the card, and when they leave or close
-    /// its buffer.
+    /// waiting for the same one). A finished summary stays cached, and the
+    /// stretch stays remembered. Called when the reader dismisses the card.
     public func dismiss(_ bufferID: BufferID) {
         guard let card = cards.removeValue(forKey: bufferID) else { return }
         detach(card.key)
     }
 
-    /// Closes every card except `bufferID`'s: the buffer on screen. The
-    /// others' buffers were left or closed.
-    public func dismissAll(except bufferID: BufferID?) {
-        for id in cards.keys where id != bufferID { dismiss(id) }
+    /// The buffer on screen changed to `bufferID`. Cards elsewhere stay,
+    /// and their summaries keep being written, except a "nothing new" card,
+    /// which was an answer for the moment, and cards whose buffers are gone
+    /// (`exists` says which still are).
+    public func selectionChanged(to bufferID: BufferID?, exists: (BufferID) -> Bool) {
+        for (id, card) in cards where id != bufferID && (card.isNothingNew || !exists(id)) {
+            dismiss(id)
+        }
+        for id in stretches.keys where !exists(id) {
+            stretches[id] = nil
+            stretchOrder.removeAll { $0 == id }
+        }
+    }
+
+    /// Closes every card and stops their summaries (unless Siri is waiting
+    /// for one): Catch me up was turned off.
+    public func closeAll() {
+        for id in cards.keys { dismiss(id) }
     }
 
     // MARK: Siri and Shortcuts
@@ -246,6 +322,8 @@ public final class CatchUpStore {
                 try Task.checkCancellation()
                 guard var final = last else { throw CatchUpError.nothingToSummarize }
                 final.isComplete = true
+                final.isRevising = false
+                final.progress = nil
                 self?.complete(final, of: job)
                 return final
             } catch {
@@ -259,6 +337,16 @@ public final class CatchUpStore {
 
     private func progress(_ snapshot: CatchUpSummary, of job: Job) {
         guard jobs[job.key] === job else { return }
+        var snapshot = snapshot
+        // Words never disappear: a snapshot without any keeps the ones
+        // shown so far, dimmed, until the summarizer writes again.
+        if !snapshot.hasText, let shown = job.latest, shown.hasText {
+            var kept = shown
+            kept.isRevising = true
+            kept.progress = snapshot.progress
+            kept.skippedMessages = snapshot.skippedMessages
+            snapshot = kept
+        }
         job.latest = snapshot
         if let card = attachedCard(job.key), card.isRunning { card.phase = .running(snapshot) }
     }
@@ -307,6 +395,16 @@ public final class CatchUpStore {
     }
 
     // MARK: Cache
+
+    /// Remembers `request` as its buffer's latest stretch, for the session.
+    private func remember(_ request: CatchUpRequest, marker: Date?) {
+        stretches[request.bufferID] = Stretch(request: request, marker: marker)
+        stretchOrder.removeAll { $0 == request.bufferID }
+        stretchOrder.append(request.bufferID)
+        while stretchOrder.count > cacheLimit {
+            stretches[stretchOrder.removeFirst()] = nil
+        }
+    }
 
     private func store(_ summary: CatchUpSummary, for key: CatchUpRangeKey) {
         cache[key] = summary

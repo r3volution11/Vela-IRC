@@ -134,6 +134,11 @@ private struct PaletteCommandRowContent: View {
             color: primary
         )
         Spacer(minLength: 8)
+        if let detail = command.detail {
+            Text(detail)
+                .font(.system(size: 11))
+                .foregroundStyle(primary.opacity(0.55))
+        }
         if command.isChecked == true {
             Image(systemName: "checkmark")
                 .font(.system(size: 11, weight: .semibold))

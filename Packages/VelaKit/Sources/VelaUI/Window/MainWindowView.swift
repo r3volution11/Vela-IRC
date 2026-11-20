@@ -89,10 +89,17 @@ struct MainWindowView: View {
             // The expanded player had the keyboard focus.
             if EmbedPlayerStore.shared.selectedBufferChanged() { uiState.focusInput() }
         }
-        // A Catch me up card lasts while its buffer is on screen; leaving
-        // or closing the buffer closes it (the summary stays cached).
+        // A Catch me up card stays, and keeps summarizing, while you're in
+        // other buffers; only a "nothing new" card closes when you leave,
+        // and cards of closed buffers go.
         .onChange(of: app.selectedBufferID, initial: true) { _, selected in
-            intelligence.catchUp.dismissAll(except: selected)
+            intelligence.catchUp.selectionChanged(to: selected) { id in
+                app.session(for: id.networkID)?.buffer(id: id) != nil
+            }
+        }
+        // Turning Catch me up off closes every card.
+        .onChange(of: app.settings[.intelligenceCatchUp]) { _, isOn in
+            if !isOn { intelligence.catchUp.closeAll() }
         }
         .onDisappear {
             EmbedPlayerStore.shared.stopAll()

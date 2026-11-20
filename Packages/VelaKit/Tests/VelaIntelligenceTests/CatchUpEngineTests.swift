@@ -168,19 +168,199 @@ struct CatchUpEngineTests {
         #expect(!intermediate.isEmpty)
     }
 
-    // MARK: Errors
+    // MARK: Progress
 
-    @Test func guardrailsBecomeDeclined() async {
-        let model = FakeCatchUpModel(final: { _ in throw CatchUpModelError.declined })
-        await #expect(throws: CatchUpError.declined) {
-            try await CatchUpEngine(model: model).run(F.request(F.chatter(3)))
+    /// A long stretch is read in parts before any words appear: each part
+    /// is reported, so the card can say "Reading… 3 of 8".
+    @Test func chunkPassesReportProgress() async throws {
+        let model = FakeCatchUpModel(context: 2048)
+        let partials = Recorder<[CatchUpSummary]>([])
+        let summary = try await CatchUpEngine(model: model).run(F.request(F.chatter(240))) { snapshot in
+            partials.update { $0.append(snapshot) }
         }
+        let parts = model.digestCalls.count
+        #expect(parts > 1)
+        let reading = partials.value.filter { !$0.hasText }
+        #expect(reading.map(\.progress) == (0...parts).map { CatchUpProgress(completed: $0, total: parts) })
+        #expect(reading.allSatisfy { !$0.isComplete && !$0.isRevising && $0.messageCount == 240 })
+        // Then the summary is written.
+        #expect(partials.value.last?.overview == "All of it.")
+        #expect(partials.value.last?.progress == nil)
+        #expect(summary.overview == "All of it.")
     }
 
-    @Test func anUnsupportedLanguageIsReportedAsUnavailable() async {
+    /// A part that turns out too long is read in halves: one more part.
+    @Test func aSplitPartAddsToTheTotal() async throws {
+        let model = FakeCatchUpModel(
+            context: 4096,
+            digest: { prompt in
+                if lineNumbers(in: prompt).count > 20 { throw CatchUpModelError.contextExceeded }
+                return CatchUpDraft(overview: "ok")
+            },
+            final: { prompt in
+                if lineNumbers(in: prompt).count > 20 { throw CatchUpModelError.contextExceeded }
+                return [CatchUpDraft(overview: "Merged.")]
+            }
+        )
+        let partials = Recorder<[CatchUpSummary]>([])
+        _ = try await CatchUpEngine(model: model).run(F.request(F.chatter(240))) { snapshot in
+            partials.update { $0.append(snapshot) }
+        }
+        let progress = partials.value.compactMap(\.progress)
+        #expect(progress.map(\.total) == progress.map(\.total).sorted())
+        #expect(progress.map(\.completed) == progress.map(\.completed).sorted())
+        #expect(progress.last?.isFinished == true)
+        // Every request that answered is a part read.
+        let answered = model.digestCalls.filter { lineNumbers(in: $0.prompt).count <= 20 }.count
+        #expect(progress.last?.completed == answered)
+    }
+
+    // MARK: Response limits
+
+    @Test func everyRequestCapsItsResponse() async throws {
+        let long = FakeCatchUpModel(context: 2048)
+        _ = try await CatchUpEngine(model: long).run(F.request(F.chatter(240)))
+        #expect(!long.digestCalls.isEmpty)
+        #expect(long.digestCalls.allSatisfy { $0.limit == CatchUpEngine.responseTokens(for: .digest) })
+        #expect(long.summarizeCalls.map(\.limit) == [CatchUpEngine.responseTokens(for: .merge)])
+
+        let short = FakeCatchUpModel()
+        _ = try await CatchUpEngine(model: short).run(F.request(F.chatter(3)))
+        #expect(short.summarizeCalls.map(\.limit) == [CatchUpEngine.responseTokens(for: .single)])
+        #expect(CatchUpEngine.responseTokens(for: .single) == 750)
+        #expect(CatchUpEngine.responseTokens(for: .digest) == 500)
+    }
+
+    @Test func foundationModelsRequestsAreCapped() {
+        let options = FoundationModelsCatchUpModel.options(maximumResponseTokens: 750)
+        #expect(options.maximumResponseTokens == 750)
+        #expect(options.temperature == 0.3)
+    }
+
+    // MARK: Words are never taken back
+
+    /// The single pass wrote something, then ran out of room: its words
+    /// stay, dimmed, while the stretch is read in parts, until the retry
+    /// writes.
+    @Test func textIsNeverTakenBack() async throws {
+        let model = FakeCatchUpModel(steps: { prompt in
+            if !lineNumbers(in: prompt).isEmpty {
+                return [.draft(CatchUpDraft(overview: "Theme talk")), .draft(CatchUpDraft(overview: "Theme talk and a review.")), .fail(.contextExceeded)]
+            }
+            return [.draft(CatchUpDraft(overview: "Merged")), .draft(CatchUpDraft(overview: "Merged from parts."))]
+        })
+        let partials = Recorder<[CatchUpSummary]>([])
+        let summary = try await CatchUpEngine(model: model).run(F.request(F.chatter(30))) { snapshot in
+            partials.update { $0.append(snapshot) }
+        }
+        let snapshots = partials.value
+        let firstText = try #require(snapshots.firstIndex { $0.hasText })
+        #expect(snapshots[firstText...].allSatisfy { $0.hasText })
+        let redoing = snapshots.filter(\.isRevising)
+        #expect(!redoing.isEmpty)
+        #expect(redoing.allSatisfy { $0.overview == "Theme talk and a review." })
+        #expect(redoing.contains { $0.progress != nil })
+        // The retry's words replace them.
+        #expect(snapshots.last?.overview == "Merged from parts.")
+        #expect(snapshots.last?.isRevising == false)
+        #expect(summary.overview == "Merged from parts.")
+        #expect(!model.digestCalls.isEmpty)
+    }
+
+    // MARK: Declined parts
+
+    @Test func aDeclinedPartIsSkipped() async throws {
+        let model = FakeCatchUpModel(
+            context: 2048,
+            digest: { prompt in
+                let numbers = lineNumbers(in: prompt)
+                if numbers.first == 1 { throw CatchUpModelError.declined }
+                return CatchUpDraft(overview: "Lines from \(numbers.first!).", topics: [.init(title: "Part from \(numbers.first!)")])
+            },
+            final: { _ in [CatchUpDraft(overview: "The rest of it.")] }
+        )
+        let summary = try await CatchUpEngine(model: model).run(F.request(F.chatter(240)))
+        let declined = try #require(model.digestCalls.first { lineNumbers(in: $0.prompt).first == 1 })
+        #expect(model.digestCalls.count > 1)
+        #expect(summary.overview == "The rest of it.")
+        #expect(summary.skippedMessages == lineNumbers(in: declined.prompt).count)
+        let topics = try #require(model.summarizeCalls.last?.prompt).split(separator: "\n").filter { $0.hasPrefix("- Part from") }
+        #expect(!topics.isEmpty)
+        #expect(!topics.contains("- Part from 1"))
+    }
+
+    /// A short stretch the model declines is read in halves, so only the
+    /// half it declines is left out.
+    @Test func aDeclinedSinglePassIsReadInHalves() async throws {
+        let model = FakeCatchUpModel(
+            digest: { prompt in
+                if lineNumbers(in: prompt).contains(1) { throw CatchUpModelError.declined }
+                return CatchUpDraft(overview: "The second half.")
+            },
+            final: { prompt in
+                if !lineNumbers(in: prompt).isEmpty { throw CatchUpModelError.declined }
+                return [CatchUpDraft(overview: "What's left.")]
+            }
+        )
+        let summary = try await CatchUpEngine(model: model).run(F.request(F.chatter(30)))
+        #expect(summary.overview == "What's left.")
+        let declined = try #require(model.digestCalls.first { lineNumbers(in: $0.prompt).contains(1) })
+        #expect(summary.skippedMessages == lineNumbers(in: declined.prompt).count)
+        #expect((1..<30).contains(summary.skippedMessages))
+    }
+
+    /// The parts were fine but combining them was declined: the notes that
+    /// cover everything become the summary.
+    @Test func aDeclinedMergeFallsBackToTheNotes() async throws {
+        let model = FakeCatchUpModel(
+            context: 2048,
+            digest: { prompt in
+                CatchUpDraft(overview: prompt.contains("Summaries of consecutive parts") ? "Combined notes." : "A part.")
+            },
+            final: { _ in throw CatchUpModelError.declined }
+        )
+        let summary = try await CatchUpEngine(model: model).run(F.request(F.chatter(240)))
+        #expect(summary.overview == "Combined notes.")
+        #expect(summary.isComplete)
+        #expect(summary.skippedMessages == 0)
+    }
+
+    @Test func everythingDeclinedFails() async {
+        let short = FakeCatchUpModel(
+            digest: { _ in throw CatchUpModelError.declined },
+            final: { _ in throw CatchUpModelError.declined }
+        )
+        await #expect(throws: CatchUpError.declined) {
+            try await CatchUpEngine(model: short).run(F.request(F.chatter(3)))
+        }
+        let long = FakeCatchUpModel(
+            context: 2048,
+            digest: { _ in throw CatchUpModelError.declined },
+            final: { _ in [CatchUpDraft(overview: "Never written.")] }
+        )
+        await #expect(throws: CatchUpError.declined) {
+            try await CatchUpEngine(model: long).run(F.request(F.chatter(240)))
+        }
+        #expect(long.summarizeCalls.isEmpty)
+    }
+
+    // MARK: Errors
+
+    /// The model can't read what people wrote: that's the conversation's
+    /// language, not the Mac's, so no System Settings fix is offered.
+    @Test func aConversationInAnUnsupportedLanguageSaysSo() async {
         let model = FakeCatchUpModel(final: { _ in throw CatchUpModelError.unsupportedLanguage })
-        await #expect(throws: CatchUpError.unavailable(.unsupportedLanguage)) {
+        await #expect(throws: CatchUpError.conversationLanguageUnsupported) {
             try await CatchUpEngine(model: model).run(F.request(F.chatter(3)))
+        }
+        #expect(CatchUpError.conversationLanguageUnsupported.errorDescription == "This conversation's language isn't supported for summaries yet.")
+        #expect(CatchUpModelError.unsupportedLanguage.catchUpError != .unavailable(.unsupportedLanguage))
+
+        let older = LanguageModelSession.GenerationError.unsupportedLanguageOrLocale(.init(debugDescription: "xx"))
+        #expect(FoundationModelsCatchUpModel.classify(older) as? CatchUpModelError == .unsupportedLanguage)
+        if #available(macOS 27.0, *) {
+            let current = LanguageModelError.unsupportedLanguageOrLocale(.init(languageCode: "xx", debugDescription: "xx"))
+            #expect(FoundationModelsCatchUpModel.classify(current) as? CatchUpModelError == .unsupportedLanguage)
         }
     }
 

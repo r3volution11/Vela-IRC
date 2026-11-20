@@ -13,11 +13,12 @@ import VelaTheme
 /// marker, lined up with the message text.
 struct CatchUpCardRow: View {
     @Environment(\.chatStyle) private var style
+    @Environment(AppModel.self) private var app
     @Environment(IntelligenceServices.self) private var intelligence
     @Environment(MessageListController.self) private var controller
 
     var body: some View {
-        if let card = intelligence.catchUp.cards[controller.buffer.id] {
+        if app.settings[.intelligenceCatchUp], let card = intelligence.catchUp.cards[controller.buffer.id] {
             CatchUpCardView(card: card)
                 .padding(.leading, leadingInset)
                 .padding(.trailing, style.rowHorizontalPadding)
@@ -43,6 +44,7 @@ struct CatchUpCardView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppModel.self) private var app
     @Environment(IntelligenceServices.self) private var intelligence
     @Environment(MessageListController.self) private var controller
     @Environment(UIState.self) private var uiState
@@ -55,13 +57,18 @@ struct CatchUpCardView: View {
             header
             switch card.phase {
             case .running(let partial):
-                if let partial, !partial.overview.isEmpty {
-                    content(partial)
+                if let partial, partial.hasText {
+                    // Words being redone stay, dimmed, until new ones arrive.
+                    VStack(alignment: .leading, spacing: 9) { content(partial) }
+                        .opacity(partial.isRevising ? 0.5 : 1)
+                    if partial.isRevising { status(Self.revisingText(partial)) }
                 } else {
-                    loading
+                    status(Self.statusText(partial, messageCount: card.messageCount))
                 }
             case .done(let summary):
                 content(summary)
+            case .failed(.nothingToSummarize):
+                nothingNew
             case .failed(let error):
                 failure(error)
             }
@@ -87,53 +94,102 @@ struct CatchUpCardView: View {
                 .font(.system(size: max(10, style.fontSize - 2), weight: .semibold))
                 .foregroundStyle(theme[ThemeKey.accentText])
                 .accessibilityHidden(true)
-            Text("While you were away · \(CatchUpActions.messagesLabel(card.messageCount))")
+            Text(card.isNothingNew ? "Catch me up" : "While you were away · \(CatchUpActions.messagesLabel(card.messageCount))")
                 .font(style.font(size: max(9, style.fontSize - 2), weight: .medium))
                 .foregroundStyle(theme[ThemeKey.embedSiteName])
                 .lineLimit(1)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 8)
-            if case .running(let partial?) = card.phase, !partial.overview.isEmpty {
-                // Still writing; before the first words the body has its own spinner.
+            if case .running(let partial?) = card.phase, partial.hasText, !partial.isRevising {
+                // Still writing; otherwise the body has its own spinner.
                 ProgressView()
                     .controlSize(.mini)
                     .accessibilityLabel("Summarizing")
             }
-            CatchUpCardButton(systemImage: "doc.on.doc", label: "Copy Summary") { copy() }
-                .disabled(!isDone)
-            CatchUpCardButton(systemImage: "arrow.clockwise", label: "Regenerate") { regenerate() }
-                .disabled(card.isRunning)
+            if !card.isNothingNew {
+                CatchUpCardButton(systemImage: "doc.on.doc", label: "Copy Summary") { copy() }
+                    .disabled(!isDone)
+                CatchUpCardButton(systemImage: "arrow.clockwise", label: "Regenerate") { regenerate() }
+                    .disabled(card.isRunning)
+            }
             CatchUpCardButton(systemImage: "xmark", label: "Dismiss") { dismiss() }
         }
     }
 
     private var footer: some View {
-        Text(footerText)
+        Text(Self.footerText(card.summary, messageCount: card.messageCount))
             .font(style.font(size: max(9, style.fontSize - 3)))
             .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    private var footerText: String {
-        let note = "Summarized on this Mac by Apple Intelligence. May contain mistakes."
-        guard let summary = card.summary, summary.messageCount < card.messageCount,
-              summary.messageCount >= CatchUpRequest.maximumLines
-        else { return note }
-        return "Covers the latest \(CatchUpActions.messagesLabel(summary.messageCount)). " + note
+    /// The note under the summary: how much it covers, what was left out,
+    /// and where it was made.
+    nonisolated static func footerText(_ summary: CatchUpSummary?, messageCount: Int) -> String {
+        var parts: [String] = []
+        if let summary, summary.messageCount < messageCount, summary.messageCount >= CatchUpRequest.maximumLines {
+            parts.append("Covers the latest \(CatchUpActions.messagesLabel(summary.messageCount)).")
+        }
+        if let skipped = summary?.skippedMessages, skipped > 0 {
+            parts.append("Skipped \(CatchUpActions.messagesLabel(skipped)) that Apple Intelligence wouldn't summarize.")
+        }
+        parts.append("Summarized on this Mac by Apple Intelligence. May contain mistakes.")
+        return parts.joined(separator: " ")
+    }
+
+    /// While there are no words to show: "Reading 250 messages…", or for
+    /// a stretch read in parts "Reading… 3 of 8", then "Writing the
+    /// summary…".
+    nonisolated static func statusText(_ partial: CatchUpSummary?, messageCount: Int) -> String {
+        guard let progress = partial?.progress else {
+            return "Reading \(CatchUpActions.messagesLabel(messageCount))…"
+        }
+        if progress.isFinished { return "Writing the summary…" }
+        return "Reading… \(progress.completed + 1) of \(progress.total)"
+    }
+
+    /// Under words that are being redone.
+    nonisolated static func revisingText(_ partial: CatchUpSummary) -> String {
+        guard let progress = partial.progress, !progress.isFinished else { return "Finishing…" }
+        return "Finishing… \(progress.completed + 1) of \(progress.total)"
     }
 
     // MARK: States
 
-    private var loading: some View {
+    private func status(_ text: String) -> some View {
         HStack(spacing: 8) {
             ProgressView()
                 .controlSize(.small)
                 .accessibilityHidden(true)
-            Text("Reading \(CatchUpActions.messagesLabel(card.messageCount))…")
+            Text(text)
                 .font(style.font(size: max(10, style.fontSize - 1)))
                 .foregroundStyle(theme[ThemeKey.embedDescription])
+                .contentTransition(.numericText())
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Asked for with nothing new: says so, and when the button comes back.
+    private var nothingNew: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: max(10, style.fontSize - 1), weight: .semibold))
+                .foregroundStyle(theme[ThemeKey.embedSiteName])
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Nothing new in \(controller.buffer.name) since you last read it.")
+                    .font(style.font(size: max(10, style.fontSize - 1)))
+                    .foregroundStyle(theme[ThemeKey.chatForeground])
+                Text(CatchUpEligibility.nothingNewDetail(
+                    threshold: app.settings[.intelligenceCatchUpThreshold],
+                    showsNewLine: style.showUnreadMarker
+                ))
+                .font(style.font(size: max(9, style.fontSize - 2)))
+                .foregroundStyle(theme[ThemeKey.embedDescription])
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
         .accessibilityElement(children: .combine)
     }
 
@@ -211,7 +267,8 @@ struct CatchUpCardView: View {
     /// Changes that resize the card, for its animation.
     private var layoutKey: [Int] {
         switch card.phase {
-        case .running(let partial): [0, partial?.topics.count ?? -1, partial?.addressedToYou.count ?? 0, partial?.overview.isEmpty == false ? 1 : 0]
+        case .running(let partial):
+            [0, partial?.topics.count ?? -1, partial?.addressedToYou.count ?? 0, partial?.hasText == true ? 1 : 0, partial?.isRevising == true ? 1 : 0]
         case .done(let summary): [1, summary.topics.count, summary.addressedToYou.count]
         case .failed: [2]
         }

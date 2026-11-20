@@ -49,7 +49,9 @@ Come back to a busy channel and a **Catch me up** button appears at the end of t
 - **Topics**, each with a title, who took part and a one-line summary. Click a topic to jump to its first message, which is briefly highlighted.
 - **You were mentioned**, when people said something to you.
 
-The buttons at the top of the card copy the summary (**Copy Summary**), write a new one (**Regenerate**) and close the card (**Dismiss**). The card stays put while you're in the channel, even if you switch to another app, and closes when you go to another channel.
+The buttons at the top of the card copy the summary (**Copy Summary**), write a new one (**Regenerate**) and close the card (**Dismiss**). The card stays until you dismiss it. Go to another channel while it's being written and it keeps going: it's there, finished, when you come back.
+
+**Messages your bouncer replays count as new.** When Vela connects to ZNC, soju or a server with chat history, the messages it replays from while you were away count as unread once they're newer than where you stopped reading, so the New line and Catch me up cover them. See [Bouncers](/guide/bouncers).
 
 ### When the button appears
 
@@ -60,7 +62,7 @@ The **Catch me up** button shows when all of these are true:
 - At least **25** messages are new. Change the number with **Show the button after**: 10, 25, 50 or 100 new messages.
 - The **New** line is showing. The button sits on it, so with **Show the New line** turned off in **Settings → Messages → Unread messages** (as the Classic IRC preset does), there's no button. See [Unread messages](/guide/messages-and-layouts#unread-messages).
 
-You can also catch up whenever something's unread, however little, even with the button or the New line turned off:
+You can also catch up whenever you like, however little is new, even with the button or the New line turned off:
 
 - Right-click a channel or conversation (in the sidebar, the rail or the tabs) and choose **Catch Me Up**.
 - Run **Buffer: Catch Me Up** from the [command palette](/guide/command-palette).
@@ -68,16 +70,23 @@ You can also catch up whenever something's unread, however little, even with the
 
 Without the New line, the card opens where the new messages start, just above the first one.
 
+**With nothing new,** Catch Me Up shows the summary you made earlier in that channel, until you quit Vela, so a stretch you've since read is still one click away. If there's no earlier summary, a card at the end of the conversation says there's nothing new, and when the button will be back. In the command palette, the command says which you'll get: **earlier summary** or **nothing new**.
+
+**Offer Catch me up in busy channels** turns Catch me up off everywhere: the button, the right-click item and the palette command go, open cards close, and Siri says it's turned off in Vela's settings.
+
 In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#intelligence.catchUp) and the number is [`intelligence.catchUpThreshold`](/reference/settings#intelligence.catchUpThreshold), which takes any number.
 
 ### What it reads, and how long it takes {#catch-up-limits}
 
 - **The new messages, actions and notices** after the New marker (or where it would be, with the New line off). Joins, parts, other events and deleted messages are left out, and links are reduced to the site they point to.
 - **At most the latest 600.** For a longer stretch, the card says "Covers the latest 600 messages."
-- **It takes a moment.** About 10 seconds for a few dozen messages, and up to about a minute for 600. Until the first words arrive, the card says "Reading 250 messages…".
+- **It takes a while.** On a fast Mac, about 10 seconds for a few dozen messages and about a minute for 600, most of it spent reading the parts. A slower Mac, or one on macOS 26.0–26.3 (whose model reads less at a time), can take a few minutes for a long stretch. You can go to another channel meanwhile.
+- **Long stretches are read in parts.** The card counts them ("Reading… 3 of 8"), then says "Writing the summary…" until the first words appear. Before that, a short stretch says "Reading 40 messages…".
+- **Words never disappear.** If Apple Intelligence has to redo a pass (it ran out of room, say), what it wrote stays on the card, dimmed, with "Finishing…", until the new words arrive.
+- **A part it won't summarize is skipped.** Apple Intelligence's safety checks sometimes decline part of a conversation. The rest is still summarized, and the card says how many messages it skipped. Only when it declines all of it does the card say it couldn't summarize the conversation.
 - **A summary is kept until new messages arrive**, so opening the card again shows it straight away. **Regenerate** writes a fresh one.
 
-If something goes wrong, the card says why and offers **Try Again**, or **Open System Settings** when Apple Intelligence needs attention.
+If something goes wrong, the card says why and offers **Try Again**, or **Open System Settings** when Apple Intelligence needs attention. When people are writing in a language Apple Intelligence can't summarize yet, the card says "This conversation's language isn't supported for summaries yet." That's about the conversation, not your Mac's language, so there's nothing to change in System Settings.
 
 ::: warning Summaries can contain mistakes
 A summary can misread a conversation or leave out something that matters. Click a topic to read the messages behind it before you act on it.

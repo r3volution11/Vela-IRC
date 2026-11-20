@@ -9,25 +9,35 @@ import VelaStore
 
 extension VelaCommandCatalog {
     /// Catch me up (Apple Intelligence summaries) for the selected buffer:
-    /// "Buffer: Catch Me Up", while something is new and Apple
+    /// "Buffer: Catch Me Up", while Catch me up is on and Apple
     /// Intelligence is ready.
     var catchUpCommands: [VelaCommand] {
-        let app = context.app
-        guard let intelligence = context.intelligence,
-              let buffer = app.selectedBuffer, let session = app.selectedSession
+        guard let intelligence = context.intelligence else { return [] }
+        return Self.catchUpCommands(app: context.app, intelligence: intelligence)
+    }
+
+    /// See ``catchUpCommands``. With nothing new it's still listed, noting
+    /// what it will do: show the latest summary again, or say there's
+    /// nothing new.
+    static func catchUpCommands(app: AppModel, intelligence: IntelligenceServices) -> [VelaCommand] {
+        guard let buffer = app.selectedBuffer, let session = app.selectedSession,
+              CatchUpEligibility.canOffer(
+                  isEnabled: app.settings[.intelligenceCatchUp],
+                  status: intelligence.availability.status,
+                  kind: buffer.kind
+              )
         else { return [] }
-        let offered = CatchUpEligibility.canOffer(
-            status: intelligence.availability.status,
-            hasUnread: CatchUpActions.hasUnread(buffer, app: app),
-            kind: buffer.kind
-        )
+        let store = intelligence.catchUp
         return [
             VelaCommand(
                 id: "buffer.catchUp", category: .buffer, title: "Catch Me Up",
                 keywords: ["summary", "summarize", "apple intelligence", "unread", "missed", "new messages", "tldr"],
-                isEnabled: offered
+                detail: CatchUpEligibility.paletteDetail(
+                    hasUnread: CatchUpActions.hasUnread(buffer, app: app),
+                    hasEarlierSummary: store.hasEarlierSummary(for: buffer.id)
+                )
             ) {
-                CatchUpActions.open(buffer, session: session, app: app, store: intelligence.catchUp)
+                CatchUpActions.open(buffer, session: session, app: app, store: store)
             },
         ]
     }

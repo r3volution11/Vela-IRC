@@ -14,20 +14,23 @@ nonisolated protocol CatchUpLanguageModel: Sendable {
     func tokenCount(_ text: String) async -> Int?
     /// The exact tokens the response format adds to a request, or nil.
     func schemaTokenCount(for pass: CatchUpPrompts.Pass) async -> Int?
-    /// A digest of one chunk (or a merge of digests), all at once.
+    /// A digest of one chunk (or a merge of digests), all at once. The
+    /// response stops after `maximumResponseTokens`.
     /// Errors are ``CatchUpModelError``s.
-    func digest(prompt: String, instructions: String) async throws -> CatchUpDraft
+    func digest(prompt: String, instructions: String, maximumResponseTokens: Int) async throws -> CatchUpDraft
     /// The final summary, streamed: each element is the summary so far.
+    /// The response stops after `maximumResponseTokens`.
     /// Errors are ``CatchUpModelError``s.
-    func summarize(prompt: String, instructions: String) -> AsyncThrowingStream<CatchUpDraft, Error>
+    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error>
 }
 
 /// Model failures the engine reacts to.
 nonisolated enum CatchUpModelError: Error, Equatable {
     /// The request didn't fit the context window: retry with less.
     case contextExceeded
-    /// Guardrails or a refusal.
+    /// Guardrails or a refusal: that part is left out.
     case declined
+    /// The model can't read the conversation's language.
     case unsupportedLanguage
     /// The model's assets aren't there (still downloading, say).
     case unavailable
@@ -39,7 +42,9 @@ nonisolated enum CatchUpModelError: Error, Equatable {
         switch self {
         case .contextExceeded: .failed("This conversation is too long to summarize.")
         case .declined: .declined
-        case .unsupportedLanguage: .unavailable(.unsupportedLanguage)
+        // About what people wrote, not the Mac's language (that's checked
+        // before summarizing), so nothing in System Settings fixes it.
+        case .unsupportedLanguage: .conversationLanguageUnsupported
         case .unavailable: .unavailable(.modelNotReady)
         case .rateLimited: .rateLimited
         case .failed(let message): .failed(message)
@@ -51,11 +56,14 @@ nonisolated enum CatchUpModelError: Error, Equatable {
 /// transcript, summarizes it in one pass when it fits the model's context,
 /// and otherwise digests it chunk by chunk and merges the digests (map /
 /// reduce). The final pass streams, so the overview appears as it's
-/// written. Exceeded context windows retry with smaller pieces.
+/// written. Exceeded context windows retry with smaller pieces, and parts
+/// the model declines are left out (the summary says how many messages).
 nonisolated struct CatchUpEngine: Sendable {
     let model: any CatchUpLanguageModel
 
-    /// Room left for each kind of response.
+    /// Room left for each kind of response, which is also the most a
+    /// response may write: one that runs on (repeating itself, say) is cut
+    /// off there instead of filling the context window.
     static func responseTokens(for pass: CatchUpPrompts.Pass) -> Int {
         switch pass {
         case .single, .merge: 750
@@ -71,17 +79,21 @@ nonisolated struct CatchUpEngine: Sendable {
         }
     }
 
-    /// Summarizes `request`, calling `progress` with each partial summary.
-    /// Returns the complete one. Throws ``CatchUpError``s (or
-    /// `CancellationError`).
+    /// Summarizes `request`, calling `progress` with each snapshot: how
+    /// many parts of a long stretch are read, then the summary as it's
+    /// written. Words in one snapshot are never missing from the next (see
+    /// ``CatchUpSummary/isRevising``). Returns the complete summary.
+    /// Throws ``CatchUpError``s (or `CancellationError`); only a stretch
+    /// the model declines in full fails as declined.
     func run(
         _ request: CatchUpRequest,
-        progress: @Sendable (CatchUpSummary) -> Void = { _ in }
+        progress: @escaping @Sendable (CatchUpSummary) -> Void = { _ in }
     ) async throws -> CatchUpSummary {
         let transcript = CatchUpTranscript(request)
         guard !transcript.isEmpty else { throw CatchUpError.nothingToSummarize }
+        let reporter = CatchUpReporter(transcript: transcript, send: progress)
         do {
-            return try await summarize(transcript, bufferName: request.bufferName, progress: progress)
+            return try await summarize(transcript, bufferName: request.bufferName, reporter: reporter)
         } catch let error as CatchUpModelError {
             throw error.catchUpError
         }
@@ -90,11 +102,12 @@ nonisolated struct CatchUpEngine: Sendable {
     private func summarize(
         _ transcript: CatchUpTranscript,
         bufferName: String,
-        progress: @Sendable (CatchUpSummary) -> Void
+        reporter: CatchUpReporter
     ) async throws -> CatchUpSummary {
         let costs = await lineCosts(transcript)
         let total = costs.reduce(0, +)
-        var digestBudget = await budget(for: .digest, ownNick: transcript.ownNick)
+        let digestBudget = await budget(for: .digest, ownNick: transcript.ownNick)
+        var chunkTokens = digestBudget.transcriptTokens
 
         let single = await budget(for: .single, ownNick: transcript.ownNick)
         if total <= single.transcriptTokens {
@@ -102,85 +115,117 @@ nonisolated struct CatchUpEngine: Sendable {
                 return try await stream(
                     prompt: CatchUpPrompts.single(transcript, bufferName: bufferName),
                     instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .single),
-                    transcript: transcript,
-                    progress: progress
+                    pass: .single,
+                    reporter: reporter
                 )
             } catch CatchUpModelError.contextExceeded {
                 // The estimate was off: chunk it, with a safety margin.
-                digestBudget = digestBudget.shrunk(by: 0.6)
+                chunkTokens = digestBudget.shrunk(by: 0.6).transcriptTokens
+                reporter.redo()
+            } catch CatchUpModelError.declined where transcript.entries.count > 1 {
+                // Something in it trips the guardrails: read it in halves,
+                // so only the half that does is left out.
+                chunkTokens = min(chunkTokens, max(1, (total + 1) / 2))
+                reporter.redo()
             }
         }
 
         try Task.checkCancellation()
         var digests: [CatchUpDigest] = []
-        let pieces = CatchUpChunker.balanced(Array(zip(transcript.entries, costs)), budget: digestBudget.transcriptTokens) { $0.1 }
+        let pieces = CatchUpChunker.balanced(Array(zip(transcript.entries, costs)), budget: chunkTokens) { $0.1 }
+        reporter.plan(pieces.count)
         for piece in pieces {
-            digests += try await digest(piece.map(\.0)[...], of: transcript, bufferName: bufferName)
+            digests += try await digest(piece.map(\.0)[...], of: transcript, bufferName: bufferName, reporter: reporter)
         }
-        return try await merge(digests, transcript: transcript, bufferName: bufferName, progress: progress)
+        return try await merge(digests, transcript: transcript, bufferName: bufferName, reporter: reporter)
     }
 
     // MARK: Map
 
     /// Digests `entries`, splitting them in half (and again) whenever the
-    /// model reports they didn't fit.
+    /// model reports they didn't fit. A part the model declines is left out.
     private func digest(
         _ entries: ArraySlice<CatchUpTranscript.Entry>,
         of transcript: CatchUpTranscript,
-        bufferName: String
+        bufferName: String,
+        reporter: CatchUpReporter
     ) async throws -> [CatchUpDigest] {
         try Task.checkCancellation()
         guard let first = entries.first?.number, let last = entries.last?.number else { return [] }
         do {
             let draft = try await model.digest(
                 prompt: CatchUpPrompts.digest(entries, of: transcript, bufferName: bufferName),
-                instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .digest)
+                instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .digest),
+                maximumResponseTokens: Self.responseTokens(for: .digest)
             )
+            reporter.partRead()
             return [CatchUpDigest(lines: first...last, draft: draft)]
         } catch CatchUpModelError.contextExceeded where entries.count > 1 {
+            // One part becomes two.
+            reporter.plan(1)
             let middle = entries.startIndex + entries.count / 2
-            let left = try await digest(entries[..<middle], of: transcript, bufferName: bufferName)
-            let right = try await digest(entries[middle...], of: transcript, bufferName: bufferName)
+            let left = try await digest(entries[..<middle], of: transcript, bufferName: bufferName, reporter: reporter)
+            let right = try await digest(entries[middle...], of: transcript, bufferName: bufferName, reporter: reporter)
             return left + right
+        } catch CatchUpModelError.declined {
+            // Its guardrails, or a refusal: one part shouldn't sink the
+            // whole summary, which says how much it left out.
+            reporter.skipped(entries.count)
+            return []
         }
     }
 
     // MARK: Reduce
 
     /// Merges digests into the final summary. When they don't fit one
-    /// request, neighbors are merged into bigger digests first.
+    /// request, neighbors are merged into bigger digests first. Throws
+    /// `declined` when every part was declined.
     private func merge(
         _ digests: [CatchUpDigest],
         transcript: CatchUpTranscript,
         bufferName: String,
-        progress: @Sendable (CatchUpSummary) -> Void
+        reporter: CatchUpReporter
     ) async throws -> CatchUpSummary {
         let mergeBudget = await budget(for: .merge, ownNick: transcript.ownNick)
         var level = digests
         while level.count > 1, await cost(of: CatchUpPrompts.merge(level, bufferName: bufferName)) > mergeBudget.transcriptTokens {
-            level = try await mergeNeighbors(level, budget: mergeBudget, transcript: transcript, bufferName: bufferName)
+            level = try await mergeNeighbors(level, budget: mergeBudget, transcript: transcript, bufferName: bufferName, reporter: reporter)
         }
+        guard let only = level.first else { throw CatchUpModelError.declined }
         do {
             return try await stream(
                 prompt: CatchUpPrompts.merge(level, bufferName: bufferName),
                 instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .merge),
-                transcript: transcript,
-                progress: progress
+                pass: .merge,
+                reporter: reporter
             )
         } catch CatchUpModelError.contextExceeded where level.count > 1 {
-            let fewer = try await mergeNeighbors(level, budget: mergeBudget.shrunk(by: 0.5), transcript: transcript, bufferName: bufferName)
-            return try await merge(fewer, transcript: transcript, bufferName: bufferName, progress: progress)
+            reporter.redo()
+            let fewer = try await mergeNeighbors(level, budget: mergeBudget.shrunk(by: 0.5), transcript: transcript, bufferName: bufferName, reporter: reporter)
+            return try await merge(fewer, transcript: transcript, bufferName: bufferName, reporter: reporter)
+        } catch CatchUpModelError.declined where level.count > 1 {
+            // Something in the notes trips the guardrails: combine them in
+            // smaller groups, leaving out any group it declines.
+            reporter.redo()
+            let fewer = try await mergeNeighbors(level, budget: mergeBudget.shrunk(by: 0.5), transcript: transcript, bufferName: bufferName, reporter: reporter)
+            return try await merge(fewer, transcript: transcript, bufferName: bufferName, reporter: reporter)
+        } catch CatchUpModelError.declined {
+            // One digest left, covering everything that wasn't skipped:
+            // it's the summary.
+            return reporter.finish(only.draft)
         }
     }
 
     /// One reduce level: groups neighbors that fit `budget` together and
     /// merges each group into one digest. Always shrinks the list (pairs
-    /// up when even two don't fit by estimate).
+    /// up when even two don't fit by estimate). A group the model declines
+    /// is left out.
     private func mergeNeighbors(
         _ digests: [CatchUpDigest],
         budget: CatchUpBudget,
         transcript: CatchUpTranscript,
-        bufferName: String
+        bufferName: String,
+        reporter: CatchUpReporter
     ) async throws -> [CatchUpDigest] {
         var costs: [Int] = []
         for (index, digest) in digests.enumerated() {
@@ -192,6 +237,7 @@ nonisolated struct CatchUpEngine: Sendable {
                 Array(digests.indices)[start..<min(start + 2, digests.count)]
             }
         }
+        reporter.plan(groups.count { $0.count > 1 })
         var merged: [CatchUpDigest] = []
         for group in groups {
             try Task.checkCancellation()
@@ -200,11 +246,19 @@ nonisolated struct CatchUpEngine: Sendable {
                 merged += members
                 continue
             }
-            let draft = try await model.digest(
-                prompt: CatchUpPrompts.merge(members, bufferName: bufferName),
-                instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .merge)
-            )
-            merged.append(CatchUpDigest(lines: first.lines.lowerBound...last.lines.upperBound, draft: draft))
+            let summarized = members.reduce(0) { $0 + $1.summarizedLines }
+            do {
+                // The result is a digest, so it gets a digest's room.
+                let draft = try await model.digest(
+                    prompt: CatchUpPrompts.merge(members, bufferName: bufferName),
+                    instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .merge),
+                    maximumResponseTokens: Self.responseTokens(for: .digest)
+                )
+                reporter.partRead()
+                merged.append(CatchUpDigest(lines: first.lines.lowerBound...last.lines.upperBound, draft: draft, summarizedLines: summarized))
+            } catch CatchUpModelError.declined {
+                reporter.skipped(summarized)
+            }
         }
         return merged
     }
@@ -214,17 +268,18 @@ nonisolated struct CatchUpEngine: Sendable {
     private func stream(
         prompt: String,
         instructions: String,
-        transcript: CatchUpTranscript,
-        progress: @Sendable (CatchUpSummary) -> Void
+        pass: CatchUpPrompts.Pass,
+        reporter: CatchUpReporter
     ) async throws -> CatchUpSummary {
         var last: CatchUpDraft?
-        for try await draft in model.summarize(prompt: prompt, instructions: instructions) {
+        let drafts = model.summarize(prompt: prompt, instructions: instructions, maximumResponseTokens: Self.responseTokens(for: pass))
+        for try await draft in drafts {
             last = draft
-            progress(Self.summary(from: draft, transcript: transcript, isComplete: false))
+            reporter.wrote(draft)
         }
         try Task.checkCancellation()
         guard let last else { throw CatchUpModelError.failed("Apple Intelligence didn't return a summary.") }
-        return Self.summary(from: last, transcript: transcript, isComplete: true)
+        return reporter.finish(last)
     }
 
     // MARK: Budgets
@@ -357,5 +412,76 @@ nonisolated struct CatchUpEngine: Sendable {
     /// while the summary streams in.
     static func topicID(_ index: Int) -> UUID {
         UUID(uuidString: String(format: "C47C0B00-0000-4000-8000-%012d", index)) ?? UUID()
+    }
+}
+
+/// What one run tells the card (``CatchUpEngine/run(_:progress:)``): how
+/// many parts of a long stretch are read, then the summary as it's
+/// written. Words that have appeared are never taken back: while a pass is
+/// redone they stay, marked ``CatchUpSummary/isRevising``, until the next
+/// pass writes. Used by one run, from one task.
+nonisolated private final class CatchUpReporter {
+    private let transcript: CatchUpTranscript
+    private let send: @Sendable (CatchUpSummary) -> Void
+    private var completed = 0
+    private var total = 0
+    private var skippedMessages = 0
+    /// The latest snapshot with words in it.
+    private var written: CatchUpSummary?
+
+    init(transcript: CatchUpTranscript, send: @escaping @Sendable (CatchUpSummary) -> Void) {
+        self.transcript = transcript
+        self.send = send
+    }
+
+    /// `count` more parts to read: chunks, halves of one, or merges.
+    func plan(_ count: Int) {
+        guard count > 0 else { return }
+        total += count
+        report()
+    }
+
+    func partRead() {
+        completed += 1
+        report()
+    }
+
+    /// A part was declined: its `messages` are left out.
+    func skipped(_ messages: Int) {
+        skippedMessages += messages
+        completed += 1
+        report()
+    }
+
+    /// A pass failed and is being redone: what it wrote stays, dimmed.
+    func redo() {
+        if written != nil { report() }
+    }
+
+    /// A snapshot of the summary being written. Until it has words, the
+    /// card keeps showing what it had.
+    func wrote(_ draft: CatchUpDraft) {
+        var summary = CatchUpEngine.summary(from: draft, transcript: transcript, isComplete: false)
+        guard summary.hasText else { return }
+        summary.skippedMessages = skippedMessages
+        written = summary
+        send(summary)
+    }
+
+    /// The finished summary.
+    func finish(_ draft: CatchUpDraft) -> CatchUpSummary {
+        var summary = CatchUpEngine.summary(from: draft, transcript: transcript, isComplete: true)
+        summary.skippedMessages = skippedMessages
+        return summary
+    }
+
+    private func report() {
+        var snapshot = written ?? CatchUpSummary(
+            overview: "", topics: [], addressedToYou: [], messageCount: transcript.entries.count, isComplete: false
+        )
+        snapshot.isRevising = written != nil
+        snapshot.progress = total > 0 ? CatchUpProgress(completed: min(completed, total), total: total) : nil
+        snapshot.skippedMessages = skippedMessages
+        send(snapshot)
     }
 }

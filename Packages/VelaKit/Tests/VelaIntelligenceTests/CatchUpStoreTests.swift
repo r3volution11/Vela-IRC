@@ -222,28 +222,155 @@ struct CatchUpStoreTests {
         #expect(try #require(store.card(for: other)).anchor == .distantPast)
     }
 
-    @Test func leavingABufferClosesOnlyItsCard() async throws {
+    // MARK: Leaving and coming back
+
+    private let swiftID = BufferID(networkID: CatchUpFixtures.bufferID.networkID, foldedName: "#swift")
+
+    /// Going to another buffer leaves the card, and its summary keeps
+    /// being written; coming back shows it, finished.
+    @Test func aSummaryKeepsGoingWhileYouAreElsewhere() async throws {
         let summarizer = ManualSummarizer()
         let store = CatchUpStore(summarizer: summarizer)
-        let swiftID = BufferID(networkID: F.bufferID.networkID, foldedName: "#swift")
         let swift = F.request(F.chatter(30), bufferID: swiftID, name: "#swift")
         store.open(swift, reveal: false)
         #expect(await eventually { summarizer.callCount == 1 })
-        summarizer.complete(0, overview: "Swift talk.")
-        #expect(await eventually { overview(store.card(for: swiftID)) == "Swift talk." })
-        store.open(F.request(F.chatter(40)), reveal: false)
 
         // #vela is on screen now.
-        store.dismissAll(except: F.bufferID)
-        #expect(store.card(for: swiftID) == nil)
-        #expect(store.card(for: F.bufferID) != nil)
+        store.selectionChanged(to: F.bufferID) { _ in true }
+        #expect(store.card(for: swiftID)?.isRunning == true)
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(!summarizer.call(0).terminated.value)
 
-        // The finished summary is still there for Siri, or the card again.
-        #expect(store.cachedSummary(for: swift)?.overview == "Swift talk.")
-        store.open(swift, reveal: false)
+        summarizer.complete(0, overview: "Swift talk.")
+        #expect(await eventually { overview(store.card(for: swiftID)) == "Swift talk." })
+        // Back in #swift: the card is there, finished.
+        store.selectionChanged(to: swiftID) { _ in true }
         #expect(overview(store.card(for: swiftID)) == "Swift talk.")
+        #expect(summarizer.callCount == 1)
+    }
 
-        store.dismissAll(except: nil)
+    /// After the stretch was read (and the card dismissed), asking again
+    /// shows the same summary, from the cache.
+    @Test func aReadStretchStaysReachable() async throws {
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        let request = F.request(F.chatter(30))
+        #expect(!store.hasEarlierSummary(for: F.bufferID))
+        #expect(!store.reopen(F.bufferID))
+
+        store.open(request, marker: Date(timeIntervalSince1970: 7), reveal: false)
+        #expect(await eventually { summarizer.callCount == 1 })
+        summarizer.complete(0, overview: "Earlier.")
+        #expect(await eventually { overview(store.card(for: F.bufferID)) == "Earlier." })
+        store.dismiss(F.bufferID)
+
+        #expect(store.hasEarlierSummary(for: F.bufferID))
+        #expect(store.latestRequest(for: F.bufferID) == request)
+        #expect(store.reopen(F.bufferID))
+        let card = try #require(store.card(for: F.bufferID))
+        #expect(overview(card) == "Earlier.")
+        #expect(card.marker == Date(timeIntervalSince1970: 7))
+        #expect(store.reveal?.bufferID == F.bufferID)
+        #expect(summarizer.callCount == 1)
+    }
+
+    /// A summary dismissed before it finished is written again on request.
+    @Test func reopeningAnUnfinishedStretchSummarizesItAgain() async {
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        store.open(F.request(F.chatter(30)), reveal: false)
+        #expect(await eventually { summarizer.callCount == 1 })
+        store.dismiss(F.bufferID)
+        #expect(await eventually { summarizer.call(0).terminated.value })
+
+        #expect(store.reopen(F.bufferID))
+        #expect(store.card(for: F.bufferID)?.isRunning == true)
+        #expect(await eventually { summarizer.callCount == 2 })
+    }
+
+    @Test func nothingNewSaysSo() async throws {
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        let end = Date(timeIntervalSince1970: 1_800_000_000)
+        store.open(F.request([]), marker: end)
+        let card = try #require(store.card(for: F.bufferID))
+        #expect(card.isNothingNew)
+        #expect(card.phase == .failed(.nothingToSummarize))
+        #expect(card.anchor == end)
+        #expect(card.coversThrough == nil)
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(summarizer.callCount == 0)
+        // It's no summary to come back to.
+        #expect(!store.hasEarlierSummary(for: F.bufferID))
+
+        // It closes when you leave; summaries don't.
+        store.open(F.request(F.chatter(30), bufferID: swiftID, name: "#swift"), reveal: false)
+        store.selectionChanged(to: swiftID) { _ in true }
+        #expect(store.card(for: F.bufferID) == nil)
+        #expect(store.card(for: swiftID) != nil)
+    }
+
+    @Test func cardsOfClosedBuffersGo() async {
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        store.open(F.request(F.chatter(30), bufferID: swiftID, name: "#swift"), reveal: false)
+        #expect(await eventually { summarizer.callCount == 1 })
+        store.selectionChanged(to: F.bufferID) { $0 != swiftID }
+        #expect(store.card(for: swiftID) == nil)
+        #expect(!store.hasEarlierSummary(for: swiftID))
+        #expect(await eventually { summarizer.call(0).terminated.value })
+    }
+
+    /// Catch me up turned off: every card closes and its summary stops.
+    @Test func closeAllStopsEverything() async {
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        store.open(F.request(F.chatter(30)), reveal: false)
+        store.open(F.request(F.chatter(30), bufferID: swiftID, name: "#swift"), reveal: false)
+        #expect(await eventually { summarizer.callCount == 2 })
+        store.closeAll()
         #expect(store.cards.isEmpty)
+        #expect(await eventually { summarizer.call(0).terminated.value && summarizer.call(1).terminated.value })
+    }
+
+    // MARK: Progress
+
+    @Test func progressReachesTheCard() async throws {
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        store.open(F.request(F.chatter(30)))
+        #expect(await eventually { summarizer.callCount == 1 })
+        let card = try #require(store.card(for: F.bufferID))
+        let reading = CatchUpSummary(overview: "", topics: [], addressedToYou: [], messageCount: 30, isComplete: false, progress: CatchUpProgress(completed: 2, total: 5))
+        summarizer.call(0).continuation.yield(reading)
+        #expect(await eventually { card.summary?.progress == CatchUpProgress(completed: 2, total: 5) })
+        #expect(card.summary?.hasText == false)
+    }
+
+    /// A summarizer that goes quiet after writing (a pass being redone)
+    /// doesn't blank the card: the words stay, marked as being redone.
+    @Test func wordsShownAreNeverTakenBack() async throws {
+        let summarizer = ManualSummarizer()
+        let store = CatchUpStore(summarizer: summarizer)
+        store.open(F.request(F.chatter(30)))
+        #expect(await eventually { summarizer.callCount == 1 })
+        let card = try #require(store.card(for: F.bufferID))
+        let continuation = summarizer.call(0).continuation
+        continuation.yield(CatchUpSummary(overview: "Half a thought", topics: [], addressedToYou: [], messageCount: 30, isComplete: false))
+        #expect(await eventually { card.summary?.overview == "Half a thought" })
+
+        continuation.yield(CatchUpSummary(overview: "", topics: [], addressedToYou: [], messageCount: 30, isComplete: false, progress: CatchUpProgress(completed: 1, total: 3)))
+        #expect(await eventually { card.summary?.progress != nil })
+        #expect(card.summary?.overview == "Half a thought")
+        #expect(card.summary?.isRevising == true)
+
+        continuation.yield(CatchUpSummary(overview: "The whole thought.", topics: [], addressedToYou: [], messageCount: 30, isComplete: false, isRevising: false))
+        continuation.yield(CatchUpSummary(overview: "The whole thought.", topics: [], addressedToYou: [], messageCount: 30, isComplete: true))
+        continuation.finish()
+        #expect(await eventually { overview(card) == "The whole thought." })
+        if case .done(let done) = card.phase {
+            #expect(!done.isRevising)
+            #expect(done.progress == nil)
+        }
     }
 }

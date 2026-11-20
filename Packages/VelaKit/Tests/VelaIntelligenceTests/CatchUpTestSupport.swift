@@ -64,12 +64,19 @@ nonisolated final class Recorder<Value: Sendable>: @unchecked Sendable {
 /// and `final` decide each answer from the prompt.
 nonisolated final class FakeCatchUpModel: CatchUpLanguageModel {
     enum Call: Equatable, Sendable {
-        case digest(prompt: String, instructions: String)
-        case summarize(prompt: String, instructions: String)
+        case digest(prompt: String, instructions: String, limit: Int)
+        case summarize(prompt: String, instructions: String, limit: Int)
 
         var prompt: String {
             switch self {
-            case .digest(let prompt, _), .summarize(let prompt, _): prompt
+            case .digest(let prompt, _, _), .summarize(let prompt, _, _): prompt
+            }
+        }
+
+        /// The `maximumResponseTokens` it was asked with.
+        var limit: Int {
+            switch self {
+            case .digest(_, _, let limit), .summarize(_, _, let limit): limit
             }
         }
 
@@ -78,10 +85,17 @@ nonisolated final class FakeCatchUpModel: CatchUpLanguageModel {
         }
     }
 
+    /// One step of a streamed final answer: a snapshot, or a failure
+    /// after the snapshots before it.
+    enum Step: Sendable {
+        case draft(CatchUpDraft)
+        case fail(CatchUpModelError)
+    }
+
     let context: Int
     let counts: Bool
     let digestAnswer: @Sendable (String) throws -> CatchUpDraft
-    let finalAnswer: @Sendable (String) throws -> [CatchUpDraft]
+    let finalSteps: @Sendable (String) -> [Step]
     let calls = Recorder<[Call]>([])
 
     init(
@@ -93,7 +107,28 @@ nonisolated final class FakeCatchUpModel: CatchUpLanguageModel {
         self.context = context
         self.counts = counts
         self.digestAnswer = digest
-        self.finalAnswer = final
+        self.finalSteps = { prompt in
+            do {
+                return try final(prompt).map(Step.draft)
+            } catch let error as CatchUpModelError {
+                return [.fail(error)]
+            } catch {
+                return [.fail(.failed(error.localizedDescription))]
+            }
+        }
+    }
+
+    /// A model whose final answers stream `steps`, which can fail after
+    /// writing something.
+    init(
+        context: Int = 4096,
+        digest: @escaping @Sendable (String) throws -> CatchUpDraft = { _ in CatchUpDraft(overview: "A part.") },
+        steps: @escaping @Sendable (String) -> [Step]
+    ) {
+        self.context = context
+        self.counts = false
+        self.digestAnswer = digest
+        self.finalSteps = steps
     }
 
     var digestCalls: [Call] { calls.value.filter(\.isDigest) }
@@ -110,21 +145,25 @@ nonisolated final class FakeCatchUpModel: CatchUpLanguageModel {
         counts ? 300 : nil
     }
 
-    func digest(prompt: String, instructions: String) async throws -> CatchUpDraft {
-        calls.update { $0.append(.digest(prompt: prompt, instructions: instructions)) }
+    func digest(prompt: String, instructions: String, maximumResponseTokens: Int) async throws -> CatchUpDraft {
+        calls.update { $0.append(.digest(prompt: prompt, instructions: instructions, limit: maximumResponseTokens)) }
         return try digestAnswer(prompt)
     }
 
-    func summarize(prompt: String, instructions: String) -> AsyncThrowingStream<CatchUpDraft, Error> {
-        calls.update { $0.append(.summarize(prompt: prompt, instructions: instructions)) }
-        let answer = finalAnswer
+    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error> {
+        calls.update { $0.append(.summarize(prompt: prompt, instructions: instructions, limit: maximumResponseTokens)) }
+        let steps = finalSteps(prompt)
         return AsyncThrowingStream { continuation in
-            do {
-                for draft in try answer(prompt) { continuation.yield(draft) }
-                continuation.finish()
-            } catch {
-                continuation.finish(throwing: error)
+            for step in steps {
+                switch step {
+                case .draft(let draft):
+                    continuation.yield(draft)
+                case .fail(let error):
+                    continuation.finish(throwing: error)
+                    return
+                }
             }
+            continuation.finish()
         }
     }
 }

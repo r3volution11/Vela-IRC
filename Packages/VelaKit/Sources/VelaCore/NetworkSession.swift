@@ -89,7 +89,13 @@ public final class NetworkSession: Identifiable {
     @ObservationIgnored private var connectedAt: Date?
     @ObservationIgnored private var bufferIndex: [String: BufferModel] = [:]
     @ObservationIgnored private var pendingNames: [String: [String: Member]] = [:]
-    @ObservationIgnored private var historyBatches: [String: (buffer: BufferModel, count: Int)] = [:]
+    @ObservationIgnored private var historyBatches: [String: HistoryBatch] = [:]
+    /// The message being handled came in a batch of older history, asked
+    /// for by scrolling up: it never counts as unread.
+    @ObservationIgnored private var handlingOlderHistory = false
+    /// The Dock badge and other unread totals are due an update (replayed
+    /// history updates them a few times a second, not once a line).
+    @ObservationIgnored private var unreadCountsChangeScheduled = false
     @ObservationIgnored private var bouncerBatchIDs: Set<String> = []
     @ObservationIgnored private var lastTypingSent: [BufferID: (state: TypingState, at: Date)] = [:]
     @ObservationIgnored private var pendingRecords: [MessageRecord] = []
@@ -460,9 +466,11 @@ public final class NetworkSession: Identifiable {
     // MARK: Inbound messages
 
     private func handle(_ message: IRCMessage, batch: IRCBatch?) {
-        let historyBuffer = batch.flatMap { historyBatches[$0.id]?.buffer }
-        let isHistory = historyBuffer != nil || isPlayback(message)
-        if let batch, historyBatches[batch.id] != nil { historyBatches[batch.id]?.count += 1 }
+        let historyBatch = batch.flatMap { historyBatches[$0.id] }
+        let isHistory = historyBatch != nil || isPlayback(message)
+        if let batch, historyBatch != nil { historyBatches[batch.id]?.count += 1 }
+        handlingOlderHistory = historyBatch?.isOlder ?? false
+        defer { handlingOlderHistory = false }
 
         switch message.command {
         case "PRIVMSG", "NOTICE": handleChat(message, isHistory: isHistory)
@@ -558,7 +566,11 @@ public final class NetworkSession: Identifiable {
             // Notices from services and the like go to the server buffer unless a query is open.
             destination = serverBuffer
         } else {
+            let opens = self.buffer(named: source.nick) == nil
             destination = ensureBuffer(name: source.nick, kind: .query)
+            // A private message sent while you were away, replayed by a
+            // bouncer: a conversation it opens is all news to you.
+            if opens, isHistory { destination.lastReadAt = .distantPast }
         }
 
         typingStopped(nick: source.nick, in: destination)
@@ -619,6 +631,10 @@ public final class NetworkSession: Identifiable {
             buffer.memberMap = [:]
             buffer.memberRank = { [isupport] in isupport.rank(ofSymbol: $0.topPrefix) }
             autoRejoin[buffer.id.foldedName] = true
+            // Never read before (a first join): start reading here. History
+            // from before it stays read, and what a bouncer replays after
+            // it next time counts as unread, even if you never open it.
+            if buffer.lastReadAt == nil { buffer.lastReadAt = message.serverTime ?? Date() }
             persistBuffer(buffer)
             if supportsChatHistory { fetchLatestHistory(for: buffer) }
         } else if !isHistory {
@@ -922,13 +938,23 @@ public final class NetworkSession: Identifiable {
 
     // MARK: Batches & history
 
+    /// An open `chathistory` batch.
+    private struct HistoryBatch {
+        let buffer: BufferModel
+        /// Lines it has brought so far.
+        var count = 0
+        /// It answers CHATHISTORY BEFORE (scrolling up): older lines, never
+        /// unread, rather than ones missed while away.
+        let isOlder: Bool
+    }
+
     private func handleBatchStart(_ batch: IRCBatch) {
         switch batch.type {
         case "chathistory":
             guard let target = batch.params.first else { return }
             let kind: BufferKind = isupport.isChannel(target) ? .channel : .query
             let buffer = self.buffer(named: target) ?? ensureBuffer(name: target, kind: kind)
-            historyBatches[batch.id] = (buffer, 0)
+            historyBatches[batch.id] = HistoryBatch(buffer: buffer, isOlder: pendingBeforeRequests.contains(buffer.id))
         case "soju.im/bouncer-networks":
             bouncerBatchIDs.insert(batch.id)
         default:
@@ -988,14 +1014,19 @@ public final class NetworkSession: Identifiable {
             }
         }
         if supportsChatHistory, isConnected, client != nil, buffer.kind != .server {
-            let since = buffer.lines.first?.time ?? oldest
-            pendingBeforeRequests.insert(buffer.id)
-            sendRaw("CHATHISTORY BEFORE \(buffer.name) timestamp=\(IRCTime.format(since)) \(historyLimit)")
+            requestOlderHistory(for: buffer, before: buffer.lines.first?.time ?? oldest)
             // `isLoadingHistory` is cleared when the batch ends.
         } else {
             buffer.isLoadingHistory = false
             buffer.hasMoreHistory = false
         }
+    }
+
+    /// Asks the server for the lines before `time` (CHATHISTORY BEFORE).
+    /// The batch that answers is older history: it never counts as unread.
+    func requestOlderHistory(for buffer: BufferModel, before time: Date) {
+        pendingBeforeRequests.insert(buffer.id)
+        sendRaw("CHATHISTORY BEFORE \(buffer.name) timestamp=\(IRCTime.format(time)) \(historyLimit)")
     }
 
     private func loadReactions(for msgids: [String], in buffer: BufferModel) async {
@@ -1453,15 +1484,18 @@ public final class NetworkSession: Identifiable {
     /// Moves the read position up to `time` (never back) and recounts what's
     /// still unread after it: ``markRead(_:)`` for everything up to one
     /// message, as Siri's "mark as read" asks. Lines after it that were
-    /// never counted (seen on screen, history, your own) stay uncounted.
+    /// never counted (seen on screen, your own, history in a buffer never
+    /// read before) stay uncounted.
     public func markRead(_ buffer: BufferModel, upTo time: Date) {
         let readTo = max(buffer.lastReadAt ?? .distantPast, time)
+        // Replayed lines after the read position counted once there was one.
+        let countsHistory = buffer.lastReadAt != nil
         var unread = 0
         var highlights = 0
         // Lines are in time order: count back to the read position.
         for line in buffer.lines.reversed() {
             guard line.time > readTo else { break }
-            guard !line.isHistory, !line.isSelf, line.kind.isConversation else { continue }
+            guard !line.isHistory || countsHistory, !line.isSelf, line.kind.isConversation else { continue }
             unread += 1
             if line.isHighlight || (buffer.kind == .query && line.kind != .notice) { highlights += 1 }
         }
@@ -1629,27 +1663,79 @@ public final class NetworkSession: Identifiable {
         if buffer.kind != .server || line.kind.isConversation {
             enqueue(line.record(networkID: id, bufferName: buffer.id.foldedName))
         }
-        guard !line.isHistory, !line.isSelf else { return }
+        guard !line.isSelf else { return }
+        if line.isHistory {
+            countReplayed(line, in: buffer)
+            return
+        }
 
         let visible = host?.isBufferVisible(buffer.id) ?? false
-        let countsAsUnread = line.kind.isConversation
-        if !visible && countsAsUnread {
-            if buffer.unreadCount == 0 {
-                // Mark where the new lines start as soon as the first one
-                // arrives, so a channel left open in an unfocused window
-                // shows the marker without waiting for focus.
-                buffer.unreadMarkerAfter = buffer.lastReadAt ?? .distantPast
-            }
-            buffer.unreadCount += 1
-            if line.isHighlight || (buffer.kind == .query && line.kind != .notice) {
-                buffer.highlightCount += 1
-            }
+        if !visible && line.kind.isConversation {
+            countUnread(line, in: buffer)
             host?.sessionDidChangeUnreadCounts(self)
         }
         if line.isHighlight || (buffer.kind == .query && line.kind.isConversation) {
             if !buffer.isMuted || line.isHighlight {
                 host?.session(self, didReceiveNotable: line, in: buffer)
             }
+        }
+    }
+
+    /// Counts `line` as unread (and as a mention when it is one). The New
+    /// marker goes where the new lines start as soon as the first arrives,
+    /// so a channel left open in an unfocused window shows it without
+    /// waiting for focus.
+    private func countUnread(_ line: ChatLine, in buffer: BufferModel) {
+        if buffer.unreadCount == 0 {
+            buffer.unreadMarkerAfter = buffer.lastReadAt ?? .distantPast
+        }
+        buffer.unreadCount += 1
+        if line.isHighlight || (buffer.kind == .query && line.kind != .notice) {
+            buffer.highlightCount += 1
+        }
+    }
+
+    /// A line a bouncer replayed, or chathistory brought. One from after
+    /// you last read the buffer is something you missed, so it counts like
+    /// a live one: badges, mentions, the New line, the Dock badge and Catch
+    /// me up all see it. It never notifies, though: no banners, sounds or
+    /// Dock bounces for old news. Lines from before the read position, older
+    /// history loaded by scrolling up, and history in a buffer never read
+    /// (no read position yet) stay read.
+    private func countReplayed(_ line: ChatLine, in buffer: BufferModel) {
+        guard line.kind.isConversation, !handlingOlderHistory,
+              let lastRead = buffer.lastReadAt, line.time > lastRead else { return }
+        if host?.isBufferVisible(buffer.id) ?? false {
+            // On screen, so nothing to count, but the New line goes above
+            // what was replayed, below what the reader has already seen.
+            if buffer.unreadMarkerAfter == nil {
+                buffer.unreadMarkerAfter = max(lastRead, timeOfLine(before: line, in: buffer) ?? lastRead)
+            }
+            return
+        }
+        countUnread(line, in: buffer)
+        scheduleUnreadCountsChange()
+    }
+
+    /// The time of the line just before `line` in `buffer`. Replayed lines
+    /// land at or near the end, so the search from there is short.
+    private func timeOfLine(before line: ChatLine, in buffer: BufferModel) -> Date? {
+        let lines = buffer.lines
+        guard let index = lines.lastIndex(where: { $0.id == line.id }), index > lines.startIndex else { return nil }
+        return lines[index - 1].time
+    }
+
+    /// Tells the host the unread totals changed, a few times a second at
+    /// most: a bouncer can replay thousands of lines at once, and the Dock
+    /// badge needn't be worked out again for each.
+    private func scheduleUnreadCountsChange() {
+        guard !unreadCountsChangeScheduled else { return }
+        unreadCountsChangeScheduled = true
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard let self else { return }
+            self.unreadCountsChangeScheduled = false
+            self.host?.sessionDidChangeUnreadCounts(self)
         }
     }
 

@@ -39,6 +39,13 @@ public final class FoundationModelSummarizer: ConversationSummarizer {
 
 /// ``CatchUpLanguageModel`` on `SystemLanguageModel.default`. Each request
 /// gets a fresh session, so earlier chunks never crowd the context.
+///
+/// Guardrails stay at `.default`. `.permissiveContentTransformations` reads
+/// like the right fit for summarizing what people wrote, but the SDK says it
+/// relaxes only requests that generate a `String`; for guided generation,
+/// which every request here is (`ChunkDigest`, `GeneratedCatchUp`), it
+/// "behaves the same way as `default`". So it would change nothing. A part
+/// the guardrails decline is skipped instead (see ``CatchUpEngine``).
 nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
     /// Plan for at most this context, whatever the model offers (tests use
     /// 4,096 to act like macOS 26.0–26.3).
@@ -47,8 +54,13 @@ nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
     var countsTokens = true
 
     /// Low but not greedy: factual, without the repetition loops greedy
-    /// decoding can fall into.
-    private var options: GenerationOptions { GenerationOptions(temperature: 0.3) }
+    /// decoding can fall into. The response stops after
+    /// `maximumResponseTokens`, the room the engine left for it, so one
+    /// that runs on is cut off there instead of filling the context window
+    /// (minutes, on a Mac with a 4,096-token model).
+    static func options(maximumResponseTokens: Int) -> GenerationOptions {
+        GenerationOptions(temperature: 0.3, maximumResponseTokens: maximumResponseTokens)
+    }
 
     func contextSize() async -> Int {
         min(SystemLanguageModel.default.contextSize, contextLimit ?? .max)
@@ -68,18 +80,26 @@ nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
         return try? await SystemLanguageModel.default.tokenCount(for: schema)
     }
 
-    func digest(prompt: String, instructions: String) async throws -> CatchUpDraft {
+    func digest(prompt: String, instructions: String, maximumResponseTokens: Int) async throws -> CatchUpDraft {
         let session = LanguageModelSession(model: .default, instructions: instructions)
+        let options = Self.options(maximumResponseTokens: maximumResponseTokens)
         do {
-            let response = try await session.respond(to: prompt, generating: ChunkDigest.self, options: options)
-            return CatchUpDraft(response.content)
+            // Streamed, keeping the last snapshot: a response cut off at
+            // the limit then ends with what it has, where `respond(to:)`
+            // throws a parsing error for the unfinished structure.
+            var last: ChunkDigest.PartiallyGenerated?
+            for try await snapshot in session.streamResponse(to: prompt, generating: ChunkDigest.self, options: options) {
+                last = snapshot.content
+            }
+            guard let last else { throw CatchUpModelError.failed("Apple Intelligence didn't return a summary.") }
+            return CatchUpDraft(last)
         } catch {
             throw Self.classify(error)
         }
     }
 
-    func summarize(prompt: String, instructions: String) -> AsyncThrowingStream<CatchUpDraft, Error> {
-        let options = options
+    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error> {
+        let options = Self.options(maximumResponseTokens: maximumResponseTokens)
         return AsyncThrowingStream { continuation in
             let task = Task {
                 let session = LanguageModelSession(model: .default, instructions: instructions)

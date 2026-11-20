@@ -39,6 +39,7 @@ The port is whatever you configured for the listener in ZNC; it's often not 6697
 ### What Vela does with ZNC
 
 - **Playback.** If ZNC's `playback` module is loaded, Vela asks for only the messages it hasn't seen yet each time it connects, so nothing is shown twice.
+- **What you missed counts as unread.** Messages ZNC replays that are newer than where you stopped reading count in the unread and mention badges, put the **New** line above them, and can be summarized with [Catch me up](/guide/apple-intelligence#catch-me-up). They never pop up notifications or play sounds. A channel Vela has never had open starts counting from when it first joins it, so its older history stays read. The same goes for history from soju or any server with chat history.
 - **Your own messages from other clients.** With `self-message`, messages you send from another client connected to the same ZNC appear in Vela too. Vela and your other clients can stay connected at the same time.
 - **Accurate timestamps** with `server-time`.
 - **Channels.** ZNC rejoins your channels itself, so Vela doesn't send its own joins. The **Channels** list in the network editor is only used for direct connections.

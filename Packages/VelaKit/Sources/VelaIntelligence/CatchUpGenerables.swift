@@ -62,16 +62,31 @@ extension CatchUpDraft {
     nonisolated init(_ partial: GeneratedCatchUp.PartiallyGenerated) {
         self.init(
             overview: partial.overview ?? "",
-            topics: (partial.topics ?? []).compactMap { topic in
-                guard let title = topic.title else { return nil }
-                return Topic(
-                    title: title,
-                    summary: topic.summary ?? "",
-                    participants: topic.participants ?? [],
-                    firstLine: topic.firstLine
-                )
-            },
+            topics: (partial.topics ?? []).compactMap(Topic.init),
             addressedToYou: partial.addressedToYou ?? []
+        )
+    }
+
+    /// A digest as far as it got: all of it once generation finishes, or
+    /// what was written before the response limit cut it off.
+    nonisolated init(_ partial: ChunkDigest.PartiallyGenerated) {
+        self.init(
+            overview: partial.overview ?? "",
+            topics: (partial.topics ?? []).compactMap(Topic.init),
+            addressedToYou: partial.addressedToYou ?? []
+        )
+    }
+}
+
+extension CatchUpDraft.Topic {
+    /// Nil until the topic has a title.
+    nonisolated init?(_ topic: GeneratedTopic.PartiallyGenerated) {
+        guard let title = topic.title else { return nil }
+        self.init(
+            title: title,
+            summary: topic.summary ?? "",
+            participants: topic.participants ?? [],
+            firstLine: topic.firstLine
         )
     }
 }

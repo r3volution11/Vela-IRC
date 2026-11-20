@@ -42,6 +42,7 @@ Choose **Unmute** to undo it.
 ## Unread counts
 
 - The sidebar and tabs show how many messages you haven't read in each channel, and a separate accent-colored badge for mentions and private messages.
+- Messages a [bouncer](/guide/bouncers) replays when Vela connects count too, when they're newer than where you stopped reading. They're counted quietly: no banners or sounds for old messages.
 - The Dock icon shows a badge too: see [The Dock icon](#dock).
 - **Mark as Read** (right-click a channel) or **Mark All as Read** (in the **Go** menu) clears them.
 - Ask Siri "Check my Vela mentions" to hear where you're mentioned, or run **Check Mentions** in [Shortcuts](/guide/siri-shortcuts#shortcuts).

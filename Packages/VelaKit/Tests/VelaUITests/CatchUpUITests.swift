@@ -4,8 +4,9 @@
 
 import Foundation
 import Testing
-import VelaCore
+@testable import VelaCore
 import VelaIntelligence
+import VelaIRC
 import VelaStore
 @testable import VelaUI
 
@@ -40,12 +41,170 @@ struct CatchUpUITests {
         #expect(CatchUpEligibility.showsButton(isEnabled: true, status: .available, unreadLines: 1, threshold: 0))
     }
 
-    @Test func menusAndThePaletteOfferItWhenAnythingIsNew() {
-        #expect(CatchUpEligibility.canOffer(status: .available, hasUnread: true, kind: .channel))
-        #expect(CatchUpEligibility.canOffer(status: .available, hasUnread: true, kind: .query))
-        #expect(!CatchUpEligibility.canOffer(status: .available, hasUnread: true, kind: .server))
-        #expect(!CatchUpEligibility.canOffer(status: .available, hasUnread: false, kind: .channel))
-        #expect(!CatchUpEligibility.canOffer(status: .deviceNotEligible, hasUnread: true, kind: .channel))
+    /// Asked for explicitly, so offered whenever Catch me up is on and
+    /// Apple Intelligence is ready, new messages or not: with nothing new,
+    /// choosing it says why (or shows the latest summary again).
+    @Test func menusAndThePaletteAreOfferedWhileCatchUpIsOn() {
+        #expect(CatchUpEligibility.canOffer(isEnabled: true, status: .available, kind: .channel))
+        #expect(CatchUpEligibility.canOffer(isEnabled: true, status: .available, kind: .query))
+        #expect(!CatchUpEligibility.canOffer(isEnabled: true, status: .available, kind: .server))
+        #expect(!CatchUpEligibility.canOffer(isEnabled: true, status: .deviceNotEligible, kind: .channel))
+        #expect(!CatchUpEligibility.canOffer(isEnabled: false, status: .available, kind: .channel))
+    }
+
+    @Test func thePaletteSaysWhatItWillDo() {
+        #expect(CatchUpEligibility.paletteDetail(hasUnread: true, hasEarlierSummary: true) == nil)
+        #expect(CatchUpEligibility.paletteDetail(hasUnread: true, hasEarlierSummary: false) == nil)
+        #expect(CatchUpEligibility.paletteDetail(hasUnread: false, hasEarlierSummary: true) == "earlier summary")
+        #expect(CatchUpEligibility.paletteDetail(hasUnread: false, hasEarlierSummary: false) == "nothing new")
+    }
+
+    @Test func nothingNewSaysWhenTheButtonComesBack() {
+        #expect(CatchUpEligibility.nothingNewDetail(threshold: 25, showsNewLine: true)
+            == "Catch me up summarizes the messages you missed. Its button appears on the New line when 25 or more messages are new.")
+        #expect(CatchUpEligibility.nothingNewDetail(threshold: 1, showsNewLine: true).hasSuffix("when a new message arrives."))
+        #expect(CatchUpEligibility.nothingNewDetail(threshold: 0, showsNewLine: true).hasSuffix("when a new message arrives."))
+        let noLine = CatchUpEligibility.nothingNewDetail(threshold: 25, showsNewLine: false)
+        #expect(!noLine.contains("New line"))
+        #expect(noLine.contains("Ask again"))
+    }
+
+    /// A card left from an earlier stretch doesn't hide the button for
+    /// messages that came after it.
+    @Test func aCardForAnEarlierStretchLetsTheButtonBack() {
+        let end = start.addingTimeInterval(600)
+        #expect(CatchUpEligibility.cardHidesButton(isRunning: true, coversThrough: end, marker: end.addingTimeInterval(60)))
+        #expect(CatchUpEligibility.cardHidesButton(isRunning: false, coversThrough: end, marker: start))
+        #expect(!CatchUpEligibility.cardHidesButton(isRunning: false, coversThrough: end, marker: end))
+        #expect(!CatchUpEligibility.cardHidesButton(isRunning: false, coversThrough: end, marker: end.addingTimeInterval(60)))
+        // A "nothing new" card covers nothing.
+        #expect(!CatchUpEligibility.cardHidesButton(isRunning: false, coversThrough: nil, marker: end))
+    }
+
+    // MARK: The card's words
+
+    private func summary(_ overview: String = "", progress: CatchUpProgress? = nil, isRevising: Bool = false) -> CatchUpSummary {
+        CatchUpSummary(overview: overview, topics: [], addressedToYou: [], messageCount: 600, isComplete: false, progress: progress, isRevising: isRevising)
+    }
+
+    @Test func theCardSaysHowFarAlongItIs() {
+        #expect(CatchUpCardView.statusText(nil, messageCount: 250) == "Reading 250 messages…")
+        #expect(CatchUpCardView.statusText(summary(), messageCount: 250) == "Reading 250 messages…")
+        #expect(CatchUpCardView.statusText(summary(progress: .init(completed: 0, total: 8)), messageCount: 600) == "Reading… 1 of 8")
+        #expect(CatchUpCardView.statusText(summary(progress: .init(completed: 2, total: 8)), messageCount: 600) == "Reading… 3 of 8")
+        #expect(CatchUpCardView.statusText(summary(progress: .init(completed: 8, total: 8)), messageCount: 600) == "Writing the summary…")
+        #expect(CatchUpCardView.revisingText(summary("Half", isRevising: true)) == "Finishing…")
+        #expect(CatchUpCardView.revisingText(summary("Half", progress: .init(completed: 1, total: 3), isRevising: true)) == "Finishing… 2 of 3")
+        #expect(CatchUpCardView.revisingText(summary("Half", progress: .init(completed: 3, total: 3), isRevising: true)) == "Finishing…")
+    }
+
+    @Test func theFooterSaysWhatWasSkipped() {
+        let note = "Summarized on this Mac by Apple Intelligence. May contain mistakes."
+        var done = CatchUpSummary(overview: "x", topics: [], addressedToYou: [], messageCount: 200, isComplete: true)
+        #expect(CatchUpCardView.footerText(done, messageCount: 200) == note)
+        #expect(CatchUpCardView.footerText(nil, messageCount: 200) == note)
+        done.skippedMessages = 40
+        #expect(CatchUpCardView.footerText(done, messageCount: 200) == "Skipped 40 messages that Apple Intelligence wouldn't summarize. " + note)
+        done.messageCount = 600
+        #expect(CatchUpCardView.footerText(done, messageCount: 900)
+            == "Covers the latest 600 messages. Skipped 40 messages that Apple Intelligence wouldn't summarize. " + note)
+    }
+
+    // MARK: With the app model
+
+    private func demo() throws -> (app: AppModel, session: NetworkSession, vela: BufferModel, swift: BufferModel, services: IntelligenceServices) {
+        let app = AppModel.demo()
+        let session = try #require(app.sessions.first)
+        let vela = try #require(session.buffer(named: "#vela"))
+        let swift = try #require(session.buffer(named: "#swift"))
+        let services = IntelligenceServices(availability: .fixed(.available), summarizer: CannedSummarizer(stepDelay: .milliseconds(40)))
+        return (app, session, vela, swift, services)
+    }
+
+    private func say(_ text: String, in channel: String, to session: NetworkSession) {
+        session.handle(.message(IRCMessage(line: ":alice!a@host PRIVMSG \(channel) :\(text)")!, batch: nil))
+    }
+
+    private func eventually(timeout: Duration = .seconds(3), _ condition: () -> Bool) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return condition()
+    }
+
+    /// Going to another channel while a summary is written, then back:
+    /// the card is there, finished, and Catch Me Up still shows it after
+    /// the channel has been read.
+    @Test func stillOfferedAfterLeavingAndReturning() async throws {
+        let (app, session, vela, swift, services) = try demo()
+        let store = services.catchUp
+        app.select(vela)
+        for index in 1...5 { say("swift news \(index)", in: "#swift", to: session) }
+        #expect(swift.unreadCount > 0)
+
+        CatchUpActions.open(swift, session: session, app: app, store: store)
+        #expect(app.selectedBufferID == swift.id)
+        let card = try #require(store.card(for: swift.id))
+        #expect(card.isRunning)
+
+        // Off to #vela while it's written (MainWindowView's part).
+        app.select(vela)
+        store.selectionChanged(to: vela.id) { _ in true }
+        #expect(store.card(for: swift.id) === card)
+        #expect(await eventually { if case .done = card.phase { true } else { false } })
+
+        // Back in #swift: read now, but the card is still there.
+        app.select(swift)
+        store.selectionChanged(to: swift.id) { _ in true }
+        #expect(!CatchUpActions.hasUnread(swift, app: app))
+        #expect(store.card(for: swift.id) === card)
+
+        // Dismissed, it's still one click away.
+        store.dismiss(swift.id)
+        let commands = VelaCommandCatalog.catchUpCommands(app: app, intelligence: services)
+        #expect(commands.map(\.id) == ["buffer.catchUp"])
+        #expect(commands.first?.detail == "earlier summary")
+        commands.first?.perform()
+        let reopened = try #require(store.card(for: swift.id))
+        if case .done(let summary) = reopened.phase {
+            #expect(summary.messageCount == card.messageCount)
+        } else {
+            Issue.record("expected the earlier summary at once, got \(reopened.phase)")
+        }
+    }
+
+    /// Nothing new and nothing summarized yet: the card says so instead of
+    /// the command doing nothing.
+    @Test func nothingNewOpensACardThatSaysSo() throws {
+        let (app, session, vela, _, services) = try demo()
+        app.select(vela)
+        session.markRead(vela)
+        app.select(try #require(session.buffer(named: "#swift")))
+        app.select(vela)
+        #expect(!CatchUpActions.hasUnread(vela, app: app))
+
+        let commands = VelaCommandCatalog.catchUpCommands(app: app, intelligence: services)
+        #expect(commands.first?.detail == "nothing new")
+        commands.first?.perform()
+        let card = try #require(services.catchUp.card(for: vela.id))
+        #expect(card.isNothingNew)
+        // At the end of the conversation.
+        #expect(card.anchor == vela.lines.last?.time)
+    }
+
+    /// `intelligence.catchUp` off: no button, no menu item, no palette
+    /// command (Siri's answer is tested with the intents).
+    @Test func theSettingHidesEveryEntryPoint() throws {
+        let (app, _, vela, _, services) = try demo()
+        app.select(vela)
+        #expect(!VelaCommandCatalog.catchUpCommands(app: app, intelligence: services).isEmpty)
+
+        app.settings[.intelligenceCatchUp] = false
+        #expect(VelaCommandCatalog.catchUpCommands(app: app, intelligence: services).isEmpty)
+        #expect(!CatchUpEligibility.canOffer(isEnabled: app.settings[.intelligenceCatchUp], status: .available, kind: .channel))
+        #expect(!CatchUpEligibility.showsButton(isEnabled: app.settings[.intelligenceCatchUp], status: .available, unreadLines: 500, threshold: 25))
     }
 
     // MARK: Display items

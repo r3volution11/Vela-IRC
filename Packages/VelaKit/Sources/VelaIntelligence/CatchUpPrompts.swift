@@ -38,6 +38,15 @@ nonisolated struct CatchUpDigest: Sendable, Equatable {
     /// Transcript line numbers it covers.
     var lines: ClosedRange<Int>
     var draft: CatchUpDraft
+    /// How many of those lines it summarizes: fewer than `lines` holds
+    /// when a part in between was declined and left out.
+    var summarizedLines: Int
+
+    init(lines: ClosedRange<Int>, draft: CatchUpDraft, summarizedLines: Int? = nil) {
+        self.lines = lines
+        self.draft = draft
+        self.summarizedLines = summarizedLines ?? lines.count
+    }
 }
 
 /// The words sent to the model. Pure, so prompts are tested without it.

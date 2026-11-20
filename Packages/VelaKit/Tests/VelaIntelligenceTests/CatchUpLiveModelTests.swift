@@ -69,13 +69,13 @@ struct CatchUpLiveModelTests {
         func tokenCount(_ text: String) async -> Int? { await base.tokenCount(text) }
         func schemaTokenCount(for pass: CatchUpPrompts.Pass) async -> Int? { await base.schemaTokenCount(for: pass) }
 
-        func digest(prompt: String, instructions: String) async throws -> CatchUpDraft {
+        func digest(prompt: String, instructions: String, maximumResponseTokens: Int) async throws -> CatchUpDraft {
             digests.update { $0 += 1 }
-            return try await base.digest(prompt: prompt, instructions: instructions)
+            return try await base.digest(prompt: prompt, instructions: instructions, maximumResponseTokens: maximumResponseTokens)
         }
 
-        func summarize(prompt: String, instructions: String) -> AsyncThrowingStream<CatchUpDraft, Error> {
-            base.summarize(prompt: prompt, instructions: instructions)
+        func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error> {
+            base.summarize(prompt: prompt, instructions: instructions, maximumResponseTokens: maximumResponseTokens)
         }
     }
 
@@ -93,10 +93,16 @@ struct CatchUpLiveModelTests {
         let start = clock.now
         let firstPartial = Recorder<Duration?>(nil)
         let partials = Recorder(0)
+        // When each part of a long stretch was done ("Reading… 2 of 3").
+        let parts = Recorder<[String]>([])
         let summary = try await engine.run(request) { snapshot in
             partials.update { $0 += 1 }
             if !snapshot.overview.isEmpty {
                 firstPartial.update { if $0 == nil { $0 = clock.now - start } }
+            }
+            if let progress = snapshot.progress {
+                let seconds = (clock.now - start).formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 1)))
+                parts.update { $0.append("\(progress.completed)/\(progress.total) at \(seconds)") }
             }
         }
         let elapsed = clock.now - start
@@ -106,6 +112,8 @@ struct CatchUpLiveModelTests {
         var report = "\n=== \(label): \(lines.count) lines, \(counting.digests.value) digest requests, \(seconds(elapsed)) total"
         if let first = firstPartial.value { report += ", overview began after \(seconds(first))" }
         report += ", \(partials.value) snapshots\n"
+        if !parts.value.isEmpty { report += "Progress: \(parts.value.joined(separator: ", "))\n" }
+        if summary.skippedMessages > 0 { report += "Skipped: \(summary.skippedMessages) messages\n" }
         report += "Overview: \(summary.overview)\n"
         for topic in summary.topics {
             let index = topic.firstLineID.flatMap { id in lines.firstIndex { $0.id == id } }

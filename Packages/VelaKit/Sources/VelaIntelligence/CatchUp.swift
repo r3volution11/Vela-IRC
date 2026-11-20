@@ -104,6 +104,24 @@ nonisolated public struct CatchUpTopic: Sendable, Hashable, Identifiable {
     }
 }
 
+/// How far a long summary has got before its words are written: a long
+/// stretch is read in parts, and the parts' notes are combined.
+nonisolated public struct CatchUpProgress: Sendable, Hashable {
+    /// Parts read so far.
+    public var completed: Int
+    /// Every part, combining steps included. It can grow while summarizing,
+    /// when a part turns out too long and is read in halves.
+    public var total: Int
+
+    public init(completed: Int, total: Int) {
+        self.completed = completed
+        self.total = total
+    }
+
+    /// Every part is read: what's left is writing the summary.
+    public var isFinished: Bool { completed >= total }
+}
+
 /// A (possibly still streaming) summary.
 nonisolated public struct CatchUpSummary: Sendable, Hashable {
     /// One or two sentences on the whole stretch.
@@ -115,24 +133,54 @@ nonisolated public struct CatchUpSummary: Sendable, Hashable {
     public var messageCount: Int
     /// False while the summarizer is still producing it.
     public var isComplete: Bool
+    /// While a long stretch is read in parts, how many are done. Nil for a
+    /// stretch read in one go, and once the summary itself is being written.
+    public var progress: CatchUpProgress?
+    /// The words shown are from an attempt that's being redone (it ran out
+    /// of room, say). They stay, dimmed, until the new attempt writes:
+    /// text that has appeared is never taken away.
+    public var isRevising: Bool
+    /// Messages left out because Apple Intelligence declined to summarize
+    /// the part they were in.
+    public var skippedMessages: Int
 
-    public init(overview: String, topics: [CatchUpTopic], addressedToYou: [String], messageCount: Int, isComplete: Bool) {
+    public init(
+        overview: String,
+        topics: [CatchUpTopic],
+        addressedToYou: [String],
+        messageCount: Int,
+        isComplete: Bool,
+        progress: CatchUpProgress? = nil,
+        isRevising: Bool = false,
+        skippedMessages: Int = 0
+    ) {
         self.overview = overview
         self.topics = topics
         self.addressedToYou = addressedToYou
         self.messageCount = messageCount
         self.isComplete = isComplete
+        self.progress = progress
+        self.isRevising = isRevising
+        self.skippedMessages = skippedMessages
     }
+
+    /// Whether there are words to show yet.
+    public var hasText: Bool { !overview.isEmpty }
 }
 
 nonisolated public enum CatchUpError: Error, Equatable, LocalizedError {
     case unavailable(IntelligenceStatus)
     case nothingToSummarize
-    /// The model's safety guardrails declined the conversation.
+    /// The model's safety guardrails declined the conversation (every part
+    /// of it; parts it declines are otherwise skipped).
     case declined
     /// Apple Intelligence turned the request away for now; it limits how
     /// much an app asks of it, more so in the background (Siri, Shortcuts).
     case rateLimited
+    /// The conversation is in a language the model can't summarize. Not
+    /// ``IntelligenceStatus/unsupportedLanguage``, which is about the
+    /// Mac's own language and has a fix in System Settings; this has none.
+    case conversationLanguageUnsupported
     case failed(String)
 
     public var errorDescription: String? {
@@ -141,6 +189,7 @@ nonisolated public enum CatchUpError: Error, Equatable, LocalizedError {
         case .nothingToSummarize: "There's nothing new to summarize."
         case .declined: "Apple Intelligence couldn't summarize this conversation."
         case .rateLimited: "Apple Intelligence is busy. Try again in a moment."
+        case .conversationLanguageUnsupported: "This conversation's language isn't supported for summaries yet."
         case .failed(let message): message
         }
     }

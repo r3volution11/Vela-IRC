@@ -10,7 +10,8 @@ import VelaTheme
 
 /// "Catch me up" on the New marker, when Catch me up is on, Apple
 /// Intelligence is ready and at least `intelligence.catchUpThreshold`
-/// messages are new. Hidden while the card is open.
+/// messages are new. Hidden while a card covers them (one left from an
+/// earlier stretch doesn't).
 struct CatchUpMarkerButton: View {
     @Environment(\.chatStyle) private var style
     @Environment(AppModel.self) private var app
@@ -26,7 +27,11 @@ struct CatchUpMarkerButton: View {
             unreadLines: unread,
             threshold: app.settings[.intelligenceCatchUpThreshold]
         )
-        if shows, intelligence.catchUp.cards[buffer.id] == nil {
+        let card = intelligence.catchUp.cards[buffer.id]
+        let hiddenByCard = card.map {
+            CatchUpEligibility.cardHidesButton(isRunning: $0.isRunning, coversThrough: $0.coversThrough, marker: buffer.unreadMarkerAfter)
+        } ?? false
+        if shows, !hiddenByCard {
             Button {
                 CatchUpActions.open(buffer, session: controller.session, app: app, store: intelligence.catchUp)
             } label: {

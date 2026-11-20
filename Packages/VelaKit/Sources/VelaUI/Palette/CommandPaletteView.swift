@@ -241,6 +241,7 @@ struct CommandPaletteView: View {
             return parts.joined(separator: ", ")
         case .command(let command):
             var parts = [command.paletteTitle]
+            if let detail = command.detail { parts.append(detail) }
             if command.isChecked == true { parts.append("on") }
             if let shortcut = command.shortcut { parts.append(ShortcutGlyphs.spoken(shortcut)) }
             return parts.joined(separator: ", ")

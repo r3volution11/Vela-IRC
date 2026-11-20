@@ -16,6 +16,10 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **A channel you close stays closed** even when messages are still arriving as you leave it.
 - **⌘1–⌘9 now always match the tabs' order** after joining, closing or reordering.
 
+### Chat and messages
+
+- **Messages a bouncer replays now count as unread.** What ZNC, soju or a server with chat history replays when Vela connects counts in unread and mention badges, the New line and the Dock badge once it's newer than where you stopped reading. Replayed messages never pop up notifications or play sounds, and a channel Vela has never had open starts counting from when it first joins.
+
 ### Siri, Shortcuts and Apple Intelligence
 
 - **Name the network to Siri.** "Open #vela on Libera.Chat in Vela", or just "on Libera", picks the channel on that network when you're in channels with the same name on more than one. It works in every phrase that names a channel.
@@ -27,6 +31,14 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Spotlight keeps up after a hiccup.** A Spotlight update that fails is tried again, a little later each time, and updates no longer run over each other.
 - **Settings no longer promise "summarize this" on macOS 27.** macOS gives apps no public way to let Siri summarize what's on screen; ask it to "Catch me up on #vela in Vela" instead.
 - **Siri can run an action the moment it opens Vela.** Vela sets up what its actions need as it starts, rather than when it sets up its windows.
+- **Catch me up works with bouncers.** Messages your bouncer replays count as new, so the button, the card and Siri cover what you missed while Vela was closed.
+- **Long catch-ups show their progress:** "Reading… 3 of 8", then "Writing the summary…". Every response is capped, so a runaway one can't keep Apple Intelligence busy for minutes.
+- **Words never disappear from the card.** When a pass has to be redone, what was written stays, dimmed, with "Finishing…", until the new words arrive.
+- **Going to another channel no longer cancels a summary.** It keeps going, and the card is there when you come back. After you've read the channel, **Catch Me Up** in the right-click menu, the command palette or Siri shows that summary again until you quit.
+- **A part Apple Intelligence won't summarize is skipped,** and the card says how many messages it left out, instead of the whole summary failing.
+- **Catch Me Up in the right-click menu and the command palette is always there** while Catch me up is on. With nothing new it says so on a card, and the palette notes "nothing new" or "earlier summary".
+- **A clear message when the conversation's language isn't supported,** without the System Settings button meant for your Mac's language.
+- **Offer Catch me up in busy channels turns it off everywhere:** the button, the right-click menu, the command palette and open cards, and Siri says it's turned off.
 
 ## 1.0.0 - 2026-11-18
 

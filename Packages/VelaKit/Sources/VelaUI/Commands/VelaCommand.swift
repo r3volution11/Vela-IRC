@@ -23,6 +23,9 @@ struct VelaCommand: Identifiable {
     var shortcut: KeyboardShortcut?
     /// Extra words the palette matches on (not displayed).
     var keywords: [String] = []
+    /// A short note the palette shows at the end of the row, such as
+    /// "nothing new" (not shown in menus).
+    var detail: String?
     /// Disabled commands are greyed out in menus and hidden from the palette.
     var isEnabled = true
     /// For choices and toggles: whether it's the current state. Menus show a

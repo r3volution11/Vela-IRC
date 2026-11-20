@@ -173,10 +173,15 @@ struct SessionTests {
         #expect(session.buffer(named: "#vela")?.lines.last?.isRedacted == true)
     }
 
-    @Test func chatHistoryBatchInsertsHistoryWithoutUnread() {
+    /// History is inserted in time order. What's older than the read
+    /// position (here, joining started it) stays read, and so does history
+    /// in a buffer with no read position at all. Newer history counts as
+    /// unread; see ReplayedUnreadTests.
+    @Test func historyFromBeforeTheReadPositionStaysRead() {
         let (session, host) = makeSession()
         feed(session, ":doug!d@host JOIN #vela", ":alice!a@host PRIVMSG #vela :live message")
         let buffer = try! #require(session.buffer(named: "#vela"))
+        #expect(buffer.lastReadAt != nil)
         let unreadBefore = buffer.unreadCount
         let batch = IRCBatch(id: "b1", type: "chathistory", params: ["#vela"], parentID: nil)
         session.handle(.batchStarted(batch))
@@ -188,8 +193,21 @@ struct SessionTests {
         let texts = buffer.lines.filter { $0.kind == .message }.map(\.text)
         #expect(texts == ["old one doug", "old two", "live message"])
         #expect(buffer.unreadCount == unreadBefore)
+        #expect(buffer.highlightCount == 0)
         #expect(host.notable.isEmpty)
         #expect(buffer.lines.first(where: { $0.msgid == "h1" })?.isHistory == true)
+
+        // No read position: everything replayed stays read.
+        let fresh = IRCBatch(id: "b2", type: "chathistory", params: ["#fresh"], parentID: nil)
+        session.handle(.batchStarted(fresh))
+        feed(session, "@time=2030-01-01T00:00:01.000Z;msgid=f1;batch=b2 :carol!c@host PRIVMSG #fresh :hi doug", batch: fresh)
+        session.handle(.batchEnded(fresh))
+        let channel = try! #require(session.buffer(named: "#fresh"))
+        #expect(channel.lastReadAt == nil)
+        #expect(channel.lines.count == 1)
+        #expect(channel.unreadCount == 0)
+        #expect(channel.highlightCount == 0)
+        #expect(host.notable.isEmpty)
     }
 
     @Test func localEchoWithoutEchoMessage() {

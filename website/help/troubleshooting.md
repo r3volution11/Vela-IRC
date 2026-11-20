@@ -70,11 +70,15 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 
 - **Is Apple Intelligence ready?** The box at the top of **Settings → Apple Intelligence** says. Catch me up needs a Mac with Apple silicon, Apple Intelligence turned on in System Settings, its model downloaded, and a supported language. See [What you need](/guide/apple-intelligence#requirements).
 - **Are enough messages new?** The button waits for 25 new messages by default (**Show the button after**). To catch up on fewer, right-click the channel and choose **Catch Me Up**.
-- **Is Offer Catch me up in busy channels on?** It controls only the button; the right-click menu and the command palette work either way.
-- **Is anything new?** The button sits on the **New** marker, so it only appears in a channel with messages you haven't read.
+- **Is Offer Catch me up in busy channels on?** Turned off, it removes Catch me up everywhere: the button, the right-click menu, the command palette and Siri.
+- **Is anything new?** The button sits on the **New** marker, so it only appears in a channel with messages you haven't read. **Catch Me Up** in the right-click menu or the command palette works either way: with nothing new, it shows the summary you made there earlier, or says there's nothing new and when the button will be back.
+- **Using a bouncer?** Messages ZNC, soju or a server with chat history replays when Vela connects count as new once they're newer than where you stopped reading. A channel Vela has never had open starts counting when it first joins, so its older history stays read. See [Bouncers](/guide/bouncers).
+- **Did you go to another channel?** A summary keeps going while you're elsewhere, and its card is there when you come back. After you've read the channel, choose **Catch Me Up** again to see it.
 - **Is the New line turned off?** With **Show the New line** off (Settings → Messages → Unread messages, or the Classic IRC preset) there's no button. Right-click the channel and choose **Catch Me Up**, or use the command palette.
 
 If a summary looks wrong, click a topic to read the messages behind it, or click **Regenerate**. Summaries can contain mistakes.
+
+If the card says it skipped some messages, Apple Intelligence's safety checks declined that part of the conversation; the rest is summarized. "This conversation's language isn't supported for summaries yet" means people are writing in a language Apple Intelligence can't summarize; changing your Mac's settings won't help.
 
 ## Translate isn't offered {#translate}
 
