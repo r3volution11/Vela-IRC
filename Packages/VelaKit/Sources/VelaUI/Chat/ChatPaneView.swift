@@ -17,6 +17,8 @@ struct ChatColumnView: View {
     @Environment(\.chatStyle) private var style
     @Environment(\.theme) private var theme
     @Environment(\.effectiveVibrancy) private var vibrancy
+    /// For the message box to scroll the message list (Page Up, Home…).
+    @State private var messageListLink = MessageListLink()
 
     var body: some View {
         let usesTabs = style.navigationStyle == .tabs
@@ -64,6 +66,7 @@ struct ChatColumnView: View {
                 }
             }
         }
+        .environment(\.messageListLink, messageListLink)
         .background { if !onMaterial { theme[ThemeKey.chatBackground] } }
     }
 }

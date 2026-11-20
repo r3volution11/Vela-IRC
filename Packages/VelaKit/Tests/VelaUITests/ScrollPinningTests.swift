@@ -290,6 +290,24 @@ struct ScrollPinningTests {
         #expect(!r139)
         #expect(!far.isPinned)
     }
+
+    /// Bringing a row selected with the keyboard into view a little above
+    /// the bottom: following the newest line from there would cut it off
+    /// again, so only landing right at the bottom follows.
+    @Test func aScrollToASelectedRowFollowsOnlyFromTheBottom() {
+        var near = pinning(pinned: true, at: at(distance: 0))
+        near.unpin()
+        _ = near.update(at(distance: 25), driver: .programmatic)
+        let nearFollows = near.settle(followsNearBottom: false)
+        #expect(!nearFollows)
+        #expect(!near.isPinned)
+
+        var atBottom = pinning(pinned: false, at: at(distance: 300))
+        _ = atBottom.update(at(distance: 0), driver: .programmatic)
+        let atBottomFollows = atBottom.settle(followsNearBottom: false)
+        #expect(!atBottomFollows)
+        #expect(atBottom.isPinned)
+    }
 }
 
 @Suite("The clip view in step")

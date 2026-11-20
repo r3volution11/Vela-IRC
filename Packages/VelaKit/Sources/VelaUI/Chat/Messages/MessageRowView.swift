@@ -12,13 +12,17 @@ import VelaTheme
 /// One display item. Equatable so unchanged rows skip body evaluation when
 /// the list updates; a new text generation (our nick changed, so mentions
 /// are highlighted elsewhere) runs them again, and a new text stamp runs
-/// this one again (someone it mentions came or went).
+/// this one again (someone it mentions came or went). So does selecting
+/// it with the keyboard, or moving the selection off it: only the
+/// selected row gets a `selection`.
 struct DisplayItemRow: View, Equatable {
     let item: DisplayItem
     /// `MessageListController.textGeneration`.
     var textGeneration = 0
     /// `MessageListController.textStamp(for:)`.
     var textStamp = 0
+    /// `MessageListController.selection`, for the selected row only.
+    var selection: RowSelection?
 
     var body: some View {
         switch item {
@@ -30,12 +34,12 @@ struct DisplayItemRow: View, Equatable {
             CatchUpCardRow()
         case .line(let lineItem):
             if lineItem.line.kind.isConversation {
-                MessageRow(item: lineItem, textGeneration: textGeneration, textStamp: textStamp)
+                MessageRow(item: lineItem, textGeneration: textGeneration, textStamp: textStamp, selection: selection)
             } else {
                 EventRow(line: lineItem.line, textGeneration: textGeneration)
             }
         case .membershipRun(let run):
-            MembershipRunRow(run: run)
+            MembershipRunRow(run: run, isSelected: selection != nil)
         }
     }
 }
@@ -55,6 +59,8 @@ struct MessageRow: View {
     var textGeneration = 0
     /// Not read either, for the same reason (`DisplayItemRow.textStamp`).
     var textStamp = 0
+    /// Selected with the keyboard (`DisplayItemRow.selection`).
+    var selection: RowSelection?
 
     @State private var isHovered = false
     @State private var isPickerOpen = false
@@ -102,6 +108,8 @@ struct MessageRow: View {
                 MessageMenuItems(line: line, links: links)
             }
             .autoTranslation(for: line)
+            // VoiceOver's Add Reaction, on the text inside.
+            .environment(\.openReactionPicker, ReactionPickerOpener { isPickerOpen = true })
             .accessibilityElement(children: .contain)
     }
 
@@ -169,6 +177,15 @@ struct MessageRow: View {
             }
             if style.layout == .columns {
                 ColumnsSeparator()
+            }
+            // Only on the selected row, so the others carry none of it.
+            if let selection {
+                MessageSelectionHighlight()
+                    // E, as the toolbar's smiley button does.
+                    .onChange(of: selection.pickerRequest) { _, request in
+                        if request != 0 { isPickerOpen = true }
+                    }
+                SelectedRowAnchor(id: selection.id)
             }
         }
     }
@@ -649,16 +666,20 @@ extension View {
 private struct MessageAccessibilityModifier: ViewModifier {
     @Environment(MessageListController.self) private var controller
     @Environment(UIState.self) private var uiState
+    @Environment(\.openReactionPicker) private var openReactionPicker
     let line: ChatLine
     let rendered: RenderedText?
 
     func body(content: Content) -> some View {
         content
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(controller.accessibilityLabel(for: line) { Self.label(for: line, rendered: rendered) })
+            .accessibilityLabel(controller.accessibilityLabel(for: line) { MessageAccessibility.label(for: line, rendered: rendered) })
             .accessibilityActions {
                 if controller.canReply(to: line) {
                     Button("Reply") { controller.reply(to: line, uiState: uiState) }
+                }
+                if let openReactionPicker, controller.canReact(to: line) {
+                    Button("Add Reaction") { openReactionPicker.open() }
                 }
                 if !line.isRedacted {
                     Button("Copy Text") { controller.copyText(of: line) }
@@ -672,7 +693,22 @@ private struct MessageAccessibilityModifier: ViewModifier {
                 }
             }
     }
+}
 
+/// Opens a message row's reaction picker (VoiceOver's Add Reaction on the
+/// row's text).
+struct ReactionPickerOpener {
+    let open: () -> Void
+}
+
+extension EnvironmentValues {
+    /// Set by each message row for the views inside it.
+    @Entry var openReactionPicker: ReactionPickerOpener?
+}
+
+enum MessageAccessibility {
+    /// "nick, time, message", as VoiceOver reads a message (and its
+    /// selection, `MessageKeyHandler`).
     static func label(for line: ChatLine, rendered: RenderedText?) -> String {
         let nick = line.nick ?? ""
         let time = line.time.formatted(date: .omitted, time: .shortened)

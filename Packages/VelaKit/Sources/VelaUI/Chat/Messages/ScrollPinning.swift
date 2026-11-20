@@ -67,8 +67,10 @@ nonisolated struct ScrollMetrics: Equatable, Sendable {
 /// it scrolls to the bottom anew, whatever SwiftUI reports
 /// (`mustScrollToBottomAnew`).
 ///
-/// Only the reader unpins the list, by scrolling up past the tolerance in a
-/// gesture. While unpinned nothing scrolls them (except sending a message,
+/// Only the reader unpins the list: by scrolling up past the tolerance in a
+/// gesture, or from the keyboard (Page Up or Home in the message box, a
+/// message selected above the list's top edge). While unpinned nothing
+/// scrolls them (except sending a message,
 /// which always returns to the present) until they come back to the bottom.
 /// Nothing scrolls under a gesture either: what it held back (new lines, a
 /// sent message) is followed when it ends, if the reader stayed at the
@@ -79,12 +81,13 @@ nonisolated struct ScrollPinning: Sendable {
 
     /// What is moving the list right now.
     enum Driver: Sendable {
-        /// No gesture: layout changes and SwiftUI's own corrections. (The
-        /// list isn't focusable, so there is no keyboard scrolling.)
+        /// No gesture: layout changes and SwiftUI's own corrections.
         case idle
         /// A trackpad, wheel or scroller gesture, including momentum.
         case user
-        /// A programmatic scroll (reply jump, jump to present) still running.
+        /// A programmatic scroll (reply jump, jump to present, and the
+        /// keyboard's: Page Up in the message box, a selected message
+        /// brought into view) still running.
         case programmatic
     }
 
@@ -197,10 +200,16 @@ nonisolated struct ScrollPinning: Sendable {
     /// where it landed. Returns true when the list should scroll to the
     /// bottom (a jump to present that fell short, e.g. after rows were
     /// re-measured on the way).
-    mutating func settle() -> Bool {
+    ///
+    /// Landing near the bottom follows it again, as after a gesture, unless
+    /// `followsNearBottom` is false: then only landing at it does. A scroll
+    /// that brought a row selected with the keyboard into view a little
+    /// above the bottom stays there, rather than following the newest line
+    /// and cutting the row off again.
+    mutating func settle(followsNearBottom: Bool = true) -> Bool {
         guard let metrics else { return isPinned }
         if isPinned { return !Self.isAtBottom(metrics) }
-        isPinned = Self.isNearBottom(metrics)
+        isPinned = followsNearBottom ? Self.isNearBottom(metrics) : Self.isAtBottom(metrics)
         return false
     }
 }

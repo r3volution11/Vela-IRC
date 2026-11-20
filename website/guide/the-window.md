@@ -67,6 +67,8 @@ When you're offline or connecting, the header says so, and the message field off
 
 Messages are separated by **day dividers**. A **New** marker shows where you stopped reading (in a busy channel, with a **Catch me up** button that [summarizes what you missed](/guide/apple-intelligence#catch-me-up)), and when you've scrolled up, a **Jump to present** button takes you back to the newest messages. See [Messages & layouts](/guide/messages-and-layouts).
 
+The messages work from the keyboard too. Press <kbd>⌥⌘2</kbd> to select one, move with <kbd>↑</kbd> and <kbd>↓</kbd>, and press <kbd>R</kbd> to reply, <kbd>E</kbd> to react or <kbd>Space</kbd> for all its actions; <kbd>Esc</kbd> goes back to the message field. See [The messages](/reference/keyboard-shortcuts#the-messages).
+
 ## The member list
 
 The list of people in the channel, grouped by rank. See [Member list](/guide/member-list). Drag its edge to resize it.
@@ -83,6 +85,8 @@ The list of people in the channel, grouped by rank. See [Member list](/guide/mem
 | This network's channels and conversations 1–9 | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
 | Focus the sidebar or tabs, the messages, the message box or the member list | <kbd>⌥⌘1</kbd>, <kbd>⌥⌘2</kbd>, <kbd>⌥⌘3</kbd> (or <kbd>⌘L</kbd>), <kbd>⌥⌘4</kbd> |
 | Go round those four, forward / back | <kbd>F6</kbd> / <kbd>⇧F6</kbd> |
+| Pick a message, to reply, react, copy… | <kbd>⌥⌘2</kbd>, then <kbd>↑</kbd> <kbd>↓</kbd> |
+| Scroll the messages from the message box | <kbd>Page Up</kbd> <kbd>Page Down</kbd> <kbd>Home</kbd> <kbd>End</kbd> |
 
 All of them are listed in [Keyboard shortcuts](/reference/keyboard-shortcuts).
 

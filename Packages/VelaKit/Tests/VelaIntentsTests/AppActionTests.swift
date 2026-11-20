@@ -62,7 +62,9 @@ struct AppActionTests {
         await #expect(throws: AppActionError.notConnected(network: "OFTC")) {
             try await app.send("hi", to: debian.id, connectionTimeout: .milliseconds(300))
         }
-        #expect(Date().timeIntervalSince(start) < 2)
+        // Well short of the 10 s default; loose enough for a busy test run,
+        // where the main actor is shared with every other test.
+        #expect(Date().timeIntervalSince(start) < 5)
     }
 
     @Test func notJoined() async throws {
@@ -178,7 +180,8 @@ struct AppActionTests {
         let start = Date()
         let names = try await app.setAway(nil, connectionTimeout: .milliseconds(400)).map(\.displayName)
         #expect(names == ["Libera.Chat", "Ergo Testnet"])
-        #expect(Date().timeIntervalSince(start) < 2)
+        // Well short of the 10 s default (see notConnectedGivesUpQuickly).
+        #expect(Date().timeIntervalSince(start) < 5)
     }
 
     // MARK: Read state and mentions

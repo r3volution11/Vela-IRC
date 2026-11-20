@@ -15,13 +15,16 @@ import VelaTheme
 ///
 /// Return sends, ⇧Return/⌥Return add a line, Tab completes nicks, channels,
 /// `/commands` and `:emoji:`, ↑/↓ recall this buffer's history, Escape
-/// cancels a pending reply. Drafts are kept per buffer in `UIState`.
+/// cancels a pending reply (with nothing to cancel, it jumps to the newest
+/// message), Page Up/Down, Home and End scroll the messages. Drafts are
+/// kept per buffer in `UIState`.
 struct InputBar: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.messageListLink) private var messageListLink
     let buffer: BufferModel
     let session: NetworkSession
 
@@ -248,6 +251,9 @@ struct InputBar: View {
                     return true
                 }
                 return false
+            },
+            scrollMessages: { [messageListLink, buffer] scroll in
+                messageListLink?.scroll(scroll, in: buffer.id) ?? false
             },
             interceptPaste: { pasted in
                 let lines = Self.messageLineCount(pasted)

@@ -12,7 +12,8 @@ import VelaStore
 import VelaTheme
 
 /// Per-list state shared by the message list and its rows: caches, the
-/// row being flashed, expanded membership runs and pending deletions.
+/// row being flashed, the row selected with the keyboard, expanded
+/// membership runs and pending deletions.
 /// Scroll bookkeeping that changes on every frame is `@ObservationIgnored`
 /// so scrolling never re-evaluates rows.
 @Observable
@@ -30,6 +31,11 @@ final class MessageListController {
     var showsJumpToPresent = false
     /// Conversation lines that arrived while scrolled away from the bottom.
     var unseenCount = 0
+    /// The row picked with the keyboard while the messages have the focus
+    /// (`MessageKeyboard`). Read by the list alone, which passes it to that
+    /// row and no other (`DisplayItemRow.selection`): moving it runs the
+    /// list's body and two rows', never every row's.
+    private(set) var selection: RowSelection?
 
     @ObservationIgnored let displayCache = MessageDisplayCache()
     @ObservationIgnored let textCache = MessageTextCache()
@@ -235,16 +241,20 @@ final class MessageListController {
 
     /// Marks a programmatic scroll as running for `seconds`: geometry
     /// changes meanwhile don't pin or unpin. Afterwards the pinned state is
-    /// re-derived from where the list landed and `completion` is told
-    /// whether it should still scroll to the bottom.
-    func beginProgrammaticScroll(for seconds: TimeInterval = 0.6, completion: @escaping (Bool) -> Void) {
+    /// re-derived from where the list landed (`ScrollPinning.settle`) and
+    /// `completion` is told whether it should still scroll to the bottom.
+    func beginProgrammaticScroll(
+        for seconds: TimeInterval = 0.6,
+        followsNearBottom: Bool = true,
+        completion: @escaping (Bool) -> Void
+    ) {
         programmaticScrollEnds = Date().addingTimeInterval(seconds)
         programmaticScrollGeneration &+= 1
         let generation = programmaticScrollGeneration
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
             guard let self, generation == self.programmaticScrollGeneration else { return }
-            let follow = self.pinning.settle()
+            let follow = self.pinning.settle(followsNearBottom: followsNearBottom)
             self.syncAnchor()
             completion(follow)
         }
@@ -300,10 +310,13 @@ final class MessageListController {
     }
 
     func copyToPasteboard(_ string: String) {
-        let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(string, forType: .string)
     }
+
+    /// Where Copy Text, Copy Link and Copy Nick copy to (tests stand in a
+    /// pasteboard of their own).
+    @ObservationIgnored var pasteboard = NSPasteboard.general
 
     func message(_ nick: String) {
         session.submit("/query \(nick)", in: buffer)
@@ -334,6 +347,116 @@ final class MessageListController {
 
     func toggleRun(_ id: UUID) {
         if expandedRuns.contains(id) { expandedRuns.remove(id) } else { expandedRuns.insert(id) }
+    }
+
+    // MARK: Keyboard selection
+
+    /// Rows at least half in view, top to bottom, with `.end` while the
+    /// space after the last row is (`onScrollTargetVisibilityChange`).
+    @ObservationIgnored var visibleIDs: [DisplayItemID] = []
+    /// The view that has the focus while the messages do.
+    @ObservationIgnored weak var keyView: MessageKeyView?
+    /// The messages were asked for the focus before their view was in a
+    /// window.
+    @ObservationIgnored private var keyFocusPending = false
+    /// Where the selection was found in the items last time.
+    @ObservationIgnored private var selectionIndex: Int?
+    /// The selected row's anchor (`SelectedRowAnchor`), and which row it
+    /// was made for.
+    @ObservationIgnored private weak var anchorView: NSView?
+    @ObservationIgnored private var anchorID: DisplayItemID?
+
+    /// Opens a menu shown from the keyboard at a point in a view. Tests
+    /// stand in their own: a real menu opens on screen and runs its own
+    /// event loop.
+    @ObservationIgnored var menuPresenter: (NSMenu, NSPoint, NSView) -> Void = { menu, point, view in
+        _ = menu.popUp(positioning: nil, at: point, in: view)
+    }
+    /// Opens a link chosen from the keyboard; nil opens it as a click does.
+    /// (Tests stand in their own.)
+    @ObservationIgnored var linkOpener: ((URL) -> Void)?
+    /// A key with nothing to do (tests keep quiet).
+    @ObservationIgnored var beep: () -> Void = { NSSound.beep() }
+
+    /// Selects the row `id` (nil: none), found at `index` in the items.
+    func select(_ id: DisplayItemID?, index: Int? = nil) {
+        selectionIndex = index
+        guard selection?.id != id else { return }
+        selection = id.map { RowSelection(id: $0) }
+    }
+
+    /// The selected row and where it is, while it's still in the list.
+    var selectedItem: (item: DisplayItem, index: Int)? {
+        guard let id = selection?.id else { return nil }
+        let items = displayCache.items
+        guard let index = MessageSelection.index(of: id, in: items, hint: selectionIndex) else { return nil }
+        selectionIndex = index
+        return (items[index], index)
+    }
+
+    /// Opens the selected row's reaction picker (E), as its hover
+    /// toolbar's button does.
+    func requestReactionPicker() {
+        selection?.pickerRequest &+= 1
+    }
+
+    /// A selected row's anchor checking in. The row the selection just left
+    /// can still be updated once more before its anchor goes, so only the
+    /// selected row's counts.
+    func setSelectedRowView(_ view: NSView, for id: DisplayItemID) {
+        guard id == selection?.id else { return }
+        anchorView = view
+        anchorID = id
+    }
+
+    /// The selected row's anchor, once that row is laid out.
+    var selectedRowView: NSView? {
+        guard let anchorView, anchorID == selection?.id, anchorView.window != nil else { return nil }
+        return anchorView
+    }
+
+    /// How far the list must scroll to show the selected row whole: down
+    /// when positive, up when negative, 0 when it's all in view; to its top
+    /// for a row taller than the list. Nil until the row is laid out. Where
+    /// the clip view shows the list, not where SwiftUI reports it
+    /// (`ClipViewSync`).
+    func selectedRowScrollDistance() -> CGFloat? {
+        guard let row = selectedRowView, let clip = scrollView?.contentView else { return nil }
+        let rowRect = row.convert(row.bounds, to: nil)
+        let visible = clip.convert(clip.bounds, to: nil)
+        // In the window's coordinates, y grows upward: the row's top is
+        // its maxY.
+        if rowRect.maxY > visible.maxY + 0.5 || rowRect.height > visible.height {
+            return visible.maxY - rowRect.maxY
+        }
+        if rowRect.minY < visible.minY - 0.5 { return visible.minY - rowRect.minY }
+        return 0
+    }
+
+    /// Gives the messages the focus, now or once their view is in a window.
+    func requestKeyFocus() {
+        if let keyView, keyView.window != nil {
+            keyView.takeFocus()
+        } else {
+            keyFocusPending = true
+        }
+    }
+
+    /// Whether the messages were asked for the focus before they could
+    /// take it; asks once.
+    func takePendingKeyFocus() -> Bool {
+        defer { keyFocusPending = false }
+        return keyFocusPending
+    }
+
+    /// Opens a link chosen from the keyboard as clicking it would: channel
+    /// links in Vela, the rest in the browser.
+    func openLink(_ url: URL, app: AppModel) {
+        if let linkOpener {
+            linkOpener(url)
+        } else if !openInVela(url, app: app) {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     // MARK: Text
@@ -466,13 +589,19 @@ final class MessageListController {
     }
 
     private func open(_ url: URL, app: AppModel) -> OpenURLAction.Result {
-        guard let channel = ChannelLink.channel(from: url) else { return .systemAction }
+        openInVela(url, app: app) ? .handled : .systemAction
+    }
+
+    /// Shows or joins the channel a channel link names; false for any other
+    /// link, which the system opens.
+    private func openInVela(_ url: URL, app: AppModel) -> Bool {
+        guard let channel = ChannelLink.channel(from: url) else { return false }
         if let existing = session.buffer(named: channel), existing.isJoined || !session.isConnected {
             app.select(existing)
         } else {
             session.submit("/join \(channel)", in: buffer)
         }
-        return .handled
+        return true
     }
 
     // MARK: Row caches

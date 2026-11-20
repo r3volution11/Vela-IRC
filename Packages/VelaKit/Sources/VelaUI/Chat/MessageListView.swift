@@ -30,6 +30,13 @@ import VelaTheme
 ///
 /// The typing line floats over the bottom of the list; the space under the
 /// last row grows to fit it only while someone is typing (`ListEndSpacing`).
+///
+/// The keyboard: the messages take the focus with ⌥⌘2 or F6, and a
+/// message can then be picked and acted on (`MessageKeyboard`). The
+/// message box scrolls the list with Page Up, Page Down, Home and End, and
+/// Esc there jumps to the present (`MessageListLink`). Scrolling from the
+/// keyboard is the reader's doing, like a gesture: it stops following the
+/// newest line, unless it ends near it.
 struct MessageListView: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
@@ -37,6 +44,7 @@ struct MessageListView: View {
     @Environment(UIState.self) private var uiState
     @Environment(IntelligenceServices.self) private var intelligence
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.messageListLink) private var messageListLink
     let buffer: BufferModel
     let session: NetworkSession
 
@@ -46,6 +54,8 @@ struct MessageListView: View {
     @State private var typingShown = false
     /// The typing line's measured height.
     @State private var typingLineHeight: CGFloat = 0
+    /// This list's place in `messageListLink`, while it's on screen.
+    @State private var linkToken: UUID?
 
     /// The rows' own coordinate space: content coordinates.
     private static let contentSpace = "MessageListContent"
@@ -78,13 +88,21 @@ struct MessageListView: View {
             // re-renders the lines that mention them (and only those).
             nickChangeCount: buffer.nickChangeCount
         )
+        // Observed here only: a new selection runs this body, and the two
+        // rows whose `selection` changed (the rest compare equal).
+        let selection = controller.selection
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 HistoryHeader(buffer: buffer, title: BufferTitle.title(for: buffer, in: session))
                 ForEach(items) { item in
-                    DisplayItemRow(item: item, textGeneration: textGeneration, textStamp: controller.textStamp(for: item))
-                        .equatable()
+                    DisplayItemRow(
+                        item: item,
+                        textGeneration: textGeneration,
+                        textStamp: controller.textStamp(for: item),
+                        selection: selection?.id == item.id ? selection : nil
+                    )
+                    .equatable()
                 }
                 // Room under the last row (and for the typing line), and the
                 // target for scrolling to the bottom. Inside the stack, so
@@ -104,6 +122,9 @@ struct MessageListView: View {
             .themedScrollers()
             .background(ListScrollViewProbe { [controller] in controller.scrollView = $0 })
         }
+        // Behind the list, out of the rows: nothing per row, nothing while
+        // scrolling.
+        .background { MessageKeyboard(controller: controller, scrolling: keyboardScrolling) }
         .modifier(ListScrollPosition(position: $position))
         .defaultScrollAnchor(.bottom, for: .initialOffset)
         .defaultScrollAnchor(.bottom, for: .alignment)
@@ -125,8 +146,11 @@ struct MessageListView: View {
             updatePill()
         }
         .onScrollTargetVisibilityChange(idType: DisplayItemID.self, threshold: 0.5) { visible in
-            // Transient layouts can report nothing visible; keep the last row.
-            if let first = visible.first(where: { $0 != .end }) { controller.topVisibleID = first }
+            // Transient layouts can report nothing visible; keep the last rows.
+            if let first = visible.first(where: { $0 != .end }) {
+                controller.topVisibleID = first
+                controller.visibleIDs = visible
+            }
         }
         .onChange(of: LinesSignature(buffer.lines)) { _, _ in
             linesChanged()
@@ -146,9 +170,11 @@ struct MessageListView: View {
         .onAppear {
             controller.trackLines()
             listOpened(items)
+            linkToken = messageListLink?.register(buffer.id) { scroll in keyboardScroll(scroll) }
         }
         .onDisappear {
             controller.bottomCheck?.cancel()
+            if let linkToken { messageListLink?.unregister(buffer.id, token: linkToken) }
         }
         .onChange(of: app.isWindowActive) { _, active in
             if active { windowActivated() }
@@ -389,14 +415,15 @@ struct MessageListView: View {
         }
     }
 
-    private func jumpToPresent() {
+    /// `glides`: false jumps at once, however short the trip.
+    private func jumpToPresent(glides: Bool = true) {
         controller.pin()
         markAllSeen()
         controller.showsJumpToPresent = false
         // Long animated scrolls through a lazy stack land unreliably (rows
         // are estimated); animate only short trips.
         let near = controller.metrics.map { $0.distanceFromBottom < $0.containerHeight * 3 } ?? true
-        let animated = near && !reduceMotion
+        let animated = glides && near && !reduceMotion
         controller.beginProgrammaticScroll(for: animated ? 0.45 : 0.15) { follow in
             if follow { scrollToBottom() } else { checkClipView() }
         }
@@ -518,6 +545,148 @@ struct MessageListView: View {
             }
         }
         controller.flash(lineID, reduceMotion: reduceMotion)
+    }
+
+    // MARK: Keyboard
+
+    private var keyboardScrolling: MessageListScrolling {
+        MessageListScrolling(
+            reveal: { id, edge in reveal(id, from: edge) },
+            scroll: { scroll, animated in keyboardScroll(scroll, glides: animated) }
+        )
+    }
+
+    /// Page Up, Page Down, Home and End in the message box (or in the
+    /// messages, with nothing there to select), and Esc in the message box.
+    /// `glides`: false jumps at once (the selection's trips).
+    private func keyboardScroll(_ scroll: MessageListScroll, glides: Bool = true) {
+        switch scroll {
+        case .pageUp: scrollPage(up: true, glides: glides)
+        case .pageDown: scrollPage(up: false, glides: glides)
+        case .top: scrollToTop(glides: glides)
+        case .present: jumpToPresent(glides: glides)
+        }
+    }
+
+    /// A page up or down, less `KeyboardPaging.overlap`, so the line at the
+    /// edge stays in view. A page down that reaches the newest line jumps
+    /// to the present, which follows new lines again.
+    private func scrollPage(up: Bool, glides: Bool) {
+        guard let metrics = controller.metrics, !metrics.fitsWithoutScrolling else { return }
+        let page = KeyboardPaging.distance(containerHeight: metrics.containerHeight)
+        if up {
+            guard metrics.visibleMinY > 0.5 else { return }
+            scrollAway(toY: max(0, metrics.visibleMinY - page), glides: glides)
+        } else if metrics.distanceFromBottom <= page {
+            jumpToPresent(glides: glides)
+        } else {
+            scrollAway(toY: metrics.visibleMinY + page, glides: glides)
+        }
+    }
+
+    /// Home: the oldest line loaded, at the top, from where older history
+    /// loads as it does when scrolling there.
+    private func scrollToTop(glides: Bool) {
+        guard let metrics = controller.metrics, !metrics.fitsWithoutScrolling, metrics.visibleMinY > 0.5 else { return }
+        controller.unpin()
+        // Long animated scrolls through a lazy stack land unreliably (rows
+        // are estimated); animate only short trips.
+        let animated = glides && metrics.visibleMinY < metrics.containerHeight * 3 && !reduceMotion
+        controller.beginProgrammaticScroll(for: animated ? 0.45 : 0.15) { follow in
+            if follow { scrollToBottom() }
+            updatePill()
+        }
+        withAnimation(animated ? .smooth(duration: 0.3) : nil) {
+            position.scrollTo(edge: .top)
+        }
+    }
+
+    /// Scrolls to an offset the reader asked for: like their own scrolling,
+    /// it stops following the newest line unless it ends near it
+    /// (`ScrollPinning.settle()`).
+    private func scrollAway(toY y: CGFloat, glides: Bool) {
+        controller.unpin()
+        let animated = glides && !reduceMotion
+        controller.beginProgrammaticScroll(for: animated ? 0.4 : 0.15) { follow in
+            if follow { scrollToBottom() }
+            updatePill()
+        }
+        withAnimation(animated ? .smooth(duration: 0.25) : nil) {
+            position.scrollTo(y: y)
+        }
+    }
+
+    /// Brings the row the keyboard selected into view, as little as it
+    /// takes. Out of view (it may not be laid out), the list first scrolls
+    /// near it by id, bringing it in at `edge` (the way the selection went).
+    /// Then, once it's drawn with its selection, its anchor
+    /// (`SelectedRowAnchor`) says exactly how far it's cut off, if at all,
+    /// and the list moves by that much: row heights on the way may have
+    /// been estimates.
+    private func reveal(_ id: DisplayItemID, from edge: VerticalEdge) {
+        let inView = controller.visibleIDs.contains(id)
+        if !inView { scrollNear(id, at: edge) }
+        Task {
+            var corrections = 0
+            for attempt in 1...12 {
+                try? await Task.sleep(for: .milliseconds(inView ? 20 : 40))
+                guard controller.selection?.id == id, !controller.isUserScrolling else { return }
+                guard let distance = controller.selectedRowScrollDistance() else {
+                    // Still not laid out where the first scroll left it.
+                    if attempt == 5 { scrollNear(id, at: edge) }
+                    continue
+                }
+                guard abs(distance) > 0.5, corrections < 3 else { return }
+                corrections += 1
+                scrollSelection(by: distance)
+            }
+        }
+    }
+
+    /// Scrolls the selected row `id`, out of view, to the top or bottom edge
+    /// of the list. A collapsed join/part run is reached through the message
+    /// beside it: SwiftUI places a run scrolled to by id a row off.
+    private func scrollNear(_ id: DisplayItemID, at edge: VerticalEdge) {
+        let target = MessageSelection.scrollTarget(for: id, toward: edge, in: controller.displayCache.items)
+        if edge == .top { controller.unpin() }
+        controller.beginProgrammaticScroll(for: 0.3, followsNearBottom: false) { follow in
+            if follow { scrollToBottom() }
+            updatePill()
+        }
+        let y: CGFloat = edge == .top ? 0 : 1
+        var moved = position
+        moved.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: y))
+        // An equal ScrollPosition is ignored (the same row, scrolled to
+        // before): nudge the anchor.
+        if moved == position { moved.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: edge == .top ? 0.0001 : 0.9999)) }
+        position = moved
+    }
+
+    /// Moves the list `distance` points (down when positive) to show the
+    /// selected row whole. Up from the bottom, the list stops following
+    /// the newest line, unless it ends right at it: following from just
+    /// above it would cut the row off again
+    /// (`ScrollPinning.settle(followsNearBottom:)`).
+    private func scrollSelection(by distance: CGFloat) {
+        // From where the clip view shows the list, as the distance was
+        // measured (`ClipViewSync`).
+        guard let offset = controller.scrollView?.contentView.bounds.minY ?? controller.metrics?.visibleMinY else { return }
+        if distance < 0 { controller.unpin() }
+        controller.beginProgrammaticScroll(for: 0.2, followsNearBottom: false) { follow in
+            if follow { scrollToBottom() }
+            updatePill()
+        }
+        position.scrollTo(y: max(0, offset + distance))
+    }
+}
+
+/// How far Page Up and Page Down move the list.
+nonisolated enum KeyboardPaging {
+    /// What stays in view of the page before: about two lines.
+    static let overlap: CGFloat = 40
+
+    static func distance(containerHeight: CGFloat) -> CGFloat {
+        max(containerHeight - overlap, containerHeight / 2)
     }
 }
 

@@ -1,6 +1,6 @@
 ---
 title: Keyboard shortcuts
-description: Every keyboard shortcut in Vela, the native macOS IRC client, from the command palette and quick switcher to navigation, the message field, the settings editor and the theme editor.
+description: Every keyboard shortcut in Vela, the native macOS IRC client, from the command palette and quick switcher to navigation, the message field, picking and acting on messages, the settings editor and the theme editor.
 ---
 
 # Keyboard shortcuts
@@ -113,10 +113,35 @@ With the member list focused (<kbd>⌥⌘4</kbd>). The highlighted person has a 
 | Complete a nick, `#channel`, `/command` or `:emoji:` (again for the next match) | <kbd>Tab</kbd> |
 | Previous / next message you sent in this channel | <kbd>↑</kbd> / <kbd>↓</kbd> |
 | Cancel a reply or a pending multi-line paste | <kbd>Esc</kbd> |
+| With nothing to cancel, jump to the newest message | <kbd>Esc</kbd> |
+| Scroll the messages up or down a page | <kbd>Page Up</kbd> / <kbd>Page Down</kbd> or <kbd>fn↑</kbd> / <kbd>fn↓</kbd> |
+| Scroll to the oldest message loaded / the newest | <kbd>Home</kbd> / <kbd>End</kbd> or <kbd>fn←</kbd> / <kbd>fn→</kbd> |
+| Move to the start / end of what you've typed | <kbd>⌘↑</kbd> / <kbd>⌘↓</kbd> |
 | Undo typing (and, after it, leaving or closing a channel) | <kbd>⌘Z</kbd> |
 | Emoji & Symbols (macOS) | <kbd>⌃⌘Space</kbd> |
 | Show Spelling and Grammar | <kbd>⌘:</kbd> |
 | Check Document Now (check the message's spelling) | <kbd>⌘;</kbd> |
+
+## The messages
+
+Press <kbd>⌥⌘2</kbd> (**Go → Focus Messages**), or <kbd>F6</kbd> until you get there, to pick a message with the keyboard. The newest message is selected, or the lowest one in view if you've scrolled up. Joins, parts and other events are skipped; a collapsed run of joins and parts can be selected.
+
+| Action | Shortcut |
+| --- | --- |
+| Previous / next message | <kbd>↑</kbd> / <kbd>↓</kbd> |
+| A page of messages up / down | <kbd>Page Up</kbd> / <kbd>Page Down</kbd> |
+| The first / last message loaded | <kbd>Home</kbd> / <kbd>End</kbd> |
+| Reply | <kbd>R</kbd> |
+| React (opens the emoji picker) | <kbd>E</kbd> |
+| Copy the text | <kbd>C</kbd> or <kbd>⌘C</kbd> |
+| Open the link (a menu of them when there are several) | <kbd>Return</kbd> |
+| Show or hide the joins and parts in a collapsed run | <kbd>Return</kbd> |
+| The sender's menu: message, mention, whois, op… | <kbd>U</kbd> |
+| Translate, or hide the translation | <kbd>T</kbd> |
+| Every action for the message (its right-click menu) | <kbd>Space</kbd>, <kbd>⇧F10</kbd> or the context-menu key |
+| Back to the message field | <kbd>Esc</kbd> |
+
+Typing anything else goes back to the message field and types it there.
 
 ## In the palette
 

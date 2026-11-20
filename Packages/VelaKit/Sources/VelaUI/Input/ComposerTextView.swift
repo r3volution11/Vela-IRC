@@ -40,6 +40,10 @@ struct ComposerActions {
     var historyNext: () -> Bool
     /// Escape. Return true if something was dismissed.
     var escape: () -> Bool
+    /// Page Up, Page Down, Home and End (and Esc with nothing to cancel,
+    /// `.present`) scroll the message list instead of the text. Return
+    /// false when there's no list to scroll.
+    var scrollMessages: (MessageListScroll) -> Bool = { _ in false }
     /// A paste is about to happen. Return true to take it over (it's not inserted).
     var interceptPaste: (String) -> Bool
     /// Tab-completion candidates for the word before the caret.
@@ -70,7 +74,9 @@ struct ComposerInsertion: Equatable {
 /// The composer's multi-line editor: an `NSTextView` that grows from one line
 /// to `maxLines` and then scrolls, with chat key handling (Return sends,
 /// ⇧Return/⌥Return insert a newline, Tab completes, ↑/↓ walk history,
-/// Escape dismisses) and `:shortcode:` emoji replacement.
+/// Escape dismisses, or with nothing to dismiss jumps to the newest
+/// message; Page Up/Down, Home and End scroll the messages) and
+/// `:shortcode:` emoji replacement.
 ///
 /// macOS text checking (spelling, grammar, autocorrect, text replacements,
 /// smart quotes and dashes) follows ``ComposerAppearance/textChecking`` and
@@ -178,13 +184,11 @@ struct ComposerTextView: NSViewRepresentable {
         }
         if let insertion, insertion.id != coordinator.lastInsertionID {
             coordinator.lastInsertionID = insertion.id
-            if insertion.isMention {
-                let caret = textView.selectedRange().location
-                let preceding = (textView.string as NSString).substring(to: min(caret, (textView.string as NSString).length))
-                coordinator.insert(ComposerInsertion.mentionText(for: insertion.text, before: preceding))
-            } else {
-                coordinator.insert(insertion.text)
-            }
+            // On the next turn: the edit reports the new text through the
+            // binding, which a write during this update loses. The next
+            // update then put the old text back (a Mention chosen while
+            // the message box didn't have the focus came to nothing).
+            DispatchQueue.main.async { [weak coordinator] in coordinator?.insert(insertion) }
         }
         if focusRequest != coordinator.lastFocusRequest {
             coordinator.lastFocusRequest = focusRequest
@@ -457,6 +461,19 @@ struct ComposerTextView: NSViewRepresentable {
             isProgrammaticChange = false
         }
 
+        /// Inserts text from outside (a mention, an edited paste) at the
+        /// selection.
+        func insert(_ insertion: ComposerInsertion) {
+            guard let textView else { return }
+            guard insertion.isMention else {
+                insert(insertion.text)
+                return
+            }
+            let text = textView.string as NSString
+            let caret = min(textView.selectedRange().location, text.length)
+            insert(ComposerInsertion.mentionText(for: insertion.text, before: text.substring(to: caret)))
+        }
+
         /// Inserts `string` at the selection as a user edit (it's reported
         /// and undoable) that autocorrect leaves alone.
         func insert(_ string: String) {
@@ -531,9 +548,30 @@ struct ComposerTextView: NSViewRepresentable {
             case #selector(NSResponder.moveDown(_:)):
                 return isCaretOnLastLine() && parent.actions.historyNext()
             case #selector(NSResponder.cancelOperation(_:)):
-                _ = parent.actions.escape()
+                // A pending paste or a reply first, as before; then a Tab
+                // completion being cycled through, which ends, leaving the
+                // word. With nothing to cancel: back to the newest message,
+                // like Jump to present.
+                if parent.actions.escape() {
+                    // Cancelled.
+                } else if completion != nil {
+                    completion = nil
+                } else {
+                    _ = parent.actions.scrollMessages(.present)
+                }
                 // Never fall through to NSTextView's completion popup.
                 return true
+            // The message list, not the text, which is a few lines at most
+            // (⌘↑ and ⌘↓ still move the caret to its start and end).
+            // fn-↑ and fn-↓ are Page Up and Page Down.
+            case #selector(NSResponder.scrollPageUp(_:)):
+                return parent.actions.scrollMessages(.pageUp)
+            case #selector(NSResponder.scrollPageDown(_:)):
+                return parent.actions.scrollMessages(.pageDown)
+            case #selector(NSResponder.scrollToBeginningOfDocument(_:)):
+                return parent.actions.scrollMessages(.top)
+            case #selector(NSResponder.scrollToEndOfDocument(_:)):
+                return parent.actions.scrollMessages(.present)
             default:
                 return false
             }

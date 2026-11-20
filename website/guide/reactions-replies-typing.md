@@ -11,11 +11,13 @@ Modern IRC servers support a few things chat apps have made familiar. Vela suppo
 
 Hover a message: the toolbar at its top-right offers your three most-used emoji and a **smiley** button that opens the emoji picker, with search, your frequently used emoji and every category. **Right-click → Add Reaction** works too.
 
+From the keyboard, press <kbd>⌥⌘2</kbd> to pick a message (<kbd>↑</kbd> and <kbd>↓</kbd> move to another), then <kbd>E</kbd> to open the emoji picker. Type to search, and <kbd>Return</kbd> adds the first match. See [The messages](/reference/keyboard-shortcuts#the-messages) for everything else you can do from there.
+
 Reactions appear as chips under the message, each with a count; yours are highlighted. Click a chip to add or remove your reaction, or the **+** chip to pick another emoji.
 
 ## Replies
 
-Hover a message and click the **reply** arrow, or right-click the message and choose **Reply**. A bar above the message field shows who you're replying to (<kbd>Esc</kbd> cancels). Your reply appears with a small quote of the original above it; click the quote to jump to the original message.
+Hover a message and click the **reply** arrow, or right-click the message and choose **Reply**. From the keyboard, pick the message (<kbd>⌥⌘2</kbd>, then <kbd>↑</kbd> and <kbd>↓</kbd>) and press <kbd>R</kbd>. A bar above the message field shows who you're replying to (<kbd>Esc</kbd> cancels). Your reply appears with a small quote of the original above it; click the quote to jump to the original message.
 
 On servers without reply support, the bar warns that your message will be **sent as a normal message**.
 

@@ -181,6 +181,8 @@ struct MembershipRunRow: View {
     @Environment(MessageListController.self) private var controller
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let run: MembershipRun
+    /// Selected with the keyboard (Return shows or hides the events).
+    var isSelected = false
 
     @State private var hovering = false
 
@@ -206,6 +208,12 @@ struct MembershipRunRow: View {
                     }
                 }
                 .background(hovering ? theme[ThemeKey.chatHoverBackground] : .clear)
+                .background {
+                    if isSelected {
+                        MessageSelectionHighlight()
+                        SelectedRowAnchor(id: .membershipRun(run.id))
+                    }
+                }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

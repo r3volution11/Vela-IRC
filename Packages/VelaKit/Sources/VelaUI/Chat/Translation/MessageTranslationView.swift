@@ -140,20 +140,39 @@ struct TranslationMessageMenuItems: View {
     let line: ChatLine
 
     var body: some View {
-        if let context, !line.isRedacted {
-            if store.state(for: line.id)?.isShowing == true {
-                Button {
-                    store.hide(line.id)
-                } label: {
+        if let context, let action = store.messageAction(for: line, in: controller.buffer, context: context) {
+            Button {
+                store.perform(action, on: line, context: context)
+            } label: {
+                if action == .hide {
                     Label("Hide Translation", systemImage: "translate")
-                }
-            } else if let source = store.offer(for: line, in: controller.buffer, context: context) {
-                Button {
-                    store.translate(line, from: source, context: context)
-                } label: {
+                } else {
                     Label("Translate", systemImage: "translate")
                 }
             }
+        }
+    }
+}
+
+extension TranslationStore {
+    /// What a message's Translate item (or T on a selected message) does.
+    enum MessageAction: Equatable {
+        case hide
+        case translate(from: Locale.Language)
+    }
+
+    /// Hide the translation showing under `line`, or translate it when
+    /// it's someone else's line in another language; nil when neither.
+    func messageAction(for line: ChatLine, in buffer: BufferModel, context: TranslationContext) -> MessageAction? {
+        guard !line.isRedacted else { return nil }
+        if state(for: line.id)?.isShowing == true { return .hide }
+        return offer(for: line, in: buffer, context: context).map { .translate(from: $0) }
+    }
+
+    func perform(_ action: MessageAction, on line: ChatLine, context: TranslationContext) {
+        switch action {
+        case .hide: hide(line.id)
+        case .translate(let source): translate(line, from: source, context: context)
         }
     }
 }

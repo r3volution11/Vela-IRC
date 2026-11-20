@@ -13,7 +13,11 @@ Type in the message field at the bottom of the window and press **Return** to se
 | <kbd>⇧Return</kbd> or <kbd>⌥Return</kbd> | New line |
 | <kbd>Tab</kbd> | Complete the word before the cursor; press again for the next match |
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Previous / next message you sent here |
-| <kbd>Esc</kbd> | Cancel a reply or a pending paste |
+| <kbd>Esc</kbd> | Cancel a reply or a pending paste; with nothing to cancel, jump to the newest message |
+| <kbd>Page Up</kbd> / <kbd>Page Down</kbd> | Scroll the messages a page, keeping a line or two of the last page in view |
+| <kbd>Home</kbd> / <kbd>End</kbd> | Scroll to the oldest message loaded / back to the newest |
+
+So you can read back without leaving the field: what you've typed stays put, and so does the cursor. On a laptop keyboard, <kbd>fn↑</kbd> and <kbd>fn↓</kbd> are Page Up and Page Down, and <kbd>fn←</kbd> and <kbd>fn→</kbd> are Home and End. To pick a message and act on it, press <kbd>⌥⌘2</kbd>; see [The messages](/reference/keyboard-shortcuts#the-messages).
 
 The field grows as you type, up to eight lines, then scrolls. IRC limits how long a single message can be, so long or multi-line text is sent as several messages; a small "2 messages" label tells you before you send.
 
@@ -38,7 +42,7 @@ Unsent text is kept per channel, so you can switch away mid-sentence and pick up
 
 ## Replies
 
-Hover a message and click the **reply** arrow (or right-click it and choose **Reply**). A bar above the field shows who you're replying to; press <kbd>Esc</kbd> or click **×** to cancel.
+Hover a message and click the **reply** arrow (or right-click it and choose **Reply**). From the keyboard, press <kbd>⌥⌘2</kbd>, pick the message with <kbd>↑</kbd> and <kbd>↓</kbd>, and press <kbd>R</kbd>. A bar above the field shows who you're replying to; press <kbd>Esc</kbd> or click **×** to cancel.
 
 Replies need server support (IRCv3 message tags). On servers without it, the bar says **sent as a normal message**. See [Reactions, replies & typing](/guide/reactions-replies-typing).
 
