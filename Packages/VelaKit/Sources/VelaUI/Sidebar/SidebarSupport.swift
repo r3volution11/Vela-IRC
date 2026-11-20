@@ -236,6 +236,32 @@ struct SidebarRowBackground: View {
     }
 }
 
+/// The ring around the row the keyboard is on, while the sidebar or the
+/// member list has the keyboard focus: the theme's `focusBorder`, as on a
+/// focused tab or field.
+struct KeyboardFocusRing<RingShape: InsettableShape>: View {
+    @Environment(\.theme) private var theme
+    let shape: RingShape
+
+    var body: some View {
+        shape
+            .strokeBorder(theme[ThemeKey.focusBorder], lineWidth: 2)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+extension View {
+    /// Rings the row in `focusBorder` when `isShown`.
+    func keyboardFocusRing(_ isShown: Bool, cornerRadius: CGFloat) -> some View {
+        overlay {
+            if isShown {
+                KeyboardFocusRing(shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            }
+        }
+    }
+}
+
 /// Unread badge, highlight badge, dot or muted glyph at the end of a row.
 struct SidebarActivityIndicator: View {
     @Environment(\.theme) private var theme
@@ -404,6 +430,10 @@ extension EnvironmentValues {
     /// back their hover highlight meanwhile, so it doesn't flicker across
     /// the rows the drag passes over.
     @Entry var isSidebarReordering = false
+    /// The sidebar's keyboard focus, which a clicked row hands to the
+    /// message box. The same object for the sidebar's life, so rows never
+    /// redraw for it.
+    @Entry var sidebarKeyboardFocus: KeyboardFocusHandle?
 }
 
 /// The raised look of an item being dragged: an opaque tile with the hover

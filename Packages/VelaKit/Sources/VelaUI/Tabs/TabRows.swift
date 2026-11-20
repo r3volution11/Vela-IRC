@@ -44,6 +44,8 @@ struct ChannelTabRow: View {
             id != selectedID && id != hoveredID && !reorder.isMoving(id)
         }
         let shortcutTargets = TabActions.shortcutTargets(in: session).map(\.id)
+        // With the keyboard on this row, its selected tab has the ring.
+        let keyboardRow = interaction.keyboardRow
 
         HStack(spacing: 2) {
             TabScroller(target: selectedID, dragsWindow: dragsWindow, reorder: reorder, isOverflowing: $isOverflowing) {
@@ -74,7 +76,7 @@ struct ChannelTabRow: View {
                                 selection: selectionNamespace,
                                 isSelected: buffer.id == selectedID,
                                 isHovered: buffer.id == hoveredID,
-                                isFocused: focusedTab == .buffer(buffer.id),
+                                isFocused: focusedTab == .buffer(buffer.id) || (keyboardRow == .channels && buffer.id == selectedID),
                                 showsSeparator: separated.contains(buffer.id),
                                 isLifted: role?.isLifted ?? false
                             ),
@@ -121,8 +123,29 @@ struct ChannelTabRow: View {
             }
         }
         .frame(height: rowHeight)
-        .onKeyPress(keys: [.leftArrow, .rightArrow, .home, .end]) { press in
-            moveFocus(press.key, in: buffers)
+        .onKeyPress(keys: Self.focusedTabKeys) { press in
+            switch press.key {
+            case .upArrow, .downArrow:
+                guard focusedTab != nil else { return .ignored }
+                let row = TabActions.keyboardRow(
+                    after: .channels, up: press.key == .upArrow, showsNetworks: !showsNetworkName, placement: interaction.placement
+                )
+                if row != .channels { interaction.moveKeyboard(to: row) }
+                return .handled
+            case .return, .escape:
+                guard focusedTab != nil else { return .ignored }
+                uiState.focusInput()
+                return .handled
+            default:
+                return moveFocus(press.key, in: buffers)
+            }
+        }
+        // A tab focused from the keyboard (Tab, with Keyboard navigation
+        // on) is the tabs having the focus, for F6 and for the message box
+        // that ← and → bring in.
+        .onChange(of: focusedTab) { _, focused in
+            interaction.setButtonFocused(focused != nil, in: .channels)
+            uiState.setFocused(.navigation, interaction.hasKeyboardFocus)
         }
         .onChange(of: ids) { oldValue, newValue in
             reorder.abandon()
@@ -137,6 +160,8 @@ struct ChannelTabRow: View {
     }
 
     private static let trailingPadding: CGFloat = 8
+    /// Keys a focused tab button handles.
+    static let focusedTabKeys: Set<KeyEquivalent> = [.leftArrow, .rightArrow, .home, .end, .upArrow, .downArrow, .return, .escape]
 
     /// The tabs as drawn: mid-drag, the dragged one in the slot it would
     /// land in.
@@ -151,7 +176,7 @@ struct ChannelTabRow: View {
     /// Server console, then channels, then queries (bouncer control
     /// connections only have their console).
     private var tabs: [BufferModel] {
-        session.isBouncerControl ? [session.serverBuffer] + session.buffers : session.allBuffers
+        TabActions.tabs(of: session)
     }
 
     private var rowAlignment: Alignment {
@@ -169,6 +194,7 @@ struct ChannelTabRow: View {
     }
 
     private func select(_ buffer: BufferModel) {
+        interaction.yieldToClick(uiState)
         app.select(buffer)
         uiState.focusInput()
     }
@@ -190,8 +216,10 @@ struct ChannelTabRow: View {
             .disabled(!session.isConnected || session.isBouncerControl)
     }
 
-    /// ←/→/Home/End move between tabs while one has keyboard focus (Full
-    /// Keyboard Access), selecting as they go like a native tab view.
+    /// ←/→/Home/End move between tabs while one has keyboard focus (Tab,
+    /// with Keyboard navigation on), selecting as they go like a native tab
+    /// view. ⌥⌘1 puts the keyboard on the tabs another way, which works
+    /// without it (`TabStackView`).
     private func moveFocus(_ key: KeyEquivalent, in buffers: [BufferModel]) -> KeyPress.Result {
         guard case .buffer(let current) = focusedTab,
               let index = buffers.firstIndex(where: { $0.id == current }) else { return .ignored }
@@ -258,6 +286,8 @@ struct ServerTabRow: View {
         let separated: Set<UUID> = isSegmented ? [] : TabDrawOrder.separated(drawnOrder(ids, roles: roles)) { id in
             id != selectedID && id != hoveredID && roles[id]?.isLifted != true
         }
+        // With the keyboard on this row, its selected network has the ring.
+        let keyboardRow = interaction.keyboardRow
 
         HStack(spacing: 2) {
             TabScroller(
@@ -290,13 +320,14 @@ struct ServerTabRow: View {
                                 selection: selectionNamespace,
                                 isSelected: session.id == selectedID,
                                 isHovered: session.id == hoveredID,
-                                isFocused: focusedTab == .network(session.id),
+                                isFocused: focusedTab == .network(session.id) || (keyboardRow == .networks && session.id == selectedID),
                                 showsSeparator: separated.contains(session.id),
                                 isLifted: role?.isLifted ?? false
                             ),
                             focus: $focusedTab,
                             reorder: role,
                             onSelect: {
+                                interaction.yieldToClick(uiState)
                                 TabActions.select(session, app: app)
                                 uiState.focusInput()
                             },
@@ -347,8 +378,26 @@ struct ServerTabRow: View {
             }
         }
         .frame(height: rowHeight)
-        .onKeyPress(keys: [.leftArrow, .rightArrow, .home, .end]) { press in
-            moveFocus(press.key, in: sessions)
+        .onKeyPress(keys: ChannelTabRow.focusedTabKeys) { press in
+            switch press.key {
+            case .upArrow, .downArrow:
+                guard focusedTab != nil else { return .ignored }
+                let row = TabActions.keyboardRow(
+                    after: .networks, up: press.key == .upArrow, showsNetworks: true, placement: interaction.placement
+                )
+                if row != .networks { interaction.moveKeyboard(to: row) }
+                return .handled
+            case .return, .escape:
+                guard focusedTab != nil else { return .ignored }
+                uiState.focusInput()
+                return .handled
+            default:
+                return moveFocus(press.key, in: sessions)
+            }
+        }
+        .onChange(of: focusedTab) { _, focused in
+            interaction.setButtonFocused(focused != nil, in: .networks)
+            uiState.setFocused(.navigation, interaction.hasKeyboardFocus)
         }
         .onChange(of: ids) { reorder.abandon() }
         .onChange(of: reorder.dragged) { _, dragged in

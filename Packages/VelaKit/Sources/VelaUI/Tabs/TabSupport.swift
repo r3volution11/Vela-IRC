@@ -7,6 +7,7 @@ import Observation
 import SwiftUI
 import VelaCore
 import VelaIRC
+import VelaStore
 
 /// Identifies a tab in either row.
 enum TabKey: Hashable {
@@ -22,12 +23,65 @@ enum TabKey: Hashable {
     }
 }
 
+/// A row of tabs, for the keyboard.
+enum TabKeyboardRow: Equatable {
+    case networks
+    case channels
+}
+
 /// Hover state shared by both rows (for separators and hover fills) and
 /// middle-click-to-close, which SwiftUI has no gesture for. Pointing at a
 /// tab's close slot is the slot's own state (`TabCloseSlot`), not this.
+///
+/// Also the tabs' keyboard focus (⌥⌘1, F6): the row the keyboard is on,
+/// whose selected tab gets the focus ring, and the view that has the focus
+/// (`TabStackView`).
 @Observable
 final class TabInteraction {
     var hovered: TabKey?
+    /// The row whose selected tab has the focus ring, while the tabs have
+    /// the keyboard focus. Drawn from; keys go by `activeKeyboardRow`.
+    var keyboardRow: TabKeyboardRow?
+
+    /// Where the stack is, for which way ↑ and ↓ go.
+    let placement: TabStackPlacement
+    let keyboardFocus = KeyboardFocusHandle()
+    /// The row the keyboard is on, at once (`keyboardRow` follows after
+    /// the update a focus change can come in the middle of).
+    @ObservationIgnored var activeKeyboardRow: TabKeyboardRow = .channels
+    /// The row to put the keyboard on when the tabs next take the focus.
+    @ObservationIgnored var nextKeyboardRow: TabKeyboardRow?
+
+    init(placement: TabStackPlacement = .top) {
+        self.placement = placement
+    }
+    /// Rows with a tab button focused from the keyboard (Tab with Keyboard
+    /// navigation on in System Settings): they count as the tabs having
+    /// the focus too.
+    @ObservationIgnored private var rowsWithFocusedButton: Set<TabKeyboardRow> = []
+
+    /// The tabs have the keyboard focus, one way or the other.
+    var hasKeyboardFocus: Bool { keyboardFocus.hasFocus || !rowsWithFocusedButton.isEmpty }
+
+    /// A tab button in `row` gained or lost the focus.
+    func setButtonFocused(_ focused: Bool, in row: TabKeyboardRow) {
+        if focused { rowsWithFocusedButton.insert(row) } else { rowsWithFocusedButton.remove(row) }
+    }
+
+    /// A tab clicked (or pressed with Space or VoiceOver): the focus goes
+    /// to the new message box, as after any click on a tab, rather than
+    /// staying with the keyboard in the tabs. Call it before selecting.
+    func yieldToClick(_ uiState: UIState) {
+        keyboardFocus.yieldToClick(uiState)
+        if !rowsWithFocusedButton.isEmpty { uiState.setFocused(.navigation, false) }
+    }
+
+    /// ↑ or ↓ on a focused tab button: the keyboard goes on from the tabs'
+    /// own focus, to `row`.
+    func moveKeyboard(to row: TabKeyboardRow) {
+        nextKeyboardRow = row
+        keyboardFocus.focus()
+    }
 
     @ObservationIgnored private var monitor: Any?
     @ObservationIgnored private var middleClickHandler: ((TabKey) -> Bool)?
@@ -109,6 +163,35 @@ enum TabActions {
         app.selectedSession ?? app.sessions.first
     }
 
+    /// The channel row's tabs: the server console, then channels, then
+    /// queries (bouncer control connections only have their console).
+    static func tabs(of session: NetworkSession) -> [BufferModel] {
+        session.isBouncerControl ? [session.serverBuffer] + session.buffers : session.allBuffers
+    }
+
+    /// ←, →, Home or End from tab `index` of `count`: the tab to go to (they
+    /// stop at the ends, as in a tab view), or nil for another key.
+    static func keyboardTarget(_ key: NavigationKey, from index: Int?, count: Int) -> Int? {
+        guard count > 0 else { return nil }
+        switch key {
+        case .left: return index.map { max(0, $0 - 1) } ?? count - 1
+        case .right: return index.map { min(count - 1, $0 + 1) } ?? 0
+        case .home: return 0
+        case .end: return count - 1
+        default: return nil
+        }
+    }
+
+    /// ↑ or ↓ from `row`: the other row, in the order they're shown (the
+    /// networks above the channels, except at the bottom of the window),
+    /// or `row` at the edge or when there's one row.
+    static func keyboardRow(after row: TabKeyboardRow, up: Bool, showsNetworks: Bool, placement: TabStackPlacement) -> TabKeyboardRow {
+        guard showsNetworks else { return .channels }
+        let order: [TabKeyboardRow] = placement == .bottom ? [.channels, .networks] : [.networks, .channels]
+        let index = order.firstIndex(of: row) ?? 1
+        return order[up ? max(0, index - 1) : min(order.count - 1, index + 1)]
+    }
+
     /// ⌘`number`: selects the shown network's `number`th channel or
     /// conversation, as the tabs are now. False if there's none.
     @discardableResult
@@ -159,6 +242,13 @@ enum TabDescriptions {
         case .channel: "Channel"
         case .query: "Conversation"
         }
+    }
+
+    /// What VoiceOver says for a tab the keyboard moves to, as it reads the
+    /// tab: "#vela, 3 unread".
+    static func spoken(_ buffer: BufferModel, in session: NetworkSession) -> String {
+        let name = buffer.kind == .server ? "\(session.displayName) server console" : BufferTitle.title(for: buffer, in: session)
+        return [name, bufferValue(buffer, in: session)].filter { !$0.isEmpty }.joined(separator: ", ")
     }
 }
 

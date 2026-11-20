@@ -16,7 +16,15 @@ import VelaTheme
 /// Click a row to select it, ⌘-click to add or remove one, ⇧-click to
 /// select a run. Right-clicking within a selection of several opens the
 /// menu for all of them; double-clicking a row opens a conversation.
+///
+/// It's the window's `.members` area: ⌥⌘4 or F6 give it the keyboard focus,
+/// with a highlight on a member that ↑, ↓, Page Up, Page Down, Home and End
+/// move. Return opens a conversation with them, Space (or ⇧F10) their menu;
+/// typing filters, and Esc clears the filter, then goes back to the
+/// message box.
 struct MemberListView: View {
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     let buffer: BufferModel
@@ -25,6 +33,7 @@ struct MemberListView: View {
     @State private var filter = ""
     @State private var selection: MemberSelection
     @FocusState private var filterFocused: Bool
+    @State private var keyboard = MemberListKeyboard()
 
     init(buffer: BufferModel, session: NetworkSession, selection: MemberSelection = MemberSelection()) {
         self.buffer = buffer
@@ -36,16 +45,17 @@ struct MemberListView: View {
         let prefixes = session.isupport.prefixes
         let groups = MemberGroup.groups(for: buffer.members, prefixes: prefixes, filter: filter)
         let mapping = session.isupport.caseMapping
-        let order = groups.flatMap { $0.members.map { mapping.fold($0.nick) } }
         // Everyone selected, when it's more than one, in list order.
         let selected: [Member] = selection.count > 1
             ? groups.flatMap { $0.members.filter { selection.contains(mapping.fold($0.nick)) } }
             : []
+        // For the keys, as shown now; flattened only when a key needs it.
+        let order = MemberListOrder(groups: groups)
 
         VStack(spacing: 0) {
             header(shown: groups.reduce(0) { $0 + $1.members.count })
             if buffer.memberCount > 0 {
-                filterField
+                filterField(order)
                     .padding(.horizontal, 8)
                     .padding(.top, 8)
                     .padding(.bottom, 4)
@@ -54,46 +64,81 @@ struct MemberListView: View {
             if groups.isEmpty {
                 emptyState
             } else {
-                ScrollView(.vertical) {
-                    LazyVStack(alignment: .leading, spacing: 1, pinnedViews: [.sectionHeaders]) {
-                        ForEach(groups) { group in
-                            Section {
-                                ForEach(group.members) { member in
-                                    let key = mapping.fold(member.nick)
-                                    let isSelected = selection.contains(key)
-                                    MemberRow(
-                                        member: member,
-                                        rankName: MemberGroup.rankName(
-                                            mode: member.topPrefix.flatMap { symbol in prefixes.first { $0.symbol == symbol }?.mode },
-                                            symbol: member.topPrefix
-                                        ),
-                                        buffer: buffer,
-                                        session: session,
-                                        isSelected: isSelected,
-                                        menuMembers: isSelected && selected.count > 1 ? selected : [member],
-                                        onClick: { kind in
-                                            selection.click(key, kind: kind, order: order)
-                                        }
-                                    )
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical) {
+                        LazyVStack(alignment: .leading, spacing: 1, pinnedViews: [.sectionHeaders]) {
+                            ForEach(groups) { group in
+                                Section {
+                                    ForEach(group.members) { member in
+                                        let key = mapping.fold(member.nick)
+                                        let isSelected = selection.contains(key)
+                                        MemberRow(
+                                            member: member,
+                                            rankName: MemberGroup.rankName(
+                                                mode: member.topPrefix.flatMap { symbol in prefixes.first { $0.symbol == symbol }?.mode },
+                                                symbol: member.topPrefix
+                                            ),
+                                            buffer: buffer,
+                                            session: session,
+                                            isSelected: isSelected,
+                                            menuMembers: isSelected && selected.count > 1 ? selected : [member],
+                                            keyboard: keyboard,
+                                            onClick: { kind in
+                                                keyboard.highlight(member.nick)
+                                                // The list's order, worked out only for a ⇧-click
+                                                // rather than each time the list is drawn.
+                                                let folded = kind == .extend || kind == .extendAdding
+                                                    ? groups.flatMap { $0.members.map { mapping.fold($0.nick) } } : []
+                                                selection.click(key, kind: kind, order: folded)
+                                            }
+                                        )
+                                    }
+                                } header: {
+                                    MemberSectionHeader(title: group.title, count: group.members.count)
                                 }
-                            } header: {
-                                MemberSectionHeader(title: group.title, count: group.members.count)
                             }
                         }
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 10)
+                        // The top, to scroll back to with the keyboard.
+                        .background(alignment: .top) {
+                            Color.clear.frame(height: 1).id(MemberListKeyboard.topID)
+                        }
+                        .themedScrollers()
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 10)
-                    .themedScrollers()
+                    .scrollIndicators(.automatic)
+                    .scrollContentBackground(.hidden)
+                    // Only when the list is resized, not as it scrolls.
+                    .onScrollGeometryChange(for: CGFloat.self, of: \.containerSize.height) { _, height in
+                        keyboard.visibleHeight = height
+                    }
+                    .onAppear { keyboard.proxy = proxy }
                 }
-                .scrollIndicators(.automatic)
-                .scrollContentBackground(.hidden)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .surfaceBackground(ThemeKey.memberListBackground, on: .content)
+        .background {
+            KeyboardFocusArea(
+                handle: keyboard.handle,
+                onFocusChange: { focused in listFocusChanged(focused, order: order) },
+                onKey: { key, _ in handleKey(key, order: order) }
+            )
+        }
+        .onChange(of: uiState.focusRequest, initial: true) { _, request in
+            guard request?.area == .members else { return }
+            uiState.takeFocusRequest(for: .members)
+            keyboard.handle.focus()
+        }
+        // For F6, and for a channel opened meanwhile: the filter is the
+        // member list's too.
+        .onChange(of: filterFocused) { _, focused in
+            uiState.setFocused(.members, focused || keyboard.handle.hasFocus)
+        }
         .onChange(of: buffer.id) {
             filter = ""
             selection = MemberSelection()
+            keyboard.reset()
         }
         // People who leave drop out of the selection.
         .onChange(of: buffer.memberCount) {
@@ -101,6 +146,124 @@ struct MemberListView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Members of \(buffer.name)")
+    }
+
+    // MARK: Keyboard
+
+    /// Told at once, before Return can open a conversation and bring in
+    /// its message box.
+    private func listFocusChanged(_ focused: Bool, order: MemberListOrder) {
+        uiState.setFocused(.members, focused || filterFocused)
+        if focused {
+            // The last one highlighted, while they're listed; else the first.
+            if order.index(of: keyboard.highlighted) == nil { keyboard.highlight(order.nicks.first) }
+            if let nick = keyboard.highlighted {
+                reveal(nick, in: order, goingUp: false)
+                announce(nick, prefix: "Members")
+            }
+        }
+        // Drawn after this update: the focus can move in the middle of one.
+        Task { @MainActor in keyboard.setShowing(keyboard.handle.hasFocus) }
+    }
+
+    private func handleKey(_ key: NavigationKey, order: MemberListOrder) -> Bool {
+        switch key {
+        case .up, .down, .pageUp, .pageDown, .home, .end:
+            let current = order.index(of: keyboard.highlighted)
+            let rowHeight = CGFloat(style.sidebarRowHeight) + 1
+            let page = max(1, Int(keyboard.visibleHeight / rowHeight) - 1)
+            guard let target = order.target(key, from: current, page: page) else { return true }
+            let nick = order.nicks[target]
+            guard nick != keyboard.highlighted else { return true }
+            // From the row highlighted now, before it moves.
+            let step = key == .up || key == .down ? current.map { target - $0 } : nil
+            reveal(nick, in: order, goingUp: current.map { target < $0 } ?? false, step: step)
+            keyboard.highlight(nick)
+            announce(nick)
+        case .return:
+            if let member = highlightedMember { openQuery(with: member) }
+        case .space, .menu:
+            if let member = highlightedMember { showMenu(for: member, in: order) }
+        case .escape:
+            if filter.isEmpty {
+                uiState.focusInput()
+            } else {
+                filter = ""
+            }
+        case .text(let text):
+            typeIntoFilter(text)
+        case .left, .right:
+            break
+        }
+        return true
+    }
+
+    private var highlightedMember: Member? {
+        keyboard.highlighted.flatMap { buffer.member(named: $0, caseMapping: session.isupport.caseMapping) }
+    }
+
+    private func reveal(_ nick: String, in order: MemberListOrder, goingUp: Bool = true, step: Int? = nil) {
+        guard let index = order.index(of: nick) else { return }
+        keyboard.reveal(
+            nick, index: index, above: index >= 2 ? order.nicks[index - 2] : nil,
+            goingUp: goingUp, step: step, rowHeight: CGFloat(style.sidebarRowHeight) + 1
+        )
+    }
+
+    /// Return: what double-clicking does. The list goes with the channel,
+    /// so the focus goes to the conversation's message box.
+    private func openQuery(with member: Member) {
+        let mapping = session.isupport.caseMapping
+        guard mapping.fold(member.nick) != mapping.fold(session.nick) else { return }
+        keyboard.handle.resign()
+        app.select(session.ensureBuffer(name: member.nick, kind: .query))
+    }
+
+    /// Space, ⇧F10 or the menu key: the menu right-clicking the row opens
+    /// (for everyone selected and shown, when they're among several), under
+    /// the row.
+    private func showMenu(for member: Member, in order: MemberListOrder) {
+        let mapping = session.isupport.caseMapping
+        var members = [member]
+        if selection.count > 1, selection.contains(mapping.fold(member.nick)) {
+            members = order.groups.flatMap { $0.members.filter { selection.contains(mapping.fold($0.nick)) } }
+        }
+        let actions = UserMenuActions(app: app, uiState: uiState, session: session, buffer: buffer)
+        let targets = members.map { actions.target(nick: $0.nick) }
+        let menu = UserMenuAppKit.menu(actions.menu(for: targets)) { actions.perform($0, on: targets) }
+        // Under the row; under the list's top if the row isn't drawn.
+        let row = keyboard.menuAnchor.flatMap { $0.window == nil ? nil : $0 }
+        guard let anchor = row ?? keyboard.handle.anchorView else { return }
+        MemberListKeyboard.presentMenu(menu, anchor)
+    }
+
+    /// Letters typed in the list go to the filter, which takes the focus
+    /// with the caret after them; ↓ comes back.
+    private func typeIntoFilter(_ text: String) {
+        // No one in the channel: no filter field.
+        guard buffer.memberCount > 0 else { return }
+        filter += text
+        filterFocused = true
+        let window = keyboard.handle.window
+        Task { @MainActor in
+            // A field taking the focus selects its text, which the next
+            // letter would replace.
+            for _ in 0..<10 {
+                if let editor = window?.firstResponder as? NSTextView, editor.isFieldEditor {
+                    editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(10))
+            }
+        }
+    }
+
+    /// "marisol, operator", for VoiceOver.
+    private func announce(_ nick: String, prefix: String? = nil) {
+        guard let member = buffer.member(named: nick, caseMapping: session.isupport.caseMapping) else { return }
+        let prefixes = session.isupport.prefixes
+        let rank = MemberGroup.rankName(mode: member.topPrefix.flatMap { symbol in prefixes.first { $0.symbol == symbol }?.mode }, symbol: member.topPrefix)
+        KeyboardAnnouncement.post([prefix, member.nick, rank, member.isAway ? "away" : nil].compactMap { $0 }.joined(separator: ", "))
     }
 
     private func header(shown: Int) -> some View {
@@ -127,7 +290,7 @@ struct MemberListView: View {
         .accessibilityAddTraits(.isHeader)
     }
 
-    private var filterField: some View {
+    private func filterField(_ order: MemberListOrder) -> some View {
         HStack(spacing: 5) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 11, weight: .medium))
@@ -138,9 +301,21 @@ struct MemberListView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(theme[ThemeKey.memberListForeground])
                 .focused($filterFocused)
+                // Clears the filter, then goes back to the message box.
                 .onKeyPress(.escape) {
-                    guard !filter.isEmpty else { return .ignored }
-                    filter = ""
+                    if filter.isEmpty {
+                        uiState.focusInput()
+                    } else {
+                        filter = ""
+                    }
+                    return .handled
+                }
+                // Into the list, on the first match unless the one
+                // highlighted is still there.
+                .onKeyPress(.downArrow) {
+                    guard !order.nicks.isEmpty else { return .ignored }
+                    if order.index(of: keyboard.highlighted) == nil { keyboard.highlight(order.nicks.first) }
+                    keyboard.handle.focus()
                     return .handled
                 }
                 .accessibilityLabel("Filter members")
@@ -228,6 +403,8 @@ private struct MemberRow: View {
     /// Who the right-click menu is for: this member, or everyone selected
     /// when the row is part of a selection of several.
     let menuMembers: [Member]
+    /// The list's keyboard highlight: the row watches its own flag only.
+    let keyboard: MemberListKeyboard
     /// A click, and what it does to the selection (from the modifier
     /// keys held).
     let onClick: (MemberSelection.Click) -> Void
@@ -237,6 +414,8 @@ private struct MemberRow: View {
     var body: some View {
         let fontSize = CGFloat(style.sidebarFontSize)
         let isSelf = session.isupport.caseMapping.fold(member.nick) == session.isupport.caseMapping.fold(session.nick)
+        let isHighlighted = keyboard.flag(for: member.id).isOn
+        let cornerRadius = SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight)
 
         HStack(spacing: 4) {
             Text(member.topPrefix.map(String.init) ?? " ")
@@ -266,9 +445,20 @@ private struct MemberRow: View {
         .padding(.trailing, 6)
         .frame(height: style.sidebarRowHeight)
         .background(
-            RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight), style: .continuous)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(rowBackground)
         )
+        .background {
+            // Where Space or ⇧F10 opens the menu, and where the row is, so
+            // ↑ and ↓ only scroll when the next row is out of view.
+            if isHighlighted {
+                MemberMenuAnchor(keyboard: keyboard)
+                    .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .scrollView(axis: .vertical)) }) { frame in
+                        keyboard.highlightedFrame = (member.nick, frame)
+                    }
+            }
+        }
+        .keyboardFocusRing(isHighlighted, cornerRadius: cornerRadius)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture(count: 2) { openQuery() }
@@ -307,6 +497,9 @@ private struct MemberRow: View {
 
     private func openQuery() {
         guard session.isupport.caseMapping.fold(member.nick) != session.isupport.caseMapping.fold(session.nick) else { return }
+        // The list goes with the channel: the conversation's message box
+        // takes the focus.
+        keyboard.handle.resign()
         app.select(session.ensureBuffer(name: member.nick, kind: .query))
     }
 }

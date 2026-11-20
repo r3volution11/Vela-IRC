@@ -11,11 +11,16 @@ import VelaTheme
 /// (resizable via `sidebar.width`) or, when `sidebar.collapsed` is on, the
 /// icon rail. Hovering the rail floats the full tree over the chat without
 /// changing the layout.
+///
+/// It's the window's `.navigation` area: ⌥⌘1 or F6 give it the keyboard
+/// focus, and the keys move through the tree or the rail alike
+/// (`SidebarKeyboard`). The focus stays here as the tree and the rail swap.
 struct SidebarContainer: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(SidebarMetrics.collapsedNetworksKey) private var collapsedNetworks = NetworkIDSet()
 
     @State private var railHovering = false
     @State private var overlayHovering = false
@@ -25,6 +30,9 @@ struct SidebarContainer: View {
     @State private var overlayReordering = false
     /// The tree's width while its divider is dragged (see `PaneDivider`).
     @State private var dragWidth: Double?
+    @State private var keyboard = SidebarKeyboardFocus()
+    /// For drawing the ring on the row the keyboard is on.
+    @State private var hasKeyboardFocus = false
 
     var body: some View {
         let settings = app.settings
@@ -33,7 +41,7 @@ struct SidebarContainer: View {
 
         ZStack(alignment: .topLeading) {
             if collapsed {
-                SidebarRailView(onReorderingChange: { railReordering = $0 })
+                SidebarRailView(hasKeyboardFocus: hasKeyboardFocus, onReorderingChange: { railReordering = $0 })
                     .onHover { inside in
                         railHovering = inside
                         updateHoverExpansion()
@@ -41,7 +49,7 @@ struct SidebarContainer: View {
                     .transition(.opacity)
             } else {
                 HStack(spacing: 0) {
-                    SidebarTreeView()
+                    SidebarTreeView(hasKeyboardFocus: hasKeyboardFocus)
                     PaneDivider(width: width, range: SidebarMetrics.widthRange, edge: .leading, liveWidth: $dragWidth) { newWidth in
                         settings[.sidebarWidth] = newWidth.rounded()
                     }
@@ -58,11 +66,20 @@ struct SidebarContainer: View {
         }
         .frame(width: collapsed ? SidebarMetrics.railWidth : width + 1, alignment: .leading)
         .frame(maxHeight: .infinity)
+        .background {
+            KeyboardFocusArea(handle: keyboard.handle, onFocusChange: keyboardFocusChanged, onKey: handleKey)
+        }
+        .onChange(of: uiState.focusRequest, initial: true) { _, request in
+            guard request?.area == .navigation else { return }
+            uiState.takeFocusRequest(for: .navigation)
+            keyboard.handle.focus()
+        }
         .overlay(alignment: .topLeading) {
             if collapsed && uiState.isRailHoverExpanded {
                 floatingTree(width: width)
             }
         }
+        .environment(\.sidebarKeyboardFocus, keyboard.handle)
         // Lets the floating tree (and the divider's grab area) sit above the chat.
         .zIndex(1)
         .animation(reduceMotion ? nil : .snappy(duration: 0.24), value: collapsed)
@@ -94,8 +111,65 @@ struct SidebarContainer: View {
         }
     }
 
+    // MARK: Keyboard
+
+    /// Told at once, before a key can select another channel and bring in
+    /// its message box, which then leaves the focus here.
+    private func keyboardFocusChanged(_ focused: Bool) {
+        uiState.setFocused(.navigation, focused)
+        if focused {
+            keyboard.typeSelect.reset()
+            if let id = app.selectedBufferID { announce(id, prefix: "Sidebar") }
+        }
+        Task { @MainActor in hasKeyboardFocus = focused }
+    }
+
+    private func handleKey(_ key: NavigationKey, at time: TimeInterval) -> Bool {
+        let collapsed = collapsedNetworks
+        let rows = SidebarKeyboard.rows(in: app, collapsed: collapsed)
+        let cursorID = SidebarKeyboard.cursor(selected: app.selectedBufferID, in: app, collapsed: collapsed)
+        let cursor = cursorID.flatMap { id in rows.firstIndex { $0.id == id } }
+        guard let action = SidebarKeyboard.action(
+            for: key, rows: rows, cursor: cursor, collapsed: collapsed, typeSelect: &keyboard.typeSelect, time: time
+        ) else { return false }
+        switch action {
+        case .select(let id):
+            app.select(bufferID: id)
+            announce(id)
+        case .collapse(let id), .expand(let id):
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
+                collapsedNetworks.toggle(id)
+            }
+            KeyboardAnnouncement.post(collapsedNetworks.contains(id) ? "Collapsed" : "Expanded")
+        case .focusMessageBox:
+            uiState.focusInput()
+        case .nothing:
+            break
+        }
+        return true
+    }
+
+    /// Says the row VoiceOver would: "#vela, 3 unread".
+    private func announce(_ id: BufferID, prefix: String? = nil) {
+        guard let session = app.session(for: id.networkID), let buffer = session.buffer(id: id) else { return }
+        let name: String
+        let activity: BufferActivity
+        switch buffer.kind {
+        case .server:
+            name = session.displayName
+            activity = BufferActivity(headerOf: session, isCollapsed: collapsedNetworks.contains(session.id))
+        case .channel:
+            name = buffer.name
+            activity = BufferActivity(buffer: buffer, session: session)
+        case .query:
+            name = "Conversation with \(buffer.name)"
+            activity = BufferActivity(buffer: buffer, session: session)
+        }
+        KeyboardAnnouncement.post(([prefix, name, activity.accessibilityDescription].compactMap { $0 }.filter { !$0.isEmpty }).joined(separator: ", "))
+    }
+
     private func floatingTree(width: CGFloat) -> some View {
-        SidebarTreeView(isFloating: true, onReorderingChange: { overlayReordering = $0 })
+        SidebarTreeView(isFloating: true, hasKeyboardFocus: hasKeyboardFocus, onReorderingChange: { overlayReordering = $0 })
             .frame(width: max(width, 180))
             .frame(maxHeight: .infinity)
             .overlay(alignment: .trailing) {
@@ -134,4 +208,12 @@ struct SidebarContainer: View {
             }
         }
     }
+}
+
+/// The sidebar's keyboard focus and what's been typed to select. Not
+/// observed: only key handlers read it.
+@MainActor
+final class SidebarKeyboardFocus {
+    let handle = KeyboardFocusHandle()
+    var typeSelect = TypeSelect()
 }

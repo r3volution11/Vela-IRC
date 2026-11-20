@@ -19,6 +19,9 @@ struct SidebarRailView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(SidebarMetrics.collapsedNetworksKey) private var collapsedNetworks = NetworkIDSet()
 
+    /// The sidebar has the keyboard focus: the tile the keyboard is on
+    /// gets a ring (see `SidebarContainer`).
+    var hasKeyboardFocus = false
     /// Told when a drag to reorder starts and ends, so the tree doesn't
     /// float open over the rail mid-drag.
     var onReorderingChange: ((Bool) -> Void)?
@@ -30,28 +33,35 @@ struct SidebarRailView: View {
         let groups = app.sidebarGroups
         let topLevel = groups.filter { !$0.isOrphan }.map(\.id)
         let isReordering = networkReorder.isDragging || bufferReorder.isDragging
+        let cursor = hasKeyboardFocus ? SidebarKeyboard.cursor(selected: app.selectedBufferID, in: app, collapsed: collapsedNetworks) : nil
 
         VStack(spacing: 0) {
             // Tall enough for the traffic lights, which stack vertically here.
             SidebarTitleStrip(height: TrafficLightLayout.verticalStackHeight) { EmptyView() }
 
-            SidebarReorderScrollView(
-                coordinateSpace: networkReorder.coordinateSpace,
-                isDragging: isReordering,
-                nudge: { networkReorder.nudge(by: $0) ?? bufferReorder.nudge(by: $0) }
-            ) {
-                VStack(spacing: 6) {
-                    ForEach(groups) { group in
-                        groupView(group, isFirst: group.id == groups.first?.id, siblings: group.isOrphan ? [] : topLevel)
-                            .zIndex(holdsDrag(group) ? 1 : 0)
+            ScrollViewReader { proxy in
+                SidebarReorderScrollView(
+                    coordinateSpace: networkReorder.coordinateSpace,
+                    isDragging: isReordering,
+                    nudge: { networkReorder.nudge(by: $0) ?? bufferReorder.nudge(by: $0) }
+                ) {
+                    VStack(spacing: 6) {
+                        ForEach(groups) { group in
+                            groupView(group, isFirst: group.id == groups.first?.id, siblings: group.isOrphan ? [] : topLevel, cursor: cursor)
+                                .zIndex(holdsDrag(group) ? 1 : 0)
+                        }
                     }
+                    .padding(.top, 2)
+                    .padding(.bottom, 8)
+                    .environment(\.isSidebarReordering, isReordering)
                 }
-                .padding(.top, 2)
-                .padding(.bottom, 8)
-                .environment(\.isSidebarReordering, isReordering)
+                .scrollIndicators(.never)
+                .scrollContentBackground(.hidden)
+                // Keeps the tile the keyboard is on in view.
+                .onChange(of: cursor) { _, cursor in
+                    if let cursor { proxy.scrollTo(cursor) }
+                }
             }
-            .scrollIndicators(.never)
-            .scrollContentBackground(.hidden)
 
             VStack(spacing: 4) {
                 SidebarAddMenu()
@@ -83,14 +93,14 @@ struct SidebarRailView: View {
 
     /// A top-level network with its bouncer networks, if any, after the
     /// line that sets it apart from the one above.
-    private func groupView(_ group: SidebarNetworkGroup, isFirst: Bool, siblings: [UUID]) -> some View {
+    private func groupView(_ group: SidebarNetworkGroup, isFirst: Bool, siblings: [UUID], cursor: BufferID?) -> some View {
         VStack(spacing: 6) {
             if !isFirst {
                 RailSeparator()
                     .reorderPart(of: group.id, in: networkReorder, part: "separator")
             }
             VStack(spacing: 6) {
-                section(group.network, siblings: siblings)
+                section(group.network, siblings: siblings, cursor: cursor)
                     .zIndex(holdsDraggedBuffer(group.network) ? 1 : 0)
                 if !group.children.isEmpty {
                     let childIDs = group.children.map(\.id)
@@ -99,7 +109,7 @@ struct SidebarRailView: View {
                             VStack(spacing: 6) {
                                 RailSeparator()
                                     .reorderPart(of: child.id, in: networkReorder, part: "separator")
-                                section(child, siblings: childIDs)
+                                section(child, siblings: childIDs, cursor: cursor)
                                     .background { networkLift(child.id) }
                             }
                             .zIndex(networkReorder.isMoving(child.id) || holdsDraggedBuffer(child) ? 1 : 0)
@@ -114,7 +124,7 @@ struct SidebarRailView: View {
 
     /// A network glyph and, unless folded, its channel and conversation tiles.
     @ViewBuilder
-    private func section(_ session: NetworkSession, siblings: [UUID]) -> some View {
+    private func section(_ session: NetworkSession, siblings: [UUID], cursor: BufferID?) -> some View {
         let isCollapsed = collapsedNetworks.contains(session.id)
         let buffers = session.sidebarBuffers
         let selectedID = app.selectedBufferID
@@ -123,8 +133,10 @@ struct SidebarRailView: View {
             RailNetworkItem(
                 session: session,
                 isSelected: selectedID == session.serverBuffer.id,
-                isCollapsed: isCollapsed
+                isCollapsed: isCollapsed,
+                showsKeyboardFocus: cursor == session.serverBuffer.id
             )
+            .id(session.serverBuffer.id)
             .accessibilityMoveActions(axis: .vertical, index: siblings.firstIndex(of: session.id) ?? 0, count: siblings.count) { offset in
                 withAnimation(moveAnimation) { app.moveNetwork(session.id, by: offset) }
             }
@@ -139,10 +151,10 @@ struct SidebarRailView: View {
                 let queryIDs = queries.map(\.id)
                 VStack(spacing: 6) {
                     ForEach(Array(channels.enumerated()), id: \.element.id) { index, buffer in
-                        bufferTile(buffer, in: session, isSelected: selectedID == buffer.id, index: index, siblings: channelIDs)
+                        bufferTile(buffer, in: session, isSelected: selectedID == buffer.id, index: index, siblings: channelIDs, cursor: cursor)
                     }
                     ForEach(Array(queries.enumerated()), id: \.element.id) { index, buffer in
-                        bufferTile(buffer, in: session, isSelected: selectedID == buffer.id, index: index, siblings: queryIDs)
+                        bufferTile(buffer, in: session, isSelected: selectedID == buffer.id, index: index, siblings: queryIDs, cursor: cursor)
                     }
                 }
                 .reorderPart(of: session.id, in: networkReorder, part: "buffers")
@@ -150,9 +162,9 @@ struct SidebarRailView: View {
         }
     }
 
-    private func bufferTile(_ buffer: BufferModel, in session: NetworkSession, isSelected: Bool, index: Int, siblings: [BufferID]) -> some View {
+    private func bufferTile(_ buffer: BufferModel, in session: NetworkSession, isSelected: Bool, index: Int, siblings: [BufferID], cursor: BufferID?) -> some View {
         let isLifted = bufferReorder.isDragging(buffer.id)
-        return RailBufferItem(buffer: buffer, session: session, isSelected: isSelected)
+        return RailBufferItem(buffer: buffer, session: session, isSelected: isSelected, showsKeyboardFocus: cursor == buffer.id)
             .background {
                 // Under the tile itself, which draws its own fill on top
                 // (translucent at rest, so this also hides what it passes over).
@@ -168,6 +180,7 @@ struct SidebarRailView: View {
                 guard let moving = session.buffers.first(where: { $0.id == id }) else { return }
                 session.moveBuffer(moving, toIndex: index)
             }
+            .id(buffer.id)
     }
 
     /// A column a little wider than the tiles, behind a dragged network.
@@ -218,6 +231,10 @@ private struct RailItem<Tile: View>: View {
     let isSelected: Bool
     let activity: BufferActivity
     let help: String
+    /// The keyboard is on this tile (the sidebar has the focus).
+    var showsKeyboardFocus = false
+    /// A network's round glyph, rather than a channel's rounded square.
+    var isRound = false
     let action: () -> Void
     @ViewBuilder var tile: (_ isHovering: Bool) -> Tile
 
@@ -229,6 +246,19 @@ private struct RailItem<Tile: View>: View {
     var body: some View {
         tile(showsHover)
             .frame(width: SidebarMetrics.railTileSize, height: SidebarMetrics.railTileSize)
+            .overlay {
+                // Just outside the tile, clear of its initials.
+                if showsKeyboardFocus {
+                    Group {
+                        if isRound {
+                            KeyboardFocusRing(shape: Circle())
+                        } else {
+                            KeyboardFocusRing(shape: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                    }
+                    .padding(-3)
+                }
+            }
             .overlay(alignment: .topTrailing) {
                 RailBadge(activity: activity)
                     .offset(x: 5, y: -4)
@@ -274,11 +304,14 @@ private func railTileFill(_ theme: ResolvedTheme, isSelected: Bool, isHovering: 
 /// A network glyph: a circle with the network's initial and a status dot.
 private struct RailNetworkItem: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
+    @Environment(\.sidebarKeyboardFocus) private var keyboardFocus
     @Environment(\.theme) private var theme
     @Environment(\.effectiveVibrancy) private var vibrancy
     let session: NetworkSession
     let isSelected: Bool
     let isCollapsed: Bool
+    var showsKeyboardFocus = false
 
     var body: some View {
         let isOffline = session.connectionState == .disconnected
@@ -286,7 +319,12 @@ private struct RailNetworkItem: View {
             isSelected: isSelected,
             activity: BufferActivity(headerOf: session, isCollapsed: isCollapsed),
             help: "\(session.displayName) — \(session.connectionDescription)",
-            action: { app.select(session.serverBuffer) }
+            showsKeyboardFocus: showsKeyboardFocus,
+            isRound: true,
+            action: {
+                keyboardFocus?.yieldToClick(uiState)
+                app.select(session.serverBuffer)
+            }
         ) { hovering in
             Circle()
                 .fill(railTileFill(theme, isSelected: isSelected, isHovering: hovering))
@@ -310,10 +348,13 @@ private struct RailNetworkItem: View {
 /// A channel tile (rounded square with initials) or a query avatar.
 private struct RailBufferItem: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
+    @Environment(\.sidebarKeyboardFocus) private var keyboardFocus
     @Environment(\.theme) private var theme
     let buffer: BufferModel
     let session: NetworkSession
     let isSelected: Bool
+    var showsKeyboardFocus = false
 
     var body: some View {
         let activity = BufferActivity(buffer: buffer, session: session)
@@ -322,7 +363,11 @@ private struct RailBufferItem: View {
             isSelected: isSelected,
             activity: activity,
             help: "\(buffer.name) — \(session.displayName)",
-            action: { app.select(buffer) }
+            showsKeyboardFocus: showsKeyboardFocus,
+            action: {
+                keyboardFocus?.yieldToClick(uiState)
+                app.select(buffer)
+            }
         ) { hovering in
             let shape = RoundedRectangle(cornerRadius: 9, style: .continuous)
             if buffer.kind == .query {

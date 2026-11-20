@@ -81,9 +81,20 @@ The list of people in the channel, grouped by rank. See [Member list](/guide/mem
 | Previous / next conversation, across networks | <kbd>⌥⌘↑</kbd> / <kbd>⌥⌘↓</kbd> |
 | Previous / next with unread messages | <kbd>⌥⇧⌘↑</kbd> / <kbd>⌥⇧⌘↓</kbd> |
 | This network's channels and conversations 1–9 | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
-| Focus the message field | <kbd>⌘L</kbd> |
+| Focus the sidebar or tabs, the messages, the message box or the member list | <kbd>⌥⌘1</kbd>, <kbd>⌥⌘2</kbd>, <kbd>⌥⌘3</kbd> (or <kbd>⌘L</kbd>), <kbd>⌥⌘4</kbd> |
+| Go round those four, forward / back | <kbd>F6</kbd> / <kbd>⇧F6</kbd> |
 
 All of them are listed in [Keyboard shortcuts](/reference/keyboard-shortcuts).
+
+### With the keyboard alone
+
+Each part of the window can have the keyboard. **Go → Focus Sidebar** (or **Focus Tabs**), **Focus Messages**, **Focus Message Box** and **Focus Member List** go straight to one, and <kbd>F6</kbd> goes round them. The row or tab the keyboard is on has a ring in your theme's focus color.
+
+- **In the sidebar or the rail**, <kbd>↑</kbd> and <kbd>↓</kbd> select as they go, like Mail's mailbox list. <kbd>←</kbd> goes from a channel to its network, and on a network folds its channels away. <kbd>→</kbd> shows them again. Type the first letters of a name to go to it.
+- **In the tabs**, <kbd>←</kbd> and <kbd>→</kbd> select the tab beside, and <kbd>↑</kbd> and <kbd>↓</kbd> go between the network row and the channel row.
+- **In the member list**, the keys move a highlight. See [Member list](/guide/member-list#with-the-keyboard).
+
+<kbd>Return</kbd> or <kbd>Esc</kbd> goes back to the message box. Switching channels from the sidebar or the tabs leaves the keyboard there until you do.
 
 ## The Dock icon
 

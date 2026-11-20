@@ -24,6 +24,9 @@ struct SidebarTreeView: View {
 
     /// Shown over the chat while the rail is hover-expanded.
     var isFloating = false
+    /// The sidebar has the keyboard focus: the row the keyboard is on gets
+    /// a ring (see `SidebarContainer`).
+    var hasKeyboardFocus = false
     /// Told when a drag to reorder starts and ends, so the floating tree
     /// stays open while the pointer strays off it mid-drag.
     var onReorderingChange: ((Bool) -> Void)?
@@ -35,6 +38,7 @@ struct SidebarTreeView: View {
         let groups = app.sidebarGroups
         let topLevel = groups.filter { !$0.isOrphan }.map(\.id)
         let isReordering = networkReorder.isDragging || bufferReorder.isDragging
+        let cursor = hasKeyboardFocus ? SidebarKeyboard.cursor(selected: app.selectedBufferID, in: app, collapsed: collapsedNetworks) : nil
 
         VStack(spacing: 0) {
             SidebarTitleStrip {
@@ -46,25 +50,31 @@ struct SidebarTreeView: View {
                 }
             }
 
-            SidebarReorderScrollView(
-                coordinateSpace: networkReorder.coordinateSpace,
-                isDragging: isReordering,
-                nudge: { networkReorder.nudge(by: $0) ?? bufferReorder.nudge(by: $0) }
-            ) {
-                VStack(alignment: .leading, spacing: 1) {
-                    ForEach(groups) { group in
-                        groupView(group, siblings: group.isOrphan ? [] : topLevel)
-                            .padding(.top, group.id == groups.first?.id ? 2 : 10)
-                            .zIndex(holdsDrag(group) ? 1 : 0)
+            ScrollViewReader { proxy in
+                SidebarReorderScrollView(
+                    coordinateSpace: networkReorder.coordinateSpace,
+                    isDragging: isReordering,
+                    nudge: { networkReorder.nudge(by: $0) ?? bufferReorder.nudge(by: $0) }
+                ) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        ForEach(groups) { group in
+                            groupView(group, siblings: group.isOrphan ? [] : topLevel, cursor: cursor)
+                                .padding(.top, group.id == groups.first?.id ? 2 : 10)
+                                .zIndex(holdsDrag(group) ? 1 : 0)
+                        }
                     }
+                    .padding(.horizontal, SidebarMetrics.outerInset)
+                    .padding(.bottom, 12)
+                    .environment(\.isSidebarReordering, isReordering)
+                    .themedScrollers()
                 }
-                .padding(.horizontal, SidebarMetrics.outerInset)
-                .padding(.bottom, 12)
-                .environment(\.isSidebarReordering, isReordering)
-                .themedScrollers()
+                .scrollIndicators(.automatic)
+                .scrollContentBackground(.hidden)
+                // Keeps the row the keyboard is on in view.
+                .onChange(of: cursor) { _, cursor in
+                    if let cursor { proxy.scrollTo(cursor) }
+                }
             }
-            .scrollIndicators(.automatic)
-            .scrollContentBackground(.hidden)
 
             footer
         }
@@ -85,15 +95,15 @@ struct SidebarTreeView: View {
     /// A top-level network with its bouncer networks, if any. The block
     /// draws the lifted backdrop for a top-level drag; each bouncer network
     /// draws its own for a drag among its bouncer's networks.
-    private func groupView(_ group: SidebarNetworkGroup, siblings: [UUID]) -> some View {
+    private func groupView(_ group: SidebarNetworkGroup, siblings: [UUID], cursor: BufferID?) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            section(group.network, siblings: siblings)
+            section(group.network, siblings: siblings, cursor: cursor)
                 .zIndex(holdsDraggedBuffer(group.network) ? 1 : 0)
             if !group.children.isEmpty {
                 let childIDs = group.children.map(\.id)
                 VStack(alignment: .leading, spacing: 1) {
                     ForEach(group.children) { child in
-                        section(child, siblings: childIDs)
+                        section(child, siblings: childIDs, cursor: cursor)
                             .background { networkLift(child.id) }
                             .padding(.top, 10)
                             .zIndex(networkReorder.isMoving(child.id) || holdsDraggedBuffer(child) ? 1 : 0)
@@ -107,7 +117,7 @@ struct SidebarTreeView: View {
 
     /// A network's header and, unless folded, its channels and queries.
     @ViewBuilder
-    private func section(_ session: NetworkSession, siblings: [UUID]) -> some View {
+    private func section(_ session: NetworkSession, siblings: [UUID], cursor: BufferID?) -> some View {
         let isCollapsed = collapsedNetworks.contains(session.id)
         let buffers = session.sidebarBuffers
 
@@ -116,12 +126,14 @@ struct SidebarTreeView: View {
                 session: session,
                 isSelected: app.selectedBufferID == session.serverBuffer.id,
                 isCollapsed: isCollapsed,
-                canCollapse: !buffers.isEmpty
+                canCollapse: !buffers.isEmpty,
+                showsKeyboardFocus: cursor == session.serverBuffer.id
             ) {
                 withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
                     collapsedNetworks.toggle(session.id)
                 }
             }
+            .id(session.serverBuffer.id)
             .accessibilityMoveActions(axis: .vertical, index: siblings.firstIndex(of: session.id) ?? 0, count: siblings.count) { offset in
                 withAnimation(moveAnimation) { app.moveNetwork(session.id, by: offset) }
             }
@@ -130,7 +142,7 @@ struct SidebarTreeView: View {
             }
 
             if !isCollapsed && !buffers.isEmpty {
-                bufferRows(buffers, in: session)
+                bufferRows(buffers, in: session, cursor: cursor)
                     .reorderPart(of: session.id, in: networkReorder, part: "rows")
                     .transition(.opacity)
             }
@@ -138,7 +150,7 @@ struct SidebarTreeView: View {
     }
 
     /// Channels, then queries; each kind only reorders among itself.
-    private func bufferRows(_ buffers: [BufferModel], in session: NetworkSession) -> some View {
+    private func bufferRows(_ buffers: [BufferModel], in session: NetworkSession, cursor: BufferID?) -> some View {
         let channels = buffers.filter { $0.kind == .channel }
         let queries = buffers.filter { $0.kind == .query }
         let channelIDs = channels.map(\.id)
@@ -146,21 +158,26 @@ struct SidebarTreeView: View {
 
         return VStack(alignment: .leading, spacing: 1) {
             ForEach(Array(channels.enumerated()), id: \.element.id) { index, buffer in
-                bufferRow(buffer, in: session, index: index, siblings: channelIDs)
+                bufferRow(buffer, in: session, index: index, siblings: channelIDs, cursor: cursor)
             }
             if !channels.isEmpty && !queries.isEmpty {
                 // Sets conversations a little apart from channels.
                 Color.clear.frame(height: 4)
             }
             ForEach(Array(queries.enumerated()), id: \.element.id) { index, buffer in
-                bufferRow(buffer, in: session, index: index, siblings: queryIDs)
+                bufferRow(buffer, in: session, index: index, siblings: queryIDs, cursor: cursor)
             }
         }
     }
 
-    private func bufferRow(_ buffer: BufferModel, in session: NetworkSession, index: Int, siblings: [BufferID]) -> some View {
+    private func bufferRow(_ buffer: BufferModel, in session: NetworkSession, index: Int, siblings: [BufferID], cursor: BufferID?) -> some View {
         let isLifted = bufferReorder.isDragging(buffer.id)
-        return SidebarBufferRow(buffer: buffer, session: session, isSelected: app.selectedBufferID == buffer.id)
+        return SidebarBufferRow(
+            buffer: buffer,
+            session: session,
+            isSelected: app.selectedBufferID == buffer.id,
+            showsKeyboardFocus: cursor == buffer.id
+        )
             .background {
                 if isLifted {
                     SidebarLiftBackground(cornerRadius: SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight))
@@ -173,6 +190,7 @@ struct SidebarTreeView: View {
                 guard let moving = session.buffers.first(where: { $0.id == id }) else { return }
                 session.moveBuffer(moving, toIndex: index)
             }
+            .id(buffer.id)
     }
 
     private func networkLift(_ id: UUID) -> some View {
@@ -225,13 +243,17 @@ struct SidebarTreeView: View {
 /// Clicking it selects the server buffer.
 struct SidebarNetworkHeader: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     @Environment(\.isSidebarReordering) private var isReordering
+    @Environment(\.sidebarKeyboardFocus) private var keyboardFocus
     let session: NetworkSession
     let isSelected: Bool
     let isCollapsed: Bool
     let canCollapse: Bool
+    /// The keyboard is on this header (the sidebar has the focus).
+    var showsKeyboardFocus = false
     let toggle: () -> Void
 
     @State private var hovering = false
@@ -268,17 +290,24 @@ struct SidebarNetworkHeader: View {
         .padding(.trailing, canCollapse ? 2 : SidebarMetrics.rowPadding)
         .frame(height: CGFloat(style.sidebarRowHeight) + 2)
         .background { SidebarRowBackground(isSelected: isSelected, isHovering: showsHover) }
+        .keyboardFocusRing(showsKeyboardFocus, cornerRadius: SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .onTapGesture { app.select(session.serverBuffer) }
+        .onTapGesture(perform: open)
         .contextMenu { ServerContextMenuItems(session: session) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(session.displayName)
         .accessibilityValue([session.connectionDescription, isCollapsed ? "collapsed" : nil, activity.accessibilityDescription]
             .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", "))
         .accessibilityAddTraits(isSelected ? [.isHeader, .isButton, .isSelected] : [.isHeader, .isButton])
-        .accessibilityAction { app.select(session.serverBuffer) }
+        .accessibilityAction { open() }
         .accessibilityAction(named: isCollapsed ? "Expand" : "Collapse") { toggle() }
+    }
+
+    /// Clicked: the console, with the focus in its message box.
+    private func open() {
+        keyboardFocus?.yieldToClick(uiState)
+        app.select(session.serverBuffer)
     }
 
     private func chevron(showsHover: Bool) -> some View {
@@ -300,12 +329,16 @@ struct SidebarNetworkHeader: View {
 /// A channel or query row.
 struct SidebarBufferRow: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     @Environment(\.isSidebarReordering) private var isReordering
+    @Environment(\.sidebarKeyboardFocus) private var keyboardFocus
     let buffer: BufferModel
     let session: NetworkSession
     let isSelected: Bool
+    /// The keyboard is on this row (the sidebar has the focus).
+    var showsKeyboardFocus = false
 
     @State private var hovering = false
 
@@ -331,15 +364,23 @@ struct SidebarBufferRow: View {
         .padding(.horizontal, SidebarMetrics.rowPadding)
         .frame(height: style.sidebarRowHeight)
         .background { SidebarRowBackground(isSelected: isSelected, isHovering: hovering && !isReordering) }
+        .keyboardFocusRing(showsKeyboardFocus, cornerRadius: SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .onTapGesture { app.select(buffer) }
+        .onTapGesture(perform: open)
         .contextMenu { BufferContextMenuItems(buffer: buffer, session: session) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(buffer.kind == .query ? "Conversation with \(buffer.name)" : buffer.name)
         .accessibilityValue(activity.accessibilityDescription)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { app.select(buffer) }
+        .accessibilityAction { open() }
+    }
+
+    /// Clicked: the channel or conversation, with the focus in its
+    /// message box.
+    private func open() {
+        keyboardFocus?.yieldToClick(uiState)
+        app.select(buffer)
     }
 
     @ViewBuilder

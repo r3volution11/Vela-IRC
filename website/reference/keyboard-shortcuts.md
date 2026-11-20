@@ -14,7 +14,7 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | Command palette | <kbd>⇧⌘P</kbd> |
 | Go to a channel or conversation | <kbd>⌘P</kbd> or <kbd>⌘K</kbd> |
 | Select Theme… (live preview) | <kbd>⌃⌘T</kbd> |
-| Focus the message field | <kbd>⌘L</kbd> |
+| Focus the message box | <kbd>⌘L</kbd> |
 | Settings | <kbd>⌘,</kbd> |
 
 ## Moving around
@@ -30,7 +30,54 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | Previous conversation with unread messages | <kbd>⌥⇧⌘↑</kbd> |
 | Next conversation with unread messages | <kbd>⌥⇧⌘↓</kbd> |
 | Channel or conversation 1–9 of the current network, in tab order (the console has no number) | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
-| Move between tabs, when a tab row has keyboard focus | <kbd>←</kbd> <kbd>→</kbd> <kbd>Home</kbd> <kbd>End</kbd> |
+| Focus the sidebar, or the tabs (**Go → Focus Sidebar** or **Focus Tabs**) | <kbd>⌥⌘1</kbd> |
+| Focus the messages | <kbd>⌥⌘2</kbd> |
+| Focus the message box | <kbd>⌥⌘3</kbd> or <kbd>⌘L</kbd> |
+| Focus the member list, showing it first if it's hidden | <kbd>⌥⌘4</kbd> |
+| Next / previous area: the sidebar or tabs, the messages, the message box and the member list, in turn | <kbd>F6</kbd> / <kbd>⇧F6</kbd> |
+
+## The sidebar
+
+With the sidebar or the rail focused (<kbd>⌥⌘1</kbd>). The selected row has a ring in your theme's focus color.
+
+| Action | Shortcut |
+| --- | --- |
+| Select the network, channel or conversation above or below | <kbd>↑</kbd> <kbd>↓</kbd> |
+| Select the first or the last | <kbd>Home</kbd> <kbd>End</kbd> |
+| From a channel or conversation, go to its network | <kbd>←</kbd> |
+| Fold a network's channels away, or show them again | <kbd>←</kbd> / <kbd>→</kbd> on the network |
+| Go to a network, channel or conversation by name | type its first letters |
+| Back to the message box | <kbd>Return</kbd> or <kbd>Esc</kbd> |
+
+Clicking a channel still takes you to its message box, as always.
+
+## Tabs
+
+With the tabs focused (<kbd>⌥⌘1</kbd>). The selected tab has a ring in your theme's focus color.
+
+| Action | Shortcut |
+| --- | --- |
+| Select the tab to the left or right | <kbd>←</kbd> <kbd>→</kbd> |
+| Select the first or the last tab of the row | <kbd>Home</kbd> <kbd>End</kbd> |
+| Go between the network row and the channel row | <kbd>↑</kbd> <kbd>↓</kbd> |
+| Back to the message box | <kbd>Return</kbd> or <kbd>Esc</kbd> |
+
+These also work when you reach a tab with <kbd>Tab</kbd>, with **Keyboard navigation** on in **System Settings → Keyboard**.
+
+## The member list
+
+With the member list focused (<kbd>⌥⌘4</kbd>). The highlighted person has a ring in your theme's focus color.
+
+| Action | Shortcut |
+| --- | --- |
+| Move the highlight | <kbd>↑</kbd> <kbd>↓</kbd> |
+| Move a page at a time | <kbd>Page Up</kbd> <kbd>Page Down</kbd> |
+| Go to the first or the last person | <kbd>Home</kbd> <kbd>End</kbd> |
+| Open a private conversation with them | <kbd>Return</kbd> |
+| Open their [user menu](/guide/user-menu) | <kbd>Space</kbd> or <kbd>⇧F10</kbd> |
+| Filter the list | type a name |
+| From the filter, back to the list | <kbd>↓</kbd> |
+| Clear the filter, then go back to the message box | <kbd>Esc</kbd> |
 
 ## View
 

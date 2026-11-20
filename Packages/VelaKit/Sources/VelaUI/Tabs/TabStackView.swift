@@ -25,17 +25,26 @@ import VelaTheme
 ///
 /// A row too long for its strip shrinks its unselected tabs to fit, and
 /// only scrolls when they'd go below the minimum width (`TabStripLayout`).
+///
+/// It's the window's `.navigation` area with tabs: ⌥⌘1 or F6 put the
+/// keyboard on the selected channel tab. ← and → select the tab beside it,
+/// ↑ and ↓ go between the network and channel rows, and Return or Esc go
+/// back to the message box.
 struct TabStackView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
     @Environment(\.chatStyle) private var style
     let placement: TabStackPlacement
 
-    @State private var interaction = TabInteraction()
+    @State private var interaction: TabInteraction
+
+    init(placement: TabStackPlacement) {
+        self.placement = placement
+        _interaction = State(initialValue: TabInteraction(placement: placement))
+    }
 
     var body: some View {
         let session = TabActions.shownSession(app: app)
-        let showsServers = style.serverTabRow == .always || app.sessions.count > 1
 
         Group {
             switch placement {
@@ -48,12 +57,87 @@ struct TabStackView: View {
             }
         }
         .environment(interaction)
+        .background {
+            KeyboardFocusArea(handle: interaction.keyboardFocus, onFocusChange: keyboardFocusChanged, onKey: handleKey)
+        }
+        .onChange(of: uiState.focusRequest, initial: true) { _, request in
+            guard request?.area == .navigation else { return }
+            uiState.takeFocusRequest(for: .navigation)
+            interaction.keyboardFocus.focus()
+        }
         .onAppear {
             interaction.installMiddleClickMonitor { [app, uiState] key in
                 TabActions.middleClick(key, app: app, uiState: uiState)
             }
         }
         .onDisappear { interaction.removeMiddleClickMonitor() }
+    }
+
+    private var showsServers: Bool {
+        style.serverTabRow == .always || app.sessions.count > 1
+    }
+
+    // MARK: Keyboard
+
+    /// Told at once, before ← or → can select another tab and bring in its
+    /// message box, which then leaves the focus here.
+    private func keyboardFocusChanged(_ focused: Bool) {
+        uiState.setFocused(.navigation, focused || interaction.hasKeyboardFocus)
+        if focused {
+            let row = interaction.nextKeyboardRow ?? .channels
+            interaction.nextKeyboardRow = nil
+            interaction.activeKeyboardRow = showsServers ? row : .channels
+            announceRow()
+        }
+        // Drawn after this update: the focus can move in the middle of one.
+        let row: TabKeyboardRow? = focused ? interaction.activeKeyboardRow : nil
+        Task { @MainActor in interaction.keyboardRow = row }
+    }
+
+    private func handleKey(_ key: NavigationKey, at _: TimeInterval) -> Bool {
+        let row = showsServers ? interaction.activeKeyboardRow : .channels
+        switch key {
+        case .left, .right, .home, .end:
+            switch row {
+            case .channels:
+                guard let session = TabActions.shownSession(app: app) else { return true }
+                let tabs = TabActions.tabs(of: session)
+                let index = tabs.firstIndex { $0.id == app.selectedBufferID }
+                guard let target = TabActions.keyboardTarget(key, from: index, count: tabs.count), target != index else { return true }
+                app.select(tabs[target])
+                KeyboardAnnouncement.post(TabDescriptions.spoken(tabs[target], in: session))
+            case .networks:
+                let sessions = app.sessions
+                let index = sessions.firstIndex { $0.id == app.selectedBufferID?.networkID }
+                guard let target = TabActions.keyboardTarget(key, from: index, count: sessions.count), target != index else { return true }
+                TabActions.select(sessions[target], app: app)
+                KeyboardAnnouncement.post(sessions[target].displayName)
+            }
+            return true
+        case .up, .down:
+            let next = TabActions.keyboardRow(after: row, up: key == .up, showsNetworks: showsServers, placement: placement)
+            guard next != row else { return true }
+            interaction.activeKeyboardRow = next
+            interaction.keyboardRow = next
+            announceRow()
+            return true
+        case .return, .escape:
+            uiState.focusInput()
+            return true
+        case .pageUp, .pageDown, .space, .menu, .text:
+            return false
+        }
+    }
+
+    /// "Networks, Libera.Chat" or "Channels, #vela", for VoiceOver.
+    private func announceRow() {
+        switch interaction.activeKeyboardRow {
+        case .networks:
+            KeyboardAnnouncement.post(["Networks", app.selectedSession?.displayName].compactMap { $0 }.joined(separator: ", "))
+        case .channels:
+            let current = app.selectedBuffer.flatMap { buffer in app.selectedSession.map { TabDescriptions.spoken(buffer, in: $0) } }
+            KeyboardAnnouncement.post(["Channels", current].compactMap { $0 }.joined(separator: ", "))
+        }
     }
 }
 
