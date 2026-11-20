@@ -192,7 +192,12 @@ private struct GoMenuItems: View {
 
         Divider()
 
+        CommandMenuButton(commands.focusNavigation)
+        CommandMenuButton(commands.focusMessages)
         CommandMenuButton(commands.focusInput)
+        CommandMenuButton(commands.focusMembers)
+        CommandMenuButton(commands.nextArea)
+        CommandMenuButton(commands.previousArea)
     }
 }
 

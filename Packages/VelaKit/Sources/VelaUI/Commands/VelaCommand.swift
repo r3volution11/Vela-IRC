@@ -111,12 +111,19 @@ enum ShortcutGlyphs {
         case .deleteForward: "⌦"
         case .tab: "⇥"
         case .space: "Space"
+        case _ where functionKeyNumber(key) != nil: "F\(functionKeyNumber(key)!)"
         case .home: "↖"
         case .end: "↘"
         case .pageUp: "⇞"
         case .pageDown: "⇟"
         default: String(key.character).uppercased()
         }
+    }
+
+    /// F1–F35's number (AppKit's `NSF1FunctionKey`… characters).
+    static func functionKeyNumber(_ key: KeyEquivalent) -> Int? {
+        guard let scalar = key.character.unicodeScalars.first, (0xF704...0xF726).contains(scalar.value) else { return nil }
+        return Int(scalar.value - 0xF704) + 1
     }
 
     /// Spoken form for VoiceOver, e.g. "Shift Command M".

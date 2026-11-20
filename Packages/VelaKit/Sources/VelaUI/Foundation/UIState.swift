@@ -28,6 +28,16 @@ public final class UIState {
     public var isRailHoverExpanded = false
     /// Requests the input bar to take focus (incremented to trigger).
     public var focusInputToken = 0
+    /// The latest request for an area of the window to take the keyboard
+    /// focus (⌥⌘1–⌥⌘4, F6). The area it names takes the focus when it sees
+    /// it, on change or, for one that wasn't on screen yet (the member
+    /// list, shown to take it), on appear, and clears it with
+    /// `takeFocusRequest(for:)`. The message box goes by `focusInputToken`.
+    public private(set) var focusRequest: FocusRequest?
+    /// The area with the keyboard focus, as the areas report it (nil: none
+    /// of them, e.g. a field in a sheet, or the palette). Read when F6 is
+    /// pressed, so not observed.
+    @ObservationIgnored public private(set) var focusedArea: FocusArea?
     /// Request the message list to scroll to a line id.
     public var scrollTarget: UUID?
     /// The command palette, when open, and which mode it opened in.
@@ -47,6 +57,34 @@ public final class UIState {
     public init() {}
 
     public func focusInput() { focusInputToken &+= 1 }
+
+    /// Moves the keyboard focus to `area`.
+    public func focus(_ area: FocusArea) {
+        if area == .messageBox {
+            focusRequest = nil
+            focusInput()
+        } else {
+            focusRequest = FocusRequest(area: area)
+        }
+    }
+
+    /// Whether there's a request for `area` to take the focus, clearing it:
+    /// an area calls it once it has the focus.
+    @discardableResult
+    public func takeFocusRequest(for area: FocusArea) -> Bool {
+        guard focusRequest?.area == area else { return false }
+        focusRequest = nil
+        return true
+    }
+
+    /// An area reports that it has gained (or lost) the keyboard focus.
+    public func setFocused(_ area: FocusArea, _ isFocused: Bool) {
+        if isFocused {
+            focusedArea = area
+        } else if focusedArea == area {
+            focusedArea = nil
+        }
+    }
 }
 
 /// Mention someone in a buffer's message box, once per request.

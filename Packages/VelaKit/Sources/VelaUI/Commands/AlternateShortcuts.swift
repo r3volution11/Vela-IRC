@@ -6,7 +6,8 @@ import AppKit
 import SwiftUI
 
 /// Second shortcuts for menu commands: ⌘K for Go to Conversation… (⌘P),
-/// and ⌃Tab / ⌃⇧Tab for Next and Previous Tab (⇧⌘] / ⇧⌘[), as in Safari.
+/// ⌥⌘3 for Focus Message Box (⌘L), and ⌃Tab / ⌃⇧Tab for Next and
+/// Previous Tab (⇧⌘] / ⇧⌘[), as in Safari.
 ///
 /// A menu item carries one key equivalent and SwiftUI has no hidden menu
 /// items, so a local key monitor forwards each alternate to its command's
@@ -31,6 +32,10 @@ enum AlternateShortcuts {
             Alternate(
                 matches: { $0.modifiers == .command && $0.charactersIgnoringModifiers?.lowercased() == "k" },
                 primary: Shortcuts.goToConversation
+            ),
+            Alternate(
+                matches: { $0.modifiers == [.option, .command] && $0.charactersIgnoringModifiers == "3" },
+                primary: Shortcuts.focusInput
             ),
             Alternate(
                 matches: { $0.keyCode == tabKeyCode && $0.modifiers == .control },

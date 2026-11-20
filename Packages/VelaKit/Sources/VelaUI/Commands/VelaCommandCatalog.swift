@@ -68,6 +68,16 @@ struct VelaCommandCatalog {
         static let previousUnread = KeyboardShortcut(.upArrow, modifiers: [.shift, .option, .command])
         static let nextUnread = KeyboardShortcut(.downArrow, modifiers: [.shift, .option, .command])
         static let focusInput = KeyboardShortcut("l", modifiers: .command)
+        /// ⌥⌘1–⌥⌘4: the window's areas in screen order (`FocusArea`), with
+        /// ⌥⌘3, the message box, forwarded to ⌘L (`AlternateShortcuts`).
+        /// F6 / ⇧F6 go round them, as in Slack.
+        static let focusNavigation = KeyboardShortcut("1", modifiers: [.option, .command])
+        static let focusMessages = KeyboardShortcut("2", modifiers: [.option, .command])
+        static let focusInputAlternate = KeyboardShortcut("3", modifiers: [.option, .command])
+        static let focusMembers = KeyboardShortcut("4", modifiers: [.option, .command])
+        static let nextArea = KeyboardShortcut(f6, modifiers: [])
+        static let previousArea = KeyboardShortcut(f6, modifiers: .shift)
+        private static let f6 = KeyEquivalent(Character(Unicode.Scalar(0xF709)!))   // NSF6FunctionKey
         static let textBigger = KeyboardShortcut("+", modifiers: .command)
         static let textSmaller = KeyboardShortcut("-", modifiers: .command)
         static let textActualSize = KeyboardShortcut("0", modifiers: .command)
@@ -511,11 +521,80 @@ struct VelaCommandCatalog {
         ) { app.selectAdjacentBuffer(forward: true, unreadOnly: true) }
     }
 
+    // MARK: Focus
+
+    /// ⌥⌘1: the sidebar (or its rail), or the tabs.
+    var focusNavigation: VelaCommand {
+        let uiState = uiState
+        let usesSidebar = settings[.navigationStyle] == .sidebar
+        return VelaCommand(
+            id: "go.focusNavigation", category: .go, title: usesSidebar ? "Focus Sidebar" : "Focus Tabs",
+            shortcut: Shortcuts.focusNavigation, keywords: ["keyboard", "sidebar", "tabs", "channel list", "rail"]
+        ) { uiState.focus(.navigation) }
+    }
+
+    /// ⌥⌘2: the messages, to pick one and reply, react, copy…
+    var focusMessages: VelaCommand {
+        let uiState = uiState
+        return VelaCommand(
+            id: "go.focusMessages", category: .go, title: "Focus Messages", shortcut: Shortcuts.focusMessages,
+            keywords: ["keyboard", "select message", "reply", "react", "chat"], isEnabled: app.selectedBuffer != nil
+        ) { uiState.focus(.messages) }
+    }
+
+    /// ⌘L, or ⌥⌘3.
     var focusInput: VelaCommand {
         VelaCommand(
-            id: "go.focusInput", category: .go, title: "Focus Input", shortcut: Shortcuts.focusInput,
-            keywords: ["composer", "message", "type"], isEnabled: app.selectedBuffer != nil
+            id: "go.focusInput", category: .go, title: "Focus Message Box", shortcut: Shortcuts.focusInput,
+            keywords: ["composer", "message", "type", "input", "keyboard"], isEnabled: app.selectedBuffer != nil
         ) { [context] in context.uiState.focusInput() }
+    }
+
+    /// ⌥⌘4: the member list, shown first if it's hidden.
+    var focusMembers: VelaCommand {
+        let uiState = uiState
+        let settings = settings
+        return VelaCommand(
+            id: "go.focusMembers", category: .go, title: "Focus Member List", shortcut: Shortcuts.focusMembers,
+            keywords: ["keyboard", "nick list", "user list", "people", "members"],
+            isEnabled: app.selectedBuffer?.kind == .channel
+        ) {
+            if !settings[.memberListVisible] { settings[.memberListVisible] = true }
+            uiState.focus(.members)
+        }
+    }
+
+    /// F6.
+    var nextArea: VelaCommand {
+        let app = app
+        let uiState = uiState
+        let settings = settings
+        return VelaCommand(
+            id: "go.nextArea", category: .go, title: "Focus Next Area", shortcut: Shortcuts.nextArea,
+            keywords: ["keyboard", "pane", "cycle", "f6"]
+        ) { Self.focusAdjacentArea(forward: true, app: app, uiState: uiState, settings: settings) }
+    }
+
+    /// ⇧F6.
+    var previousArea: VelaCommand {
+        let app = app
+        let uiState = uiState
+        let settings = settings
+        return VelaCommand(
+            id: "go.previousArea", category: .go, title: "Focus Previous Area", shortcut: Shortcuts.previousArea,
+            keywords: ["keyboard", "pane", "cycle", "f6"]
+        ) { Self.focusAdjacentArea(forward: false, app: app, uiState: uiState, settings: settings) }
+    }
+
+    /// Worked out when the key is pressed, from where the focus is then.
+    private static func focusAdjacentArea(forward: Bool, app: AppModel, uiState: UIState, settings: SettingsStore) {
+        let buffer = app.selectedBuffer
+        let available = FocusAreas.available(
+            hasBuffer: buffer != nil,
+            showsMembers: settings[.memberListVisible] && buffer?.kind == .channel
+        )
+        guard let area = FocusAreas.adjacent(to: uiState.focusedArea, forward: forward, in: available) else { return }
+        uiState.focus(area)
     }
 
     private var hasOtherUnread: Bool {
@@ -781,7 +860,8 @@ struct VelaCommandCatalog {
         commands += [textBigger, textSmaller, textActualSize]
         commands += [selectTheme, toggleFollowSystem, themeEditor, importTheme, revealThemesFolder]
         commands += [openSettings, searchSettings, openSettingsJSON]
-        commands += [previousBuffer, nextBuffer, previousTab, nextTab, previousNetwork, nextNetwork, previousUnread, nextUnread, focusInput]
+        commands += [previousBuffer, nextBuffer, previousTab, nextTab, previousNetwork, nextNetwork, previousUnread, nextUnread]
+        commands += [focusNavigation, focusMessages, focusInput, focusMembers, nextArea, previousArea]
         commands.append(markAllAsRead)
         commands += selectedBufferCommands
         commands.append(reopenClosed)
