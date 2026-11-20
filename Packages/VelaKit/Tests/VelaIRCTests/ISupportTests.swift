@@ -23,6 +23,16 @@ import Testing
         #expect(!CaseMapping.strictRFC1459.equal("a~", "a^"))
     }
 
+    /// Folding works on UTF-8 bytes: only ASCII changes, wherever it is,
+    /// and text that's already folded comes back as is.
+    @Test func asciiMappingsLeaveOtherTextAlone() {
+        #expect(CaseMapping.rfc1459.fold("Ünal[X]~é") == "Ünal{x}^é")
+        #expect(CaseMapping.ascii.fold("ÉCOLE[🎉]") == "École[🎉]")
+        #expect(CaseMapping.rfc1459.fold("already{folded}") == "already{folded}")
+        #expect(CaseMapping.rfc1459.fold("") == "")
+        #expect(CaseMapping.strictRFC1459.fold("ZZ") == "zz")
+    }
+
     @Test func rfc7613FoldsUnicode() {
         #expect(CaseMapping.rfc7613.equal("ÉCOLE", "école"))
         #expect(!CaseMapping.ascii.equal("ÉCOLE", "école"))

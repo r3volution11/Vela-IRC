@@ -73,7 +73,9 @@ struct UserMenuActions {
     /// The menu for a word right-clicked in `line`'s text, when it's a
     /// nick: the author's, in the `<nick>` (or `* nick`) before the text,
     /// which is the first `prefixLength` UTF-16 characters; anyone in the
-    /// channel elsewhere. Nil for other words, which get the message's menu.
+    /// channel, or the person a conversation is with, elsewhere (the nicks
+    /// `chat.colorNicksInText` colors). Nil for other words, which get the
+    /// message's menu.
     func menu(forWord word: String, range: Range<Int>, in line: ChatLine, prefixLength: Int) -> UserMenu.Resolved? {
         let mapping = session.isupport.caseMapping
         let target: UserMenuTarget
@@ -81,6 +83,8 @@ struct UserMenuActions {
             target = self.target(nick: author, userHost: line.userHost)
         } else if buffer.kind == .channel, let member = buffer.member(named: word, caseMapping: mapping) {
             target = self.target(nick: member.nick)
+        } else if buffer.kind == .query, mapping.fold(word) == buffer.id.foldedName {
+            target = self.target(nick: buffer.name)
         } else {
             return nil
         }

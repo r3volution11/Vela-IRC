@@ -11,11 +11,14 @@ import VelaTheme
 
 /// One display item. Equatable so unchanged rows skip body evaluation when
 /// the list updates; a new text generation (our nick changed, so mentions
-/// are highlighted elsewhere) runs them again.
+/// are highlighted elsewhere) runs them again, and a new text stamp runs
+/// this one again (someone it mentions came or went).
 struct DisplayItemRow: View, Equatable {
     let item: DisplayItem
     /// `MessageListController.textGeneration`.
     var textGeneration = 0
+    /// `MessageListController.textStamp(for:)`.
+    var textStamp = 0
 
     var body: some View {
         switch item {
@@ -27,7 +30,7 @@ struct DisplayItemRow: View, Equatable {
             CatchUpCardRow()
         case .line(let lineItem):
             if lineItem.line.kind.isConversation {
-                MessageRow(item: lineItem, textGeneration: textGeneration)
+                MessageRow(item: lineItem, textGeneration: textGeneration, textStamp: textStamp)
             } else {
                 EventRow(line: lineItem.line, textGeneration: textGeneration)
             }
@@ -50,6 +53,8 @@ struct MessageRow: View {
     let item: LineItem
     /// Not read: a new one makes the row run again and fetch its text anew.
     var textGeneration = 0
+    /// Not read either, for the same reason (`DisplayItemRow.textStamp`).
+    var textStamp = 0
 
     @State private var isHovered = false
     @State private var isPickerOpen = false
@@ -337,7 +342,7 @@ struct GroupedMessageContent: View {
             // Left with avatars: the time under the avatar, which then
             // sets the row's height so the time never runs into the next.
             VStack(spacing: 3) {
-                AvatarView(nick: line.nick ?? "?", size: width, buffer: controller.buffer)
+                AvatarView(nick: line.nick ?? "?", size: width, buffer: controller.buffer, isSelf: line.isSelf)
                     .nickContextMenu(line.nick, userHost: line.userHost)
                     .padding(.top, 1)
                 avatarTime(line.time, width: width)
@@ -358,7 +363,7 @@ struct GroupedMessageContent: View {
             Color.clear
                 .frame(width: width, height: 1)
                 .overlay(alignment: .top) {
-                    AvatarView(nick: line.nick ?? "?", size: width, buffer: controller.buffer)
+                    AvatarView(nick: line.nick ?? "?", size: width, buffer: controller.buffer, isSelf: line.isSelf)
                         .nickContextMenu(line.nick, userHost: line.userHost)
                         .padding(.top, 1)
                 }

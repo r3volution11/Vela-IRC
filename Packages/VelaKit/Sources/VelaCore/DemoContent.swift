@@ -87,7 +87,7 @@ enum DemoContent {
         for (prefix, nick) in names {
             map[session.fold(nick)] = Member(nick: nick, prefixes: prefix, userHost: "\(nick)@user/\(nick)", isAway: nick.hasSuffix("_away"))
         }
-        buffer.memberMap = map
+        buffer.replaceMembers(map)
         buffer.isJoined = true
     }
 

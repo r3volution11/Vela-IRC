@@ -44,7 +44,10 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
         self.nickColors = nickColors.isEmpty ? NickPalette.defaultPalette(for: kind) : nickColors
         let palette = Self.usableNickPalette(self.nickColors, colors: colors)
         self.nickPalette = palette
-        self.nickPaletteGeometry = NickPaletteGeometry(distances: palette.map { a in palette.map { a.distance(to: $0) } })
+        self.nickPaletteGeometry = NickPaletteGeometry(
+            distances: palette.map { a in palette.map { a.distance(to: $0) } },
+            reserved: Self.selfLikeNickColors(palette, selfNick: colors[ThemeKey.chatSelfNick])
+        )
         var irc = Array(ircColors.prefix(IRCPalette.count))
         if irc.count < IRCPalette.count {
             irc += IRCPalette.standard[irc.count...]
@@ -63,11 +66,12 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
     }
 
     /// A stable color for a nickname, the same everywhere: see
-    /// `NickColorAssigner.preferredIndex(for:paletteSize:)`. Within a
-    /// conversation, prefer the conversation's assignment, which keeps the
-    /// people talking there apart.
+    /// `NickColorAssigner.usualIndex(for:palette:)`. Never one that looks
+    /// like `chat.selfNick`, your own nick's color. Within a conversation,
+    /// prefer the conversation's assignment, which keeps the people talking
+    /// there apart.
     public func nickColor(for nick: String) -> ThemeColor {
-        nickPalette[Self.nickColorIndex(for: nick, paletteSize: nickPalette.count)]
+        nickPalette[NickColorAssigner.usualIndex(for: nick, palette: nickPaletteGeometry)]
     }
 
     /// The `nickPalette` color at `index` (wrapping, so any index is safe).
@@ -115,6 +119,26 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
         let background = colors[ThemeKey.chatBackground]
         let usable = palette.filter { isDistinctNickColor($0, text: text, background: background) }
         return usable.count >= min(4, palette.count) ? usable : palette
+    }
+
+    /// The entries of `palette` nobody else is given because they look like
+    /// your own nick (`chat.selfNick`): closer to it than
+    /// `NickPaletteGeometry.oklabSimilar`, the distance under which the
+    /// assigner already treats two people's colors as alike. Your nick is in
+    /// every conversation, so its color is held the way a current
+    /// speaker's is. Many themes put their self color in the palette too
+    /// (Palenight's #C792EA, Dracula's #BD93F9), and a blue next to a
+    /// purple self color reads as the same person at a glance. Closest
+    /// first, and never so many that fewer than four colors (or the whole
+    /// palette, when it's smaller) are left to hand out.
+    static func selfLikeNickColors(_ palette: [ThemeColor], selfNick: ThemeColor?) -> Set<Int> {
+        guard let selfNick else { return [] }
+        let alike = palette.indices
+            .map { (index: $0, distance: palette[$0].distance(to: selfNick)) }
+            .filter { $0.distance < NickPaletteGeometry.oklabSimilar }
+            .sorted { $0.distance < $1.distance }
+        let room = max(0, palette.count - min(4, palette.count))
+        return Set(alike.prefix(room).map(\.index))
     }
 
     // MARK: Fallbacks

@@ -119,6 +119,85 @@ struct NickColorAssignerTests {
         #expect(assigner.index(for: "jeebz") == NickColorAssigner.preferredIndex(for: "jeebz", paletteSize: 12))
     }
 
+    // MARK: Your own color
+
+    /// A 12-color wheel where 0 is your nick's color and 1 and 11 look
+    /// like it (`similar: 2`).
+    private func wheelKeepingYours() -> NickPaletteGeometry {
+        let plain = wheel(12, similar: 2)
+        return NickPaletteGeometry(distances: plain.distances, similar: 2, reserved: [0, 1, 11])
+    }
+
+    @Test func nobodyElseGetsYourColor() {
+        let palette = wheelKeepingYours()
+        // Usual colors steer clear of it: a nick hashed onto it starts from
+        // the nearest color that isn't kept back.
+        #expect(palette.usualIndex(0) == 2 || palette.usualIndex(0) == 10)
+        #expect(palette.usualIndex(1) == 2)
+        #expect(palette.usualIndex(11) == 10)
+        #expect(palette.usualIndex(5) == 5)
+
+        var assigner = NickColorAssigner(palette: palette)
+        let nicks = (0..<40).map { "user\($0)" }
+        for nick in nicks { assigner.noteSpeaker(nick) }
+        for nick in nicks + ["lurker", "r3volution11", "Templarian"] {
+            #expect(![0, 1, 11].contains(assigner.index(for: nick)), "\(nick)")
+        }
+    }
+
+    @Test func twoNicksHashedOntoYourColorTalkInDifferentColors() {
+        let palette = wheelKeepingYours()
+        let a = nick(usually: 0, of: 12)
+        let b = nick(usually: 1, of: 12, not: [a])
+        var assigner = NickColorAssigner(palette: palette)
+        assigner.noteSpeaker(a)
+        assigner.noteSpeaker(b)
+        let colors = [assigner.index(for: a), assigner.index(for: b)]
+        #expect(colors.allSatisfy { ![0, 1, 11].contains($0) })
+        // Not just different: clearly so (two steps apart on this wheel).
+        #expect(palette.distances[colors[0]][colors[1]] >= 2)
+    }
+
+    @Test func aMoveIsReported() {
+        var assigner = NickColorAssigner(palette: wheel(12, similar: 2))
+        #expect(assigner.noteSpeaker("jeebz") == false)
+        // tomf hashes onto jeebz's color, so gets another one.
+        #expect(assigner.noteSpeaker("tomf") == true)
+        // Already given: nothing changes.
+        #expect(assigner.noteSpeaker("tomf") == false)
+        #expect(assigner.noteEarlierSpeaker("jeebz") == false)
+    }
+
+    @Test func aCrowdedChannelSharesAQuietPersonsColorBeforeALookAlike() {
+        // Eight colors, all clearly different, except that 7 looks like
+        // 3, 4, 5 and 6.
+        let palette = NickPaletteGeometry(distances: (0..<8).map { i in
+            (0..<8).map { j -> Double in
+                if i == j { return 0 }
+                return [i, j].contains(7) && [i, j].contains(where: (3...6).contains) ? 1 : 10
+            }
+        }, similar: 2)
+        var used: Set<String> = []
+        func speaker(_ color: Int) -> String {
+            let found = nick(usually: color, of: 8, not: used)
+            used.insert(found)
+            return found
+        }
+        var assigner = NickColorAssigner(palette: palette)
+        // Seven recent speakers hold colors 0–6; the last five (2–6) are
+        // talking now. Only 7 is free, and it looks like four of them.
+        let quiet = speaker(0)
+        for nick in [quiet] + (1...6).map(speaker) { assigner.noteSpeaker(nick) }
+        #expect((0...6).map { color in used.contains { assigner.index(for: $0) == color } }.allSatisfy { $0 })
+
+        // A newcomer whose usual color is the quiet one's shares it, rather
+        // than take 7 and look like the people talking.
+        let newcomer = speaker(0)
+        #expect(assigner.noteSpeaker(newcomer) == false)
+        #expect(assigner.index(for: newcomer) == 0)
+        #expect(assigner.index(for: quiet) == 0)
+    }
+
     @Test func nicksThatHaveNotSpokenUseTheirUsualColor() {
         let assigner = NickColorAssigner(palette: wheel(12))
         #expect(assigner.index(for: "lurker") == NickColorAssigner.preferredIndex(for: "lurker", paletteSize: 12))

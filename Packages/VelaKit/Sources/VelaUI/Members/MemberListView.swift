@@ -245,13 +245,13 @@ private struct MemberRow: View {
                 .frame(width: 10, alignment: .center)
                 .accessibilityHidden(true)
             if style.showAvatars {
-                AvatarView(nick: member.nick, size: CGFloat(min(16, max(12, style.sidebarRowHeight - 7))))
+                AvatarView(nick: member.nick, size: CGFloat(min(16, max(12, style.sidebarRowHeight - 7))), buffer: buffer, isSelf: isSelf)
                     .opacity(member.isAway ? 0.5 : 1)
                     .padding(.trailing, 1)
             }
             Text(member.nick)
                 .font(.system(size: fontSize, weight: isSelf ? .semibold : .regular))
-                .foregroundStyle(nickColor)
+                .foregroundStyle(nickColor(isSelf: isSelf))
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 0)
@@ -299,10 +299,10 @@ private struct MemberRow: View {
         return hovering ? theme[ThemeKey.memberListHoverBackground] : .clear
     }
 
-    private var nickColor: Color {
-        if member.isAway { return theme[ThemeKey.memberListAwayForeground] }
-        if style.colorNicks { return theme.nickColor(for: member.nick, in: buffer).color }
-        return theme[ThemeKey.memberListForeground]
+    /// Away dims anyone; otherwise the color their messages have
+    /// (`ResolvedTheme.memberListNickColor`).
+    private func nickColor(isSelf: Bool) -> Color {
+        theme.memberListNickColor(member, isSelf: isSelf, colorNicks: style.colorNicks, in: buffer)
     }
 
     private func openQuery() {

@@ -334,7 +334,10 @@ struct NickColorTests {
         let theme = try resolve(ThemeDefinition(name: "A", type: .dark))
         let nicks = (0..<200).map { "user\($0)" }
         let used = Set(nicks.map { theme.nickColor(for: $0) })
-        #expect(used.count == theme.nickPalette.count)
+        // Every color but those kept back for your own nick.
+        let reserved = Set(theme.nickPaletteGeometry.reserved.map { theme.nickPalette[$0] })
+        #expect(used.count == theme.nickPalette.count - reserved.count)
+        #expect(used.isDisjoint(with: reserved))
     }
 
     /// Palenight's palette and text colors, where #B2CCD6 sat beside
@@ -371,6 +374,47 @@ struct NickColorTests {
         definition.nickColors = ["#BFC7D5", "#B8C2D2", "#C4CAD6", "#F07178", "#82AAFF"]
         let theme = try resolve(definition)
         #expect(theme.nickPalette == theme.nickColors)
+    }
+
+    // MARK: Your own nick's color
+
+    /// Palenight's palette holds its self color, #C792EA, exactly, and two
+    /// blues beside it: someone given one looked like you.
+    @Test func colorsLikeYourOwnNickAreKeptForYou() throws {
+        var definition = palenight
+        definition.colors["chat.selfNick"] = "#C792EA"
+        let theme = try resolve(definition)
+        let me = theme.color(ThemeKey.chatSelfNick)
+        let reserved = theme.nickPaletteGeometry.reserved.map { theme.nickPalette[$0].hex }
+        #expect(Set(reserved) == ["#C792EA", "#A9B4FF", "#82AAFF"])
+        // Nobody else lands on them, however their nick hashes.
+        for nick in (0..<500).map({ "user\($0)" }) + ["r3volution11", "Templarian", "jeebz", "tomf"] {
+            #expect(theme.nickColor(for: nick).distance(to: me) >= NickPaletteGeometry.oklabSimilar, "\(nick)")
+        }
+    }
+
+    @Test func theBuiltInThemesNeverGiveOthersYourColor() throws {
+        for (id, definition) in ThemeLoader.builtInDefinitions {
+            let theme = try ThemeResolver.resolve(definition, id: id, includeLoader: { try ThemeLoader.builtInDefinition(named: $0) }, overrides: [:])
+            let me = theme.color(ThemeKey.chatSelfNick)
+            // Enough left to tell people apart.
+            #expect(theme.nickPaletteGeometry.count - theme.nickPaletteGeometry.reserved.count >= 7, "\(id)")
+            for nick in (0..<300).map({ "user\($0)" }) {
+                #expect(theme.nickColor(for: nick).distance(to: me) >= NickPaletteGeometry.oklabSimilar, "\(id): \(nick)")
+            }
+        }
+    }
+
+    @Test func aSmallPaletteKeepsFourColorsToHandOut() throws {
+        var definition = palenight
+        definition.colors["chat.selfNick"] = "#C792EA"
+        definition.nickColors = ["#C792EA", "#A9B4FF", "#82AAFF", "#F07178", "#C3E88D"]
+        let theme = try resolve(definition)
+        // Only the closest (the self color itself) is kept back.
+        #expect(theme.nickPaletteGeometry.reserved.map { theme.nickPalette[$0].hex } == ["#C792EA"])
+
+        definition.nickColors = ["#C792EA", "#A9B4FF", "#F07178", "#C3E88D"]
+        #expect(try resolve(definition).nickPaletteGeometry.reserved.isEmpty)
     }
 
     @Test func ircPalette() throws {

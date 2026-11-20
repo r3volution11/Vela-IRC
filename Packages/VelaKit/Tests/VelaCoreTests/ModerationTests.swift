@@ -306,6 +306,21 @@ struct NickWordsTests {
         #expect(found?.word == "wren")
         #expect(found?.range == 3..<7)
     }
+
+    /// Message text colors the nicks among these words, so they must be
+    /// exactly the words a right-click finds.
+    @Test func everyWordInOrderAsARightClickFindsIt() {
+        let text = "<marisol> kenji: try [doug]_ now - _ 🎉 wren! é-è x"
+        var words: [String] = []
+        NickWords.forEachWord(in: text) { range in
+            let word = String(text[range])
+            words.append(word)
+            let offset = text.utf16.distance(from: text.startIndex, to: range.lowerBound)
+            #expect(NickWords.word(at: offset, in: text)?.word == word)
+        }
+        #expect(words == ["marisol", "kenji", "try", "[doug]_", "now", "wren", "é-è", "x"])
+        NickWords.forEachWord(in: "") { _ in Issue.record("no words in nothing") }
+    }
 }
 
 @Suite("CTCP reply lines")

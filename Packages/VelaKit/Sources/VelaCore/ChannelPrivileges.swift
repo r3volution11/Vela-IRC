@@ -160,7 +160,43 @@ nonisolated public enum NickWords {
     static let specials: Set<Character> = ["[", "]", "\\", "`", "^", "{", "}", "|", "-", "_"]
 
     public static func isNickCharacter(_ character: Character) -> Bool {
-        character.isLetter || character.isNumber || specials.contains(character)
+        // Most text is ASCII: a table lookup gives the same answer as the
+        // Unicode properties and the set, without hashing a Character.
+        if let ascii = character.asciiValue, character.utf8.count == 1 { return asciiNickCharacters[Int(ascii)] }
+        return character.isLetter || character.isNumber || specials.contains(character)
+    }
+
+    private static let asciiNickCharacters: [Bool] = (0..<128).map { value in
+        let character = Character(Unicode.Scalar(UInt8(value)))
+        return character.isLetter || character.isNumber || specials.contains(character)
+    }
+
+    /// Calls `body` with the range of each nick-like word in `text`, in
+    /// order: the words `word(at:in:)` finds (and a right-click on one opens
+    /// that nick's menu). One pass over the characters.
+    public static func forEachWord(in text: String, _ body: (Range<String.Index>) -> Void) {
+        var start: String.Index?
+        var index = text.startIndex
+        while index < text.endIndex {
+            let next = text.index(after: index)
+            if isNickCharacter(text[index]) {
+                if start == nil { start = index }
+            } else if let wordStart = start {
+                emit(wordStart..<index, in: text, body)
+                start = nil
+            }
+            index = next
+        }
+        if let wordStart = start { emit(wordStart..<text.endIndex, in: text, body) }
+    }
+
+    /// `word(at:in:)`'s rule: a lone hyphen or underscore isn't a word.
+    private static func emit(_ range: Range<String.Index>, in text: String, _ body: (Range<String.Index>) -> Void) {
+        if text.index(after: range.lowerBound) == range.upperBound {
+            let character = text[range.lowerBound]
+            guard character.isLetter || character.isNumber else { return }
+        }
+        body(range)
     }
 
     /// The nick-like word around UTF-16 offset `offset` in `text` (letters,

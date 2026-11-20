@@ -92,18 +92,23 @@ extension LinkSelectionTests {
             try #require(session().buffer(named: name))
         }
 
-        private func host(_ lines: [ChatLine], in buffer: BufferModel, layout: ChatLayout) async throws -> Hosted {
+        /// `controller`, when given, is already prepared (as the list does).
+        private func host(
+            _ lines: [ChatLine], in buffer: BufferModel, layout: ChatLayout, controller given: MessageListController? = nil
+        ) async throws -> Hosted {
             let app = Self.app
             let session = try session()
-            let controller = MessageListController(buffer: buffer, session: session)
+            let controller = given ?? MessageListController(buffer: buffer, session: session)
             let uiState = UIState()
             let theme = ResolvedTheme.fallbackLight
             var style = ChatStyle(settings: app.settings)
             style.layout = layout
-            controller.textCache.prepare(
-                palette: MessageTextPalette(theme: theme, style: style),
-                options: MessageTextOptions(renderFormatting: style.renderFormatting, selfNick: session.nick, channelTypes: session.isupport.channelTypes)
-            )
+            if given == nil {
+                controller.textCache.prepare(
+                    palette: MessageTextPalette(theme: theme, style: style),
+                    options: MessageTextOptions(renderFormatting: style.renderFormatting, selfNick: session.nick, channelTypes: session.isupport.channelTypes)
+                )
+            }
             let view = ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(lines) { line in
@@ -267,6 +272,63 @@ extension LinkSelectionTests {
             let onWord = contextMenu(at: try hosted.point(of: "sidebar", in: regionView), in: hosted)
             #expect(onWord.items.contains("Reply"), "\(onWord.items)")
             #expect(onWord.menu?.title != "sidebar")
+        }
+
+        /// With nicks colored in messages, a word is colored exactly when a
+        /// right-click on it opens that person's menu; the text reads (and
+        /// VoiceOver says) the same.
+        @Test func theNicksColoredInTheTextAreTheOnesWithAMenu() async throws {
+            let session = try session()
+            let channel = try buffer("#vela")
+            let theme = ResolvedTheme.fallbackLight
+            let style = ChatStyle(settings: Self.app.settings)
+            let controller = MessageListController(buffer: channel, session: session)
+            controller.prepareText(
+                palette: MessageTextPalette(theme: theme, style: style),
+                options: MessageTextOptions(
+                    renderFormatting: style.renderFormatting, selfNick: session.nick, channelTypes: session.isupport.channelTypes,
+                    colorsNicks: true, caseMapping: session.isupport.caseMapping
+                ),
+                nickChangeCount: channel.nickChangeCount
+            )
+            let message = line("marisol", "kenji: can you check what priya said about the sidebar, doug?")
+            let hosted = try await host([message], in: channel, layout: .grouped, controller: controller)
+            defer { hosted.close() }
+            let regionView = try #require(hosted.regionViews.first)
+
+            // What the row drew.
+            let rendered = controller.textCache.rendered(message)
+            func color(of word: String) -> Color? {
+                guard let range = rendered.attributed.range(of: word) else { return nil }
+                return rendered.attributed[range].runs.first?.foregroundColor ?? nil
+            }
+            for word in ["kenji", "priya"] {
+                #expect(color(of: word) == theme.nickColor(for: word, in: channel).color, "\(word)")
+                let menu = contextMenu(at: try hosted.point(of: word, in: regionView), in: hosted)
+                #expect(menu.menu?.title == word, "\(word): \(menu.items)")
+            }
+            for word in ["check", "sidebar"] {
+                #expect(color(of: word) == nil, "\(word)")
+                let menu = contextMenu(at: try hosted.point(of: word, in: regionView), in: hosted)
+                #expect(menu.items.contains("Reply"), "\(word): \(menu.items)")
+            }
+            // A mention of us is a mention.
+            #expect(color(of: "doug") == theme[ThemeKey.chatMention])
+            #expect(rendered.plain == message.text)
+        }
+
+        /// In a conversation, the person it's with is the nick colored in
+        /// the text, and theirs is the menu a right-click on it opens.
+        @Test func thePersonAConversationIsWithHasTheirMenuInTheText() throws {
+            let session = try session()
+            let query = BufferModel(id: BufferID(networkID: session.id, foldedName: "wren"), name: "wren", kind: .query)
+            let actions = UserMenuActions(app: Self.app, uiState: UIState(), session: session, buffer: query)
+            let message = line("wren", "WREN here, ask kenji")
+            let menu = actions.menu(forWord: "WREN", range: 0..<4, in: message, prefixLength: 0)
+            #expect(menu?.targets.map(\.nick) == ["wren"])
+            #expect(menu?.menu.sections.flatMap { $0 }.isEmpty == false)
+            // Someone else named in a conversation is just a word there.
+            #expect(actions.menu(forWord: "kenji", range: 15..<20, in: message, prefixLength: 0) == nil)
         }
 
         @Test func userMenuItemsDoTheirThing() async throws {

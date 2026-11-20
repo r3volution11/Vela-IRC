@@ -24,6 +24,8 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ### Chat and messages
 
+- **Nicks are colored in messages.** When a message mentions someone in the channel, or the person you're talking with, their nick has the same color it has everywhere else, and right-clicking it opens their menu (now in a conversation too). Only whole nicks are colored, never inside links or channel names or over colors the sender chose, and a mention of you keeps its own highlight. It's on by default with **Colored nicknames**; turn it off with **Color nicks in messages** in **Settings → Messages** (`chat.colorNicksInText`) or **Toggle Nick Colors in Messages** in the command palette.
+- **Nobody else has your nick's color.** Many themes have your nick's color in their nick palette too, so someone else could be shown in it, or in a color right beside it, and look like you. Those colors are now kept for you. Your nick also has its own color in the member list and on your avatar, as on your messages, and in a crowded channel someone new shares the color of a person who isn't talking rather than look like someone who is.
 - **Messages a bouncer replays now count as unread.** What ZNC, soju or a server with chat history replays when Vela connects counts in unread and mention badges, the New line and the Dock badge once it's newer than where you stopped reading. Replayed messages never pop up notifications or play sounds, and a channel Vela has never had open starts counting from when it first joins.
 
 ### Siri, Shortcuts and Apple Intelligence

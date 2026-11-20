@@ -28,6 +28,9 @@ public struct ChatStyle: Equatable {
     public var columnsTimestampPosition: TimestampPosition = .left
     public var joinPart: JoinPartDisplay = .collapse
     public var colorNicks = true
+    /// Color the nicks of people here where messages mention them
+    /// (`chat.colorNicksInText`); only with `colorNicks`.
+    public var colorNicksInText = true
     public var showAvatars = false
     public var groupingInterval: TimeInterval = 300
     public var columnsNickWidth: Double = 120
@@ -83,6 +86,7 @@ public struct ChatStyle: Equatable {
         columnsTimestampPosition = settings[.chatTimestampPositionColumns]
         joinPart = settings[.chatShowJoinPart]
         colorNicks = settings[.chatColorNicks]
+        colorNicksInText = settings[.chatColorNicksInText]
         showAvatars = settings[.chatShowAvatars]
         groupingInterval = settings[.chatGroupingInterval]
         columnsNickWidth = settings[.chatColumnsNickWidth]

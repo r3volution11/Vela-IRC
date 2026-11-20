@@ -50,7 +50,7 @@ nonisolated public enum ScrollBenchmarkContent {
             let prefix = index == 0 ? "~" : index < 4 ? "@" : index < 9 ? "+" : ""
             members[session.fold(nick)] = Member(nick: nick, prefixes: prefix, userHost: "\(nick)@user/\(nick)")
         }
-        buffer.memberMap = members
+        buffer.replaceMembers(members)
         buffer.isJoined = true
         buffer.insertSorted(generated.lines)
         for reaction in generated.reactions {

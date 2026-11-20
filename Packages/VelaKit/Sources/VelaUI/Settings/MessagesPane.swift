@@ -115,6 +115,14 @@ struct MessagesPane: View {
                     options: [(.show, "Show"), (.collapse, "Collapse"), (.hide, "Hide")]
                 )
                 SettingsToggle("Colored nicknames", detail: "Give everyone a color from the theme's nick palette. People talking in the same channel get different colors.", isOn: $settings[.chatColorNicks])
+                SettingsToggle(
+                    "Color nicks in messages",
+                    detail: settings[.chatColorNicks]
+                        ? "When a message mentions someone in the channel, their nick has their color there too."
+                        : "Needs Colored nicknames.",
+                    isOn: $settings[.chatColorNicksInText]
+                )
+                .themedDisabled(!settings[.chatColorNicks])
                 SettingsToggle("Avatars", detail: "Show initials avatars next to message groups in the Modern layout.", isOn: $settings[.chatShowAvatars])
                 SettingsMenuRow(
                     title: "Group messages within",

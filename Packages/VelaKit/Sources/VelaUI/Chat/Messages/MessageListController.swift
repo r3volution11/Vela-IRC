@@ -6,6 +6,7 @@ import AppKit
 import Observation
 import SwiftUI
 import VelaCore
+import VelaFoundation
 import VelaIRC
 import VelaStore
 import VelaTheme
@@ -293,21 +294,114 @@ final class MessageListController {
 
     // MARK: Text
 
-    /// Bumped whenever message text renders differently (our nick, the
+    /// Bumped whenever all message text renders differently (our nick, the
     /// theme, fonts, formatting). Rows skip updates while their item is
     /// unchanged, so it's part of what they compare (`DisplayItemRow`).
     @ObservationIgnored private(set) var textGeneration = 0
     @ObservationIgnored private var textInputs: (palette: MessageTextPalette, options: MessageTextOptions)?
 
-    /// Points `textCache` at the current palette and options; returns the
-    /// text generation. Cheap when nothing changed.
+    /// Points `textCache` at the current palette and options and catches up
+    /// with who came and went (`nickChangeCount`, the buffer's
+    /// `BufferModel.nickChangeCount`, read by the list so it updates when
+    /// that changes); returns the text generation. Cheap when nothing
+    /// changed.
     @discardableResult
-    func prepareText(palette: MessageTextPalette, options: MessageTextOptions) -> Int {
-        if let textInputs, textInputs.options == options, textInputs.palette == palette { return textGeneration }
+    func prepareText(palette: MessageTextPalette, options: MessageTextOptions, nickChangeCount: Int = 0) -> Int {
+        let geometry = palette.nickGeometry
+        textCache.prepare(palette: palette, options: options, nicks: options.colorsNicks ? { [unowned self] word, folded in
+            self.nickColorIndex(word: word, folded: folded, geometry: geometry)
+        } : nil)
+        if let textInputs, textInputs.options == options, textInputs.palette == palette {
+            catchUpWithNickChanges(nickChangeCount, colorsNicks: options.colorsNicks)
+            return textGeneration
+        }
         if textInputs != nil { textGeneration &+= 1 }
         textInputs = (palette, options)
-        textCache.prepare(palette: palette, options: options)
+        // Everything renders anew, so earlier nick changes are covered.
+        nickChangesSeen = nickChangeCount
+        textStamps.removeAll()
         return textGeneration
+    }
+
+    // MARK: Nicks in message text
+
+    // Messages color the nicks of the people here (`chat.colorNicksInText`).
+    // Who's here changes all the time in a busy channel, and re-rendering
+    // every row on each join would cost the most where it's felt most, so:
+    //
+    // - Rendering looks each nick-like word up in the members, a hash
+    //   lookup by case-folded nick (`nickColorIndex(word:folded:geometry:)`),
+    //   and notes the keys of the words it looked up in the rendering
+    //   (`RenderedText.nickKeys`).
+    // - The buffer counts and logs the nicks that came, went or got
+    //   another color (`BufferModel.nickChanges(since:)`). The list reads
+    //   the count. SwiftUI updates it at most once per runloop turn,
+    //   however many changes came in that turn, so a burst is caught up
+    //   with once (and NAMES on joining is a single change: the members
+    //   are replaced at once).
+    // - Here, once per list update, the cache drops only the renderings
+    //   with one of those nicks, and their lines get a new stamp
+    //   (`textStamp(for:)`), so only those rows run again. Rows off screen
+    //   render when they scroll in, as before. Nothing else is touched:
+    //   a join of someone nobody mentioned costs a scan of the cache's keys.
+    // - A burst too big to sort out (a netsplit, a fresh NAMES, a
+    //   reconnect) drops everything once, like a theme switch.
+
+    /// `buffer.nickChangeCount` when the cache last caught up.
+    @ObservationIgnored private var nickChangesSeen = 0
+    /// Lines whose rendering was dropped for a nick change, by when.
+    @ObservationIgnored private var textStamps: [UUID: Int] = [:]
+    @ObservationIgnored private var textStampCount = 0
+    /// More changed nicks than this at once start over instead.
+    private static let nickChangesSortedOut = 64
+
+    /// For a row: changes when its line's text has to render again for a
+    /// nick change (`DisplayItemRow`). 0 for nearly every row.
+    func textStamp(for item: DisplayItem) -> Int {
+        guard !textStamps.isEmpty, case .line(let lineItem) = item else { return 0 }
+        return textStamps[lineItem.line.id] ?? 0
+    }
+
+    private func catchUpWithNickChanges(_ count: Int, colorsNicks: Bool) {
+        guard count != nickChangesSeen else { return }
+        let seen = nickChangesSeen
+        nickChangesSeen = count
+        guard colorsNicks else { return }
+        let caseMapping = session.isupport.caseMapping
+        guard let nicks = buffer.nickChanges(since: seen), nicks.count <= Self.nickChangesSortedOut else {
+            textCache.removeAll()
+            textStamps.removeAll()
+            textGeneration &+= 1
+            return
+        }
+        let dropped = textCache.invalidate(nickKeys: Set(nicks.map { MessageTextRenderer.nickKey(caseMapping.fold($0)) }))
+        guard !dropped.isEmpty else { return }
+        textStampCount &+= 1
+        for id in dropped { textStamps[id] = textStampCount }
+        if textStamps.count > textCache.capacity {
+            // Stamps outlive renderings; when they pile up, one full pass.
+            textStamps.removeAll()
+            textGeneration &+= 1
+        }
+    }
+
+    /// The color (an index into the palette's nick colors) of `word` in
+    /// this buffer's text when it's someone here: a channel member, or the
+    /// person a conversation is with; nil for any other word. The same
+    /// color their messages and the member list show
+    /// (`ResolvedTheme.nickColor(for:in:)`). Runs inside row bodies, so it
+    /// reads nothing observed.
+    func nickColorIndex(word: Substring, folded: String, geometry: NickPaletteGeometry) -> Int? {
+        switch buffer.kind {
+        case .channel:
+            guard let member = buffer.member(foldedNick: folded) else { return nil }
+            return buffer.nickColorIndex(for: member.nick, palette: geometry)
+        case .query:
+            guard folded == buffer.id.foldedName else { return nil }
+            return buffer.nickColorIndex(for: String(word), palette: geometry)
+        case .server:
+            return nil
+        }
     }
 
     // MARK: Links
@@ -476,11 +570,22 @@ extension ResolvedTheme {
     }
 
     /// The color for `nick` in message headers, honoring `chat.colorNicks`
-    /// and `chat.selfNick`.
+    /// and `chat.selfNick`. Your own nick is always `chat.selfNick`, and
+    /// nobody else is given a color like it (`NickPaletteGeometry.reserved`).
     func nickDisplayColor(_ nick: String?, isSelf: Bool, colorNicks: Bool, in buffer: BufferModel?) -> Color {
         if isSelf { return self[ThemeKey.chatSelfNick] }
         guard let nick, colorNicks else { return self[ThemeKey.chatForeground] }
         return nickColor(for: nick, in: buffer).color
+    }
+
+    /// A member's nick in the member list: dimmed while away, otherwise the
+    /// color their messages show, `chat.selfNick` for yours; the list's own
+    /// text color for others when nicks aren't colored.
+    func memberListNickColor(_ member: Member, isSelf: Bool, colorNicks: Bool, in buffer: BufferModel?) -> Color {
+        if member.isAway { return self[ThemeKey.memberListAwayForeground] }
+        if isSelf { return self[ThemeKey.chatSelfNick] }
+        if colorNicks { return nickColor(for: member.nick, in: buffer).color }
+        return self[ThemeKey.memberListForeground]
     }
 }
 

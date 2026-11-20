@@ -68,15 +68,20 @@ struct MessageListView: View {
             options: MessageTextOptions(
                 renderFormatting: style.renderFormatting,
                 selfNick: session.nick,
-                channelTypes: session.isupport.channelTypes
-            )
+                channelTypes: session.isupport.channelTypes,
+                colorsNicks: style.colorNicks && style.colorNicksInText && buffer.kind != .server,
+                caseMapping: session.isupport.caseMapping
+            ),
+            // Observed: someone coming or going updates the list, which
+            // re-renders the lines that mention them (and only those).
+            nickChangeCount: buffer.nickChangeCount
         )
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 HistoryHeader(buffer: buffer, title: BufferTitle.title(for: buffer, in: session))
                 ForEach(items) { item in
-                    DisplayItemRow(item: item, textGeneration: textGeneration)
+                    DisplayItemRow(item: item, textGeneration: textGeneration, textStamp: controller.textStamp(for: item))
                         .equatable()
                 }
                 // Room under the last row (and for the typing line), and the

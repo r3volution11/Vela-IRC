@@ -231,6 +231,7 @@ struct VelaCommandCatalog {
             toggle("toggleTimestamps", "Toggle Timestamps", .chatShowTimestamps, keywords: ["time"]),
             toggle("toggleMonospace", "Toggle Monospace Font", .chatMonospace, keywords: ["terminal", "fixed width"]),
             toggle("toggleNickColors", "Toggle Nick Colors", .chatColorNicks, keywords: ["nickname"]),
+            toggle("toggleNickColorsInText", "Toggle Nick Colors in Messages", .chatColorNicksInText, keywords: ["nickname", "mentions", "text"]),
             toggle("toggleAvatars", "Toggle Avatars", .chatShowAvatars, keywords: ["initials"]),
             toggle("toggleFormatting", "Toggle mIRC Formatting", .chatRenderFormatting, keywords: ["colors", "bold"]),
         ]

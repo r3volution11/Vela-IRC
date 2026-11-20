@@ -224,8 +224,9 @@ public final class BufferModel: Identifiable, Hashable {
     public internal(set) var typingNicks: [String] = []
     public var isMuted = false
 
-    /// Members keyed by case-folded nick.
-    internal var memberMap: [String: Member] = [:] {
+    /// Members keyed by case-folded nick. Changed only through the methods
+    /// under "Members" below, which note who came or went (`nickChanges`).
+    internal private(set) var memberMap: [String: Member] = [:] {
         didSet { membersDirty = true }
     }
     @ObservationIgnored private var membersDirty = true
@@ -267,6 +268,15 @@ public final class BufferModel: Identifiable, Hashable {
         memberMap[caseMapping.fold(nick)]
     }
 
+    /// The member whose case-folded nick is `key`, for matching nicks in
+    /// message text. Read from the members' storage without observing it:
+    /// this runs inside a row's body, which would otherwise run again on
+    /// every mode or away change in the channel. The message list follows
+    /// who comes and goes through `nickChangeCount` instead.
+    public func member(foldedNick key: String) -> Member? {
+        _memberMap[key]
+    }
+
     public func reactions(for msgid: String?) -> [ReactionSummary] {
         guard let msgid, let entries = reactionMap[msgid] else { return [] }
         let me = selfNick().lowercased()
@@ -296,7 +306,7 @@ public final class BufferModel: Identifiable, Hashable {
         } else {
             lines.append(line)
         }
-        if let nick = Self.speaker(of: line) { nickColors?.noteSpeaker(nick) }
+        if let nick = Self.speaker(of: line), nickColors?.noteSpeaker(nick) == true { noteNickChange(nick) }
         if lines.count > limit + 200 {
             lines.removeFirst(lines.count - limit)
             hasMoreHistory = true
@@ -324,7 +334,113 @@ public final class BufferModel: Identifiable, Hashable {
         }
         guard !fresh.isEmpty else { return }
         lines = (lines + fresh).sorted { $0.time < $1.time }
-        for nick in fresh.compactMap(Self.speaker(of:)) { nickColors?.noteEarlierSpeaker(nick) }
+        for nick in fresh.compactMap(Self.speaker(of:)) where nickColors?.noteEarlierSpeaker(nick) == true {
+            noteNickChange(nick)
+        }
+    }
+
+    // MARK: Members
+
+    /// Adds `member` under `key`, their case-folded nick, or updates them.
+    func setMember(_ member: Member, forKey key: String) {
+        if memberMap.updateValue(member, forKey: key) == nil { noteNickChange(member.nick) }
+    }
+
+    /// Changes the member under `key`, if there is one: modes, away,
+    /// account. Nobody comes or goes.
+    func updateMember(forKey key: String, _ update: (inout Member) -> Void) {
+        guard var member = memberMap[key] else { return }
+        update(&member)
+        memberMap[key] = member
+    }
+
+    @discardableResult
+    func removeMember(forKey key: String) -> Member? {
+        guard let removed = memberMap.removeValue(forKey: key) else { return nil }
+        noteNickChange(removed.nick)
+        return removed
+    }
+
+    /// The member under `oldKey` is now `nick`, under `newKey`.
+    func renameMember(from oldKey: String, to newKey: String, nick: String) {
+        guard var member = memberMap.removeValue(forKey: oldKey) else { return }
+        noteNickChange(member.nick)
+        member.nick = nick
+        memberMap[newKey] = member
+        noteNickChange(nick)
+    }
+
+    /// Everyone left (we parted, were kicked or disconnected).
+    func removeAllMembers() {
+        guard !memberMap.isEmpty else { return }
+        memberMap = [:]
+        resetNickChanges()
+    }
+
+    /// The members from a NAMES reply, keyed by case-folded nick. Only the
+    /// nicks that came or went are noted, unless that's most of them (a
+    /// first NAMES after joining).
+    func replaceMembers(_ members: [String: Member]) {
+        let old = memberMap
+        memberMap = members
+        var changed: [String] = []
+        for (key, member) in members where old[key] == nil {
+            changed.append(member.nick)
+            if changed.count > Self.nickChangeLogLimit / 4 { break }
+        }
+        if changed.count <= Self.nickChangeLogLimit / 4 {
+            for (key, member) in old where members[key] == nil {
+                changed.append(member.nick)
+                if changed.count > Self.nickChangeLogLimit / 4 { break }
+            }
+        }
+        if changed.count > Self.nickChangeLogLimit / 4 {
+            resetNickChanges()
+        } else {
+            changed.forEach(noteNickChange)
+        }
+    }
+
+    // MARK: Nick changes
+
+    /// Counts changes to how nicks look in this buffer's messages: someone
+    /// joining, leaving or changing nick (whose nick is then colored in
+    /// message text, or no longer), and a speaker given a color other than
+    /// their usual one. Observed: the message list reads it and re-renders
+    /// only the lines mentioning those nicks (`nickChanges(since:)`).
+    /// Modes, away and account changes don't count.
+    public private(set) var nickChangeCount = 0
+    /// The nicks behind the latest changes, as sent, oldest first.
+    @ObservationIgnored private var nickChangeLog: [String] = []
+    /// Changes up to here can't be told apart: everyone left, or came at
+    /// once.
+    @ObservationIgnored private var nickChangesResetAt = 0
+    private static let nickChangeLogLimit = 256
+
+    func noteNickChange(_ nick: String) {
+        nickChangeLog.append(nick)
+        // Trimmed in batches, so it isn't shifted on every change.
+        if nickChangeLog.count > Self.nickChangeLogLimit * 2 {
+            nickChangeLog.removeFirst(nickChangeLog.count - Self.nickChangeLogLimit)
+        }
+        nickChangeCount += 1
+    }
+
+    private func resetNickChanges() {
+        nickChangeLog.removeAll()
+        nickChangeCount += 1
+        nickChangesResetAt = nickChangeCount
+    }
+
+    /// The nicks (as sent) whose look in this buffer's messages may have
+    /// changed since `nickChangeCount` was `count`, repeats included. Nil
+    /// when that can't be told (it was too long ago, or everyone came or
+    /// went at once), and any nick may have.
+    public func nickChanges(since count: Int) -> [String]? {
+        let missed = nickChangeCount - count
+        guard missed > 0 else { return [] }
+        guard count >= nickChangesResetAt, missed <= nickChangeLog.count else { return nil }
+        return Array(nickChangeLog.suffix(missed))
     }
 
     // MARK: Nick colors

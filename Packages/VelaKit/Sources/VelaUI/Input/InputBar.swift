@@ -417,8 +417,10 @@ private struct ReplyBar: View {
         return plain.count > 140 ? String(plain.prefix(140)) + "…" : plain
     }
 
+    /// As in the message (your own nick in `chat.selfNick`).
     private func nickColor(_ nick: String) -> Color {
-        style.colorNicks ? theme.nickColor(for: nick, in: buffer).color : theme[ThemeKey.replyForeground]
+        if line.isSelf { return theme[ThemeKey.chatSelfNick] }
+        return style.colorNicks ? theme.nickColor(for: nick, in: buffer).color : theme[ThemeKey.replyForeground]
     }
 }
 

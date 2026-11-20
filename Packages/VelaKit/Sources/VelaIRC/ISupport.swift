@@ -16,19 +16,32 @@ public enum CaseMapping: String, Sendable, Hashable {
         case .rfc7613:
             return string.lowercased()
         case .ascii, .rfc1459, .strictRFC1459:
-            var scalars = String.UnicodeScalarView()
-            for scalar in string.unicodeScalars {
-                switch scalar {
-                case "A"..."Z":
-                    scalars.append(Unicode.Scalar(scalar.value + 32)!)
-                case "[" where self != .ascii: scalars.append("{")
-                case "]" where self != .ascii: scalars.append("}")
-                case "\\" where self != .ascii: scalars.append("|")
-                case "~" where self == .rfc1459: scalars.append("^")
-                default: scalars.append(scalar)
+            // Only ASCII bytes change, to other ASCII bytes, so UTF-8 can be
+            // mapped byte by byte. Most nicks and words are already folded
+            // and come back as they are (message text folds every word).
+            let utf8 = string.utf8
+            guard let first = utf8.firstIndex(where: { foldByte($0) != $0 }) else { return string }
+            let start = utf8.distance(from: utf8.startIndex, to: first)
+            return String(unsafeUninitializedCapacity: utf8.count) { buffer in
+                var count = 0
+                for byte in utf8 {
+                    buffer[count] = count < start ? byte : foldByte(byte)
+                    count += 1
                 }
+                return count
             }
-            return String(scalars)
+        }
+    }
+
+    /// One UTF-8 byte folded by the ASCII-based mappings.
+    private func foldByte(_ byte: UInt8) -> UInt8 {
+        switch byte {
+        case UInt8(ascii: "A")...UInt8(ascii: "Z"): byte + 32
+        case UInt8(ascii: "[") where self != .ascii: UInt8(ascii: "{")
+        case UInt8(ascii: "]") where self != .ascii: UInt8(ascii: "}")
+        case UInt8(ascii: "\\") where self != .ascii: UInt8(ascii: "|")
+        case UInt8(ascii: "~") where self == .rfc1459: UInt8(ascii: "^")
+        default: byte
         }
     }
 

@@ -32,7 +32,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Tabs** | Move to Top, Move to Title Bar, Move to Bottom, Always Show Server Row |
 | **Layout** | Classic, Modern Grouped, Compact Columns |
 | **Preset** | Classic IRC, Modern Chat, Tabbed, Focus |
-| **Chat** | Toggle Timestamps, Timestamps on the Left / on the Right / at the Top / at the Bottom (for the layout you're using), Toggle Monospace Font, Toggle Nick Colors, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages, Open Channels at Newest Messages, Show New Line, Save Chat Logs, Show Chat Logs |
+| **Chat** | Toggle Timestamps, Timestamps on the Left / on the Right / at the Top / at the Bottom (for the layout you're using), Toggle Monospace Font, Toggle Nick Colors, Toggle Nick Colors in Messages, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages, Open Channels at Newest Messages, Show New Line, Save Chat Logs, Show Chat Logs |
 | **Media** | Load Previews Automatically, Toggle Link Previews, Minimal / Standard / Large Link Previews, Play Videos Inline, Compact Videos, Videos as Links, Full-Size Images, Image Thumbnails, Hide Adult Site Previews, Blur Images Until Clicked |
 | **Text** | Bigger, Smaller, Actual Size |
 | **Typing** | Check Spelling While Typing, Check Grammar, Correct Spelling Automatically, Use Text Replacements, Use Smart Quotes and Dashes, Use Writing Tools, Message Box Border: None / Subtle / Accent When Typing |

@@ -371,7 +371,7 @@ public final class NetworkSession: Identifiable {
             connectedAt = nil
             for buffer in buffers where buffer.kind == .channel {
                 buffer.isJoined = false
-                buffer.memberMap = [:]
+                buffer.removeAllMembers()
             }
             historyBatches.values.forEach { $0.buffer.isLoadingHistory = false }
             historyBatches = [:]
@@ -672,7 +672,7 @@ public final class NetworkSession: Identifiable {
         let realname = message.param(2)
         if fromSelf, !isHistory {
             buffer.isJoined = true
-            buffer.memberMap = [:]
+            buffer.removeAllMembers()
             buffer.memberRank = { [isupport] in isupport.rank(ofSymbol: $0.topPrefix) }
             autoRejoin[buffer.id.foldedName] = true
             // Never read before (a first join): start reading here. History
@@ -690,7 +690,7 @@ public final class NetworkSession: Identifiable {
                 requestPlayback(for: buffer)
             }
         } else if !isHistory {
-            buffer.memberMap[fold(source.nick)] = Member(nick: source.nick, userHost: source.userHost, account: account ?? message.account, realname: realname)
+            buffer.setMember(Member(nick: source.nick, userHost: source.userHost, account: account ?? message.account, realname: realname), forKey: fold(source.nick))
         }
         let line = ChatLine(
             msgid: message.msgid, time: message.serverTime ?? Date(), kind: .join, nick: source.nick,
@@ -712,7 +712,7 @@ public final class NetworkSession: Identifiable {
         guard let buffer = buffer(named: channel) else { return }
         if fromSelf, !isHistory {
             buffer.isJoined = false
-            buffer.memberMap = [:]
+            buffer.removeAllMembers()
             buffer.typingExpiry = [:]
             buffer.refreshTyping()
             if isDetach {
@@ -722,7 +722,7 @@ public final class NetworkSession: Identifiable {
                 return
             }
         } else if !isHistory {
-            buffer.memberMap.removeValue(forKey: fold(source.nick))
+            buffer.removeMember(forKey: fold(source.nick))
             buffer.clearTyping(nick: source.nick)
         }
         add(ChatLine(
@@ -739,9 +739,9 @@ public final class NetworkSession: Identifiable {
         if !isHistory {
             if isSelf(kicked) {
                 buffer.isJoined = false
-                buffer.memberMap = [:]
+                buffer.removeAllMembers()
             } else {
-                buffer.memberMap.removeValue(forKey: fold(kicked))
+                buffer.removeMember(forKey: fold(kicked))
             }
         }
         add(ChatLine(
@@ -759,7 +759,7 @@ public final class NetworkSession: Identifiable {
         for buffer in buffers {
             let affected = buffer.kind == .channel ? buffer.memberMap[key] != nil : buffer.id.foldedName == key
             guard affected else { continue }
-            if !isHistory { buffer.memberMap.removeValue(forKey: key) }
+            if !isHistory { buffer.removeMember(forKey: key) }
             buffer.clearTyping(nick: source.nick)
             add(ChatLine(
                 msgid: message.msgid, time: message.serverTime ?? Date(), kind: .quit, nick: source.nick,
@@ -780,10 +780,7 @@ public final class NetworkSession: Identifiable {
         for buffer in buffers {
             let affected = buffer.kind == .channel ? buffer.memberMap[oldKey] != nil : buffer.id.foldedName == oldKey
             guard affected || wasSelf else { continue }
-            if var member = buffer.memberMap.removeValue(forKey: oldKey) {
-                member.nick = newNick
-                buffer.memberMap[fold(newNick)] = member
-            }
+            buffer.renameMember(from: oldKey, to: fold(newNick), nick: newNick)
             buffer.clearTyping(nick: source.nick)
             add(ChatLine(
                 msgid: message.msgid, time: message.serverTime ?? Date(), kind: .nick, nick: source.nick,
@@ -836,12 +833,12 @@ public final class NetworkSession: Identifiable {
             default:
                 if prefixModes.contains(char) {
                     guard let nick = args.next(), let symbol = isupport.symbol(forMode: char) else { continue }
-                    let key = fold(nick)
-                    guard var member = buffer.memberMap[key] else { continue }
-                    var symbols = Set(member.prefixes)
-                    if adding { symbols.insert(symbol) } else { symbols.remove(symbol) }
-                    member.prefixes = String(isupport.prefixSymbols.filter { symbols.contains($0) })
-                    buffer.memberMap[key] = member
+                    let prefixSymbols = isupport.prefixSymbols
+                    buffer.updateMember(forKey: fold(nick)) { member in
+                        var symbols = Set(member.prefixes)
+                        if adding { symbols.insert(symbol) } else { symbols.remove(symbol) }
+                        member.prefixes = String(prefixSymbols.filter { symbols.contains($0) })
+                    }
                 } else if modes.list.contains(char) || modes.always.contains(char) || (adding && modes.whenSet.contains(char)) {
                     _ = args.next()
                 }
@@ -949,7 +946,7 @@ public final class NetworkSession: Identifiable {
             if let buffer = buffer(named: channel) {
                 let fresh = pendingNames[key] ?? [:]
                 // Preserve away/account info already known.
-                buffer.memberMap = fresh.mapValues { member in
+                buffer.replaceMembers(fresh.mapValues { member in
                     var member = member
                     if let old = buffer.memberMap[fold(member.nick)] {
                         member.isAway = old.isAway
@@ -957,7 +954,7 @@ public final class NetworkSession: Identifiable {
                         member.realname = member.realname ?? old.realname
                     }
                     return member
-                }
+                })
             }
             pendingNames.removeValue(forKey: key)
         case "433":
@@ -1794,9 +1791,7 @@ public final class NetworkSession: Identifiable {
     func updateMember(_ nick: String, _ update: (inout Member) -> Void) {
         let key = fold(nick)
         for buffer in channels {
-            guard var member = buffer.memberMap[key] else { continue }
-            update(&member)
-            buffer.memberMap[key] = member
+            buffer.updateMember(forKey: key, update)
         }
     }
 

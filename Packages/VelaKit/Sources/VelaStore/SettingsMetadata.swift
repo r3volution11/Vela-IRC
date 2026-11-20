@@ -179,6 +179,7 @@ public enum SettingsMetadata {
         "chat.showJoinPart": "Join/Part Messages",
         "chat.openAt": "Open Channels At",
         "chat.showUnreadMarker": "Show New Line",
+        "chat.colorNicksInText": "Color Nicks in Messages",
         "chat.timestampPosition.classic": "Timestamp Position in Classic",
         "chat.timestampPosition.grouped": "Timestamp Position in Modern",
         "chat.timestampPosition.columns": "Timestamp Position in Compact Columns",

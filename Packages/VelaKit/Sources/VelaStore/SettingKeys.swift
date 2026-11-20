@@ -361,6 +361,9 @@ extension SettingKey where Value == Bool {
     public static var chatColorNicks: SettingKey<Bool> {
         .init("chat.colorNicks", default: true, summary: "Color nicks from the theme's nick palette; people talking in the same channel get different colors.")
     }
+    public static var chatColorNicksInText: SettingKey<Bool> {
+        .init("chat.colorNicksInText", default: true, summary: "Color the nicks of people in the channel (or the conversation) where messages mention them, as they're colored everywhere else. Needs chat.colorNicks.")
+    }
     public static var chatShowAvatars: SettingKey<Bool> {
         .init("chat.showAvatars", default: false, summary: "Show initials avatars next to message groups in the grouped layout and member list.")
     }
@@ -726,6 +729,7 @@ public enum SettingsCatalog {
             SettingKey.chatTimestampPositionColumns.descriptor,
             SettingKey.chatShowJoinPart.descriptor,
             SettingKey.chatColorNicks.descriptor,
+            SettingKey.chatColorNicksInText.descriptor,
             SettingKey.chatShowAvatars.descriptor,
             SettingKey.chatGroupingInterval.descriptor,
             SettingKey.chatColumnsNickWidth.descriptor,
