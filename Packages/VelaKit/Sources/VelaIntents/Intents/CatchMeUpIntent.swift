@@ -56,18 +56,20 @@ public struct CatchMeUpIntent: AppIntent {
         let status = services.availability.status
         guard status.isAvailable else { throw IntentFailure(status.detail) }
 
-        let request = CatchUpRequest(buffer: buffer, session: session)
+        // At most the newest SiriCatchUp.maximumLines lines, so Siri gets
+        // its answer in one pass of the model.
+        let catchUp = SiriCatchUp(CatchUpRequest(buffer: buffer, session: session))
         let nothingNew = "There's nothing new in \(buffer.name)."
-        guard !request.lines.isEmpty else {
+        guard !catchUp.full.lines.isEmpty else {
             return .result(dialog: "\(nothingNew)", view: CatchUpSnippetView(content: .nothingNew(header)))
         }
         do {
-            // Through the store: a summary already cached, or being written
-            // for an open card, is shared rather than made again.
-            let summary = try await services.catchUp.summary(for: request)
-            let overview = summary.overview.trimmingCharacters(in: .whitespacesAndNewlines)
-            let dialog = overview.isEmpty ? "Here's what you missed in \(buffer.name)." : overview
-            return .result(dialog: "\(dialog)", view: CatchUpSnippetView(content: .summary(header, summary)))
+            // Through the store: a summary already cached (of the whole
+            // stretch, or of Siri's part), or being written for an open
+            // card, is shared rather than made again.
+            let result = try await catchUp.summarize(with: services.catchUp)
+            let dialog = catchUp.dialog(for: result)
+            return .result(dialog: "\(dialog)", view: CatchUpSnippetView(content: .summary(header, result.summary)))
         } catch CatchUpError.nothingToSummarize {
             return .result(dialog: "\(nothingNew)", view: CatchUpSnippetView(content: .nothingNew(header)))
         } catch let error as CatchUpError {

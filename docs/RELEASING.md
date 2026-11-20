@@ -104,7 +104,7 @@ What it does:
 2. Finds your **Developer ID Application** certificate and Team ID, and checks that the `vela-notary` profile exists.
 3. With `--publish`, checks that `gh` is installed and signed in, and that there are [release notes](#release-notes). If not, it stops before building anything.
 4. **Runs the [preflight checks](#preflight-checks)** (`scripts/release-preflight.sh`): git, the version and changelog, CI, the adult-domain list, the generated files, the package tests, the website, the media sites and the scroll benchmark. If one fails, it prints the summary and stops before archiving.
-5. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`.
+5. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`. The build's full output is in `build/release/archive.log`.
 6. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
 7. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
 8. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
@@ -192,6 +192,9 @@ Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts 
 | Version | `CFBundleShortVersionString` is the version and `CFBundleVersion` the build number. | The project changed while building, or the build isn't from it; build again. |
 | Architectures | The app has both `arm64` and `x86_64`. | Check that the archive is for `generic/platform=macOS` with `ONLY_ACTIVE_ARCH=NO`, as the script does. |
 | App Sandbox | The `com.apple.security.app-sandbox` entitlement is on. | Check `CODE_SIGN_ENTITLEMENTS` (`Vela/Vela.entitlements`) in the Release configuration. |
+| App Shortcuts | The app's App Intents metadata (`Contents/Resources/Metadata.appintents/extract.actionsdata`) has as many App Shortcuts as `Vela/VelaShortcuts.swift` declares (7 today). | Xcode's App Intents metadata processor dropped some. Its lines are kept out of the build output but saved in `build/release/archive.log`: fix what they point at and build again. |
+| App Intents actions | The metadata has **Catch Me Up** (`CatchMeUpIntent`) and **Open Channel** (`OpenChannelIntent`) from the VelaIntents module. | As for App Shortcuts. |
+| App Intents package | `extract.packagedata` includes `VelaIntentsPackage`, which brings in the VelaIntents package's intents. | Check that `VelaAppIntentsPackage` in `Vela/VelaShortcuts.swift` lists `VelaIntentsPackage`, then build again. |
 | Signature | `codesign --verify --deep --strict` passes. | A file changed after signing, or a nested binary isn't signed. Build again. |
 | Developer ID | Signed with a Developer ID Application certificate of your Team ID, with a secure timestamp. | Check the certificate (see [If something goes wrong](#if-something-goes-wrong)) and `VELA_TEAM_ID`. |
 | Gatekeeper | `spctl -a -vvv` on the app says "Notarized Developer ID". | Notarization or stapling didn't work; build again and read Apple's log. |
@@ -209,6 +212,12 @@ scripts/verify-release.sh ~/Downloads/Vela.dmg --version 1.1.0 --build 2 --team 
 ```
 
 It expects the project's version and build number unless you give `--version` and `--build`, and any Developer ID team unless you give `--team` (or set `VELA_TEAM_ID`).
+
+The App Intents checks are a function in `scripts/lib/release-checks.zsh`, so they also run on an app outside a disk image, such as the exported one:
+
+```sh
+zsh -c 'source scripts/lib/release-checks.zsh; check_app_intents build/release/export/Vela.app Vela/VelaShortcuts.swift'
+```
 
 ### Options
 

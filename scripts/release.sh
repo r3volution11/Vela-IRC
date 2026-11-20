@@ -314,7 +314,9 @@ xcodebuild archive \
   -derivedDataPath build/DerivedData-release \
   ONLY_ACTIVE_ARCH=NO \
   "${sign_settings[@]}" \
-  -quiet 2>&1 | grep -vE "CoreSimulator|appintentsmetadataprocessor" || true
+  -quiet 2>&1 | tee "$out/archive.log" | grep -vE "CoreSimulator|appintentsmetadataprocessor" || true
+# The App Intents metadata processor's lines are kept out of the way above but
+# stay in archive.log; the post-build checks look at what it wrote.
 [[ -d "$out/Vela.xcarchive/Products/Applications/Vela.app" ]] || fail "Archive failed."
 
 app="$out/Vela.app"

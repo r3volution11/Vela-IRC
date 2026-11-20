@@ -9,9 +9,10 @@ import VelaIntents
 
 extension View {
     /// Tells Siri and Apple Intelligence which channel is on screen, so
-    /// "summarize this" or "reply to this channel" mean this one: the view
-    /// carries the channel's App Intents entity, and so does a user
-    /// activity that's current while the window is.
+    /// "reply to this" means this one: the view carries the channel's App
+    /// Intents entity, and so does a user activity that's current while
+    /// the window is. (No public App Intents schema summarizes on-screen
+    /// content, so "summarize this" isn't offered; Catch Me Up is.)
     func onscreenEntity(buffer: BufferModel, session: NetworkSession) -> some View {
         modifier(OnscreenEntityModifier(bufferID: buffer.id, title: buffer.name, network: session.displayName))
     }

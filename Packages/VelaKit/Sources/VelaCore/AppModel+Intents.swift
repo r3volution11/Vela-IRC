@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import AppKit
 import Foundation
 import VelaIRC
 
@@ -73,6 +74,56 @@ nonisolated public struct MentionSummary: Sendable, Hashable {
     }
 }
 
+/// What's unread in one buffer, as Siri and Shortcuts count it (see
+/// ``AppModel/unreadTally(for:)``).
+nonisolated public struct UnreadTally: Sendable, Hashable {
+    public var unread: Int
+    /// Highlights (in a private conversation, every new message).
+    public var mentions: Int
+
+    public init(unread: Int, mentions: Int) {
+        self.unread = unread
+        self.mentions = mentions
+    }
+}
+
+extension UnreadTally {
+    /// The larger of `buffer`'s live counts and what's newer than its read
+    /// position; only the live counts (nothing, normally) while it's on
+    /// screen, where new lines are seen as they arrive.
+    @MainActor
+    public init(buffer: BufferModel, isOnScreen: Bool) {
+        let live = UnreadTally(unread: buffer.unreadCount, mentions: buffer.highlightCount)
+        guard !isOnScreen else {
+            self = live
+            return
+        }
+        let history = buffer.unreadByReadPosition
+        self.init(unread: max(live.unread, history.unread), mentions: max(live.mentions, history.mentions))
+    }
+}
+
+extension BufferModel {
+    /// What's unread going by the read position alone: messages, actions
+    /// and notices from others newer than ``lastReadAt``, among the lines
+    /// in memory (the newest from history, restored when Vela starts, and
+    /// everything since). Counted the way live lines are, so a private
+    /// conversation's messages are mentions too. A buffer never read (no
+    /// read position) has every line unread, as its New marker does.
+    public var unreadByReadPosition: UnreadTally {
+        let readTo = lastReadAt ?? .distantPast
+        var tally = UnreadTally(unread: 0, mentions: 0)
+        // Lines are in time order: count back to the read position.
+        for line in lines.reversed() {
+            guard line.time > readTo else { break }
+            guard line.kind.isConversation, !line.isSelf, !line.isRedacted else { continue }
+            tally.unread += 1
+            if line.isHighlight || (kind == .query && line.kind != .notice) { tally.mentions += 1 }
+        }
+        return tally
+    }
+}
+
 extension AppModel {
     // MARK: Buffers
 
@@ -88,35 +139,58 @@ extension AppModel {
     }
 
     /// The unmuted channel or conversation with the most unread lines (ties
-    /// go to more mentions, then sidebar order), for "Catch Me Up".
+    /// go to more mentions, then sidebar order), for "Catch Me Up". Counted
+    /// with ``unreadTally(for:)``.
     public var busiestUnreadBuffer: BufferModel? {
-        var best: BufferModel?
-        for buffer in conversationBuffers where !buffer.isMuted && buffer.unreadCount > 0 {
+        var best: (buffer: BufferModel, tally: UnreadTally)?
+        for buffer in conversationBuffers where !buffer.isMuted {
+            let tally = unreadTally(for: buffer)
+            guard tally.unread > 0 else { continue }
             guard let current = best else {
-                best = buffer
+                best = (buffer, tally)
                 continue
             }
-            if buffer.unreadCount > current.unreadCount
-                || (buffer.unreadCount == current.unreadCount && buffer.highlightCount > current.highlightCount) {
-                best = buffer
+            if tally.unread > current.tally.unread
+                || (tally.unread == current.tally.unread && tally.mentions > current.tally.mentions) {
+                best = (buffer, tally)
             }
         }
-        return best
+        return best?.buffer
+    }
+
+    /// Unread lines and mentions in `buffer`, as Siri and Shortcuts count
+    /// them: the live counts, or what's newer than the read position in
+    /// the lines Vela has (``BufferModel/unreadByReadPosition``), whichever
+    /// is more. Live counts start at zero when Vela starts (Siri may have
+    /// just launched it), while the history restored for each buffer shows
+    /// what arrived after you last read it. The buffer on screen while Vela
+    /// is the active app has nothing unread. Demo mode uses its live counts
+    /// only: its sample content sets them directly, with no read positions.
+    public func unreadTally(for buffer: BufferModel) -> UnreadTally {
+        if isDemo { return UnreadTally(unread: buffer.unreadCount, mentions: buffer.highlightCount) }
+        return UnreadTally(buffer: buffer, isOnScreen: isBufferVisible(buffer.id) && Self.isAppActive)
+    }
+
+    /// Whether Vela is the active app. (A window's focus alone isn't
+    /// enough: before the first window reports in, it counts as focused.)
+    private static var isAppActive: Bool {
+        (NSApp as NSApplication?)?.isActive == true
     }
 
     // MARK: Mentions
 
-    /// Buffers with mentions, in sidebar order.
+    /// Buffers with mentions, in sidebar order, counted with ``unreadTally(for:)``.
     public var mentionSummary: MentionSummary {
         let entries = conversationBuffers.compactMap { buffer -> MentionSummary.Entry? in
-            guard buffer.highlightCount > 0, let session = session(for: buffer.id.networkID) else { return nil }
+            let tally = unreadTally(for: buffer)
+            guard tally.mentions > 0, let session = session(for: buffer.id.networkID) else { return nil }
             return MentionSummary.Entry(
                 bufferID: buffer.id,
                 name: buffer.name,
                 networkName: session.displayName,
                 isPrivate: buffer.kind == .query,
-                mentions: buffer.highlightCount,
-                unread: buffer.unreadCount
+                mentions: tally.mentions,
+                unread: tally.unread
             )
         }
         return MentionSummary(entries: entries)

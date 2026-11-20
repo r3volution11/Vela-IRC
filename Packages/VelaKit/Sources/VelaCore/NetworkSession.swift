@@ -239,6 +239,8 @@ public final class NetworkSession: Identifiable {
     }
 
     @ObservationIgnored private var autoRejoin: [String: Bool] = [:]
+    /// Recent lines still loading from the store (``recentHistoryLoaded()``).
+    private let historyLoads = PendingWork()
 
     public func connect() {
         userRequestedDisconnect = false
@@ -1591,12 +1593,21 @@ public final class NetworkSession: Identifiable {
     private func loadRecentScrollback(for buffer: BufferModel) {
         guard let database else { return }
         let key = buffer.id.storeKey
+        historyLoads.begin()
         Task { [weak self] in
+            defer { self?.historyLoads.end() }
             guard let records = try? await database.latestMessages(in: key, limit: 200) else { return }
             buffer.insertSorted(records.map(ChatLine.init(record:)))
             buffer.hasMoreHistory = true
             await self?.loadReactions(for: records.compactMap(\.msgid), in: buffer)
         }
+    }
+
+    /// Returns once the recent lines of every buffer restored or opened
+    /// so far have loaded from the message store (`AppModel.ready()`
+    /// waits for this, so Siri counts unread lines from them).
+    public func recentHistoryLoaded() async {
+        await historyLoads.wait()
     }
 
     func updateMember(_ nick: String, _ update: (inout Member) -> Void) {

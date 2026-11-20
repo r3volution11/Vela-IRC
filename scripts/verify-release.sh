@@ -13,6 +13,9 @@
 #   • CFBundleShortVersionString and CFBundleVersion are the version and build;
 #   • it runs on Apple silicon and Intel (arm64 and x86_64);
 #   • the App Sandbox entitlement is on;
+#   • its App Intents metadata has every App Shortcut, Catch Me Up and Open
+#     Channel, and the VelaIntents package (check_app_intents in
+#     scripts/lib/release-checks.zsh);
 #   • codesign --verify --deep --strict passes;
 #   • it's signed with a Developer ID Application certificate (of --team, if
 #     given), with a secure timestamp;
@@ -162,6 +165,9 @@ else
   check_fail "App Sandbox" "the com.apple.security.app-sandbox entitlement is missing" \
     "Check CODE_SIGN_ENTITLEMENTS (Vela/Vela.entitlements) in the Release configuration."
 fi
+
+# Siri, Shortcuts and Spotlight: the App Intents metadata (lib/release-checks.zsh).
+check_app_intents "$app" Vela/VelaShortcuts.swift
 
 if verify_output=$(codesign --verify --deep --strict "$app" 2>&1); then
   check_pass "Signature" "codesign --verify --deep --strict passes"

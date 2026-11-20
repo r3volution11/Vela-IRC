@@ -39,8 +39,9 @@ public final class AppModel: SessionHost {
     public private(set) var sessions: [NetworkSession] = []
     public private(set) var selectedBufferID: BufferID?
     public private(set) var lastError: String?
-    /// True once ``start()`` has restored saved networks and buffers (at
-    /// once in demo mode). Siri and Shortcuts wait for it with ``ready()``.
+    /// True once ``start()`` has restored saved networks and buffers, with
+    /// each buffer's recent history (at once in demo mode). Siri and
+    /// Shortcuts wait for it with ``ready()``.
     public private(set) var isReady = false
     /// The latest request to bring a buffer on screen from outside the
     /// window (Siri, Shortcuts, Spotlight). The scene layer selects it,
@@ -174,10 +175,14 @@ public final class AppModel: SessionHost {
         Task {
             for session in sessions { await session.restoreBuffers() }
             restoreSelection()
-            markReady()
             for session in sessions where session.config.autoConnect && !isOrphanedChild(session) {
                 session.connect()
             }
+            // Siri and Shortcuts count what's unread from each buffer's
+            // restored history (live counts start at zero), so readiness
+            // waits for it too.
+            for session in sessions { await session.recentHistoryLoaded() }
+            markReady()
         }
         observeSystem()
         observeDockSettings()
@@ -189,7 +194,8 @@ public final class AppModel: SessionHost {
 
     /// Starts Vela if it hasn't been (Siri and Shortcuts can run before the
     /// main window appears) and waits until saved networks and buffers are
-    /// restored. Connections may still be in progress.
+    /// restored, and each buffer's recent lines have loaded from the
+    /// message store. Connections may still be in progress.
     public func ready() async {
         start()
         guard !isReady else { return }

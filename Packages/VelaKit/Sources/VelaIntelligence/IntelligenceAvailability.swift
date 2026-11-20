@@ -65,20 +65,31 @@ nonisolated public enum IntelligenceStatus: Equatable, Sendable {
     }
 }
 
-/// Tracks ``IntelligenceStatus``. The live instance re-checks whenever Vela
-/// becomes active, so turning Apple Intelligence on in System Settings
-/// shows up without a relaunch.
+/// Tracks ``IntelligenceStatus``. The live instance follows the system
+/// model as it changes (`SystemLanguageModel` is observable), so a model
+/// that finishes downloading while Vela is in front, or Apple Intelligence
+/// turned on in System Settings, shows up at once. It also re-checks
+/// whenever Vela becomes active, in case a change slipped by.
 @Observable
 public final class IntelligenceAvailability {
     public private(set) var status: IntelligenceStatus
 
     @ObservationIgnored private let probe: () -> IntelligenceStatus
+    @ObservationIgnored private let tracksChanges: Bool
+    /// One observation of what the probe reads is outstanding at a time.
+    @ObservationIgnored private var isTracking = false
     @ObservationIgnored private var observer: NSObjectProtocol?
 
-    /// - Parameter probe: Returns the current status; called on refresh.
-    public init(probe: @escaping () -> IntelligenceStatus) {
+    /// - Parameters:
+    ///   - probe: Returns the current status; called on refresh.
+    ///   - tracksChanges: Refresh whenever observable state the probe read
+    ///     changes (Swift Observation; for the live probe, the system
+    ///     model's availability). No polling: the probe runs once per change.
+    public init(probe: @escaping () -> IntelligenceStatus, tracksChanges: Bool = false) {
         self.probe = probe
+        self.tracksChanges = tracksChanges
         self.status = probe()
+        if tracksChanges { refresh() }
     }
 
     /// A fixed status, for demo mode and tests.
@@ -86,9 +97,9 @@ public final class IntelligenceAvailability {
         IntelligenceAvailability { status }
     }
 
-    /// The real status from `SystemLanguageModel.default`.
+    /// The real status from `SystemLanguageModel.default`, kept current.
     public static func live() -> IntelligenceAvailability {
-        let availability = IntelligenceAvailability(probe: systemStatus)
+        let availability = IntelligenceAvailability(probe: systemStatus, tracksChanges: true)
         availability.observer = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
             object: nil,
@@ -100,8 +111,24 @@ public final class IntelligenceAvailability {
     }
 
     public func refresh() {
-        let current = probe()
+        let current = read()
         if current != status { status = current }
+    }
+
+    /// The probe's answer. While changes are tracked and nothing is
+    /// watching yet, it also watches what the probe read, to refresh once
+    /// that changes (and watch again then).
+    private func read() -> IntelligenceStatus {
+        guard tracksChanges, !isTracking else { return probe() }
+        isTracking = true
+        return withObservationTracking(probe) { [weak self] in
+            // Called as the change is made, on whichever thread made it:
+            // read the new value afterwards, on the main actor.
+            Task { @MainActor in
+                self?.isTracking = false
+                self?.refresh()
+            }
+        }
     }
 
     private static func systemStatus() -> IntelligenceStatus {

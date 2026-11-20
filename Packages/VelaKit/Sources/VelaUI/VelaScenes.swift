@@ -19,6 +19,18 @@ public struct VelaScenes: Scene {
     @State private var services: SceneServices
     @State private var siri: SiriSceneSupport
 
+    /// Makes the app's models and services and registers them with App
+    /// Intents (`AppDependencyManager`). Call it from the app's `init()`,
+    /// as Apple's App Intents pattern does: Siri and Shortcuts can launch
+    /// Vela to run an action, and its dependencies must be registered
+    /// before the action runs, not whenever SwiftUI first builds the
+    /// scenes. ``init(appShortcuts:)`` reuses what this made.
+    ///
+    /// - Parameter appShortcuts: As for ``init(appShortcuts:)``.
+    public static func prepare(appShortcuts: (any AppShortcutsProvider.Type)? = nil) {
+        _ = AppInstances.shared(appShortcuts: appShortcuts)
+    }
+
     /// - Parameter appShortcuts: The app's App Shortcuts, refreshed when
     ///   channels change so phrases like "Open #vela in Vela" stay current.
     public init(appShortcuts: (any AppShortcutsProvider.Type)? = nil) {
@@ -133,7 +145,8 @@ private final class AppInstances {
         let uiState = UIState()
         let services = SceneServices(intelligence: demo ? .demo() : .live())
         // Siri, Shortcuts and Spotlight run App Intents in this process;
-        // they reach the same model and services through dependencies.
+        // they reach the same model and services through dependencies,
+        // registered here once, from the app's init (`VelaScenes.prepare`).
         AppDependencyManager.shared.add(dependency: app)
         AppDependencyManager.shared.add(dependency: services.intelligence)
         if SnapshotSupport.isActive {

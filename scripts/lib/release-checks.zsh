@@ -1,6 +1,7 @@
 # Shared by scripts/release.sh, scripts/release-preflight.sh and
 # scripts/verify-release.sh (sourced, not run): PASS/FAIL/SKIP results, the
-# summary at the end, and reading the Vela target's build settings.
+# summary at the end, reading the Vela target's build settings, and checking
+# a built app's App Intents metadata.
 #
 # Each result is printed as it happens and kept for the summary. When
 # RELEASE_CHECKS_RESULTS names a file, results are appended to it too, one per
@@ -105,4 +106,59 @@ vela_setting() {
     fi
   done
   return 1
+}
+
+# check_app_intents <Vela.app> <shortcuts source>: the App Intents metadata
+# Siri, Shortcuts and Spotlight read from the app, as Xcode's
+# appintentsmetadataprocessor wrote it to
+# Contents/Resources/Metadata.appintents:
+#   • extract.actionsdata has as many App Shortcuts as the shortcuts source
+#     (Vela/VelaShortcuts.swift) declares with AppShortcut(…);
+#   • its actions include CatchMeUpIntent and OpenChannelIntent from the
+#     VelaIntents module;
+#   • extract.packagedata includes the VelaIntents package
+#     (VelaIntentsPackage), which brings in the package's intents.
+# A metadata problem doesn't stop the build, so this is where it shows.
+check_app_intents() {
+  local app=$1 source=$2 id name included
+  local metadata="$app/Contents/Resources/Metadata.appintents"
+  local actions="$metadata/extract.actionsdata" packages="$metadata/extract.packagedata"
+  local fix="Read the appintentsmetadataprocessor lines in build/release/archive.log, fix what they point at and build again."
+  local -i expected found
+  local -a missing
+  # plutil reads the JSON files too (but -lint only checks property lists).
+  if [[ ! -f $actions ]] || ! plutil -type actions "$actions" >/dev/null 2>&1; then
+    check_fail "App Intents metadata" "Contents/Resources/Metadata.appintents/extract.actionsdata is missing or unreadable" "$fix"
+    return 0
+  fi
+
+  expected=$(grep -cE '^[[:space:]]*AppShortcut\(' "$source" 2>/dev/null) || expected=0
+  found=$(plutil -extract autoShortcuts raw -o - "$actions" 2>/dev/null) || found=-1
+  if (( expected == 0 )); then
+    check_fail "App Shortcuts" "couldn't count the AppShortcut(…) entries in $source" \
+      "Check that $source is the app's AppShortcutsProvider."
+  elif (( found == expected )); then
+    check_pass "App Shortcuts" "$found, as in ${source:t}"
+  else
+    check_fail "App Shortcuts" "the app has $(( found < 0 ? 0 : found )), ${source:t} declares $expected" "$fix"
+  fi
+
+  for id in CatchMeUpIntent OpenChannelIntent; do
+    name=$(plutil -extract "actions.$id.fullyQualifiedTypeName" raw -o - "$actions" 2>/dev/null) || name=""
+    [[ $name == "VelaIntents.$id" ]] || missing+=($id)
+  done
+  if (( ${#missing} )); then
+    check_fail "App Intents actions" "${(j:, :)missing} missing from the metadata" "$fix"
+  else
+    found=$(plutil -extract actions raw -o - "$actions" 2>/dev/null | grep -c .) || found=0
+    check_pass "App Intents actions" "CatchMeUpIntent and OpenChannelIntent from VelaIntents ($found actions in all)"
+  fi
+
+  included=$(plutil -extract includes json -o - "$packages" 2>/dev/null) || included=""
+  if [[ $included == *11VelaIntents*PackageV* ]]; then
+    check_pass "App Intents package" "VelaIntentsPackage is included"
+  else
+    check_fail "App Intents package" "extract.packagedata doesn't include VelaIntentsPackage" \
+      "Check that VelaAppIntentsPackage in Vela/VelaShortcuts.swift lists VelaIntentsPackage, then build again."
+  fi
 }

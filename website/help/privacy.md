@@ -27,7 +27,7 @@ Vela never fetches previews from your local network (`localhost`, private IP add
 - **Catch me up and translation run on your Mac.** Summaries come from the Apple Intelligence model on your Mac, and translations from Apple's Translation framework. Your conversations aren't sent to Apple, to Vela's developers or anyone else, and summaries and translations are kept only in memory. See [Apple Intelligence & translation](/guide/apple-intelligence#privacy).
 - **Translation languages come from Apple.** The first time you translate from a language, macOS asks to download it, and downloads it from Apple once.
 - **Writing Tools is Apple's.** When you use it, Vela hands it the text in the message field, and Apple Intelligence handles it as it does in any app.
-- **Spotlight gets names only:** your channel and conversation names and their networks, never messages. Turn off **Show channels in Spotlight** in **Settings → Apple Intelligence** to remove them.
+- **Spotlight gets names only:** your channel and conversation names and their networks, never messages. Turn off **Show channels in Spotlight** in **Settings → Apple Intelligence** to remove them from Spotlight's results. On macOS 27, the same names are also kept for Siri, hidden from Spotlight's results, so Siri can find a channel or a nick when you ask it to send a message; the setting doesn't remove those. See [Spotlight](/guide/siri-shortcuts#spotlight).
 - **Siri learns where you send messages.** When you send one, Vela tells Siri which channel it went to, so Siri can suggest it later; it never shares the text. What you say to Siri is handled by Siri, under Apple's privacy policy. See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts#privacy).
 
 ## What other IRC users can see
@@ -48,7 +48,7 @@ Everything stays on your Mac, inside Vela's sandbox container:
 - **Settings, networks and themes** as plain files you can read.
 - **Passwords, channel keys and client certificates** in your macOS Keychain, never in plain files.
 
-Outside the container, macOS keeps your channel and conversation names in Spotlight's index (unless you turn off **Show channels in Spotlight**), and the translation languages you've downloaded.
+Outside the container, macOS keeps your channel and conversation names in Spotlight's index (as search results unless you turn off **Show channels in Spotlight**, and on macOS 27 also hidden from results, for Siri), and the translation languages you've downloaded.
 
 Vela is sandboxed: it can only reach its own container and files you choose, such as a theme you import or a folder for chat logs. See [where files live](/help/troubleshooting#where-files-live) and [how to remove everything](/guide/install#uninstalling).
 

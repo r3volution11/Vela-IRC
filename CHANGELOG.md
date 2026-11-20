@@ -20,6 +20,13 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 - **Name the network to Siri.** "Open #vela on Libera.Chat in Vela", or just "on Libera", picks the channel on that network when you're in channels with the same name on more than one. It works in every phrase that names a channel.
 - **Settings → Apple Intelligence** shows a fixed example phrase, using Vela's own channel, instead of the name of one of your channels.
+- **Apple Intelligence turns on as soon as it's ready.** When macOS finishes downloading the model while Vela is in front, Catch me up and Settings → Apple Intelligence update at once, instead of waiting until you switch away from Vela and back.
+- **Catch Me Up and Check Mentions are right after Siri opens Vela.** They count what's unread from where you last read each channel, so they no longer say "You're all caught up" or "You have no new mentions" before Vela has loaded its history.
+- **Siri's Catch Me Up covers the newest 100 messages,** so the answer comes quickly, and says when there were more ("From the latest 100 of 412 messages in #vela: …"). The **Catch me up** button in a channel still covers up to 600.
+- **Show channels in Spotlight** only takes your channels out of Spotlight's results now. On macOS 27, Siri still finds channels and nicks by name when it's off.
+- **Spotlight keeps up after a hiccup.** A Spotlight update that fails is tried again, a little later each time, and updates no longer run over each other.
+- **Settings no longer promise "summarize this" on macOS 27.** macOS gives apps no public way to let Siri summarize what's on screen; ask it to "Catch me up on #vela in Vela" instead.
+- **Siri can run an action the moment it opens Vela.** Vela sets up what its actions need as it starts, rather than when it sets up its windows.
 
 ## 1.0.0 - 2026-11-18
 

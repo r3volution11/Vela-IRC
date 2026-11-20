@@ -87,6 +87,8 @@ If a summary looks wrong, click a topic to read the messages behind it, or click
 
 Open Vela once, so macOS registers its actions. If Vela's actions still don't appear, check that there's **only one copy of Vela.app** on your Mac (an old copy in Downloads, or one you built yourself, confuses macOS about which to use), delete the others, and open Vela from Applications. See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts#troubleshooting).
 
+**Siri doesn't understand "Catch me up in Vela" and the other phrases.** They're in English, so they work when Siri's language is English (**System Settings → Apple Intelligence & Siri → Language**). In other languages, use Vela's actions in the **Shortcuts** app instead.
+
 ## macOS asks about the Keychain
 
 Vela keeps passwords, channel keys and client certificates in your login keychain, where macOS lets only the copy of Vela that saved them read them. Every release is signed by the same developer, so updating Vela never asks.

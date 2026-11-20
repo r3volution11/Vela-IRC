@@ -16,11 +16,11 @@ struct IntelligenceSiriSection: View {
         @Bindable var settings = app.settings
         SettingsSection(
             "Siri & Shortcuts",
-            footer: "On macOS 27 or later, Siri can also send and draft messages, and knows which channel is open, so “reply to this” and “summarize this” work."
+            footer: "On macOS 27 or later, Siri can also send and draft messages, and knows which channel is open, so “reply to this” works."
         ) {
             SettingsToggle(
                 "Show channels in Spotlight",
-                detail: "Channel and conversation names only, never messages.",
+                detail: "Channel and conversation names in Spotlight's results, never messages. Siri still finds them by name when this is off.",
                 isOn: $settings[.intelligenceSpotlightChannels]
             )
             SiriPhrasesRow(phrases: Self.phrases)

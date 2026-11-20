@@ -659,7 +659,7 @@ extension SettingKey where Value == Bool {
     }
     public static var intelligenceSpotlightChannels: SettingKey<Bool> {
         .init("intelligence.spotlightChannels", default: true,
-              summary: "List your channels and conversations in Spotlight. Names only, never messages.")
+              summary: "List your channels and conversations in Spotlight's results. Names only, never messages. Siri finds them by name either way.")
     }
 }
 

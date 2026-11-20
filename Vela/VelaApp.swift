@@ -7,6 +7,12 @@ import VelaUI
 
 @main
 struct VelaApp: App {
+    init() {
+        // Siri and Shortcuts can launch Vela to run an action: register
+        // its App Intents dependencies now, before anything can ask.
+        VelaScenes.prepare(appShortcuts: VelaShortcuts.self)
+    }
+
     var body: some Scene {
         VelaScenes(appShortcuts: VelaShortcuts.self)
     }
