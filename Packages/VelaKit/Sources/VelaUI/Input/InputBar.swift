@@ -132,6 +132,8 @@ struct InputBar: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: replyTarget?.id)
         .onAppear(perform: restoreDraft)
         .onChange(of: text) { _, newValue in saveDraft(newValue) }
+        // For F6, which goes on from the area that has the focus.
+        .onChange(of: isFocused) { _, focused in uiState.setFocused(.messageBox, focused) }
         // A draft put in from outside (Siri's "draft a message") while this
         // channel is already open.
         .onChange(of: uiState.drafts[buffer.id]) { _, draft in
@@ -171,6 +173,7 @@ struct InputBar: View {
                     isFocused: $isFocused,
                     appearance: appearance,
                     focusRequest: uiState.focusInputToken,
+                    yieldsFocus: { [uiState] in uiState.focusedArea.map { $0 != .messageBox } ?? false },
                     insertion: insertion,
                     actions: actions
                 )

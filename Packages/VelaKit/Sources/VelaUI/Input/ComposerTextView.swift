@@ -85,6 +85,10 @@ struct ComposerTextView: NSViewRepresentable {
     var appearance: ComposerAppearance
     /// Changing this focuses the editor.
     var focusRequest: Int
+    /// Whether another area of the window has the keyboard focus (the
+    /// sidebar, the messages, the member list): a new editor, after
+    /// switching channels, then leaves it there instead of taking it.
+    var yieldsFocus: () -> Bool = { false }
     var insertion: ComposerInsertion?
     var maxLines = 8
     var actions: ComposerActions
@@ -140,7 +144,10 @@ struct ComposerTextView: NSViewRepresentable {
         textView.onPaste = { [weak coordinator] text in coordinator?.parent.actions.interceptPaste(text) ?? false }
         textView.onFocusChange = { [weak coordinator] focused in coordinator?.focusChanged(focused) }
         textView.onWidthChange = { [weak coordinator] in coordinator?.updateHeight(deferred: true) }
-        textView.onAttachedToWindow = { [weak coordinator] in coordinator?.focus(force: false) }
+        textView.onAttachedToWindow = { [weak coordinator] in
+            guard let coordinator, !coordinator.parent.yieldsFocus() else { return }
+            coordinator.focus(force: false)
+        }
         textView.onTextCheckingToggle = { [weak coordinator] toggle, isOn in coordinator?.textCheckingToggled(toggle, isOn: isOn) }
         textView.onWillCheckText = { [weak coordinator] in coordinator?.refreshIgnoredWords() }
         textView.textCheckingFilter = { [weak coordinator] results in coordinator?.filter(results) ?? results }
