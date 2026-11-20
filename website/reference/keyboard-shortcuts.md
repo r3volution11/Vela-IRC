@@ -1,6 +1,6 @@
 ---
 title: Keyboard shortcuts
-description: Every keyboard shortcut in Vela, the native macOS IRC client, from the command palette and quick switcher to navigation, the message field, picking and acting on messages, the settings editor and the theme editor.
+description: "Every keyboard shortcut in Vela, the native macOS IRC client: the command palette, moving around, the sidebar and tabs, messages, the member list, settings and the theme editor."
 ---
 
 # Keyboard shortcuts

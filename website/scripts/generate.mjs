@@ -419,11 +419,16 @@ if (existsSync(join(repo, catalogPath))) {
   const keyGlyphs = { upArrow: '↑', downArrow: '↓', leftArrow: '←', rightArrow: '→', return: '↩', escape: '⎋', tab: '⇥' }
   const shortcutsPage = readFileSync(join(website, 'reference/keyboard-shortcuts.md'), 'utf8').replace(/−/g, '-')
   const shortcutRE = /static let (\w+) = KeyboardShortcut\((?:"(.)"|\.(\w+)), modifiers: \[?([^\])]*)\]?\)/g
-  for (const [, name, char, special, modifiers] of catalog.matchAll(shortcutRE)) {
+  // Menus need a shifted character (⌘{), not ⇧ and its key; the page
+  // shows the keys you press (⇧⌘[), as ShortcutGlyphs does.
+  const unshifted = { '{': '[', '}': ']' }
+  for (const [, name, written, special, modifiers] of catalog.matchAll(shortcutRE)) {
+    const char = written && (unshifted[written] ?? written)
+    const shift = modifiers.includes('.shift') || (written && written in unshifted)
     const glyphs =
       (modifiers.includes('.control') ? '⌃' : '') +
       (modifiers.includes('.option') ? '⌥' : '') +
-      (modifiers.includes('.shift') ? '⇧' : '') +
+      (shift ? '⇧' : '') +
       (modifiers.includes('.command') ? '⌘' : '') +
       (char ? char.toUpperCase() : keyGlyphs[special] ?? special)
     if (!shortcutsPage.includes(glyphs)) warn(`${glyphs} (${name}) isn't documented in reference/keyboard-shortcuts.md`)
