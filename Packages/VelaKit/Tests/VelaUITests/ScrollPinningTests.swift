@@ -157,11 +157,68 @@ struct ScrollPinningTests {
 
     @Test func gestureEndingNearTheBottomRepins() {
         var near = pinning(pinned: false, at: at(distance: 30))
-        near.gestureEnded()
+        _ = near.gestureEnded()
         #expect(near.isPinned)
         var far = pinning(pinned: false, at: at(distance: 300))
-        far.gestureEnded()
+        _ = far.gestureEnded()
         #expect(!far.isPinned)
+    }
+
+    /// New lines (or a sent message) during a gesture that never left the
+    /// bottom: the list doesn't scroll under the reader's fingers, so it
+    /// follows when the gesture ends. Nothing else would: its geometry has
+    /// stopped changing.
+    @Test func aFollowHeldBackDuringAGestureHappensWhenItEnds() {
+        // Lines arrived (the list now 60 pt short) while fingers rested on
+        // the trackpad.
+        var resting = pinning(pinned: true, at: at(distance: 0))
+        _ = resting.update(at(distance: 60, content: 3060), driver: .user)
+        resting.holdBackFollow()
+        #expect(resting.followHeldBack)
+        let follows = resting.gestureEnded()
+        #expect(follows)
+        #expect(resting.isPinned)
+        #expect(!resting.followHeldBack)
+        // Reported once.
+        let again = resting.gestureEnded()
+        #expect(!again)
+
+        // At the bottom by the end (the anchor kept it there): nothing to do.
+        var kept = pinning(pinned: true, at: at(distance: 0))
+        kept.holdBackFollow()
+        _ = kept.update(at(distance: 0, content: 3060), driver: .user)
+        let keptFollows = kept.gestureEnded()
+        #expect(!keptFollows)
+
+        // Nothing held back: a peek within the tolerance stays where the
+        // reader left it.
+        var peek = pinning(pinned: true, at: at(distance: 0))
+        _ = peek.update(at(distance: 30), driver: .user)
+        let peekFollows = peek.gestureEnded()
+        #expect(!peekFollows)
+        #expect(peek.isPinned)
+    }
+
+    /// A reader who scrolled away during the gesture isn't brought back.
+    @Test func aFollowHeldBackIsDroppedWhenTheReaderScrollsAway() {
+        var away = pinning(pinned: true, at: at(distance: 0))
+        away.holdBackFollow()
+        _ = away.update(at(distance: 400), driver: .user)
+        #expect(!away.isPinned)
+        let follows = away.gestureEnded()
+        #expect(!follows)
+        #expect(!away.isPinned)
+
+        // Unpinned already: nothing to hold back.
+        var unpinned = pinning(pinned: false, at: at(distance: 400))
+        unpinned.holdBackFollow()
+        #expect(!unpinned.followHeldBack)
+
+        // Jumping to a message drops it too.
+        var jumped = pinning(pinned: true, at: at(distance: 0))
+        jumped.holdBackFollow()
+        jumped.unpin()
+        #expect(!jumped.followHeldBack)
     }
 
     @Test func unpinnedFollowsAgainOnceTheBottomIsInView() {
@@ -232,6 +289,51 @@ struct ScrollPinningTests {
         let r139 = far.settle()
         #expect(!r139)
         #expect(!far.isPinned)
+    }
+}
+
+@Suite("The clip view in step")
+struct ClipViewSyncTests {
+    /// SwiftUI reports the list at 2616 while the clip view stayed at 2585
+    /// (seen when the composer grew a line): scroll, once.
+    @Test func aClipViewOutOfStepIsScrolledForOnce() {
+        var sync = ClipViewSync()
+        let first = sync.needsScroll(reportedMinY: 2616, clipMinY: 2585)
+        #expect(first)
+        // The same difference again, with no sign the scroll fixed it:
+        // something a scroll can't fix, so it's left alone.
+        let repeated = sync.needsScroll(reportedMinY: 2616, clipMinY: 2585)
+        #expect(!repeated)
+        // Another difference is.
+        let other = sync.needsScroll(reportedMinY: 2632, clipMinY: 2585)
+        #expect(other)
+    }
+
+    /// Once the scroll brought the two together, the same difference
+    /// coming back (the composer growing another line) is scrolled for.
+    @Test func aDifferenceIsScrolledForAgainOnceTheyAgreed() {
+        var sync = ClipViewSync()
+        let first = sync.needsScroll(reportedMinY: 2601, clipMinY: 2585)
+        #expect(first)
+        sync.observe(reportedMinY: 2601, clipMinY: 2601)
+        #expect(sync.resynced == nil)
+        let next = sync.needsScroll(reportedMinY: 2617, clipMinY: 2601)
+        #expect(next)
+        // Still apart after the scroll: remembered.
+        sync.observe(reportedMinY: 2617, clipMinY: 2601)
+        #expect(sync.resynced != nil)
+    }
+
+    /// Within a point (fractions of a point rounded to the display's
+    /// pixels) the two agree.
+    @Test func withinAPointTheyAgree() {
+        var sync = ClipViewSync()
+        let half = sync.needsScroll(reportedMinY: 2616.5, clipMinY: 2616)
+        #expect(!half)
+        let one = sync.needsScroll(reportedMinY: 2617, clipMinY: 2616)
+        #expect(!one)
+        let more = sync.needsScroll(reportedMinY: 2618, clipMinY: 2616)
+        #expect(more)
     }
 }
 

@@ -50,6 +50,11 @@ final class MessageListController {
     /// The checks that a scroll to the bottom got there
     /// (`MessageListView.scrollToBottom`).
     @ObservationIgnored var bottomCheck: Task<Void, Never>?
+    /// The `NSScrollView` behind the list (`ListScrollViewProbe`), whose
+    /// clip view is where the list really is (`ClipViewSync`).
+    @ObservationIgnored weak var scrollView: NSScrollView?
+    @ObservationIgnored private var clipSync = ClipViewSync()
+    @ObservationIgnored private var clipCheckQueued = false
     /// The user is dragging or flinging the list (trackpad or wheel gesture).
     @ObservationIgnored private(set) var isUserScrolling = false
     @ObservationIgnored private var programmaticScrollEnds = Date.distantPast
@@ -131,7 +136,11 @@ final class MessageListController {
             let anew = self.followsAnew
             self.followQueued = false
             self.followsAnew = false
-            guard self.isPinnedToBottom, !self.isUserScrolling else { return }
+            guard self.isPinnedToBottom else { return }
+            guard !self.isUserScrolling else {
+                self.holdBackFollow()
+                return
+            }
             // Got there meanwhile (the space after the last row came into
             // view), unless that's what SwiftUI says and can't be taken at
             // its word.
@@ -140,20 +149,55 @@ final class MessageListController {
         }
     }
 
+    /// Whether the clip view shows the list where SwiftUI reports it, on
+    /// the next main-actor turn (once the change being reported has been
+    /// laid out), while the list follows the newest line at the bottom with
+    /// nothing else moving it. `scrollToBottom` brings the clip view there
+    /// when it doesn't (`ClipViewSync`). Once per turn however many
+    /// geometry changes ask; a comparison of two numbers.
+    func queueClipCheck(_ scrollToBottom: @escaping @MainActor () -> Void) {
+        guard !clipCheckQueued, scrollView != nil else { return }
+        clipCheckQueued = true
+        Task { [weak self] in
+            guard let self else { return }
+            self.clipCheckQueued = false
+            guard self.isPinnedToBottom, self.scrollDriver == .idle,
+                  let metrics = self.metrics, ScrollPinning.isAtBottom(metrics),
+                  let clipMinY = self.scrollView?.contentView.bounds.minY else { return }
+            if self.clipSync.needsScroll(reportedMinY: metrics.visibleMinY, clipMinY: clipMinY) { scrollToBottom() }
+        }
+    }
+
+    /// Notes, during the checks after a scroll to the bottom, whether the
+    /// clip view shows the list where SwiftUI reports it
+    /// (`ClipViewSync.observe(reportedMinY:clipMinY:)`).
+    func noteClipView() {
+        guard let metrics, let clipMinY = scrollView?.contentView.bounds.minY else { return }
+        clipSync.observe(reportedMinY: metrics.visibleMinY, clipMinY: clipMinY)
+    }
+
+    /// The list should follow the newest line while the reader scrolls: it
+    /// does when the gesture ends, if the reader stayed at the bottom.
+    func holdBackFollow() {
+        pinning.holdBackFollow()
+    }
+
     /// Tracks scroll gestures; when one ends, a reader who stopped near the
     /// bottom follows it again, and the row under the pointer shows its
-    /// hover state.
-    func scrollPhaseChanged(isUserScrolling scrolling: Bool) {
+    /// hover state. Returns true when the list should scroll to the bottom:
+    /// it followed the newest line through the gesture, and something held
+    /// back for it (new lines, a sent message) left it short.
+    func scrollPhaseChanged(isUserScrolling scrolling: Bool) -> Bool {
         let ended = isUserScrolling && !scrolling
         isUserScrolling = scrolling
-        if ended {
-            pinning.gestureEnded()
-            syncAnchor()
-            if let pending = pendingHover {
-                pendingHover = nil
-                pending.apply(true)
-            }
+        guard ended else { return false }
+        let follow = pinning.gestureEnded()
+        syncAnchor()
+        if let pending = pendingHover {
+            pendingHover = nil
+            pending.apply(true)
         }
+        return follow
     }
 
     // MARK: Hover

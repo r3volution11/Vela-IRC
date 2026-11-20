@@ -24,7 +24,9 @@ import VelaTheme
 /// nothing moves them and a "Jump to present" pill counts what's new.
 /// Sending a message always returns to the bottom. The bottom is always the
 /// space after the last row (`DisplayItemID.end`), never the content's
-/// bottom edge, which is partly estimated (see `scrollToBottom()`).
+/// bottom edge, which is partly estimated (see `scrollToBottom()`). And
+/// it's where AppKit's clip view shows the list, not only where SwiftUI
+/// reports it (`ClipViewSync`).
 ///
 /// The typing line floats over the bottom of the list; the space under the
 /// last row grows to fit it only while someone is typing (`ListEndSpacing`).
@@ -100,6 +102,7 @@ struct MessageListView: View {
             .scrollTargetLayout()
             .coordinateSpace(.named(Self.contentSpace))
             .themedScrollers()
+            .background(ListScrollViewProbe { [controller] in controller.scrollView = $0 })
         }
         .modifier(ListScrollPosition(position: $position))
         .defaultScrollAnchor(.bottom, for: .initialOffset)
@@ -116,8 +119,8 @@ struct MessageListView: View {
         }
         .onScrollPhaseChange { _, phase in
             switch phase {
-            case .tracking, .interacting, .decelerating: controller.scrollPhaseChanged(isUserScrolling: true)
-            default: controller.scrollPhaseChanged(isUserScrolling: false)
+            case .tracking, .interacting, .decelerating: _ = controller.scrollPhaseChanged(isUserScrolling: true)
+            default: if controller.scrollPhaseChanged(isUserScrolling: false) { scrollToBottom() }
             }
             updatePill()
         }
@@ -202,7 +205,7 @@ struct MessageListView: View {
         let animation = animated && !reduceMotion ? ListEndSpacing.typingAnimation : nil
         if animation != nil, controller.isPinnedToBottom, controller.scrollDriver == .idle {
             controller.beginProgrammaticScroll(for: ListEndSpacing.typingAnimationSettle) { follow in
-                if follow { scrollToBottom() }
+                if follow { scrollToBottom() } else { checkClipView() }
             }
         }
         withAnimation(animation) { typingShown = active }
@@ -238,10 +241,19 @@ struct MessageListView: View {
         controller.queueFollow(follow) { anew in
             scrollToBottom(anew: anew)
         }
+        if follow == .stay, controller.isPinnedToBottom, controller.scrollDriver == .idle {
+            checkClipView()
+        }
         if controller.isPinnedToBottom {
             markAllSeen()
         }
         updatePill()
+    }
+
+    /// At the bottom as SwiftUI reports it: makes sure the scroll view shows
+    /// that too, once this change has been laid out (`ClipViewSync`).
+    private func checkClipView() {
+        controller.queueClipCheck { scrollToBottom(anew: true) }
     }
 
     /// The space after the last row was laid out somewhere else. That can
@@ -264,15 +276,22 @@ struct MessageListView: View {
     private func linesChanged() {
         guard let change = controller.lineTracker?.update(buffer.lines) else { return }
         if change.sentMessage {
-            // Sending a message always returns to the present.
+            // Sending a message always returns to the present: now, or once
+            // the reader's gesture ends.
             controller.pin()
             markAllSeen()
             updatePill()
             scrollToBottom()
+            if controller.isUserScrolling { controller.holdBackFollow() }
         } else if controller.isPinnedToBottom {
             markAllSeen()
-            // Don't fight a gesture that's still within the bottom tolerance.
-            if !controller.isUserScrolling { scrollToBottom() }
+            // Don't fight a gesture that's still within the bottom
+            // tolerance; follow when it ends.
+            if controller.isUserScrolling {
+                controller.holdBackFollow()
+            } else {
+                scrollToBottom()
+            }
         } else {
             controller.unseenCount += change.newFromOthers
             updatePill()
@@ -321,7 +340,13 @@ struct MessageListView: View {
         var lastCheck = Date()
         while true {
             try? await Task.sleep(for: .seconds(settle.wait))
-            guard !Task.isCancelled, controller.isPinnedToBottom, !controller.isUserScrolling else { return }
+            guard !Task.isCancelled, controller.isPinnedToBottom else { return }
+            guard !controller.isUserScrolling else {
+                // Checked again when the gesture ends.
+                controller.holdBackFollow()
+                return
+            }
+            controller.noteClipView()
             let now = Date()
             let step = settle.check(
                 waited: now.timeIntervalSince(lastCheck),
@@ -373,7 +398,7 @@ struct MessageListView: View {
         let near = controller.metrics.map { $0.distanceFromBottom < $0.containerHeight * 3 } ?? true
         let animated = near && !reduceMotion
         controller.beginProgrammaticScroll(for: animated ? 0.45 : 0.15) { follow in
-            if follow { scrollToBottom() }
+            if follow { scrollToBottom() } else { checkClipView() }
         }
         withAnimation(animated ? .smooth(duration: 0.35) : nil) {
             scrollToBottom(animated: animated)

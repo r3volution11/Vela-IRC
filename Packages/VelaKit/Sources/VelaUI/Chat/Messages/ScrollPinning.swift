@@ -70,6 +70,9 @@ nonisolated struct ScrollMetrics: Equatable, Sendable {
 /// Only the reader unpins the list, by scrolling up past the tolerance in a
 /// gesture. While unpinned nothing scrolls them (except sending a message,
 /// which always returns to the present) until they come back to the bottom.
+/// Nothing scrolls under a gesture either: what it held back (new lines, a
+/// sent message) is followed when it ends, if the reader stayed at the
+/// bottom (`holdBackFollow()`, `gestureEnded()`).
 nonisolated struct ScrollPinning: Sendable {
     /// Distance from the bottom that still counts as "at the bottom".
     static let bottomTolerance: CGFloat = 40
@@ -88,6 +91,9 @@ nonisolated struct ScrollPinning: Sendable {
     private(set) var isPinned: Bool
     /// The last metrics seen.
     private(set) var metrics: ScrollMetrics?
+    /// A follow the reader's gesture held back: new lines arrived, or a
+    /// message was sent, while they scrolled without leaving the bottom.
+    private(set) var followHeldBack = false
 
     init(isPinned: Bool = true) {
         self.isPinned = isPinned
@@ -159,17 +165,33 @@ nonisolated struct ScrollPinning: Sendable {
         return new.containerHeight < previous.containerHeight - 0.5
     }
 
+    /// The list should follow the newest line, but the reader is scrolling
+    /// (`MessageListView` doesn't scroll under a gesture). It does once the
+    /// gesture ends, if it's still pinned then.
+    mutating func holdBackFollow() {
+        if isPinned { followHeldBack = true }
+    }
+
     /// A scroll gesture (and its momentum) ended: a reader who stopped near
-    /// the bottom follows it again.
-    mutating func gestureEnded() {
+    /// the bottom follows it again. Returns true when the list should scroll
+    /// to the bottom: a follow was held back during the gesture and the
+    /// list, still pinned, isn't at the bottom. (Nothing else would move it
+    /// there: its geometry has stopped changing.)
+    mutating func gestureEnded() -> Bool {
+        defer { followHeldBack = false }
         if !isPinned, let metrics, Self.isNearBottom(metrics) { isPinned = true }
+        guard isPinned, followHeldBack else { return false }
+        return !(metrics.map(Self.isAtBottom) ?? false)
     }
 
     /// Follow the bottom (sending a message, "Jump to present").
     mutating func pin() { isPinned = true }
 
     /// Stop following the bottom (jumping to a message or the unread marker).
-    mutating func unpin() { isPinned = false }
+    mutating func unpin() {
+        isPinned = false
+        followHeldBack = false
+    }
 
     /// Re-derives the state once a programmatic scroll has finished, from
     /// where it landed. Returns true when the list should scroll to the
@@ -261,6 +283,57 @@ nonisolated struct BottomSettle: Equatable, Sendable {
         let anchor = Self.anchors[(tries - 1) % Self.anchors.count]
         lastAnchor = anchor
         return .scroll(anchor: anchor)
+    }
+}
+
+// MARK: The clip view
+
+/// Whether AppKit shows the list where SwiftUI reports it.
+///
+/// On the Mac, SwiftUI's `ScrollView` is an `NSScrollView`, and an offset
+/// SwiftUI sets doesn't always reach its clip view: one that reaches it
+/// before the clip view or the document has its new size is held where
+/// AppKit allows. SwiftUI keeps reporting the offset it set, at the bottom,
+/// while the clip view shows the list short of it: the newest line stays
+/// under the list's bottom edge, under the composer, until something else
+/// scrolls it. (`ScrollPinning.mustScrollToBottomAnew` heads off the case
+/// seen most, the list getting shorter; this catches any other.)
+///
+/// So a list following the newest line compares the two once a change has
+/// been laid out (`MessageListController.queueClipCheck`), and scrolls to
+/// the bottom again when they differ. A scroll makes SwiftUI set the offset
+/// anew, which brings the clip view in line. The checks that follow that
+/// scroll (`BottomSettle`) note whether it did. A difference a scroll
+/// didn't fix isn't one a scroll can fix, so it's left alone rather than
+/// scrolled at after every change.
+nonisolated struct ClipViewSync: Equatable, Sendable {
+    /// More than this between the two is the clip view out of step.
+    static let tolerance: CGFloat = 1
+
+    /// The difference last scrolled for, until the two are seen to agree.
+    private(set) var resynced: CGFloat?
+
+    static func agree(reportedMinY: CGFloat, clipMinY: CGFloat) -> Bool {
+        abs(clipMinY - reportedMinY) <= tolerance
+    }
+
+    /// Whether the list must scroll to bring the clip view, at `clipMinY`,
+    /// to the offset SwiftUI reports, `reportedMinY`.
+    mutating func needsScroll(reportedMinY: CGFloat, clipMinY: CGFloat) -> Bool {
+        let difference = clipMinY - reportedMinY
+        guard !Self.agree(reportedMinY: reportedMinY, clipMinY: clipMinY) else {
+            resynced = nil
+            return false
+        }
+        if let resynced, abs(resynced - difference) <= 0.5 { return false }
+        resynced = difference
+        return true
+    }
+
+    /// Where the two are now, after a scroll: once they agree, the next
+    /// difference, whatever it is, is scrolled for again.
+    mutating func observe(reportedMinY: CGFloat, clipMinY: CGFloat) {
+        if Self.agree(reportedMinY: reportedMinY, clipMinY: clipMinY) { resynced = nil }
     }
 }
 
