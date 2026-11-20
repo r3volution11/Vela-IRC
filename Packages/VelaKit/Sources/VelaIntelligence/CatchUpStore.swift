@@ -26,6 +26,10 @@ public final class CatchUpCard {
     /// goes, as it does when the window loses and regains focus.
     public private(set) var marker: Date?
     public internal(set) var phase: Phase
+    /// While its summary waits its turn (summaries are written one at a
+    /// time), how many are ahead of it, the one being written included.
+    /// Nil once its own is being written, and for a finished card.
+    public internal(set) var summariesAhead: Int?
 
     /// Where the card sits in the list: before the first line newer than
     /// this. Its own marker, or the start of the buffer when it was opened
@@ -104,6 +108,12 @@ nonisolated public struct CatchUpReveal: Equatable, Sendable {
 /// leaves it, and its summary keeps being written. Each buffer's latest
 /// stretch is also remembered for the session (see ``reopen(_:reveal:)``),
 /// so its summary stays reachable after the buffer is read.
+///
+/// Summaries are written one at a time, in the order they're asked for:
+/// several at once would be heavy on a Mac with 8 GB of memory. A card
+/// whose summary is waiting says so (``CatchUpCard/summariesAhead``), and
+/// closing it takes it out of the queue. Siri's request goes to the front,
+/// since Siri is waiting for it.
 @Observable
 public final class CatchUpStore {
     /// Open cards, by buffer. Changes only when a card opens or closes;
@@ -115,7 +125,12 @@ public final class CatchUpStore {
     @ObservationIgnored private let summarizer: any ConversationSummarizer
     @ObservationIgnored private var cache: [CatchUpRangeKey: CatchUpSummary] = [:]
     @ObservationIgnored private var cacheOrder: [CatchUpRangeKey] = []
+    /// The job for each stretch being summarized or waiting its turn.
     @ObservationIgnored private var jobs: [CatchUpRangeKey: Job] = [:]
+    /// Jobs waiting their turn, next first.
+    @ObservationIgnored private var queue: [Job] = []
+    /// The job being written now; at most one at a time.
+    @ObservationIgnored private var running: Job?
     @ObservationIgnored private let cacheLimit: Int
     /// Each buffer's latest stretch, newest last; as many as the cache holds.
     @ObservationIgnored private var stretches: [BufferID: Stretch] = [:]
@@ -252,29 +267,76 @@ public final class CatchUpStore {
     /// The finished summary of `request`, from the cache when possible.
     /// Shares the work with an open card summarizing the same stretch.
     /// Errors are ``CatchUpError``s (or `CancellationError`).
-    public func summary(for request: CatchUpRequest) async throws -> CatchUpSummary {
+    ///
+    /// - Parameter urgent: Someone is waiting on it (Siri): it goes to the
+    ///   front of the queue, after the summary being written now.
+    public func summary(for request: CatchUpRequest, urgent: Bool = false) async throws -> CatchUpSummary {
+        guard let summary = try await summary(for: request, urgent: urgent, patience: nil) else {
+            throw CancellationError()
+        }
+        return summary
+    }
+
+    /// As ``summary(for:urgent:)``, waiting at most `patience`. Returns nil
+    /// when the summary isn't ready by then. It keeps being written, held
+    /// for the caller, who either opens its card (``open(_:marker:reveal:)``
+    /// with the same request, which takes it over) or lets go of it with
+    /// ``release(_:)``. Siri uses this to hand a long wait over to the card.
+    public func summary(for request: CatchUpRequest, urgent: Bool, patience: Duration?) async throws -> CatchUpSummary? {
         guard !request.lines.isEmpty else { throw CatchUpError.nothingToSummarize }
         let key = CatchUpRangeKey(request)
         if let cached = cache[key] {
             touch(key)
             return cached
         }
-        let job = jobs[key] ?? startJob(request, key: key)
-        let token = UUID()
-        job.waiters.insert(token)
-        defer { job.waiters.remove(token) }
-        let task: Task<CatchUpSummary, Error> = job.task
-        return try await withTaskCancellationHandler {
-            do {
-                return try await task.value
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch {
-                throw Self.catchUpError(error)
-            }
-        } onCancel: {
-            Task { @MainActor [weak self] in self?.stopWaiting(token, for: job) }
+        let job: Job
+        if let existing = jobs[key] {
+            job = existing
+            if urgent { moveToFront(job) }
+        } else {
+            job = startJob(request, key: key, urgent: urgent)
         }
+        let token = UUID()
+        let timer = patience.map { patience in
+            Task { [weak self] in
+                guard (try? await Task.sleep(for: patience)) != nil else { return }
+                self?.expire(token, of: job)
+            }
+        }
+        defer { timer?.cancel() }
+        do {
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    if let result = job.result {
+                        continuation.resume(with: result.map { Optional($0) })
+                    } else {
+                        job.waiters[token] = continuation
+                    }
+                }
+            } onCancel: {
+                Task { @MainActor [weak self] in
+                    if let self {
+                        self.stopWaiting(token, for: job)
+                    } else {
+                        job.waiters.removeValue(forKey: token)?.resume(throwing: CancellationError())
+                    }
+                }
+            }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw Self.catchUpError(error)
+        }
+    }
+
+    /// Lets go of a summary ``summary(for:urgent:patience:)`` held when its
+    /// patience ran out. It stops, unless a card shows it or someone else
+    /// is waiting for it.
+    public func release(_ request: CatchUpRequest) {
+        let key = CatchUpRangeKey(request)
+        guard let job = jobs[key], job.holds > 0 else { return }
+        job.holds -= 1
+        if !job.isWanted, attachedCard(key) == nil { stop(job) }
     }
 
     /// The cached summary of `request`, if there is one.
@@ -282,19 +344,108 @@ public final class CatchUpStore {
         cache[CatchUpRangeKey(request)]
     }
 
+    /// How `request` would be summarized (see ``ConversationSummarizer/plan(_:)``).
+    public func plan(for request: CatchUpRequest) async -> CatchUpPlan {
+        await summarizer.plan(request)
+    }
+
     // MARK: Jobs
 
+    /// One summary being written, or waiting its turn. Summaries are
+    /// written one at a time, in the order they were asked for (Siri's
+    /// first), so a Mac with little memory never runs several at once.
     @MainActor
     private final class Job {
+        enum Turn {
+            /// In the queue.
+            case waiting
+            /// Its summary is being written (or about to be).
+            case started
+            /// Taken out of the queue before its turn.
+            case withdrawn
+        }
+
         let key: CatchUpRangeKey
+        let request: CatchUpRequest
         /// Set right after init (the task refers back to its job).
         var task: Task<CatchUpSummary, Error>!
         var latest: CatchUpSummary?
+        private(set) var turn = Turn.waiting
+        /// The task, waiting for its turn.
+        private var turnContinuation: CheckedContinuation<Snapshots, Error>?
+        /// The summary started before the task got to wait for it.
+        private var started: Snapshots?
         /// Callers of `summary(for:)` waiting for this job.
-        var waiters: Set<UUID> = []
+        var waiters: [UUID: CheckedContinuation<CatchUpSummary?, Error>] = [:]
+        /// Siri gave up waiting and is handing the summary to its card.
+        var holds = 0
+        /// How it ended.
+        private(set) var result: Result<CatchUpSummary, Error>?
 
-        init(key: CatchUpRangeKey) {
+        typealias Snapshots = AsyncThrowingStream<CatchUpSummary, Error>
+
+        init(key: CatchUpRangeKey, request: CatchUpRequest) {
             self.key = key
+            self.request = request
+        }
+
+        /// Someone besides a card wants it.
+        var isWanted: Bool { !waiters.isEmpty || holds > 0 }
+
+        /// The summary's snapshots, once the store starts this job; throws
+        /// `CancellationError` if it's withdrawn (or its task cancelled)
+        /// first.
+        func waitForTurn() async throws -> Snapshots {
+            switch turn {
+            case .started: return try takeStarted()
+            case .withdrawn: throw CancellationError()
+            case .waiting: break
+            }
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    switch turn {
+                    case .started: continuation.resume(with: Result { try takeStarted() })
+                    case .withdrawn: continuation.resume(throwing: CancellationError())
+                    case .waiting: turnContinuation = continuation
+                    }
+                }
+            } onCancel: {
+                Task { @MainActor in self.withdraw() }
+            }
+        }
+
+        /// Its turn: the summarizer has started on it, writing `snapshots`.
+        /// Called the moment the turn comes, so the summary starts then.
+        func start(_ snapshots: Snapshots) {
+            guard turn == .waiting else { return }
+            turn = .started
+            if let turnContinuation {
+                turnContinuation.resume(returning: snapshots)
+                self.turnContinuation = nil
+            } else {
+                started = snapshots
+            }
+        }
+
+        private func takeStarted() throws -> Snapshots {
+            guard let snapshots = started else { throw CancellationError() }
+            started = nil
+            return snapshots
+        }
+
+        func withdraw() {
+            guard turn == .waiting else { return }
+            turn = .withdrawn
+            turnContinuation?.resume(throwing: CancellationError())
+            turnContinuation = nil
+        }
+
+        /// The job ended: everyone waiting gets the result.
+        func finish(_ result: Result<CatchUpSummary, Error>) {
+            self.result = result
+            let waiting = Array(waiters.values)
+            waiters.removeAll()
+            for waiter in waiting { waiter.resume(with: result.map { Optional($0) }) }
         }
     }
 
@@ -302,17 +453,22 @@ public final class CatchUpStore {
         if let cached = cache[card.key] {
             touch(card.key)
             card.phase = .done(cached)
+            card.summariesAhead = nil
             return
         }
         let job = jobs[card.key] ?? startJob(card.request, key: card.key)
         card.phase = .running(job.latest)
+        updatePlaces()
     }
 
-    private func startJob(_ request: CatchUpRequest, key: CatchUpRangeKey) -> Job {
-        let job = Job(key: key)
-        let stream = summarizer.summarize(request)
+    /// A new job for `request`, queued: at the end, or `urgent`ly at the
+    /// front. It starts at once when nothing else is being summarized.
+    private func startJob(_ request: CatchUpRequest, key: CatchUpRangeKey, urgent: Bool = false) -> Job {
+        let job = Job(key: key, request: request)
         job.task = Task { [weak self] in
             do {
+                let stream = try await job.waitForTurn()
+                try Task.checkCancellation()
                 var last: CatchUpSummary?
                 for try await snapshot in stream {
                     try Task.checkCancellation()
@@ -325,14 +481,73 @@ public final class CatchUpStore {
                 final.isRevising = false
                 final.progress = nil
                 self?.complete(final, of: job)
+                job.finish(.success(final))
+                self?.ended(job)
                 return final
             } catch {
                 self?.fail(error, of: job)
+                job.finish(.failure(error))
+                self?.ended(job)
                 throw error
             }
         }
         jobs[key] = job
+        if urgent { queue.insert(job, at: 0) } else { queue.append(job) }
+        startNext()
         return job
+    }
+
+    /// Starts the next job in the queue if none is being written, and
+    /// tells queued cards their place.
+    private func startNext() {
+        while running == nil, !queue.isEmpty {
+            let next = queue.removeFirst()
+            guard next.turn == .waiting else { continue }
+            running = next
+            next.start(summarizer.summarize(next.request))
+        }
+        updatePlaces()
+    }
+
+    /// `job`'s task is over (done, failed or stopped): the next one's turn.
+    private func ended(_ job: Job) {
+        queue.removeAll { $0 === job }
+        if running === job { running = nil }
+        startNext()
+    }
+
+    /// Siri is waiting for a queued `job`: it goes next.
+    private func moveToFront(_ job: Job) {
+        guard let index = queue.firstIndex(where: { $0 === job }), index > 0 else { return }
+        queue.remove(at: index)
+        queue.insert(job, at: 0)
+        updatePlaces()
+    }
+
+    /// Stops `job`: takes it out of the queue, or cancels it while it's
+    /// being written (which then lets the next one start).
+    private func stop(_ job: Job) {
+        job.task.cancel()
+        if jobs[job.key] === job { jobs[job.key] = nil }
+        if let index = queue.firstIndex(where: { $0 === job }) {
+            queue.remove(at: index)
+            job.withdraw()
+        }
+        updatePlaces()
+    }
+
+    /// Each queued card's ``CatchUpCard/summariesAhead``. Cheap: one pass
+    /// over a queue no longer than the open cards (and Siri's request).
+    private func updatePlaces() {
+        if let running, let card = attachedCard(of: running), card.summariesAhead != nil {
+            card.summariesAhead = nil
+        }
+        // One that's been stopped is about to make way: don't count it.
+        let ahead = running.map { $0.task.isCancelled ? 0 : 1 } ?? 0
+        for (index, job) in queue.enumerated() {
+            guard let card = attachedCard(of: job), card.summariesAhead != ahead + index else { continue }
+            card.summariesAhead = ahead + index
+        }
     }
 
     private func progress(_ snapshot: CatchUpSummary, of job: Job) {
@@ -345,6 +560,8 @@ public final class CatchUpStore {
             kept.isRevising = true
             kept.progress = snapshot.progress
             kept.skippedMessages = snapshot.skippedMessages
+            kept.venue = snapshot.venue
+            kept.cloudFallback = snapshot.cloudFallback
             snapshot = kept
         }
         job.latest = snapshot
@@ -370,19 +587,34 @@ public final class CatchUpStore {
         return card
     }
 
+    /// The card showing `job`, while it's the job for the card's stretch.
+    private func attachedCard(of job: Job) -> CatchUpCard? {
+        guard jobs[job.key] === job else { return nil }
+        return attachedCard(job.key)
+    }
+
     /// The card showing `key` closed or moved on: stop its job, unless
     /// Siri is waiting for the same summary.
     private func detach(_ key: CatchUpRangeKey) {
-        guard let job = jobs[key], job.waiters.isEmpty else { return }
-        job.task.cancel()
-        jobs[key] = nil
+        guard let job = jobs[key], !job.isWanted else { return }
+        stop(job)
     }
 
+    /// A caller of ``summary(for:urgent:patience:)`` stopped waiting
+    /// (Siri gave up). Its job stops too, unless a card shows it or
+    /// someone else still wants it.
     private func stopWaiting(_ token: UUID, for job: Job) {
-        job.waiters.remove(token)
-        guard jobs[job.key] === job, job.waiters.isEmpty, attachedCard(job.key) == nil else { return }
-        job.task.cancel()
-        jobs[job.key] = nil
+        job.waiters.removeValue(forKey: token)?.resume(throwing: CancellationError())
+        guard !job.isWanted else { return }
+        if jobs[job.key] !== job || attachedCard(job.key) == nil { stop(job) }
+    }
+
+    /// `token`'s patience ran out: it stops waiting, and the job is held
+    /// for it until it opens the card or lets go (``release(_:)``).
+    private func expire(_ token: UUID, of job: Job) {
+        guard let waiter = job.waiters.removeValue(forKey: token) else { return }
+        job.holds += 1
+        waiter.resume(returning: nil)
     }
 
     private func isFailed(_ card: CatchUpCard) -> Bool {

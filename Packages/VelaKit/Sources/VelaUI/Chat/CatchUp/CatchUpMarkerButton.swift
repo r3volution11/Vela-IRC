@@ -44,7 +44,7 @@ struct CatchUpMarkerButton: View {
             .buttonStyle(CatchUpCapsuleButtonStyle())
             .help("Summarize the \(CatchUpActions.messagesLabel(unread)) you missed with Apple Intelligence")
             .accessibilityLabel("Catch me up")
-            .accessibilityHint("Summarizes the \(CatchUpActions.messagesLabel(unread)) you missed, on this Mac")
+            .accessibilityHint("Summarizes the \(CatchUpActions.messagesLabel(unread)) you missed with Apple Intelligence")
             .onAppear {
                 if CatchUpDemo.takeLaunchRequest(isDemo: app.isDemo) {
                     CatchUpActions.open(buffer, session: controller.session, app: app, store: intelligence.catchUp)

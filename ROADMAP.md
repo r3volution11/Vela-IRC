@@ -58,6 +58,7 @@
 - [x] **Typing:** IRC-safe spelling, grammar, autocorrect, text replacements and smart quotes, following macOS until changed
 - [x] **Apple Intelligence**
   - [x] Catch me up: on-device summaries of what you missed
+  - [x] Private Cloud Compute for long catch-ups (opt-in, macOS 27)
   - [x] Writing Tools in the message field
   - [x] On-device message translation, per message or per channel
 - [x] **Siri, Shortcuts and Spotlight:** App Shortcuts phrases, Shortcuts actions, channel names in Spotlight, and the macOS 27 Siri messages domain

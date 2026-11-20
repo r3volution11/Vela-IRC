@@ -11,7 +11,7 @@ Vela uses Apple's built-in intelligence to help with busy channels and other lan
 - **[Translate](#translate-messages)** shows messages from other languages in yours.
 - **[Writing Tools](#writing-tools)** proofreads and rewrites what you type.
 
-Summaries and translations are made on your Mac. Vela doesn't send your conversations to Apple, to a server of its own or anywhere else. See [Privacy](#privacy) for the details.
+Summaries and translations are made on your Mac. Vela doesn't send your conversations to Apple, to a server of its own or anywhere else, unless you turn on [Private Cloud Compute](#private-cloud-compute) for long catch-ups (macOS 27 or later; it's off by default). See [Privacy](#privacy) for the details.
 
 ## What you need {#requirements}
 
@@ -27,7 +27,7 @@ Catch me up and Writing Tools use **Apple Intelligence**, so they need:
 
 <Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Apple Intelligence: a green “Apple Intelligence is on” box, then the Catch me up and Translation sections" caption="Settings → Apple Intelligence." />
 
-**Settings → Apple Intelligence** has a section each for Catch me up, Translation, Writing Tools and [Siri & Shortcuts](/guide/siri-shortcuts). At the top, a box says whether Apple Intelligence is ready:
+**Settings → Apple Intelligence** has a section each for Catch me up, Translation, Writing Tools and [Siri & Shortcuts](/guide/siri-shortcuts). On macOS 27 or later, the Catch me up section also has **Use Private Cloud Compute for long catch-ups** ([see below](#private-cloud-compute)). At the top, a box says whether Apple Intelligence is ready:
 
 | Status | What it means |
 | --- | --- |
@@ -80,11 +80,25 @@ In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#int
 
 - **The new messages, actions and notices** after the New marker (or where it would be, with the New line off). Joins, parts, other events and deleted messages are left out, and links are reduced to the site they point to.
 - **At most the latest 600.** For a longer stretch, the card says "Covers the latest 600 messages."
-- **It takes a while.** On a fast Mac, about 10 seconds for a few dozen messages and about a minute for 600, most of it spent reading the parts. A slower Mac, or one on macOS 26.0–26.3 (whose model reads less at a time), can take a few minutes for a long stretch. You can go to another channel meanwhile.
+- **It takes a while.** On a fast Mac, about 10 seconds for a few dozen messages and about a minute for 600, most of it spent reading the parts. A slower Mac, or one on macOS 26.0–26.3 (whose model reads less at a time), can take a few minutes for a long stretch. You can go to another channel meanwhile. With [Private Cloud Compute](#private-cloud-compute) on, a long stretch is usually read in one go.
 - **Long stretches are read in parts.** The card counts them ("Reading… 3 of 8"), then says "Writing the summary…" until the first words appear. Before that, a short stretch says "Reading 40 messages…".
+- **One summary at a time.** Ask in several channels and they're summarized in turn, in the order you asked, so a Mac with 8 GB of memory isn't running several at once. A card waiting its turn says so ("Waiting… 1 summary ahead"); dismiss it to take it out of line. A summary [Siri](/guide/siri-shortcuts#siri) is waiting for goes next.
 - **Words never disappear.** If Apple Intelligence has to redo a pass (it ran out of room, say), what it wrote stays on the card, dimmed, with "Finishing…", until the new words arrive.
 - **A part it won't summarize is skipped.** Apple Intelligence's safety checks sometimes decline part of a conversation. The rest is still summarized, and the card says how many messages it skipped. Only when it declines all of it does the card say it couldn't summarize the conversation.
 - **A summary is kept until new messages arrive**, so opening the card again shows it straight away. **Regenerate** writes a fresh one.
+
+### Private Cloud Compute for long catch-ups {#private-cloud-compute}
+
+On macOS 27 or later, **Use Private Cloud Compute for long catch-ups** in **Settings → Apple Intelligence** lets a long catch-up use Apple's [Private Cloud Compute](https://security.apple.com/blog/private-cloud-compute/): the larger Apple Intelligence model that runs on Apple's servers. It's **off by default**.
+
+- **Only long catch-ups go.** A stretch the model on your Mac reads in one pass (on macOS 27, up to a couple of hundred messages of ordinary chat) is summarized on your Mac as always. One that would take several passes goes to Private Cloud Compute, which reads far more at once, so a few hundred messages are usually read in one go: quicker, and without the parts.
+- **What's sent:** the messages in that stretch, with their nicks (links reduced to the site they point to, as always), the channel's name, and your nick, so the summary can say when you were mentioned.
+- **Apple's guarantees:** the request is encrypted on its way to Private Cloud Compute, used only to write the summary, and not stored afterwards. Apple can't read it, and independent experts can check the software that runs it.
+- **Everything else stays on your Mac:** short catch-ups, translation and the rest of Vela. Vela still sends nothing to its developers.
+- **If it can't be used, your Mac does it.** When Private Cloud Compute isn't available, can't be reached, or you've reached its daily limit, the summary is made on your Mac instead, without asking. The card's footer says where each summary was made: "Summarized by Apple Intelligence with Private Cloud Compute", or "Summarized on this Mac by Apple Intelligence" with the reason Private Cloud Compute wasn't used. After a failure, Vela waits a few minutes before trying it again.
+- **Siri can answer long catch-ups itself** with it on. See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts#siri).
+
+In settings.json, it's [`intelligence.privateCloudCompute`](/reference/settings#intelligence.privateCloudCompute). It has no effect on macOS 26.
 
 If something goes wrong, the card says why and offers **Try Again**, or **Open System Settings** when Apple Intelligence needs attention. When people are writing in a language Apple Intelligence can't summarize yet, the card says "This conversation's language isn't supported for summaries yet." That's about the conversation, not your Mac's language, so there's nothing to change in System Settings.
 
@@ -133,7 +147,8 @@ Writing Tools leaves commands, nicks, channel names, links and code alone, and i
 
 ## Privacy
 
-- **Catch me up runs on your Mac,** on the Apple Intelligence model that macOS keeps on it. The messages it reads and the summary it writes never leave your Mac, and summaries are kept only in memory.
+- **Catch me up runs on your Mac,** on the Apple Intelligence model that macOS keeps on it. The messages it reads and the summary it writes stay on your Mac, and summaries are kept only in memory.
+- **Unless you turn on Private Cloud Compute** (macOS 27 or later, off by default). Then a catch-up too long for one pass on your Mac goes to Apple's Private Cloud Compute: encrypted, used only to write the summary, not stored, and not readable by Apple. See [Private Cloud Compute for long catch-ups](#private-cloud-compute).
 - **Translation runs on your Mac,** with Apple's Translation framework, and so does working out a message's language. Only the language downloads come from Apple, and macOS asks before each one. Translations are kept only in memory.
 - **Writing Tools is Apple's.** Vela hands it the text in the message field, and Apple Intelligence handles it as it does in any app.
 - **There's no Vela server.** None of these features sends anything to Vela's developers.

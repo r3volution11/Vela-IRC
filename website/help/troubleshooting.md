@@ -74,6 +74,7 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 - **Is anything new?** The button sits on the **New** marker, so it only appears in a channel with messages you haven't read. **Catch Me Up** in the right-click menu or the command palette works either way: with nothing new, it shows the summary you made there earlier, or says there's nothing new and when the button will be back.
 - **Using a bouncer?** Messages ZNC, soju or a server with chat history replays when Vela connects count as new once they're newer than where you stopped reading. A channel Vela has never had open starts counting when it first joins, so its older history stays read. See [Bouncers](/guide/bouncers).
 - **Did you go to another channel?** A summary keeps going while you're elsewhere, and its card is there when you come back. After you've read the channel, choose **Catch Me Up** again to see it.
+- **Does the card say "Waiting…"?** Summaries are written one at a time, in the order you asked for them, so a card waits while another channel's summary is written. It starts on its own when its turn comes; dismiss it to take it out of line.
 - **Is the New line turned off?** With **Show the New line** off (Settings → Messages → Unread messages, or the Classic IRC preset) there's no button. Right-click the channel and choose **Catch Me Up**, or use the command palette.
 
 If a summary looks wrong, click a topic to read the messages behind it, or click **Regenerate**. Summaries can contain mistakes.
@@ -145,7 +146,7 @@ macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writin
 
 ### Does Vela send my messages to an AI service?
 
-No. [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
+No. [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. The one exception is yours to make: on macOS 27 or later, you can let long catch-ups use Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute), which is off by default. Requests to it are encrypted and not stored, and Apple can't read them. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
 
 ### Is Vela free?
 

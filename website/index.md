@@ -143,7 +143,7 @@ Back to a busy channel? **Catch me up** summarizes what you missed, topic by top
   linkText="How Vela handles your data"
 >
 
-Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add and, if you let it, to the sites behind the links people post. Summaries and translations are made on your Mac.
+Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add and, if you let it, to the sites behind the links people post. Summaries and translations are made on your Mac, unless you let long summaries use Apple's Private Cloud Compute.
 
 Link previews tell those sites your IP address, so you decide: automatic, click-to-load, per channel, or only from an allow list. Vela never fetches previews from addresses on your local network.
 

@@ -36,6 +36,10 @@ nonisolated enum CatchUpModelError: Error, Equatable {
     case unavailable
     /// Too many requests for now (long stretches make many in the background).
     case rateLimited
+    /// Private Cloud Compute can't take it (unreachable, over its daily
+    /// limit, or anything else it reports): ``CatchUpRouter`` summarizes
+    /// on this Mac instead. Never reaches the reader.
+    case cloudUnavailable(CatchUpCloudFallback)
     case failed(String)
 
     var catchUpError: CatchUpError {
@@ -47,6 +51,7 @@ nonisolated enum CatchUpModelError: Error, Equatable {
         case .unsupportedLanguage: .conversationLanguageUnsupported
         case .unavailable: .unavailable(.modelNotReady)
         case .rateLimited: .rateLimited
+        case .cloudUnavailable: .failed("Private Cloud Compute isn't available.")
         case .failed(let message): .failed(message)
         }
     }
@@ -84,33 +89,84 @@ nonisolated struct CatchUpEngine: Sendable {
     /// written. Words in one snapshot are never missing from the next (see
     /// ``CatchUpSummary/isRevising``). Returns the complete summary.
     /// Throws ``CatchUpError``s (or `CancellationError`); only a stretch
-    /// the model declines in full fails as declined.
+    /// the model declines in full fails as declined. A Private Cloud
+    /// Compute model's ``CatchUpModelError/cloudUnavailable(_:)`` comes
+    /// through as it is, for ``CatchUpRouter``.
+    ///
+    /// - Parameters:
+    ///   - venue: Where the model runs, stamped on every snapshot.
+    ///   - cloudFallback: Why Private Cloud Compute isn't the venue, when
+    ///     it was meant to be.
+    ///   - measured: ``measure(_:)`` of the same transcript, if it's at
+    ///     hand, so the tokens aren't counted twice.
     func run(
         _ request: CatchUpRequest,
+        venue: CatchUpVenue = .onDevice,
+        cloudFallback: CatchUpCloudFallback? = nil,
+        measured: Measurement? = nil,
         progress: @escaping @Sendable (CatchUpSummary) -> Void = { _ in }
     ) async throws -> CatchUpSummary {
-        let transcript = CatchUpTranscript(request)
+        let transcript = measured?.transcript ?? CatchUpTranscript(request)
         guard !transcript.isEmpty else { throw CatchUpError.nothingToSummarize }
-        let reporter = CatchUpReporter(transcript: transcript, send: progress)
+        let reporter = CatchUpReporter(transcript: transcript, venue: venue, cloudFallback: cloudFallback, send: progress)
         do {
-            return try await summarize(transcript, bufferName: request.bufferName, reporter: reporter)
+            let measurement = if let measured { measured } else { await measure(transcript) }
+            return try await summarize(measurement, bufferName: request.bufferName, reporter: reporter)
         } catch let error as CatchUpModelError {
+            if case .cloudUnavailable = error { throw error }
             throw error.catchUpError
         }
     }
 
+    // MARK: Planning
+
+    /// A transcript sized up for one model: each line's tokens and the
+    /// room one request has for them.
+    struct Measurement: Sendable {
+        let transcript: CatchUpTranscript
+        /// Each entry's tokens, with its line break.
+        let costs: [Int]
+        /// Room for the transcript in a request that summarizes it whole.
+        let singleBudget: CatchUpBudget
+        /// Room for it in one part's request.
+        let digestBudget: CatchUpBudget
+
+        var totalTokens: Int { costs.reduce(0, +) }
+
+        /// One request holds the whole transcript.
+        var fitsOnePass: Bool { totalTokens <= singleBudget.transcriptTokens }
+
+        /// Parts it's read in: 1 when it fits one pass, otherwise the
+        /// chunks it's split into (merging them takes a few requests more).
+        var passes: Int {
+            guard !fitsOnePass else { return 1 }
+            return max(2, CatchUpChunker.chunks(costs, budget: digestBudget.transcriptTokens) { $0 }.count)
+        }
+    }
+
+    /// Sizes up `transcript` for this engine's model: one token count of
+    /// the whole transcript where the system can count, else estimates.
+    func measure(_ transcript: CatchUpTranscript) async -> Measurement {
+        Measurement(
+            transcript: transcript,
+            costs: await lineCosts(transcript),
+            singleBudget: await budget(for: .single, ownNick: transcript.ownNick),
+            digestBudget: await budget(for: .digest, ownNick: transcript.ownNick)
+        )
+    }
+
     private func summarize(
-        _ transcript: CatchUpTranscript,
+        _ measurement: Measurement,
         bufferName: String,
         reporter: CatchUpReporter
     ) async throws -> CatchUpSummary {
-        let costs = await lineCosts(transcript)
-        let total = costs.reduce(0, +)
-        let digestBudget = await budget(for: .digest, ownNick: transcript.ownNick)
+        let transcript = measurement.transcript
+        let costs = measurement.costs
+        let total = measurement.totalTokens
+        let digestBudget = measurement.digestBudget
         var chunkTokens = digestBudget.transcriptTokens
 
-        let single = await budget(for: .single, ownNick: transcript.ownNick)
-        if total <= single.transcriptTokens {
+        if measurement.fitsOnePass {
             do {
                 return try await stream(
                     prompt: CatchUpPrompts.single(transcript, bufferName: bufferName),
@@ -422,6 +478,8 @@ nonisolated struct CatchUpEngine: Sendable {
 /// pass writes. Used by one run, from one task.
 nonisolated private final class CatchUpReporter {
     private let transcript: CatchUpTranscript
+    private let venue: CatchUpVenue
+    private let cloudFallback: CatchUpCloudFallback?
     private let send: @Sendable (CatchUpSummary) -> Void
     private var completed = 0
     private var total = 0
@@ -429,9 +487,23 @@ nonisolated private final class CatchUpReporter {
     /// The latest snapshot with words in it.
     private var written: CatchUpSummary?
 
-    init(transcript: CatchUpTranscript, send: @escaping @Sendable (CatchUpSummary) -> Void) {
+    init(
+        transcript: CatchUpTranscript,
+        venue: CatchUpVenue,
+        cloudFallback: CatchUpCloudFallback?,
+        send: @escaping @Sendable (CatchUpSummary) -> Void
+    ) {
         self.transcript = transcript
+        self.venue = venue
+        self.cloudFallback = cloudFallback
         self.send = send
+    }
+
+    /// Where it's written, on every snapshot.
+    private func stamp(_ summary: inout CatchUpSummary) {
+        summary.skippedMessages = skippedMessages
+        summary.venue = venue
+        summary.cloudFallback = cloudFallback
     }
 
     /// `count` more parts to read: chunks, halves of one, or merges.
@@ -463,7 +535,7 @@ nonisolated private final class CatchUpReporter {
     func wrote(_ draft: CatchUpDraft) {
         var summary = CatchUpEngine.summary(from: draft, transcript: transcript, isComplete: false)
         guard summary.hasText else { return }
-        summary.skippedMessages = skippedMessages
+        stamp(&summary)
         written = summary
         send(summary)
     }
@@ -471,7 +543,7 @@ nonisolated private final class CatchUpReporter {
     /// The finished summary.
     func finish(_ draft: CatchUpDraft) -> CatchUpSummary {
         var summary = CatchUpEngine.summary(from: draft, transcript: transcript, isComplete: true)
-        summary.skippedMessages = skippedMessages
+        stamp(&summary)
         return summary
     }
 
@@ -481,7 +553,7 @@ nonisolated private final class CatchUpReporter {
         )
         snapshot.isRevising = written != nil
         snapshot.progress = total > 0 ? CatchUpProgress(completed: min(completed, total), total: total) : nil
-        snapshot.skippedMessages = skippedMessages
+        stamp(&snapshot)
         send(snapshot)
     }
 }

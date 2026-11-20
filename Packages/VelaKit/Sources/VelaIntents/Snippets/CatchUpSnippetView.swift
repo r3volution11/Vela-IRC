@@ -17,6 +17,9 @@ struct CatchUpSnippetView: View {
         case caughtUp
         case nothingNew(Header)
         case summary(Header, CatchUpSummary)
+        /// Too long to wait for: Vela opened to the channel, where the card
+        /// is summarizing it.
+        case openedInVela(Header, messageCount: Int)
     }
 
     let content: Content
@@ -34,6 +37,10 @@ struct CatchUpSnippetView: View {
                 headerView(header, count: nil)
                 Text("Nothing new since you last read it.")
                     .foregroundStyle(.secondary)
+            case .openedInVela(let header, let count):
+                headerView(header, count: count)
+                Label("Summarizing in Vela. The summary appears in the channel.", systemImage: "arrow.up.forward.app")
+                    .foregroundStyle(.secondary)
             case .summary(let header, let summary):
                 headerView(header, count: summary.messageCount)
                 topics(summary)
@@ -48,7 +55,7 @@ struct CatchUpSnippetView: View {
                         }
                     }
                 }
-                Text("Summarized on this Mac by Apple Intelligence. May contain mistakes.")
+                Text("\(summary.provenance) May contain mistakes.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }

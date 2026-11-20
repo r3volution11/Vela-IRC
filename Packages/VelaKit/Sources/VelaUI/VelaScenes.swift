@@ -143,7 +143,7 @@ private final class AppInstances {
         // folder, so they never show or change the real one.
         let themeStore = ThemeStore(userThemesDirectory: demo ? DemoArguments.themesDirectory(for: arguments) : AppPaths.themesDirectory)
         let uiState = UIState()
-        let services = SceneServices(intelligence: demo ? .demo() : .live())
+        let services = SceneServices(intelligence: demo ? .demo() : .live(settings: app.settings))
         // Siri, Shortcuts and Spotlight run App Intents in this process;
         // they reach the same model and services through dependencies,
         // registered here once, from the app's init (`VelaScenes.prepare`).

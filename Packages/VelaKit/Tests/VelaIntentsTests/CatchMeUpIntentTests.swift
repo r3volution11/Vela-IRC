@@ -19,4 +19,11 @@ struct CatchMeUpIntentTests {
         app.settings[.intelligenceCatchUp] = false
         #expect(CatchMeUpIntent.refusal(app.settings) == "Catch me up is turned off in Vela's settings.")
     }
+
+    /// It runs in the background, and can bring Vela forward to the card
+    /// when a stretch is too long to wait for.
+    @Test func canContinueInVela() {
+        #expect(CatchMeUpIntent.supportedModes.contains(.background))
+        #expect(CatchMeUpIntent.supportedModes.contains(.foreground(.dynamic)))
+    }
 }

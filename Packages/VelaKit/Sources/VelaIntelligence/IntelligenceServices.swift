@@ -4,6 +4,7 @@
 
 import Foundation
 import Observation
+import VelaStore
 
 /// The Apple Intelligence services one Vela instance uses. Created by the
 /// scene layer, put in the SwiftUI environment, and registered with App
@@ -22,12 +23,15 @@ public final class IntelligenceServices {
         self.catchUp = CatchUpStore(summarizer: summarizer)
     }
 
-    /// The real on-device model.
-    public static func live() -> IntelligenceServices {
+    /// The real models: on this Mac, and Private Cloud Compute for long
+    /// catch-ups while `settings` allow it (`intelligence.privateCloudCompute`).
+    public static func live(settings: SettingsStore) -> IntelligenceServices {
         let availability = IntelligenceAvailability.live()
         return IntelligenceServices(
             availability: availability,
-            summarizer: FoundationModelSummarizer(availability: availability)
+            summarizer: FoundationModelSummarizer(availability: availability) { [weak settings] in
+                settings?[.intelligencePrivateCloudCompute] ?? false
+            }
         )
     }
 

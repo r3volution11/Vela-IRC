@@ -157,6 +157,35 @@ struct CatchUpLiveModelTests {
         #expect(snapshots.dropLast().allSatisfy { !$0.isComplete })
     }
 
+    /// How the router plans stretches of the demo conversation on this
+    /// Mac: the numbers behind `SiriCatchUp.onDeviceTokenLimit`.
+    @Test func plansStretches() async throws {
+        let router = CatchUpRouter(onDevice: FoundationModelsCatchUpModel(), cloud: nil)
+        var report = "\n=== Plans on this Mac\n"
+        for count in [24, 72, 96, 120, 168, 240, 600] {
+            let plan = await router.plan(F.request(lines(repeating: (count + 23) / 24).prefix(count).map { $0 }))
+            report += "\(count) lines: \(plan.transcriptTokens) tokens, \(plan.passes) pass\(plan.passes == 1 ? "" : "es")\n"
+        }
+        print(report)
+    }
+
+    /// With Private Cloud Compute offered (opt in with `VELA_LIVE_PCC=1`
+    /// too): a long stretch of the synthetic demo conversation goes there,
+    /// or falls back to this Mac, and says which.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["VELA_LIVE_PCC"] == "1"))
+    func routesALongStretch() async throws {
+        guard #available(macOS 27.0, *) else { return }
+        let router = CatchUpRouter(onDevice: FoundationModelsCatchUpModel(), cloud: PrivateCloudComputeCloud(timings: CatchUpCloudTimings()))
+        let request = F.request(lines(repeating: 25))
+        let plan = await router.plan(request)
+        let clock = ContinuousClock()
+        let start = clock.now
+        let summary = try await router.run(request)
+        let elapsed = (clock.now - start).formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 1)))
+        print("\n=== Private Cloud Compute: planned \(plan.venue), \(plan.passes) pass(es), \(plan.transcriptTokens) tokens, fallback \(String(describing: plan.cloudFallback)); ran on \(summary.venue), fallback \(String(describing: summary.cloudFallback)), \(elapsed)\nFooter: \(summary.provenance)\nOverview: \(summary.overview)\n")
+        #expect(summary.isComplete)
+    }
+
     @Test func reportsTokenCounts() async throws {
         let model = FoundationModelsCatchUpModel()
         let context = await model.contextSize()

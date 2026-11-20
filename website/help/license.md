@@ -36,7 +36,7 @@ Vela was made with the help of AI. Its source code is open, so anyone can read e
 | [AVKit](https://developer.apple.com/documentation/avkit) and [AVFoundation](https://developer.apple.com/documentation/avfoundation) | Playing links to video files |
 | [Image I/O](https://developer.apple.com/documentation/imageio) and [Core Image](https://developer.apple.com/documentation/coreimage) | Decoding images and animated GIFs, and blurring media until you click it |
 | [User Notifications](https://developer.apple.com/documentation/usernotifications) | Notifications for highlights and private messages |
-| [Foundation Models](https://developer.apple.com/documentation/foundationmodels) | Catch me up summaries, from the Apple Intelligence model on your Mac |
+| [Foundation Models](https://developer.apple.com/documentation/foundationmodels) | Catch me up summaries, from the Apple Intelligence model on your Mac (or Private Cloud Compute for long ones, if you turn it on) |
 | [Translation](https://developer.apple.com/documentation/translation) | Translating messages on your Mac |
 | [Natural Language](https://developer.apple.com/documentation/naturallanguage) | Working out which language a message is in |
 | [App Intents](https://developer.apple.com/documentation/appintents) | Siri and Shortcuts actions |

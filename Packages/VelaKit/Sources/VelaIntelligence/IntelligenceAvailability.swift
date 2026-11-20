@@ -37,8 +37,15 @@ nonisolated public enum IntelligenceStatus: Equatable, Sendable {
     }
 
     /// One sentence on what it means and what to do.
-    public var detail: String {
+    public var detail: String { detail(privateCloudCompute: false) }
+
+    /// ``detail``, saying where summaries are made: with
+    /// `privateCloudCompute` (`intelligence.privateCloudCompute` on, on
+    /// macOS 27+), long ones go to Private Cloud Compute.
+    public func detail(privateCloudCompute: Bool) -> String {
         switch self {
+        case .available where privateCloudCompute:
+            "Catch me up summaries are made on this Mac, except long ones, which go to Apple's Private Cloud Compute. Nothing else is sent anywhere."
         case .available:
             "Catch me up summaries are made on this Mac. The conversation isn't sent anywhere."
         case .turnedOff:

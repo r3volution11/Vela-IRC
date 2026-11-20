@@ -322,15 +322,18 @@ struct CatchUpStoreTests {
     }
 
     /// Catch me up turned off: every card closes and its summary stops.
-    @Test func closeAllStopsEverything() async {
+    @Test func closeAllStopsEverything() async throws {
         let summarizer = ManualSummarizer()
         let store = CatchUpStore(summarizer: summarizer)
         store.open(F.request(F.chatter(30)), reveal: false)
         store.open(F.request(F.chatter(30), bufferID: swiftID, name: "#swift"), reveal: false)
-        #expect(await eventually { summarizer.callCount == 2 })
+        #expect(await eventually { summarizer.callCount == 1 })
         store.closeAll()
         #expect(store.cards.isEmpty)
-        #expect(await eventually { summarizer.call(0).terminated.value && summarizer.call(1).terminated.value })
+        #expect(await eventually { summarizer.call(0).terminated.value })
+        // The one waiting its turn never starts.
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(summarizer.callCount == 1)
     }
 
     // MARK: Progress

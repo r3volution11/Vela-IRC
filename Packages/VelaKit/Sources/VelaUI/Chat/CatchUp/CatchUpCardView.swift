@@ -63,7 +63,7 @@ struct CatchUpCardView: View {
                         .opacity(partial.isRevising ? 0.5 : 1)
                     if partial.isRevising { status(Self.revisingText(partial)) }
                 } else {
-                    status(Self.statusText(partial, messageCount: card.messageCount))
+                    status(Self.statusText(partial, messageCount: card.messageCount, summariesAhead: card.summariesAhead))
                 }
             case .done(let summary):
                 content(summary)
@@ -124,7 +124,7 @@ struct CatchUpCardView: View {
     }
 
     /// The note under the summary: how much it covers, what was left out,
-    /// and where it was made.
+    /// and where it was made (on this Mac, or with Private Cloud Compute).
     nonisolated static func footerText(_ summary: CatchUpSummary?, messageCount: Int) -> String {
         var parts: [String] = []
         if let summary, summary.messageCount < messageCount, summary.messageCount >= CatchUpRequest.maximumLines {
@@ -133,14 +133,19 @@ struct CatchUpCardView: View {
         if let skipped = summary?.skippedMessages, skipped > 0 {
             parts.append("Skipped \(CatchUpActions.messagesLabel(skipped)) that Apple Intelligence wouldn't summarize.")
         }
-        parts.append("Summarized on this Mac by Apple Intelligence. May contain mistakes.")
+        parts.append(summary?.provenance ?? CatchUpSummary.onDeviceProvenance)
+        parts.append("May contain mistakes.")
         return parts.joined(separator: " ")
     }
 
-    /// While there are no words to show: "Reading 250 messages…", or for
+    /// While there are no words to show: "Waiting… 1 summary ahead" while
+    /// other summaries are written first, "Reading 250 messages…", or for
     /// a stretch read in parts "Reading… 3 of 8", then "Writing the
     /// summary…".
-    nonisolated static func statusText(_ partial: CatchUpSummary?, messageCount: Int) -> String {
+    nonisolated static func statusText(_ partial: CatchUpSummary?, messageCount: Int, summariesAhead: Int? = nil) -> String {
+        if let ahead = summariesAhead, ahead > 0 {
+            return ahead == 1 ? "Waiting… 1 summary ahead" : "Waiting… \(ahead) summaries ahead"
+        }
         guard let progress = partial?.progress else {
             return "Reading \(CatchUpActions.messagesLabel(messageCount))…"
         }

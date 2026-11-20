@@ -6,69 +6,115 @@ import Foundation
 import VelaCore
 import VelaIntelligence
 
-/// What "Catch Me Up" summarizes when Siri or Shortcuts asks, and what it
-/// says.
+/// What "Catch Me Up" does when Siri or Shortcuts asks, and what it says.
 ///
 /// Siri waits while the summary is written, in the background, where
 /// Apple Intelligence also limits how much an app may ask of it. So Siri
-/// gets the newest ``maximumLines`` lines at most: a stretch of ordinary
-/// chat the on-device model summarizes in one pass, even with the
-/// 4,096-token context of macOS 26.0–26.3, rather than the several passes
-/// the in-channel card may take for up to `CatchUpRequest.maximumLines`.
-/// When older lines are left out, the dialog says so. A summary of the
-/// whole stretch that's already made (by the card, say) is used as it is.
+/// answers itself only when that's quick:
+///
+/// - a summary of the whole stretch is already made (by the card, say),
+///   and is used as it is;
+/// - the on-device model reads the stretch in one pass, and it's no longer
+///   than ``onDeviceTokenLimit``; or
+/// - Private Cloud Compute is on and available (`intelligence.privateCloudCompute`),
+///   reads the stretch in one pass, and is expected to take no longer
+///   than ``patience``.
+///
+/// A longer stretch isn't cut short: Siri opens Vela to the channel, where
+/// the Catch me up card summarizes all of it (``Outcome/openInVela``). Siri
+/// also waits at most ``patience`` for a quick one (it may be waiting its
+/// turn behind a card's summary, or Private Cloud Compute may have fallen
+/// back to the Mac); a summary still being written then is handed to the
+/// card as it is, without starting over.
 ///
 /// Measured with the live model on macOS 27.2 (`CatchUpLiveModelTests`'
-/// conversation, an M5 Pro): 100 lines took 11 s in one pass with both
-/// the 8,192-token context and a 4,096-token one; 120 lines needed three
-/// passes (21 s) with 4,096 tokens, and 240 lines 20 s with 8,192. Slower
-/// Macs take longer, so the cap leaves room.
+/// conversation, an M5 Pro): 100 lines took 11 s in one pass with both the
+/// 8,192-token context and a 4,096-token one; 240 lines, one pass with
+/// 8,192 tokens, took 20 s. Slower Macs take longer, so the token limit
+/// sits near the 100 lines.
 struct SiriCatchUp {
-    /// The newest lines Siri summarizes at most.
-    static let maximumLines = 100
+    /// The most transcript tokens Siri summarizes on this Mac itself: about
+    /// 100 lines of ordinary chat, one pass even with the 4,096-token
+    /// context of macOS 26.0–26.3.
+    static let onDeviceTokenLimit = 2_600
+
+    /// The longest Siri waits for a summary before handing it to the card.
+    static let patience: Duration = .seconds(15)
 
     /// Everything new in the buffer.
-    let full: CatchUpRequest
-    /// What's summarized when nothing is cached: `full`, or its newest lines.
     let request: CatchUpRequest
 
-    init(_ full: CatchUpRequest, maximumLines: Int = Self.maximumLines) {
-        self.full = full
-        var request = full
-        request.lines = Array(full.lines.suffix(max(1, maximumLines)))
+    init(_ request: CatchUpRequest) {
         self.request = request
     }
 
-    /// A finished summary and what it covers.
-    struct Result: Equatable {
-        var summary: CatchUpSummary
-        /// Lines the summary covers.
-        var summarized: Int
-        /// Lines that were new.
-        var available: Int
-
-        var isPartial: Bool { summarized < available }
+    enum Outcome: Equatable {
+        /// Siri says it.
+        case summary(CatchUpSummary)
+        /// Too long for Siri to wait for: open Vela to the channel, with the
+        /// card summarizing it. `held` is true when a summary Siri started
+        /// is still being written and held for the card (see
+        /// ``CatchUpStore/release(_:)``).
+        case openInVela(held: Bool)
     }
 
-    /// Summarizes through `store`: the whole stretch's cached summary if
-    /// there is one, otherwise ``request``. Errors are `CatchUpError`s.
-    func summarize(with store: CatchUpStore) async throws -> Result {
-        if let cached = store.cachedSummary(for: full) {
-            return Result(summary: cached, summarized: full.lines.count, available: full.lines.count)
+    /// Whether `plan` is quick enough for Siri to wait for.
+    static func answersInSiri(_ plan: CatchUpPlan) -> Bool {
+        guard plan.isOnePass else { return false }
+        switch plan.venue {
+        case .onDevice:
+            return plan.transcriptTokens <= onDeviceTokenLimit
+        case .privateCloudCompute:
+            let seconds = Double(patience.components.seconds)
+            return (plan.estimatedSeconds ?? .infinity) <= seconds
         }
-        let summary = try await store.summary(for: request)
-        return Result(summary: summary, summarized: request.lines.count, available: full.lines.count)
+    }
+
+    /// The summary from `store` if Siri can wait for it: cached, or quick
+    /// enough to write (see the type's notes). Otherwise, or when it isn't
+    /// ready within `patience`, Vela should open to the card. Errors are
+    /// `CatchUpError`s.
+    func summarize(with store: CatchUpStore, patience: Duration = Self.patience) async throws -> Outcome {
+        if let cached = store.cachedSummary(for: request) { return .summary(cached) }
+        let plan = await store.plan(for: request)
+        guard Self.answersInSiri(plan) else { return .openInVela(held: false) }
+        guard let summary = try await store.summary(for: request, urgent: true, patience: patience) else {
+            return .openInVela(held: true)
+        }
+        return .summary(summary)
     }
 
     /// What Siri says: the overview, after a note on what it covers when
-    /// older lines were left out.
-    func dialog(for result: Result) -> String {
-        let overview = result.summary.overview.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = full.bufferName
-        guard result.isPartial else {
+    /// the stretch was longer than a summary reads (`CatchUpRequest.maximumLines`).
+    func dialog(for summary: CatchUpSummary) -> String {
+        let overview = summary.overview.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = request.bufferName
+        let available = request.lines.count
+        guard summary.messageCount < available, summary.messageCount >= CatchUpRequest.maximumLines else {
             return overview.isEmpty ? "Here's what you missed in \(name)." : overview
         }
-        let scope = "the latest \(result.summarized) of \(result.available) messages in \(name)"
+        let scope = "the latest \(summary.messageCount) of \(available) messages in \(name)"
         return overview.isEmpty ? "Here's what happened in \(scope)." : "From \(scope): \(overview)"
+    }
+
+    /// What Siri says as it opens Vela for a long stretch.
+    var openingDialog: String {
+        "That's \(Self.messages(request.lines.count)) in \(request.bufferName). Opening Vela to catch you up."
+    }
+
+    /// What Siri says once Vela is in front with the card.
+    var openedDialog: String {
+        "Here's \(request.bufferName). Its summary is on the way."
+    }
+
+    /// What Siri says when it can't bring Vela forward (a shortcut running
+    /// in the background, say): the card is summarizing it anyway.
+    var backgroundDialog: String {
+        "That's \(Self.messages(request.lines.count)) in \(request.bufferName), too many to summarize here. Vela is summarizing them now; open \(request.bufferName) in Vela to read it."
+    }
+
+    /// "1 message", "412 messages".
+    static func messages(_ count: Int) -> String {
+        count == 1 ? "1 message" : "\(count) messages"
     }
 }

@@ -122,6 +122,23 @@ nonisolated public struct CatchUpProgress: Sendable, Hashable {
     public var isFinished: Bool { completed >= total }
 }
 
+/// Where a summary is written.
+nonisolated public enum CatchUpVenue: Sendable, Hashable {
+    /// By Apple Intelligence on this Mac.
+    case onDevice
+    /// By Apple Intelligence on Apple's Private Cloud Compute: a long
+    /// stretch, with `intelligence.privateCloudCompute` on (macOS 27+).
+    case privateCloudCompute
+}
+
+/// Why a summary meant for Private Cloud Compute was written on this Mac.
+nonisolated public enum CatchUpCloudFallback: Sendable, Hashable {
+    /// It couldn't be reached, or wasn't ready.
+    case unavailable
+    /// The Mac's daily Private Cloud Compute limit was reached.
+    case limitReached
+}
+
 /// A (possibly still streaming) summary.
 nonisolated public struct CatchUpSummary: Sendable, Hashable {
     /// One or two sentences on the whole stretch.
@@ -143,6 +160,11 @@ nonisolated public struct CatchUpSummary: Sendable, Hashable {
     /// Messages left out because Apple Intelligence declined to summarize
     /// the part they were in.
     public var skippedMessages: Int
+    /// Where it's written.
+    public var venue: CatchUpVenue
+    /// Set when it was meant for Private Cloud Compute but is written on
+    /// this Mac instead, and why.
+    public var cloudFallback: CatchUpCloudFallback?
 
     public init(
         overview: String,
@@ -152,7 +174,9 @@ nonisolated public struct CatchUpSummary: Sendable, Hashable {
         isComplete: Bool,
         progress: CatchUpProgress? = nil,
         isRevising: Bool = false,
-        skippedMessages: Int = 0
+        skippedMessages: Int = 0,
+        venue: CatchUpVenue = .onDevice,
+        cloudFallback: CatchUpCloudFallback? = nil
     ) {
         self.overview = overview
         self.topics = topics
@@ -162,10 +186,64 @@ nonisolated public struct CatchUpSummary: Sendable, Hashable {
         self.progress = progress
         self.isRevising = isRevising
         self.skippedMessages = skippedMessages
+        self.venue = venue
+        self.cloudFallback = cloudFallback
     }
 
     /// Whether there are words to show yet.
     public var hasText: Bool { !overview.isEmpty }
+
+    /// Where it was written, for the card's footer and Siri's snippet:
+    /// "Summarized on this Mac by Apple Intelligence.", with Private Cloud
+    /// Compute, or on this Mac because Private Cloud Compute wasn't there.
+    public var provenance: String {
+        switch (venue, cloudFallback) {
+        case (.privateCloudCompute, _):
+            "Summarized by Apple Intelligence with Private Cloud Compute."
+        case (.onDevice, .limitReached?):
+            "Summarized on this Mac by Apple Intelligence: today's Private Cloud Compute limit was reached."
+        case (.onDevice, .unavailable?):
+            "Summarized on this Mac by Apple Intelligence: Private Cloud Compute wasn't available."
+        case (.onDevice, nil):
+            Self.onDeviceProvenance
+        }
+    }
+
+    /// ``provenance`` before there's a summary to go by.
+    public static let onDeviceProvenance = "Summarized on this Mac by Apple Intelligence."
+}
+
+/// How a stretch will be summarized: where, and in how many passes.
+/// Siri uses it to decide whether to answer itself or open Vela.
+nonisolated public struct CatchUpPlan: Sendable, Hashable {
+    public var venue: CatchUpVenue
+    /// Parts the transcript is read in: 1 when one request holds it all.
+    public var passes: Int
+    /// The transcript's size in tokens: counted where the system can,
+    /// otherwise estimated.
+    public var transcriptTokens: Int
+    /// Roughly how long it takes, when there's a measurement or estimate
+    /// to go by (Private Cloud Compute); nil otherwise.
+    public var estimatedSeconds: Double?
+    /// Private Cloud Compute is on but won't be used, and why.
+    public var cloudFallback: CatchUpCloudFallback?
+
+    public init(
+        venue: CatchUpVenue = .onDevice,
+        passes: Int,
+        transcriptTokens: Int,
+        estimatedSeconds: Double? = nil,
+        cloudFallback: CatchUpCloudFallback? = nil
+    ) {
+        self.venue = venue
+        self.passes = passes
+        self.transcriptTokens = transcriptTokens
+        self.estimatedSeconds = estimatedSeconds
+        self.cloudFallback = cloudFallback
+    }
+
+    /// One request summarizes the whole stretch.
+    public var isOnePass: Bool { passes <= 1 }
 }
 
 nonisolated public enum CatchUpError: Error, Equatable, LocalizedError {
@@ -200,9 +278,19 @@ public protocol ConversationSummarizer: AnyObject, Sendable {
     /// Progressively more complete summaries; the last one has
     /// `isComplete == true`. Errors are ``CatchUpError``s.
     func summarize(_ request: CatchUpRequest) -> AsyncThrowingStream<CatchUpSummary, Error>
+
+    /// How `request` would be summarized, without summarizing it. Cheap:
+    /// at most a token count.
+    func plan(_ request: CatchUpRequest) async -> CatchUpPlan
 }
 
 extension ConversationSummarizer {
+    /// One pass on this Mac: summarizers without a model to measure
+    /// against (canned ones, for demo mode and tests).
+    public func plan(_ request: CatchUpRequest) async -> CatchUpPlan {
+        CatchUpPlan(passes: 1, transcriptTokens: 0)
+    }
+
     /// The finished summary.
     public func summary(for request: CatchUpRequest) async throws -> CatchUpSummary {
         var last: CatchUpSummary?

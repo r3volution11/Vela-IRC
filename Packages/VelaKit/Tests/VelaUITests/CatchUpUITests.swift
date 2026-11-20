@@ -98,6 +98,32 @@ struct CatchUpUITests {
         #expect(CatchUpCardView.revisingText(summary("Half", progress: .init(completed: 3, total: 3), isRevising: true)) == "Finishing…")
     }
 
+    /// A summary waiting its turn says so, and its place in line.
+    @Test func aQueuedCardSaysItIsWaiting() {
+        #expect(CatchUpCardView.statusText(nil, messageCount: 250, summariesAhead: 1) == "Waiting… 1 summary ahead")
+        #expect(CatchUpCardView.statusText(nil, messageCount: 250, summariesAhead: 3) == "Waiting… 3 summaries ahead")
+        // Its turn: reading.
+        #expect(CatchUpCardView.statusText(nil, messageCount: 250, summariesAhead: nil) == "Reading 250 messages…")
+        #expect(CatchUpCardView.statusText(nil, messageCount: 250, summariesAhead: 0) == "Reading 250 messages…")
+    }
+
+    /// The footer says where the summary was made.
+    @Test func theFooterSaysWherePrivateCloudComputeWasUsed() {
+        var done = CatchUpSummary(overview: "x", topics: [], addressedToYou: [], messageCount: 400, isComplete: true, venue: .privateCloudCompute)
+        #expect(CatchUpCardView.footerText(done, messageCount: 400)
+            == "Summarized by Apple Intelligence with Private Cloud Compute. May contain mistakes.")
+        done.venue = .onDevice
+        done.cloudFallback = .unavailable
+        #expect(CatchUpCardView.footerText(done, messageCount: 400)
+            == "Summarized on this Mac by Apple Intelligence: Private Cloud Compute wasn't available. May contain mistakes.")
+        done.cloudFallback = .limitReached
+        #expect(CatchUpCardView.footerText(done, messageCount: 400)
+            == "Summarized on this Mac by Apple Intelligence: today's Private Cloud Compute limit was reached. May contain mistakes.")
+        // Still being written: the footer already says where.
+        let reading = CatchUpSummary(overview: "", topics: [], addressedToYou: [], messageCount: 400, isComplete: false, venue: .privateCloudCompute)
+        #expect(CatchUpCardView.footerText(reading, messageCount: 400).hasPrefix("Summarized by Apple Intelligence with Private Cloud Compute."))
+    }
+
     @Test func theFooterSaysWhatWasSkipped() {
         let note = "Summarized on this Mac by Apple Intelligence. May contain mistakes."
         var done = CatchUpSummary(overview: "x", topics: [], addressedToYou: [], messageCount: 200, isComplete: true)
@@ -153,7 +179,9 @@ struct CatchUpUITests {
         app.select(vela)
         store.selectionChanged(to: vela.id) { _ in true }
         #expect(store.card(for: swift.id) === card)
-        #expect(await eventually { if case .done = card.phase { true } else { false } })
+        // Generous: with the whole UI suite running at once, the canned
+        // summary's steps can take several seconds.
+        #expect(await eventually(timeout: .seconds(20)) { if case .done = card.phase { true } else { false } })
 
         // Back in #swift: read now, but the card is still there.
         app.select(swift)
@@ -357,5 +385,39 @@ struct CatchUpUITests {
         #expect(off.contains("New line is off"))
         #expect(off.contains("Right-click a channel"))
         #expect(off.contains("command palette"))
+        #expect(off.contains("Summaries are made on this Mac and"))
+    }
+
+    // MARK: Private Cloud Compute
+
+    /// The switch is offered only on macOS 27 or later, off by default, and
+    /// says plainly what turning it on sends where.
+    @Test func privateCloudComputeIsOfferedOnMacOS27() {
+        if #available(macOS 27.0, *) {
+            #expect(IntelligenceCatchUpSection.offersPrivateCloudCompute)
+        } else {
+            #expect(!IntelligenceCatchUpSection.offersPrivateCloudCompute)
+        }
+        let app = AppModel.demo()
+        #expect(app.settings[.intelligencePrivateCloudCompute] == false)
+        let detail = IntelligenceCatchUpSection.privateCloudComputeDetail
+        #expect(detail.contains("Long catch-ups are sent to Apple's Private Cloud Compute"))
+        #expect(detail.contains("encrypted"))
+        #expect(detail.contains("aren't stored"))
+        #expect(detail.contains("Apple can't read them"))
+        #expect(detail.contains("everything else stay on this Mac"))
+    }
+
+    /// With it on, Settings stops promising that every summary is made on
+    /// this Mac.
+    @Test func settingsSayWhereSummariesAreMade() {
+        #expect(IntelligenceCatchUpSection.footer(showsNewLine: true, privateCloudCompute: true)
+            .contains("Summaries are made on this Mac, long ones with Private Cloud Compute"))
+        #expect(IntelligencePane.subtitle(privateCloudCompute: false).contains("Summaries and translation run on this Mac."))
+        #expect(IntelligencePane.subtitle(privateCloudCompute: true).contains("long summaries use Private Cloud Compute"))
+        #expect(IntelligenceStatus.available.detail.contains("isn't sent anywhere"))
+        #expect(IntelligenceStatus.available.detail(privateCloudCompute: true).contains("Private Cloud Compute"))
+        // Other statuses don't change.
+        #expect(IntelligenceStatus.turnedOff.detail(privateCloudCompute: true) == IntelligenceStatus.turnedOff.detail)
     }
 }

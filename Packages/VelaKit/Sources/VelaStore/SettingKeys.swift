@@ -659,7 +659,11 @@ extension SettingKey where Value == SystemFollowingBool {
 extension SettingKey where Value == Bool {
     public static var intelligenceCatchUp: SettingKey<Bool> {
         .init("intelligence.catchUp", default: true,
-              summary: "Offer \"Catch me up\": an on-device Apple Intelligence summary of what you missed in a busy channel. Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri.")
+              summary: "Offer \"Catch me up\": an Apple Intelligence summary of what you missed in a busy channel, made on your Mac (long ones can use Private Cloud Compute; see intelligence.privateCloudCompute). Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri.")
+    }
+    public static var intelligencePrivateCloudCompute: SettingKey<Bool> {
+        .init("intelligence.privateCloudCompute", default: false,
+              summary: "On macOS 27 or later, send long catch-ups (too long for one pass of the model on your Mac) to Apple's Private Cloud Compute: encrypted, never stored, and not readable by Apple. Short catch-ups, translation and everything else stay on your Mac. If Private Cloud Compute isn't available or its daily limit is reached, the summary is made on your Mac.")
     }
     public static var intelligenceSpotlightChannels: SettingKey<Bool> {
         .init("intelligence.spotlightChannels", default: true,
@@ -787,6 +791,7 @@ public enum SettingsCatalog {
 
             SettingKey.intelligenceCatchUp.descriptor,
             SettingKey.intelligenceCatchUpThreshold.descriptor,
+            SettingKey.intelligencePrivateCloudCompute.descriptor,
             SettingKey.intelligenceSpotlightChannels.descriptor,
             SettingKey.translationLanguage.descriptor,
             SettingKey.translationAutoTranslate.descriptor,

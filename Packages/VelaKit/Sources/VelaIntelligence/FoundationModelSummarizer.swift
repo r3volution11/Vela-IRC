@@ -5,27 +5,33 @@
 import Foundation
 import FoundationModels
 
-/// Summarizes with Apple's on-device Foundation Models (``CatchUpEngine``
-/// over ``FoundationModelsCatchUpModel``). Nothing leaves the Mac.
+/// Summarizes with Apple's Foundation Models (``CatchUpEngine`` over
+/// ``FoundationModelsCatchUpModel``), on this Mac. With
+/// `intelligence.privateCloudCompute` on, on macOS 27 or later, a stretch
+/// too long for one on-device pass goes to Private Cloud Compute instead
+/// (see ``CatchUpRouter``); everything else stays on the Mac.
 public final class FoundationModelSummarizer: ConversationSummarizer {
     private let availability: IntelligenceAvailability
+    /// Whether long catch-ups may use Private Cloud Compute: the setting.
+    private let usesPrivateCloudCompute: () -> Bool
+    /// How Private Cloud Compute has done this session: how long it takes,
+    /// and whether it failed lately.
+    private let cloudTimings = CatchUpCloudTimings()
 
-    public init(availability: IntelligenceAvailability) {
+    /// - Parameters:
+    ///   - usesPrivateCloudCompute: Read before each summary; true lets
+    ///     a long one go to Private Cloud Compute (`intelligence.privateCloudCompute`).
+    public init(availability: IntelligenceAvailability, usesPrivateCloudCompute: @escaping () -> Bool = { false }) {
         self.availability = availability
+        self.usesPrivateCloudCompute = usesPrivateCloudCompute
     }
 
     public nonisolated func summarize(_ request: CatchUpRequest) -> AsyncThrowingStream<CatchUpSummary, Error> {
-        let availability = availability
-        return AsyncThrowingStream { continuation in
+        AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let status = await MainActor.run {
-                        availability.refresh()
-                        return availability.status
-                    }
-                    guard status.isAvailable else { throw CatchUpError.unavailable(status) }
-                    let engine = CatchUpEngine(model: FoundationModelsCatchUpModel())
-                    let summary = try await engine.run(request) { continuation.yield($0) }
+                    let router = try await self.router(checkingAvailability: true)
+                    let summary = try await router.run(request) { continuation.yield($0) }
                     continuation.yield(summary)
                     continuation.finish()
                 } catch {
@@ -34,6 +40,34 @@ public final class FoundationModelSummarizer: ConversationSummarizer {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    public nonisolated func plan(_ request: CatchUpRequest) async -> CatchUpPlan {
+        guard let router = try? await router(checkingAvailability: false) else {
+            return CatchUpPlan(passes: 1, transcriptTokens: 0)
+        }
+        return await router.plan(request)
+    }
+
+    /// Where summaries go now: Private Cloud Compute is offered to the
+    /// router only while the setting is on and the system has it.
+    func router(checkingAvailability: Bool) throws -> CatchUpRouter {
+        if checkingAvailability {
+            availability.refresh()
+            guard availability.status.isAvailable else { throw CatchUpError.unavailable(availability.status) }
+        }
+        return CatchUpRouter(
+            onDevice: FoundationModelsCatchUpModel(),
+            cloud: usesPrivateCloudCompute() ? Self.privateCloudCompute(timings: cloudTimings) : nil
+        )
+    }
+
+    /// Private Cloud Compute, where the system has it (macOS 27+).
+    private nonisolated static func privateCloudCompute(timings: CatchUpCloudTimings) -> (any CatchUpCloud)? {
+        if #available(macOS 27.0, *) {
+            return PrivateCloudComputeCloud(timings: timings)
+        }
+        return nil
     }
 }
 
@@ -81,12 +115,37 @@ nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
     }
 
     func digest(prompt: String, instructions: String, maximumResponseTokens: Int) async throws -> CatchUpDraft {
-        let session = LanguageModelSession(model: .default, instructions: instructions)
-        let options = Self.options(maximumResponseTokens: maximumResponseTokens)
+        try await Self.digest(
+            in: LanguageModelSession(model: .default, instructions: instructions),
+            prompt: prompt,
+            maximumResponseTokens: maximumResponseTokens,
+            classify: Self.classify
+        )
+    }
+
+    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error> {
+        Self.summarize(
+            in: { LanguageModelSession(model: .default, instructions: instructions) },
+            prompt: prompt,
+            maximumResponseTokens: maximumResponseTokens,
+            classify: Self.classify
+        )
+    }
+
+    // MARK: Requests
+
+    /// A digest from a fresh `session`, streamed, keeping the last
+    /// snapshot: a response cut off at the limit then ends with what it
+    /// has, where `respond(to:)` throws a parsing error for the unfinished
+    /// structure. Shared with ``PrivateCloudComputeCatchUpModel``.
+    static func digest(
+        in session: LanguageModelSession,
+        prompt: String,
+        maximumResponseTokens: Int,
+        classify: (Error) -> Error
+    ) async throws -> CatchUpDraft {
+        let options = options(maximumResponseTokens: maximumResponseTokens)
         do {
-            // Streamed, keeping the last snapshot: a response cut off at
-            // the limit then ends with what it has, where `respond(to:)`
-            // throws a parsing error for the unfinished structure.
             var last: ChunkDigest.PartiallyGenerated?
             for try await snapshot in session.streamResponse(to: prompt, generating: ChunkDigest.self, options: options) {
                 last = snapshot.content
@@ -94,15 +153,22 @@ nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
             guard let last else { throw CatchUpModelError.failed("Apple Intelligence didn't return a summary.") }
             return CatchUpDraft(last)
         } catch {
-            throw Self.classify(error)
+            throw classify(error)
         }
     }
 
-    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error> {
-        let options = Self.options(maximumResponseTokens: maximumResponseTokens)
+    /// The final summary from a fresh session, streamed. Shared with
+    /// ``PrivateCloudComputeCatchUpModel``.
+    static func summarize(
+        in makeSession: @escaping @Sendable () -> LanguageModelSession,
+        prompt: String,
+        maximumResponseTokens: Int,
+        classify: @escaping @Sendable (Error) -> Error
+    ) -> AsyncThrowingStream<CatchUpDraft, Error> {
+        let options = options(maximumResponseTokens: maximumResponseTokens)
         return AsyncThrowingStream { continuation in
             let task = Task {
-                let session = LanguageModelSession(model: .default, instructions: instructions)
+                let session = makeSession()
                 do {
                     let stream = session.streamResponse(to: prompt, generating: GeneratedCatchUp.self, options: options)
                     for try await snapshot in stream {
@@ -110,7 +176,7 @@ nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
                     }
                     continuation.finish()
                 } catch {
-                    continuation.finish(throwing: Self.classify(error))
+                    continuation.finish(throwing: classify(error))
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
@@ -119,7 +185,7 @@ nonisolated struct FoundationModelsCatchUpModel: CatchUpLanguageModel {
 
     /// Foundation Models' errors as the engine's. macOS 27 reports
     /// `LanguageModelError`s; macOS 26 the older `GenerationError`s.
-    static func classify(_ error: Error) -> Error {
+    @Sendable static func classify(_ error: Error) -> Error {
         if error is CancellationError || error is CatchUpModelError { return error }
         if #available(macOS 27.0, *) {
             if let error = error as? LanguageModelError {

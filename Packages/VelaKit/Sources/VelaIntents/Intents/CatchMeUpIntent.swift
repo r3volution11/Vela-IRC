@@ -9,8 +9,10 @@ import VelaCore
 import VelaIntelligence
 import VelaStore
 
-/// Summarizes what you missed in a channel with Apple Intelligence, on this
-/// Mac. Siri speaks the overview; the snippet lists the topics.
+/// Summarizes what you missed in a channel with Apple Intelligence. Siri
+/// speaks the overview; the snippet lists the topics. A stretch too long
+/// to wait for opens Vela to the channel instead, with the Catch me up
+/// card summarizing all of it (see ``SiriCatchUp``).
 public struct CatchMeUpIntent: AppIntent {
     /// What Siri says instead of catching up, if it can't at all: while
     /// Catch me up is turned off (`intelligence.catchUp`).
@@ -21,11 +23,13 @@ public struct CatchMeUpIntent: AppIntent {
 
     public static let title: LocalizedStringResource = "Catch Me Up"
     public static let description = IntentDescription(
-        "Summarizes what you missed in a channel or conversation. Apple Intelligence writes the summary on this Mac.",
+        "Summarizes what you missed in a channel or conversation with Apple Intelligence, on this Mac. Long stretches use Private Cloud Compute if you turn it on in Vela's settings, or open in Vela.",
         categoryName: "Messages",
         searchKeywords: ["summary", "summarize", "unread", "apple intelligence"]
     )
-    public static let supportedModes: IntentModes = .background
+    /// In the background, and in front when a long stretch opens Vela to
+    /// its card (`continueInForeground`).
+    public static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]
 
     @Parameter(
         title: "Channel",
@@ -65,23 +69,38 @@ public struct CatchMeUpIntent: AppIntent {
         let status = services.availability.status
         guard status.isAvailable else { throw IntentFailure(status.detail) }
 
-        var request = CatchUpRequest(buffer: buffer, session: session)
+        let store = services.catchUp
+        // Where the card goes: under the New marker, as when it's clicked.
+        let marker = buffer.unreadMarkerAfter ?? buffer.lastReadAt
+        var request = CatchUpRequest(buffer: buffer, session: session, since: marker)
         // Read since it was caught up on: the stretch summarized this session.
-        if request.lines.isEmpty, let latest = services.catchUp.latestRequest(for: buffer.id) { request = latest }
-        // At most the newest SiriCatchUp.maximumLines lines, so Siri gets
-        // its answer in one pass of the model.
-        let catchUp = SiriCatchUp(request)
+        var isEarlierStretch = false
+        if request.lines.isEmpty, let latest = store.latestRequest(for: buffer.id) {
+            request = latest
+            isEarlierStretch = true
+        }
         let nothingNew = "There's nothing new in \(buffer.name)."
-        guard !catchUp.full.lines.isEmpty else {
+        guard !request.lines.isEmpty else {
             return .result(dialog: "\(nothingNew)", view: CatchUpSnippetView(content: .nothingNew(header)))
         }
+        let catchUp = SiriCatchUp(request)
         do {
-            // Through the store: a summary already cached (of the whole
-            // stretch, or of Siri's part), or being written for an open
-            // card, is shared rather than made again.
-            let result = try await catchUp.summarize(with: services.catchUp)
-            let dialog = catchUp.dialog(for: result)
-            return .result(dialog: "\(dialog)", view: CatchUpSnippetView(content: .summary(header, result.summary)))
+            // Through the store: a summary already cached, or being written
+            // for an open card, is shared rather than made again.
+            switch try await catchUp.summarize(with: store) {
+            case .summary(let summary):
+                let dialog = catchUp.dialog(for: summary)
+                return .result(dialog: "\(dialog)", view: CatchUpSnippetView(content: .summary(header, summary)))
+            case .openInVela(let held):
+                // A summary Siri started stays with the card, and stops
+                // only if Vela doesn't open after all.
+                defer { if held { store.release(request) } }
+                let dialog = try await openCard(catchUp, marker: marker, isEarlierStretch: isEarlierStretch, in: buffer)
+                return .result(
+                    dialog: "\(dialog)",
+                    view: CatchUpSnippetView(content: .openedInVela(header, messageCount: request.lines.count))
+                )
+            }
         } catch CatchUpError.nothingToSummarize {
             return .result(dialog: "\(nothingNew)", view: CatchUpSnippetView(content: .nothingNew(header)))
         } catch let error as CatchUpError {
@@ -89,5 +108,34 @@ public struct CatchMeUpIntent: AppIntent {
             // hits the background rate limit.
             throw IntentFailure(error.errorDescription ?? "Apple Intelligence couldn't summarize this conversation.")
         }
+    }
+
+    /// Opens the Catch me up card for a stretch too long for Siri to wait
+    /// for. Brings Vela forward to the channel when it can (Siri says
+    /// it's opening Vela first); otherwise the card starts summarizing
+    /// where it'll be when the channel is next opened. Returns what Siri
+    /// says. The card sits under `marker`, the buffer's New marker, or
+    /// where it was for the stretch summarized earlier this session.
+    @MainActor
+    private func openCard(
+        _ catchUp: SiriCatchUp,
+        marker: Date?,
+        isEarlierStretch: Bool,
+        in buffer: BufferModel
+    ) async throws -> String {
+        let store = services.catchUp
+        let mode = systemContext.currentMode
+        let inFront = mode == .foreground || mode.canContinueInForeground
+        if mode != .foreground, mode.canContinueInForeground {
+            try await continueInForeground("\(catchUp.openingDialog)", alwaysConfirm: false)
+        }
+        if isEarlierStretch {
+            store.reopen(buffer.id, reveal: inFront)
+        } else {
+            store.open(catchUp.request, marker: marker, reveal: inFront)
+        }
+        guard inFront else { return catchUp.backgroundDialog }
+        app.requestShow(buffer.id)
+        return catchUp.openedDialog
     }
 }
