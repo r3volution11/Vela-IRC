@@ -142,13 +142,6 @@ nonisolated struct CatchUpTranscript: Sendable, Equatable {
         return result
     }
 
-    /// The first line whose speaker is one of `nicks`, for a topic whose
-    /// line number didn't come back usable.
-    func firstLine(spokenBy nicks: [String]) -> Entry? {
-        let keys = Set(nicks.map { $0.lowercased() })
-        return entries.first { keys.contains($0.nick.lowercased()) }
-    }
-
     // MARK: Cleaning
 
     /// One line of plain text: whitespace collapsed, links reduced to their

@@ -168,10 +168,9 @@ nonisolated final class CatchUpCloudTimings: Sendable {
 // MARK: Private Cloud Compute
 
 /// `PrivateCloudComputeLanguageModel`, checked before each summary: it must
-/// be available, under its daily limit, able to generate the summary's
-/// structure (guided generation) and to read the Mac's language, and not
-/// have failed in the last few minutes. Its context size comes from the
-/// system.
+/// be available, under its daily limit and able to read the Mac's
+/// language, and not have failed in the last few minutes. Its context size
+/// comes from the system.
 @available(macOS 27.0, *)
 nonisolated struct PrivateCloudComputeCloud: CatchUpCloud {
     let timings: CatchUpCloudTimings
@@ -183,8 +182,9 @@ nonisolated struct PrivateCloudComputeCloud: CatchUpCloud {
         // The limit is per person and per day, and separate from
         // availability: the model can be available with the limit reached.
         guard !model.quotaUsage.isLimitReached else { return .notReady(.limitReached) }
-        guard model.capabilities.contains(.guidedGeneration),
-              (try? await model.supportsLocale()) == true,
+        // Replies are plain text, so no capability beyond generating text
+        // (such as guided generation) is needed.
+        guard (try? await model.supportsLocale()) == true,
               let context = try? await model.contextSize
         else { return .notReady(.unavailable) }
         return .ready(PrivateCloudComputeCatchUpModel(model: model, context: context))
@@ -203,10 +203,11 @@ nonisolated struct PrivateCloudComputeCloud: CatchUpCloud {
     }
 }
 
-/// ``CatchUpLanguageModel`` on Private Cloud Compute: the same requests as
-/// on the Mac (``FoundationModelsCatchUpModel``), in a session on
-/// `PrivateCloudComputeLanguageModel`. The system counts tokens only for
-/// the on-device model, so the engine estimates them here, erring long.
+/// ``CatchUpLanguageModel`` on Private Cloud Compute: the same plain-text
+/// requests as on the Mac (``FoundationModelsCatchUpModel``), in a session
+/// on `PrivateCloudComputeLanguageModel`, which has no guardrail options of
+/// its own. The system counts tokens only for the on-device model, so the
+/// engine estimates them here, erring long.
 @available(macOS 27.0, *)
 nonisolated struct PrivateCloudComputeCatchUpModel: CatchUpLanguageModel {
     let model: PrivateCloudComputeLanguageModel
@@ -217,20 +218,24 @@ nonisolated struct PrivateCloudComputeCatchUpModel: CatchUpLanguageModel {
 
     func tokenCount(_ text: String) async -> Int? { nil }
 
-    func schemaTokenCount(for pass: CatchUpPrompts.Pass) async -> Int? { nil }
-
-    func digest(prompt: String, instructions: String, maximumResponseTokens: Int) async throws -> CatchUpDraft {
-        try await FoundationModelsCatchUpModel.digest(
+    func digest(
+        prompt: String,
+        instructions: String,
+        maximumResponseTokens: Int,
+        until enough: @escaping @Sendable (String) -> Bool
+    ) async throws -> String {
+        try await FoundationModelsCatchUpModel.respond(
             in: LanguageModelSession(model: model, instructions: instructions),
             prompt: prompt,
             maximumResponseTokens: maximumResponseTokens,
+            until: enough,
             classify: Self.classify
         )
     }
 
-    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error> {
+    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<String, Error> {
         let model = model
-        return FoundationModelsCatchUpModel.summarize(
+        return FoundationModelsCatchUpModel.stream(
             in: { LanguageModelSession(model: model, instructions: instructions) },
             prompt: prompt,
             maximumResponseTokens: maximumResponseTokens,

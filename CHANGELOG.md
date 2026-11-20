@@ -48,6 +48,9 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Words never disappear from the card.** When a pass has to be redone, what was written stays, dimmed, with "Finishing…", until the new words arrive.
 - **Going to another channel no longer cancels a summary.** It keeps going, and the card is there when you come back. After you've read the channel, **Catch Me Up** in the right-click menu, the command palette or Siri shows that summary again until you quit.
 - **A part Apple Intelligence won't summarize is skipped,** and the card says how many messages it left out, instead of the whole summary failing.
+- **Catch me up no longer skips most of a heated or political channel:** summaries are asked for in plain text, which Apple Intelligence's safety checks accept far more often, and describe the discussion neutrally, without taking sides or repeating insults.
+- **Apple Intelligence is no longer told the channel's or the network's name.** Catch me up gives it the messages and your nick, nothing else, on your Mac and with Private Cloud Compute.
+- **A topic links to its first message only when Apple Intelligence placed it there.** A topic it couldn't place has no link, instead of a guess at where it started.
 - **Catch Me Up in the right-click menu and the command palette is always there** while Catch me up is on. With nothing new it says so on a card, and the palette notes "nothing new" or "earlier summary".
 - **A clear message when the conversation's language isn't supported,** without the System Settings button meant for your Mac's language.
 - **Offer Catch me up in busy channels turns it off everywhere:** the button, the right-click menu, the command palette and open cards, and Siri says it's turned off.

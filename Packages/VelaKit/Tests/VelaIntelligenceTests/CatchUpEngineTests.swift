@@ -53,15 +53,61 @@ struct CatchUpEngineTests {
         #expect(summary.addressedToYou == ["wren asked you to review the sidebar PR."])
     }
 
-    @Test func instructionsNameTheReaderAndTheRules() {
+    @Test func instructionsNameTheReaderAndTheRules() throws {
         let instructions = CatchUpPrompts.instructions(ownNick: "doug", pass: .single)
         #expect(instructions.contains("“doug”"))
+        #expect(instructions.contains("Call the reader “you”"))
         #expect(instructions.contains("Never invent"))
+        #expect(instructions.contains("neutrally, without taking sides or repeating insults"))
         #expect(instructions.contains("exactly as they appear"))
-        #expect(instructions.contains("at most two sentences"))
-        #expect(instructions.contains("at most 6 topics"))
+        #expect(instructions.contains("OVERVIEW: <one or two sentences on the whole conversation>"))
+        #expect(instructions.contains("TOPIC: [<number of the first transcript line about it>] | <short title> | <one sentence on what was said> | <nicks involved, comma-separated>"))
+        #expect(instructions.contains("YOU: <nick> <what they asked or told you>"))
+        #expect(instructions.contains("names “doug”"))
+        #expect(instructions.contains("at most 6 TOPIC lines"))
+        #expect(CatchUpPrompts.instructions(ownNick: "doug", pass: .digest).contains("at most 4 TOPIC lines"))
+        #expect(CatchUpPrompts.instructions(ownNick: "doug", pass: .merge).contains("TOPIC: [<the smallest number of the parts' topics it combines>]"))
+        // The example's line parses as the format says.
+        let example = try #require(instructions.split(separator: "\n").first { $0.hasPrefix("TOPIC: [17]") })
+        #expect(CatchUpReply.parse(String(example)).topics.first?.firstLine == 17)
+        // The format is part of the instructions, and counted with them.
+        #expect(instructions.hasSuffix(CatchUpPrompts.format(ownNick: "doug", pass: .single)))
         // The transcript never goes in the instructions.
         #expect(!instructions.contains("[1]"))
+    }
+
+    /// No prompt or instruction names the channel or the network: a name
+    /// alone can read as a subject Apple Intelligence turns down.
+    @Test func promptsNeverNameTheChannelOrNetwork() async throws {
+        for (channel, network) in [("##politicalfun", "PoliticsNet"), ("#vela", "Libera.Chat"), ("mallory", "Example IRC")] {
+            for lines in [F.chatter(3), F.chatter(240)] {
+                let model = FakeCatchUpModel(
+                    context: 2048,
+                    digest: { prompt in
+                        CatchUpDraft(overview: "A part.", topics: [.init(title: "Part", participants: ["alice"], firstLine: lineNumbers(in: prompt).first)])
+                    },
+                    final: { _ in [CatchUpDraft(overview: "All of it.")] }
+                )
+                var request = F.request(lines, name: channel)
+                request.networkName = network
+                _ = try await CatchUpEngine(model: model).run(request)
+                #expect(!model.calls.value.isEmpty)
+                for call in model.calls.value {
+                    let (prompt, instructions) = switch call {
+                    case .digest(let prompt, let instructions, _), .summarize(let prompt, let instructions, _): (prompt, instructions)
+                    }
+                    for text in [prompt, instructions] {
+                        #expect(!text.localizedCaseInsensitiveContains(channel), "\(channel) in \(text)")
+                        #expect(!text.localizedCaseInsensitiveContains(network), "\(network) in \(text)")
+                    }
+                }
+                // Including the merges of a long stretch.
+                if lines.count > 3 { #expect(!model.digestCalls.isEmpty) }
+            }
+        }
+        // Planning measures the same prompts.
+        let router = CatchUpRouter(onDevice: FakeCatchUpModel(), cloud: nil)
+        _ = await router.plan(F.request(F.chatter(30), name: "##politicalfun"))
     }
 
     @Test func nothingToSummarize() async {
@@ -85,7 +131,15 @@ struct CatchUpEngineTests {
                     topics: [.init(title: "Part from \(numbers.first!)", participants: ["alice"], firstLine: numbers.first!)]
                 )
             },
-            final: { _ in [CatchUpDraft(overview: "Release planning.", topics: [.init(title: "Release", participants: ["bob"], firstLine: 2)])] }
+            final: { prompt in
+                // The second part's line, as its digest cites it, and one made up.
+                let second = prompt.split(separator: "\n").first { $0.hasPrefix("Part 2, lines ") }
+                let line = second.flatMap { Int($0.dropFirst("Part 2, lines ".count).prefix { $0.isNumber }) }
+                return [CatchUpDraft(overview: "Release planning.", topics: [
+                    .init(title: "Release", participants: ["bob"], firstLine: line),
+                    .init(title: "Invented", participants: ["bob"], firstLine: 2),
+                ])]
+            }
         )
         let summary = try await CatchUpEngine(model: model).run(F.request(lines))
 
@@ -99,10 +153,10 @@ struct CatchUpEngineTests {
 
         #expect(model.summarizeCalls.count == 1)
         let merge = try #require(model.summarizeCalls.first?.prompt)
-        #expect(merge.contains("Part 1 (lines 1–\(digests[0].last!))"))
-        #expect(merge.contains("[line 1] Part from 1"))
+        #expect(merge.contains("Part 1, lines 1–\(digests[0].last!):\nOVERVIEW: Lines 1–\(digests[0].last!).\nTOPIC: [1] | Part from 1 |  | alice"))
         #expect(summary.overview == "Release planning.")
-        #expect(summary.topics.first?.firstLineID == lines[1].id)
+        // A merge can only cite the lines its parts cited.
+        #expect(summary.topics.map(\.firstLineID) == [lines[digests[1][0] - 1].id, nil])
         #expect(summary.messageCount == 240)
     }
 
@@ -284,9 +338,9 @@ struct CatchUpEngineTests {
         #expect(model.digestCalls.count > 1)
         #expect(summary.overview == "The rest of it.")
         #expect(summary.skippedMessages == lineNumbers(in: declined.prompt).count)
-        let topics = try #require(model.summarizeCalls.last?.prompt).split(separator: "\n").filter { $0.hasPrefix("- Part from") }
+        let topics = try #require(model.summarizeCalls.last?.prompt).split(separator: "\n").filter { $0.hasPrefix("TOPIC: ") }
         #expect(!topics.isEmpty)
-        #expect(!topics.contains("- Part from 1"))
+        #expect(!topics.contains { $0.hasSuffix("| Part from 1") })
     }
 
     /// A short stretch the model declines is read in halves, so only the
@@ -344,6 +398,149 @@ struct CatchUpEngineTests {
         #expect(long.summarizeCalls.isEmpty)
     }
 
+    // MARK: Plain-text replies
+
+    /// The reply streams as text: the overview shows as it's written, each
+    /// topic once its line is done, and nothing shown is taken back.
+    @Test func aStreamedReplyIsReadAsItArrives() async throws {
+        let lines = F.heatedPoliticsLines()
+        let reply = """
+        **OVERVIEW:** People argued about the minimum wage and voter ID; maple_ asked you about the polls.
+        1. TOPIC: 1 | Minimum wage | redfern said a $20 minimum hurts small businesses; bluejay and libby disagreed. | redfern, bluejay, libby
+        2. TOPIC: [14] | Voter ID | orwell_fan backed the bill and bluejay called it a solution looking for a problem. | orwell_fan, bluejay
+        TOPIC: 999 | Made-up line | Nothing. | konrad
+        YOU: maple_ asked whether ID was an issue when you worked the polls.
+        """
+        // Every few characters, as a model streams.
+        let steps = stride(from: 6, to: reply.count, by: 6).map { String(reply.prefix($0)) } + [reply]
+        let model = FakeCatchUpModel(context: 8192, finalText: { _ in steps })
+        let partials = Recorder<[CatchUpSummary]>([])
+        let summary = try await CatchUpEngine(model: model).run(F.request(lines)) { snapshot in
+            partials.update { $0.append(snapshot) }
+        }
+
+        let snapshots = partials.value
+        #expect(!snapshots.isEmpty)
+        // Fewer snapshots than steps: a step that reads the same isn't passed on.
+        #expect(snapshots.count < steps.count)
+        for (earlier, later) in zip(snapshots, snapshots.dropFirst()) {
+            #expect(later.overview.hasPrefix(earlier.overview), "\(earlier.overview) → \(later.overview)")
+            #expect(later.topics.count >= earlier.topics.count)
+            #expect(Array(later.topics.prefix(earlier.topics.count)) == earlier.topics)
+        }
+        // The overview streamed in pieces before the first topic.
+        #expect(snapshots.filter { $0.topics.isEmpty }.count > 3)
+        #expect(!snapshots.contains { $0.overview.contains("OVERVIEW") || $0.overview.contains("*") })
+
+        #expect(summary.overview == "People argued about the minimum wage and voter ID; maple_ asked you about the polls.")
+        #expect(summary.topics.map(\.title) == ["Minimum wage", "Voter ID", "Made-up line"])
+        #expect(summary.topics[0].participants == ["redfern", "bluejay", "libby"])
+        #expect(summary.topics[1].summary == "orwell_fan backed the bill and bluejay called it a solution looking for a problem.")
+        // Valid line numbers link; one past the transcript doesn't.
+        #expect(summary.topics.map(\.firstLineID) == [lines[0].id, lines[13].id, nil])
+        #expect(summary.addressedToYou == ["maple_ asked whether ID was an issue when you worked the polls."])
+    }
+
+    /// A refusal written out as text, not thrown, counts as declined: the
+    /// stretch is read in halves and the half that's refused is skipped.
+    @Test func aWrittenRefusalIsDeclined() async throws {
+        let model = FakeCatchUpModel(
+            digestText: { prompt in
+                lineNumbers(in: prompt).contains(1) ? "I'm sorry, but I can't help with that." : "OVERVIEW: The second half.\nTOPIC: 20 | Later | More talk. | bob"
+            },
+            finalText: { prompt in
+                lineNumbers(in: prompt).isEmpty ? ["OVERVIEW: What's left."] : ["I", "I'm sorry, but I can't", "I'm sorry, but I can't summarize this conversation."]
+            }
+        )
+        let partials = Recorder<[CatchUpSummary]>([])
+        let summary = try await CatchUpEngine(model: model).run(F.request(F.chatter(30))) { snapshot in
+            partials.update { $0.append(snapshot) }
+        }
+        // The refusal was never shown.
+        #expect(!partials.value.contains { $0.overview.localizedCaseInsensitiveContains("sorry") || $0.overview == "I" })
+        #expect(summary.overview == "What's left.")
+        #expect((1..<30).contains(summary.skippedMessages))
+    }
+
+    /// A digest cites only lines in its own part.
+    @Test func aDigestCitesOnlyItsOwnLines() async throws {
+        let model = FakeCatchUpModel(
+            context: 2048,
+            digestText: { prompt in
+                let numbers = lineNumbers(in: prompt)
+                return """
+                OVERVIEW: A part.
+                TOPIC: \(numbers.first!) | Own line \(numbers.first!) | Fine. | alice
+                TOPIC: \(numbers.last! + 1) | Next part's line \(numbers.first!) | Not this part's. | bob
+                """
+            },
+            finalText: { _ in ["OVERVIEW: All of it."] }
+        )
+        _ = try await CatchUpEngine(model: model).run(F.request(F.chatter(240)))
+        let merge = try #require(model.summarizeCalls.last?.prompt)
+        let firsts = model.digestCalls.map { lineNumbers(in: $0.prompt).first! }
+        #expect(firsts.count > 1)
+        for first in firsts {
+            #expect(merge.contains("TOPIC: [\(first)] | Own line \(first) | Fine. | alice"))
+            #expect(merge.contains("TOPIC: Next part's line \(first) | Not this part's. | bob"))
+        }
+    }
+
+    /// A reply that runs past the six topics the card shows is stopped
+    /// there: what follows is never read.
+    @Test func aReplyPastSixTopicsIsStopped() async throws {
+        let lines = [F.line("wren", "doug: can you review the PR?")] + F.chatter(29)
+        let topics = (1...10).map { "TOPIC: \($0 + 1) | Topic \($0) | Talk. | alice" }
+        let reply = (["OVERVIEW: Lots of topics."] + topics + ["YOU: wren asked you to review the PR."]).joined(separator: "\n")
+        let steps = reply.split(separator: "\n").indices.map { reply.split(separator: "\n")[...$0].joined(separator: "\n") + "\n" }
+        let model = FakeCatchUpModel(finalText: { _ in steps })
+        let summary = try await CatchUpEngine(model: model).run(F.request(lines))
+        #expect(summary.topics.map(\.title) == (1...6).map { "Topic \($0)" })
+        // The model's own note came after the stop: the mention is quoted instead.
+        #expect(summary.addressedToYou == ["wren: “can you review the PR?”"])
+    }
+
+    /// A digest stops once it's past the four topics a part keeps, as the
+    /// schema's limits used to stop it.
+    @Test func aDigestPastFourTopicsIsStopped() async throws {
+        let model = FakeCatchUpModel(
+            context: 2048,
+            digestText: { prompt in
+                let first = lineNumbers(in: prompt).first ?? 1
+                let topics = (0..<8).map { "TOPIC: [\(first + $0)] | Part \(first) topic \($0) | Talk. | alice" }
+                return (["OVERVIEW: A part."] + topics + ["YOU: alice asked you something."]).joined(separator: "\n")
+            },
+            finalText: { _ in ["OVERVIEW: All of it."] }
+        )
+        _ = try await CatchUpEngine(model: model).run(F.request(F.chatter(240)))
+        let merge = try #require(model.summarizeCalls.last?.prompt)
+        #expect(merge.contains("topic 3 |"))
+        #expect(!merge.contains("topic 4 |"))
+        // What came after the stop was never read.
+        #expect(!merge.contains("YOU:"))
+    }
+
+    @Test func theLimitWatchesAStreamedReply() {
+        let limit = CatchUpReplyLimit(nicks: ["alice"], topics: 2)
+        let reply = "OVERVIEW: x\nTOPIC: [1] | One\nTOPIC: [2] | Two\nYOU: a\nYOU: b\nYOU: c\nYOU: d\nTOPIC: [3] | Three\n"
+        var stops: [Int] = []
+        for end in 0...reply.count where limit.isReached(String(reply.prefix(end))) { stops.append(end) }
+        // Stopped once a fourth note is done: the two topics were written.
+        #expect(stops.first == reply.range(of: "YOU: d\n")!.upperBound.utf16Offset(in: reply))
+    }
+
+    /// A reply with no usable text, or nothing at all, is a declined part.
+    @Test func anEmptyReplyIsDeclined() async throws {
+        let model = FakeCatchUpModel(
+            context: 2048,
+            digestText: { prompt in lineNumbers(in: prompt).contains(1) ? "   \n" : "OVERVIEW: Fine." },
+            finalText: { _ in ["OVERVIEW: The rest."] }
+        )
+        let summary = try await CatchUpEngine(model: model).run(F.request(F.chatter(240)))
+        #expect(summary.overview == "The rest.")
+        #expect(summary.skippedMessages > 0)
+    }
+
     // MARK: Errors
 
     /// The model can't read what people wrote: that's the conversation's
@@ -389,6 +586,24 @@ struct CatchUpEngineTests {
 
     // MARK: Results
 
+    /// Line numbers that only count the topics (1, 2, 3…) link nowhere;
+    /// real ones, and a first topic at line 1, still link.
+    @Test func numbersThatCountTopicsAreNotLines() {
+        let inRange: (Int) -> Bool = { 1...72 ~= $0 }
+        let counted = CatchUpDraft(topics: (1...4).map { .init(title: "T\($0)", firstLine: $0) }).citing(inRange)
+        #expect(counted.topics.allSatisfy { $0.firstLine == nil })
+        let real = CatchUpDraft(topics: [.init(title: "A", firstLine: 1), .init(title: "B", firstLine: 14), .init(title: "C", firstLine: 99)]).citing(inRange)
+        #expect(real.topics.map(\.firstLine) == [1, 14, nil])
+        let one = CatchUpDraft(topics: [.init(title: "A", firstLine: 1)]).citing(inRange)
+        #expect(one.topics.map(\.firstLine) == [1])
+        // Seen in a live merge: 2, 3, 4, 5 for topics that started far apart.
+        let offset = CatchUpDraft(topics: (2...5).map { .init(title: "T\($0)", firstLine: $0) }).citing(inRange)
+        #expect(offset.topics.allSatisfy { $0.firstLine == nil })
+        // Two neighbors that don't start at 1 may be real.
+        let pair = CatchUpDraft(topics: [.init(title: "A", firstLine: 7), .init(title: "B", firstLine: 8)]).citing(inRange)
+        #expect(pair.topics.map(\.firstLine) == [7, 8])
+    }
+
     @Test func resultsKeepToWhatWasSaid() {
         let lines = [
             F.line("Kenji", "first"),
@@ -401,7 +616,7 @@ struct CatchUpEngineTests {
             topics: [
                 // Invented and miscased nicks.
                 .init(title: "One", participants: ["kenji", "Mallory", "@ada", "KENJI"], firstLine: 2),
-                // A line number that doesn't exist: falls back to the first participant's line.
+                // A line number that doesn't exist: no link.
                 .init(title: "Two", participants: ["wren"], firstLine: 99),
                 .init(title: "   ", participants: ["ada"], firstLine: 1),
             ] + (3...9).map { .init(title: "Extra \($0)", firstLine: 1) },
@@ -413,7 +628,7 @@ struct CatchUpEngineTests {
         #expect(summary.topics.count == 6)
         #expect(summary.topics[0].participants == ["Kenji", "ada"])
         #expect(summary.topics[0].firstLineID == lines[1].id)
-        #expect(summary.topics[1].firstLineID == lines[2].id)
+        #expect(summary.topics[1].firstLineID == nil)
         #expect(summary.topics.map(\.title).contains("   ") == false)
         #expect(summary.addressedToYou.isEmpty)
         // Topic ids are stable by position, for streaming.
@@ -480,6 +695,11 @@ struct CatchUpNickCaseTests {
     @Test func notesLoseTheReadersNickUpFront() {
         #expect(CatchUpEngine.cleanNote("doug: Wren asked you to review the PR", transcript: transcript) == "wren asked you to review the PR")
         #expect(CatchUpEngine.cleanNote("  you were asked about the PR ", transcript: transcript) == "You were asked about the PR")
+        // A message quoted as written, as the live model writes YOU lines.
+        #expect(CatchUpEngine.cleanNote("wren: doug: can you review the PR?", transcript: transcript) == "wren: “can you review the PR?”")
+        #expect(CatchUpEngine.cleanNote("Wren: Doug, around?", transcript: transcript) == "wren: “around?”")
+        // Not a quote: left as it is.
+        #expect(CatchUpEngine.cleanNote("wren: asked about the PR", transcript: transcript) == "wren: asked about the PR")
     }
 
     @Test func nearRepeatsAreDropped() {

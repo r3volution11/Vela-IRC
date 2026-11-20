@@ -45,10 +45,10 @@ struct CatchUpChunkingTests {
     }
 
     @Test func budgetLeavesRoomForEverythingElse() {
-        let budget = CatchUpBudget(contextSize: 4096, instructionTokens: 300, schemaTokens: 400, responseTokens: 750)
-        #expect(budget.transcriptTokens == 4096 - 300 - 400 - 750 - 60)
-        #expect(budget.shrunk(by: 0.5).transcriptTokens == (4096 - 300 - 400 - 750 - 60) / 2)
-        let tiny = CatchUpBudget(contextSize: 1000, instructionTokens: 600, schemaTokens: 400, responseTokens: 750)
+        let budget = CatchUpBudget(contextSize: 4096, instructionTokens: 600, responseTokens: 750)
+        #expect(budget.transcriptTokens == 4096 - 600 - 750 - 60)
+        #expect(budget.shrunk(by: 0.5).transcriptTokens == (4096 - 600 - 750 - 60) / 2)
+        let tiny = CatchUpBudget(contextSize: 1000, instructionTokens: 600, responseTokens: 750)
         #expect(tiny.transcriptTokens == CatchUpBudget.minimumTranscriptTokens)
     }
 }

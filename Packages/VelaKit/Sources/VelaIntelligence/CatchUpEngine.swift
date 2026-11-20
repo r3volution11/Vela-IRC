@@ -6,29 +6,36 @@ import Foundation
 
 /// What the Catch me up engine needs from a language model. The live one
 /// wraps Foundation Models (`FoundationModelsCatchUpModel`); tests use a fake.
+/// Replies are plain text in ``CatchUpReply``'s format, which the engine
+/// reads.
 nonisolated protocol CatchUpLanguageModel: Sendable {
     /// Tokens one request can hold: instructions, prompt and response.
     func contextSize() async -> Int
     /// The exact token count of `text`, or nil where the system can't
     /// count (before macOS 26.4); the engine estimates instead.
     func tokenCount(_ text: String) async -> Int?
-    /// The exact tokens the response format adds to a request, or nil.
-    func schemaTokenCount(for pass: CatchUpPrompts.Pass) async -> Int?
-    /// A digest of one chunk (or a merge of digests), all at once. The
-    /// response stops after `maximumResponseTokens`.
+    /// The reply to a digest of one chunk (or a merge of digests), all at
+    /// once. The response stops after `maximumResponseTokens`, or as soon
+    /// as the reply so far is `enough` (it's written everything that will
+    /// be kept). Errors are ``CatchUpModelError``s.
+    func digest(
+        prompt: String,
+        instructions: String,
+        maximumResponseTokens: Int,
+        until enough: @escaping @Sendable (String) -> Bool
+    ) async throws -> String
+    /// The reply with the final summary, streamed: each element is the
+    /// reply so far. The response stops after `maximumResponseTokens`.
     /// Errors are ``CatchUpModelError``s.
-    func digest(prompt: String, instructions: String, maximumResponseTokens: Int) async throws -> CatchUpDraft
-    /// The final summary, streamed: each element is the summary so far.
-    /// The response stops after `maximumResponseTokens`.
-    /// Errors are ``CatchUpModelError``s.
-    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error>
+    func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<String, Error>
 }
 
 /// Model failures the engine reacts to.
 nonisolated enum CatchUpModelError: Error, Equatable {
     /// The request didn't fit the context window: retry with less.
     case contextExceeded
-    /// Guardrails or a refusal: that part is left out.
+    /// Guardrails or a refusal (thrown, or written out instead of a
+    /// summary): that part is left out.
     case declined
     /// The model can't read the conversation's language.
     case unsupportedLanguage
@@ -63,6 +70,9 @@ nonisolated enum CatchUpModelError: Error, Equatable {
 /// reduce). The final pass streams, so the overview appears as it's
 /// written. Exceeded context windows retry with smaller pieces, and parts
 /// the model declines are left out (the summary says how many messages).
+///
+/// Prompts carry the transcript and the reader's nick, never the
+/// channel's or the network's name (see ``CatchUpPrompts``).
 nonisolated struct CatchUpEngine: Sendable {
     let model: any CatchUpLanguageModel
 
@@ -73,14 +83,6 @@ nonisolated struct CatchUpEngine: Sendable {
         switch pass {
         case .single, .merge: 750
         case .digest: 500
-        }
-    }
-
-    /// The response format's size when the system can't count it.
-    static func estimatedSchemaTokens(for pass: CatchUpPrompts.Pass) -> Int {
-        switch pass {
-        case .single, .merge: 420
-        case .digest: 380
         }
     }
 
@@ -111,7 +113,7 @@ nonisolated struct CatchUpEngine: Sendable {
         let reporter = CatchUpReporter(transcript: transcript, venue: venue, cloudFallback: cloudFallback, send: progress)
         do {
             let measurement = if let measured { measured } else { await measure(transcript) }
-            return try await summarize(measurement, bufferName: request.bufferName, reporter: reporter)
+            return try await summarize(measurement, reporter: reporter)
         } catch let error as CatchUpModelError {
             if case .cloudUnavailable = error { throw error }
             throw error.catchUpError
@@ -157,7 +159,6 @@ nonisolated struct CatchUpEngine: Sendable {
 
     private func summarize(
         _ measurement: Measurement,
-        bufferName: String,
         reporter: CatchUpReporter
     ) async throws -> CatchUpSummary {
         let transcript = measurement.transcript
@@ -169,9 +170,11 @@ nonisolated struct CatchUpEngine: Sendable {
         if measurement.fitsOnePass {
             do {
                 return try await stream(
-                    prompt: CatchUpPrompts.single(transcript, bufferName: bufferName),
+                    prompt: CatchUpPrompts.single(transcript),
                     instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .single),
                     pass: .single,
+                    transcript: transcript,
+                    cites: { 1...transcript.entries.count ~= $0 },
                     reporter: reporter
                 )
             } catch CatchUpModelError.contextExceeded {
@@ -191,9 +194,9 @@ nonisolated struct CatchUpEngine: Sendable {
         let pieces = CatchUpChunker.balanced(Array(zip(transcript.entries, costs)), budget: chunkTokens) { $0.1 }
         reporter.plan(pieces.count)
         for piece in pieces {
-            digests += try await digest(piece.map(\.0)[...], of: transcript, bufferName: bufferName, reporter: reporter)
+            digests += try await digest(piece.map(\.0)[...], of: transcript, reporter: reporter)
         }
-        return try await merge(digests, transcript: transcript, bufferName: bufferName, reporter: reporter)
+        return try await merge(digests, transcript: transcript, reporter: reporter)
     }
 
     // MARK: Map
@@ -203,25 +206,26 @@ nonisolated struct CatchUpEngine: Sendable {
     private func digest(
         _ entries: ArraySlice<CatchUpTranscript.Entry>,
         of transcript: CatchUpTranscript,
-        bufferName: String,
         reporter: CatchUpReporter
     ) async throws -> [CatchUpDigest] {
         try Task.checkCancellation()
         guard let first = entries.first?.number, let last = entries.last?.number else { return [] }
         do {
-            let draft = try await model.digest(
-                prompt: CatchUpPrompts.digest(entries, of: transcript, bufferName: bufferName),
+            let reply = try await model.digest(
+                prompt: CatchUpPrompts.digest(entries, of: transcript),
                 instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .digest),
-                maximumResponseTokens: Self.responseTokens(for: .digest)
+                maximumResponseTokens: Self.responseTokens(for: .digest),
+                until: CatchUpReplyLimit(nicks: transcript.nicks, topics: CatchUpPrompts.maximumDigestTopics).isReached
             )
+            let draft = try Self.draft(from: reply, transcript: transcript, cites: { first...last ~= $0 })
             reporter.partRead()
-            return [CatchUpDigest(lines: first...last, draft: draft)]
+            return [CatchUpDigest(lines: first...last, draft: draft.limited(topics: CatchUpPrompts.maximumDigestTopics))]
         } catch CatchUpModelError.contextExceeded where entries.count > 1 {
             // One part becomes two.
             reporter.plan(1)
             let middle = entries.startIndex + entries.count / 2
-            let left = try await digest(entries[..<middle], of: transcript, bufferName: bufferName, reporter: reporter)
-            let right = try await digest(entries[middle...], of: transcript, bufferName: bufferName, reporter: reporter)
+            let left = try await digest(entries[..<middle], of: transcript, reporter: reporter)
+            let right = try await digest(entries[middle...], of: transcript, reporter: reporter)
             return left + right
         } catch CatchUpModelError.declined {
             // Its guardrails, or a refusal: one part shouldn't sink the
@@ -239,32 +243,34 @@ nonisolated struct CatchUpEngine: Sendable {
     private func merge(
         _ digests: [CatchUpDigest],
         transcript: CatchUpTranscript,
-        bufferName: String,
         reporter: CatchUpReporter
     ) async throws -> CatchUpSummary {
         let mergeBudget = await budget(for: .merge, ownNick: transcript.ownNick)
         var level = digests
-        while level.count > 1, await cost(of: CatchUpPrompts.merge(level, bufferName: bufferName)) > mergeBudget.transcriptTokens {
-            level = try await mergeNeighbors(level, budget: mergeBudget, transcript: transcript, bufferName: bufferName, reporter: reporter)
+        while level.count > 1, await cost(of: CatchUpPrompts.merge(level)) > mergeBudget.transcriptTokens {
+            level = try await mergeNeighbors(level, budget: mergeBudget, transcript: transcript, reporter: reporter)
         }
         guard let only = level.first else { throw CatchUpModelError.declined }
         do {
+            let cited = Self.citedLines(level)
             return try await stream(
-                prompt: CatchUpPrompts.merge(level, bufferName: bufferName),
+                prompt: CatchUpPrompts.merge(level),
                 instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .merge),
                 pass: .merge,
+                transcript: transcript,
+                cites: { cited.contains($0) },
                 reporter: reporter
             )
         } catch CatchUpModelError.contextExceeded where level.count > 1 {
             reporter.redo()
-            let fewer = try await mergeNeighbors(level, budget: mergeBudget.shrunk(by: 0.5), transcript: transcript, bufferName: bufferName, reporter: reporter)
-            return try await merge(fewer, transcript: transcript, bufferName: bufferName, reporter: reporter)
+            let fewer = try await mergeNeighbors(level, budget: mergeBudget.shrunk(by: 0.5), transcript: transcript, reporter: reporter)
+            return try await merge(fewer, transcript: transcript, reporter: reporter)
         } catch CatchUpModelError.declined where level.count > 1 {
             // Something in the notes trips the guardrails: combine them in
             // smaller groups, leaving out any group it declines.
             reporter.redo()
-            let fewer = try await mergeNeighbors(level, budget: mergeBudget.shrunk(by: 0.5), transcript: transcript, bufferName: bufferName, reporter: reporter)
-            return try await merge(fewer, transcript: transcript, bufferName: bufferName, reporter: reporter)
+            let fewer = try await mergeNeighbors(level, budget: mergeBudget.shrunk(by: 0.5), transcript: transcript, reporter: reporter)
+            return try await merge(fewer, transcript: transcript, reporter: reporter)
         } catch CatchUpModelError.declined {
             // One digest left, covering everything that wasn't skipped:
             // it's the summary.
@@ -280,7 +286,6 @@ nonisolated struct CatchUpEngine: Sendable {
         _ digests: [CatchUpDigest],
         budget: CatchUpBudget,
         transcript: CatchUpTranscript,
-        bufferName: String,
         reporter: CatchUpReporter
     ) async throws -> [CatchUpDigest] {
         var costs: [Int] = []
@@ -305,13 +310,20 @@ nonisolated struct CatchUpEngine: Sendable {
             let summarized = members.reduce(0) { $0 + $1.summarizedLines }
             do {
                 // The result is a digest, so it gets a digest's room.
-                let draft = try await model.digest(
-                    prompt: CatchUpPrompts.merge(members, bufferName: bufferName),
+                let reply = try await model.digest(
+                    prompt: CatchUpPrompts.merge(members),
                     instructions: CatchUpPrompts.instructions(ownNick: transcript.ownNick, pass: .merge),
-                    maximumResponseTokens: Self.responseTokens(for: .digest)
+                    maximumResponseTokens: Self.responseTokens(for: .digest),
+                    until: CatchUpReplyLimit(nicks: transcript.nicks, topics: CatchUpPrompts.maximumDigestTopics).isReached
                 )
+                let cited = Self.citedLines(members)
+                let draft = try Self.draft(from: reply, transcript: transcript, cites: { cited.contains($0) })
                 reporter.partRead()
-                merged.append(CatchUpDigest(lines: first.lines.lowerBound...last.lines.upperBound, draft: draft, summarizedLines: summarized))
+                merged.append(CatchUpDigest(
+                    lines: first.lines.lowerBound...last.lines.upperBound,
+                    draft: draft.limited(topics: CatchUpPrompts.maximumDigestTopics),
+                    summarizedLines: summarized
+                ))
             } catch CatchUpModelError.declined {
                 reporter.skipped(summarized)
             }
@@ -319,33 +331,67 @@ nonisolated struct CatchUpEngine: Sendable {
         return merged
     }
 
+    /// The line numbers `digests` cite: the only ones a merge of them can
+    /// cite, since it never sees the transcript.
+    private static func citedLines(_ digests: [CatchUpDigest]) -> Set<Int> {
+        Set(digests.flatMap { $0.draft.topics.compactMap(\.firstLine) })
+    }
+
+    // MARK: Replies
+
+    /// A finished reply as a draft, keeping only line numbers it `cites`
+    /// legitimately. A reply with nothing usable, such as a refusal written
+    /// out instead of thrown, counts as declined.
+    static func draft(from reply: String, transcript: CatchUpTranscript, cites: (Int) -> Bool) throws -> CatchUpDraft {
+        let draft = CatchUpReply.parse(reply, isComplete: true, nicks: transcript.nicks)
+        guard !CatchUpReply.isDeclined(draft) else { throw CatchUpModelError.declined }
+        return draft.citing(cites)
+    }
+
     // MARK: Streaming
 
+    /// The final pass, read as it streams: the overview as it's written,
+    /// each topic once its line is done. A snapshot that reads the same as
+    /// the last one isn't passed on, so a topic's line being written costs
+    /// the card nothing. A reply that runs past the topics and notes the
+    /// card shows is stopped there (mentions it didn't get to are quoted
+    /// from the transcript).
     private func stream(
         prompt: String,
         instructions: String,
         pass: CatchUpPrompts.Pass,
+        transcript: CatchUpTranscript,
+        cites: (Int) -> Bool,
         reporter: CatchUpReporter
     ) async throws -> CatchUpSummary {
-        var last: CatchUpDraft?
-        let drafts = model.summarize(prompt: prompt, instructions: instructions, maximumResponseTokens: Self.responseTokens(for: pass))
-        for try await draft in drafts {
-            last = draft
+        var reply: String?
+        var shown: CatchUpDraft?
+        var reader = CatchUpReply.Reader(nicks: transcript.nicks)
+        let replies = model.summarize(prompt: prompt, instructions: instructions, maximumResponseTokens: Self.responseTokens(for: pass))
+        for try await text in replies {
+            reply = text
+            let draft = reader.read(text, isComplete: false).citing(cites)
+            // Past what the card shows, the rest would be dropped: stop
+            // writing it.
+            if CatchUpReply.isPastLimits(draft, topics: CatchUpPrompts.maximumTopics) { break }
+            guard draft != shown else { continue }
+            shown = draft
             reporter.wrote(draft)
         }
         try Task.checkCancellation()
-        guard let last else { throw CatchUpModelError.failed("Apple Intelligence didn't return a summary.") }
-        return reporter.finish(last)
+        guard let reply else { throw CatchUpModelError.failed("Apple Intelligence didn't return a summary.") }
+        return reporter.finish(try Self.draft(from: reply, transcript: transcript, cites: cites))
     }
 
     // MARK: Budgets
 
+    /// The room in one request. The instructions include the reply format,
+    /// which takes the place a guided-generation schema had.
     private func budget(for pass: CatchUpPrompts.Pass, ownNick: String) async -> CatchUpBudget {
         let instructions = CatchUpPrompts.instructions(ownNick: ownNick, pass: pass)
         return CatchUpBudget(
             contextSize: await model.contextSize(),
             instructionTokens: await cost(of: instructions),
-            schemaTokens: await model.schemaTokenCount(for: pass) ?? Self.estimatedSchemaTokens(for: pass),
             responseTokens: Self.responseTokens(for: pass)
         )
     }
@@ -366,10 +412,10 @@ nonisolated struct CatchUpEngine: Sendable {
 
     // MARK: Results
 
-    /// A draft as the reader sees it: line numbers become message ids,
-    /// participants are limited to people who spoke (written as they
-    /// wrote them), and notes about the reader are kept only when someone
-    /// actually mentioned them.
+    /// A draft as the reader sees it: line numbers become message ids (a
+    /// topic without a valid one links nowhere), participants are limited
+    /// to people who spoke (written as they wrote them), and notes about
+    /// the reader are kept only when someone actually mentioned them.
     static func summary(from draft: CatchUpDraft, transcript: CatchUpTranscript, isComplete: Bool) -> CatchUpSummary {
         var topics: [CatchUpTopic] = []
         for topic in draft.topics {
@@ -380,16 +426,13 @@ nonisolated struct CatchUpEngine: Sendable {
             let participants = topic.participants
                 .compactMap(transcript.canonicalNick)
                 .filter { seen.insert($0.lowercased()).inserted }
-            var lineID = topic.firstLine.flatMap(transcript.lineID(forNumber:))
-            if lineID == nil, isComplete {
-                lineID = transcript.firstLine(spokenBy: participants)?.lineID
-            }
+                .prefix(CatchUpPrompts.maximumParticipants)
             topics.append(CatchUpTopic(
                 id: topicID(topics.count),
                 title: title,
                 summary: transcript.restoringNickCase(in: topic.summary.trimmingCharacters(in: .whitespacesAndNewlines)),
-                participants: participants,
-                firstLineID: lineID
+                participants: Array(participants),
+                firstLineID: topic.firstLine.flatMap(transcript.lineID(forNumber:))
             ))
         }
 
@@ -438,6 +481,18 @@ nonisolated struct CatchUpEngine: Sendable {
             let rest = text[range.upperBound...]
             if rest.first == ":" || rest.first == "," {
                 text = rest.dropFirst().trimmingCharacters(in: .whitespaces)
+            }
+        }
+        // A message quoted as written, "maple_: doug: are you hosting?",
+        // reads like the notes Vela quotes itself: maple_: “are you hosting?”.
+        if !own.isEmpty, let colon = text.firstIndex(of: ":"), transcript.canonicalNick(String(text[..<colon])) != nil {
+            let message = text[text.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+            if let range = message.range(of: own, options: [.caseInsensitive, .anchored]) {
+                let rest = message[range.upperBound...]
+                if rest.first == ":" || rest.first == "," {
+                    let quote = rest.dropFirst().trimmingCharacters(in: .whitespaces)
+                    if !quote.isEmpty { text = "\(text[..<colon]): “\(quote)”" }
+                }
             }
         }
         text = transcript.restoringNickCase(in: text)

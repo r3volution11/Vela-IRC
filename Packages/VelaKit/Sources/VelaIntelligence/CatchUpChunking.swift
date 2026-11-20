@@ -5,14 +5,14 @@
 import Foundation
 
 /// How many tokens one request may spend on the transcript: the model's
-/// context, minus the instructions, the response schema, the response
+/// context, minus the instructions (with the reply format), the response
 /// itself and a little framing.
 nonisolated struct CatchUpBudget: Sendable, Equatable {
     var contextSize: Int
+    /// The session instructions: the rules and the reply format.
     var instructionTokens: Int
-    var schemaTokens: Int
     var responseTokens: Int
-    /// The prompt's own words around the transcript ("Conversation in…").
+    /// The prompt's own words around the transcript ("The conversation, …").
     var framingTokens = 60
     /// Share of the room actually used: below 1 after the model reported an
     /// exceeded context window.
@@ -23,7 +23,7 @@ nonisolated struct CatchUpBudget: Sendable, Equatable {
     static let minimumTranscriptTokens = 200
 
     var transcriptTokens: Int {
-        let room = contextSize - instructionTokens - schemaTokens - responseTokens - framingTokens
+        let room = contextSize - instructionTokens - responseTokens - framingTokens
         return max(Self.minimumTranscriptTokens, Int(Double(room) * fill))
     }
 

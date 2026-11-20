@@ -67,14 +67,18 @@ struct CatchUpLiveModelTests {
 
         func contextSize() async -> Int { await base.contextSize() }
         func tokenCount(_ text: String) async -> Int? { await base.tokenCount(text) }
-        func schemaTokenCount(for pass: CatchUpPrompts.Pass) async -> Int? { await base.schemaTokenCount(for: pass) }
 
-        func digest(prompt: String, instructions: String, maximumResponseTokens: Int) async throws -> CatchUpDraft {
+        func digest(
+            prompt: String,
+            instructions: String,
+            maximumResponseTokens: Int,
+            until enough: @escaping @Sendable (String) -> Bool
+        ) async throws -> String {
             digests.update { $0 += 1 }
-            return try await base.digest(prompt: prompt, instructions: instructions, maximumResponseTokens: maximumResponseTokens)
+            return try await base.digest(prompt: prompt, instructions: instructions, maximumResponseTokens: maximumResponseTokens, until: enough)
         }
 
-        func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<CatchUpDraft, Error> {
+        func summarize(prompt: String, instructions: String, maximumResponseTokens: Int) -> AsyncThrowingStream<String, Error> {
             base.summarize(prompt: prompt, instructions: instructions, maximumResponseTokens: maximumResponseTokens)
         }
     }
@@ -189,13 +193,43 @@ struct CatchUpLiveModelTests {
     @Test func reportsTokenCounts() async throws {
         let model = FoundationModelsCatchUpModel()
         let context = await model.contextSize()
-        let schema = await model.schemaTokenCount(for: .single)
-        let digestSchema = await model.schemaTokenCount(for: .digest)
-        let instructions = await model.tokenCount(CatchUpPrompts.instructions(ownNick: "doug", pass: .single))
+        func count(_ text: String) async -> String { await model.tokenCount(text).map(String.init) ?? "n/a" }
+        let rules = await count(CatchUpPrompts.rules(ownNick: "doug", pass: .single))
+        let format = await count(CatchUpPrompts.format(ownNick: "doug", pass: .single))
+        let instructions = await count(CatchUpPrompts.instructions(ownNick: "doug", pass: .single))
+        let digestInstructions = await count(CatchUpPrompts.instructions(ownNick: "doug", pass: .digest))
         let transcript = CatchUpTranscript(lines: lines(repeating: 1), ownNick: "doug")
-        let counted = await model.tokenCount(transcript.text)
+        let counted = await count(transcript.text)
         let estimated = CatchUpChunker.estimatedTokens(transcript.text)
-        print("\n=== Context \(context); schema \(schema.map(String.init) ?? "n/a") (digest \(digestSchema.map(String.init) ?? "n/a")); instructions \(instructions.map(String.init) ?? "n/a"); transcript counted \(counted.map(String.init) ?? "n/a") vs estimated \(estimated)\n")
+        print("\n=== Context \(context); instructions \(instructions) (rules \(rules) + format \(format); digest \(digestInstructions)); transcript counted \(counted) vs estimated \(estimated)\n")
         #expect(context >= 4096)
+    }
+
+    /// An invented, heated political argument (72 lines, both sides, some
+    /// name-calling). Apple Intelligence declined all of it when it was
+    /// asked for a structured (`@Generable`) summary; asked for text, it
+    /// summarizes it whole.
+    @Test func summarizesAHeatedPoliticalArgument() async throws {
+        let lines = F.heatedPoliticsLines()
+        let summary = try await run(lines, label: "Heated politics, \(lines.count) lines")
+        #expect(summary.isComplete)
+        #expect(!summary.overview.isEmpty)
+        #expect(!summary.topics.isEmpty)
+        #expect(summary.skippedMessages <= lines.count / 10)
+        // Neutral? Reported, not asserted: describing an insult can be fair.
+        let text = ([summary.overview] + summary.topics.flatMap { [$0.title, $0.summary] }).joined(separator: " ").lowercased()
+        let repeated = ["muppet", "unhinged", "clown", "genius", "dumbest", "sweetheart", "puppet"].filter { text.contains($0) }
+        print("Insults repeated: \(repeated.isEmpty ? "none" : repeated.joined(separator: ", "))")
+    }
+
+    /// The same argument on a Mac with a 4,096-token model and estimated
+    /// counts (macOS 26.0–26.3), where it's read in parts and merged.
+    @Test func summarizesAHeatedPoliticalArgumentInParts() async throws {
+        let lines = F.heatedPoliticsLines() + F.heatedPoliticsLines()
+        let model = FoundationModelsCatchUpModel(contextLimit: 4096, countsTokens: false)
+        let summary = try await run(lines, label: "Heated politics twice, 4K context", model: model)
+        #expect(summary.isComplete)
+        #expect(!summary.topics.isEmpty)
+        #expect(summary.skippedMessages <= lines.count / 10)
     }
 }
