@@ -168,5 +168,7 @@ struct ShortcutGlyphTests {
         #expect(ShortcutGlyphs.string(for: VelaCommandCatalog.Shortcuts.nextTab) == "⇧⌘]")
         #expect(ShortcutGlyphs.spoken(previous) == "Shift Command Left Bracket")
         #expect(ShortcutGlyphs.string(for: VelaCommandCatalog.Shortcuts.nextNetwork) == "⌃⌘]")
+        #expect(ShortcutGlyphs.string(for: VelaCommandCatalog.Shortcuts.moveTabBack) == "⌥⇧⌘[")
+        #expect(ShortcutGlyphs.string(for: VelaCommandCatalog.Shortcuts.moveNetworkForward) == "⌃⌥⌘]")
     }
 }

@@ -48,6 +48,10 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | --- | --- |
 | Add Network… | <kbd>⇧⌘N</kbd> |
 | Join Channel… | <kbd>⌘J</kbd> |
+| Close the tab: what its **×** does (remove a channel, leave it on a bouncer, hide a detached one, close a conversation), asking first where that asks | <kbd>⌘W</kbd> |
+| Close the window | <kbd>⇧⌘W</kbd> |
+| Move the channel or conversation one place left or right (up or down in the sidebar) | <kbd>⌥⇧⌘[</kbd> / <kbd>⌥⇧⌘]</kbd> |
+| Move the network one place left or right (up or down in the sidebar) | <kbd>⌃⌥⌘[</kbd> / <kbd>⌃⌥⌘]</kbd> |
 | Reopen the channel you removed or the conversation you closed last (again to go further back) | <kbd>⇧⌘T</kbd> |
 | Undo leaving, removing or closing, right after (Edit → Undo) | <kbd>⌘Z</kbd> |
 | Redo it | <kbd>⇧⌘Z</kbd> |
@@ -78,6 +82,14 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | Switch from conversations to commands | type <kbd>></kbd> |
 | Switch back to conversations | <kbd>Backspace</kbd> in the empty field |
 
+## Settings
+
+| Action | Shortcut |
+| --- | --- |
+| Previous / next section | <kbd>⌘[</kbd> / <kbd>⌘]</kbd> |
+| Move through the sections, when their list has the focus | <kbd>↑</kbd> <kbd>↓</kbd> |
+| Close Settings | <kbd>⌘W</kbd> |
+
 ## The settings editor
 
 In **Settings → Advanced**. See [Settings editor](/customize/settings-editor).
@@ -104,4 +116,4 @@ In **Settings → Advanced**. See [Settings editor](/customize/settings-editor).
 
 ## Standard macOS shortcuts
 
-The usual ones work as you'd expect: <kbd>⌘Q</kbd> quits, <kbd>⌘H</kbd> hides Vela, <kbd>⌘M</kbd> minimizes the window, and <kbd>⌘C</kbd> / <kbd>⌘V</kbd> copy and paste.
+The usual ones work as you'd expect: <kbd>⌘Q</kbd> quits, <kbd>⌘H</kbd> hides Vela, <kbd>⌘M</kbd> minimizes the window, and <kbd>⌘C</kbd> / <kbd>⌘V</kbd> copy and paste. As in a browser, <kbd>⌘W</kbd> closes the tab in the main window and <kbd>⇧⌘W</kbd> closes the window; in other windows, such as Settings, <kbd>⌘W</kbd> closes the window.

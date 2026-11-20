@@ -168,10 +168,25 @@ private struct SettingsSidebar: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Settings sections")
         }
+        .background { sectionShortcuts }
         .padding(.top, 14)
         .padding(.bottom, 14)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(theme[ThemeKey.settingsSidebarBackground])
+    }
+
+    /// ⌘[ / ⌘]: the previous or next section, wherever the focus is in
+    /// Settings, like the arrows in the list.
+    private var sectionShortcuts: some View {
+        ZStack {
+            Button("Previous Section") { _ = move(by: -1) }
+                .keyboardShortcut("[", modifiers: .command)
+            Button("Next Section") { _ = move(by: 1) }
+                .keyboardShortcut("]", modifiers: .command)
+        }
+        .frame(width: 0, height: 0)
+        .opacity(0)
+        .accessibilityHidden(true)
     }
 
     private func move(by offset: Int) -> KeyPress.Result {

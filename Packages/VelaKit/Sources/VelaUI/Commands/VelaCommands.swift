@@ -46,6 +46,13 @@ struct VelaCommands: Commands {
             }
         }
 
+        // File → Close Tab (⌘W) and Close Window (⇧⌘W), as in a browser.
+        CommandGroup(replacing: .saveItem) {
+            CommandItems(app: app, themeStore: themeStore, uiState: uiState) { commands in
+                CloseMenuItems(commands: commands)
+            }
+        }
+
         // An IRC client has nothing to print; this also frees ⌘P and ⇧⌘P
         // (Print… and Page Setup…) for the palette.
         CommandGroup(replacing: .printItem) {}
@@ -124,6 +131,23 @@ private struct RecentlyClosedMenu: View {
         }
         .disabled(items.isEmpty)
     }
+}
+
+/// Close Tab and Close Window. Close Tab is just Close (the window) when
+/// the main window isn't the one in front.
+private struct CloseMenuItems: View {
+    @FocusedValue(\.isVelaMainWindow) private var isMainWindow
+    let commands: VelaCommandCatalog
+
+    var body: some View {
+        CommandMenuButton(commands.closeTab(inMainWindow: isMainWindow == true))
+        CommandMenuButton(commands.closeWindow)
+    }
+}
+
+extension FocusedValues {
+    /// Set by the main window's scene, so File → Close Tab knows it's in front.
+    @Entry var isVelaMainWindow: Bool?
 }
 
 // MARK: - View
@@ -222,5 +246,9 @@ private struct NetworkMenuItems: View {
             Divider()
             Button(commands.sortChannels.title) {}.disabled(true)
         }
+        CommandMenuButton(commands.moveSelectedBuffer(forward: false))
+        CommandMenuButton(commands.moveSelectedBuffer(forward: true))
+        CommandMenuButton(commands.moveSelectedNetwork(forward: false))
+        CommandMenuButton(commands.moveSelectedNetwork(forward: true))
     }
 }

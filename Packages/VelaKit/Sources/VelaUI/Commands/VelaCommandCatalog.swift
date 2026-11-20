@@ -65,6 +65,15 @@ struct VelaCommandCatalog {
         static let nextTab = KeyboardShortcut("}", modifiers: .command)
         static let previousNetwork = KeyboardShortcut("[", modifiers: [.control, .command])
         static let nextNetwork = KeyboardShortcut("]", modifiers: [.control, .command])
+        /// ⌥⇧⌘[ / ⌥⇧⌘]: the selected tab one place back or on (written with
+        /// the shifted characters, like `previousTab`); ⌥⌃⌘[ / ⌥⌃⌘] its network.
+        static let moveTabBack = KeyboardShortcut("{", modifiers: [.option, .command])
+        static let moveTabForward = KeyboardShortcut("}", modifiers: [.option, .command])
+        static let moveNetworkBack = KeyboardShortcut("[", modifiers: [.option, .control, .command])
+        static let moveNetworkForward = KeyboardShortcut("]", modifiers: [.option, .control, .command])
+        /// File → Close Tab, as in a browser; Close Window moves to ⇧⌘W.
+        static let closeTab = KeyboardShortcut("w", modifiers: .command)
+        static let closeWindow = KeyboardShortcut("w", modifiers: [.shift, .command])
         static let previousUnread = KeyboardShortcut(.upArrow, modifiers: [.shift, .option, .command])
         static let nextUnread = KeyboardShortcut(.downArrow, modifiers: [.shift, .option, .command])
         static let focusInput = KeyboardShortcut("l", modifiers: .command)
@@ -788,6 +797,105 @@ struct VelaCommandCatalog {
 
     /// Puts the selected network's channels and private conversations back
     /// in alphabetical order after they've been dragged around.
+    // MARK: Closing and moving tabs
+
+    /// File → Close Tab (⌘W). In the main window, what the selected tab's ×
+    /// does (asking first where that asks): "Remove Channel…", "Leave
+    /// Channel…", "Hide Channel" or "Close Conversation", and nothing on a
+    /// server console. In any other window (Settings, the theme editor),
+    /// it closes that window, as ⌘W does everywhere else.
+    func closeTab(inMainWindow: Bool) -> VelaCommand {
+        guard inMainWindow else {
+            return VelaCommand(
+                id: "file.close", category: .view, title: "Close", shortcut: Shortcuts.closeTab, showsInPalette: false
+            ) { NSApp.keyWindow?.performClose(nil) }
+        }
+        let app = app
+        let uiState = uiState
+        let action = app.selectedBuffer.flatMap { buffer in
+            app.session(for: buffer.id.networkID).flatMap { ChannelActions.closeAction(for: buffer, in: $0, app: app) }
+        }
+        let asks = switch action {
+        case .remove: settings[.channelsConfirmRemove]
+        case .detach: settings[.channelsConfirmLeave]
+        default: false
+        }
+        return VelaCommand(
+            id: "file.closeTab", category: .tabs, title: "Close Tab",
+            menuTitle: action.map { asks ? "\($0.title)…" : $0.title } ?? "Close Tab",
+            shortcut: Shortcuts.closeTab, isEnabled: action != nil,
+            // The palette has Close, Leave, Remove and Hide already.
+            showsInPalette: false
+        ) {
+            // The tab when it's pressed, not when the menu was drawn.
+            guard let buffer = app.selectedBuffer else { return }
+            ChannelActions.closeTab(buffer, app: app, uiState: uiState)
+        }
+    }
+
+    /// File → Close Window (⇧⌘W).
+    var closeWindow: VelaCommand {
+        VelaCommand(
+            id: "file.closeWindow", category: .view, title: "Close Window", shortcut: Shortcuts.closeWindow,
+            showsInPalette: false
+        ) { NSApp.keyWindow?.performClose(nil) }
+    }
+
+    /// The selected channel or conversation one place back or on among its
+    /// siblings: "Left" and "Right" with tabs, "Up" and "Down" with the
+    /// sidebar.
+    func moveSelectedBuffer(forward: Bool) -> VelaCommand {
+        let app = app
+        let usesSidebar = settings[.navigationStyle] == .sidebar
+        let direction = usesSidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
+        let buffer = app.selectedBuffer
+        var isEnabled = false
+        if let buffer, buffer.kind != .server, let session = app.session(for: buffer.id.networkID) {
+            let siblings = session.bufferSiblings(of: buffer)
+            if let index = siblings.firstIndex(where: { $0.id == buffer.id }) {
+                isEnabled = forward ? index < siblings.count - 1 : index > 0
+            }
+        }
+        return VelaCommand(
+            id: forward ? "tabs.moveForward" : "tabs.moveBack", category: .tabs,
+            title: "Move \(buffer?.kind == .query ? "Conversation" : "Channel") \(direction)",
+            shortcut: forward ? Shortcuts.moveTabForward : Shortcuts.moveTabBack,
+            keywords: ["reorder", "arrange", "order", "tab"], isEnabled: isEnabled
+        ) {
+            guard let buffer = app.selectedBuffer, buffer.kind != .server,
+                  let session = app.session(for: buffer.id.networkID) else { return }
+            withAnimation(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .snappy(duration: 0.25)) {
+                session.moveBuffer(buffer, by: forward ? 1 : -1)
+            }
+        }
+    }
+
+    /// The selected network one place back or on among its siblings (a
+    /// bouncer's networks among that bouncer's).
+    func moveSelectedNetwork(forward: Bool) -> VelaCommand {
+        let app = app
+        let usesSidebar = settings[.navigationStyle] == .sidebar
+        let direction = usesSidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
+        var isEnabled = false
+        if let session = app.selectedSession {
+            let siblings = app.networkSiblings(of: session.id)
+            if let index = siblings.firstIndex(where: { $0.id == session.id }) {
+                isEnabled = forward ? index < siblings.count - 1 : index > 0
+            }
+        }
+        return VelaCommand(
+            id: forward ? "network.moveForward" : "network.moveBack", category: .network,
+            title: "Move Network \(direction)",
+            shortcut: forward ? Shortcuts.moveNetworkForward : Shortcuts.moveNetworkBack,
+            keywords: ["reorder", "arrange", "order", "server"], isEnabled: isEnabled
+        ) {
+            guard let session = app.selectedSession else { return }
+            withAnimation(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .snappy(duration: 0.25)) {
+                app.moveNetwork(session.id, by: forward ? 1 : -1)
+            }
+        }
+    }
+
     var sortChannels: VelaCommand {
         let session = app.selectedSession
         return VelaCommand(
@@ -876,6 +984,8 @@ struct VelaCommandCatalog {
         commands += appIconCommands
         commands += dockCommands
         commands += [addNetwork, joinChannel, sortChannels]
+        commands += [moveSelectedBuffer(forward: false), moveSelectedBuffer(forward: true)]
+        commands += [moveSelectedNetwork(forward: false), moveSelectedNetwork(forward: true)]
         for session in app.sessions {
             commands += networkCommands(for: session)
         }

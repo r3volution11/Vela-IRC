@@ -78,6 +78,8 @@ struct MainWindowView: View {
         .background { ChannelConfirmationDialog() }
         // ⌘1–⌘9, with tabs or the sidebar.
         .background { TabShortcutButtons() }
+        // File → Close Tab closes a tab only when this window is in front.
+        .focusedSceneValue(\.isVelaMainWindow, true)
         .ignoresSafeArea()
         .frame(minWidth: 640, minHeight: 420)
         .animation(.snappy(duration: 0.2), value: showMembers)
