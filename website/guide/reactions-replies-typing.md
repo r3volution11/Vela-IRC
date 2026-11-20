@@ -19,7 +19,7 @@ Reactions appear as chips under the message, each with a count; yours are highli
 
 Hover a message and click the **reply** arrow, or right-click the message and choose **Reply**. From the keyboard, pick the message (<kbd>⌥⌘2</kbd>, then <kbd>↑</kbd> and <kbd>↓</kbd>) and press <kbd>R</kbd>. A bar above the message field shows who you're replying to (<kbd>Esc</kbd> cancels). Your reply appears with a small quote of the original above it; click the quote to jump to the original message.
 
-On servers without reply support, the bar warns that your message will be **sent as a normal message**.
+**On servers without reply support** (Libera.Chat, and most bouncers), **Reply** answers the usual IRC way instead: it puts the person's nick in the message field, as in `marisol: `, and your message goes out as a normal one. That works in channels; in a private conversation there's no one else to address, so **Reply** isn't offered there.
 
 ## Typing indicators
 
@@ -38,7 +38,7 @@ They need the server to support **IRCv3 message tags** (and, for deletion, `draf
 | Feature | Needs | If it's missing |
 | --- | --- | --- |
 | Reactions | `message-tags`, `+draft/react` allowed | No reaction buttons; others' reactions can't arrive |
-| Replies | `message-tags`, `+draft/reply` allowed | Replies are sent as normal messages |
+| Replies | `message-tags`, `+draft/reply` allowed | **Reply** puts `nick: ` in the message field, and your message is sent as a normal one |
 | Typing | `message-tags`, `+typing` allowed | No typing line |
 | Delete | `draft/message-redaction` | No **Delete Message** item |
 

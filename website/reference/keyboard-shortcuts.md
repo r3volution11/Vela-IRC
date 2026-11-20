@@ -131,7 +131,7 @@ Press <kbd>⌥⌘2</kbd> (**Go → Focus Messages**), or <kbd>F6</kbd> until you
 | Previous / next message | <kbd>↑</kbd> / <kbd>↓</kbd> |
 | A page of messages up / down | <kbd>Page Up</kbd> / <kbd>Page Down</kbd> |
 | The first / last message loaded | <kbd>Home</kbd> / <kbd>End</kbd> |
-| Reply | <kbd>R</kbd> |
+| Reply (on servers without IRCv3 replies, start a message with `nick: `) | <kbd>R</kbd> |
 | React (opens the emoji picker) | <kbd>E</kbd> |
 | Copy the text | <kbd>C</kbd> or <kbd>⌘C</kbd> |
 | Open the link (a menu of them when there are several) | <kbd>Return</kbd> |

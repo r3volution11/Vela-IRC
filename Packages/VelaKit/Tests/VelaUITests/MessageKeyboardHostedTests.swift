@@ -91,7 +91,8 @@ extension LinkSelectionTests {
             return ChatLine(msgid: "keys-\(lineNumber)", time: time, kind: kind, nick: nick, userHost: "\(nick)@user/\(nick)", text: text, isHistory: true)
         }
 
-        private func host(history: Int = 120) async throws -> Hosted {
+        /// `replies: false`: a server without IRCv3 replies (no message tags).
+        private func host(history: Int = 120, replies: Bool = true) async throws -> Hosted {
             let root = FileManager.default.temporaryDirectory.appendingPathComponent("VelaKeys-\(UUID().uuidString)")
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             let app = AppModel(
@@ -105,6 +106,7 @@ extension LinkSelectionTests {
             app.settings[.mediaShowLinkCards] = false
             app.settings[.mediaAutoLoad] = false
             let session = try #require(app.sessions.first)
+            if !replies { session.capabilities.remove("message-tags") }
             let buffer = session.ensureBuffer(name: "##keys", kind: .channel, persist: false)
             buffer.isJoined = true
             let start = Date().addingTimeInterval(-Double(history + 20) * 30)
@@ -399,6 +401,19 @@ extension LinkSelectionTests {
             #expect(hosted.uiState.focusedArea == .messageBox)
             // The selection goes with the focus.
             #expect(hosted.selectedID == nil)
+        }
+
+        /// Without IRCv3 replies, R answers the usual IRC way: "nick: ".
+        @Test func rAddressesTheSenderWithoutIRCv3Replies() async throws {
+            let hosted = try await host(replies: false)
+            defer { hosted.close() }
+            try await focusMessages(hosted)
+            try await press(.up, in: hosted)
+            try await press(.r, in: hosted, settling: 300)
+            #expect(hosted.uiState.replyTargets[hosted.buffer.id] == nil)
+            #expect(hosted.composer?.string == "marisol: ")
+            #expect(hosted.window.firstResponder === hosted.composer)
+            #expect(hosted.uiState.focusedArea == .messageBox)
         }
 
         @Test func cAndCommandCCopyTheText() async throws {

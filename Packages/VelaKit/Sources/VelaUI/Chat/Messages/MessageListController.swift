@@ -273,8 +273,26 @@ final class MessageListController {
 
     func canReact(to line: ChatLine) -> Bool { canReact && line.msgid != nil && !line.isRedacted }
 
+    /// With IRCv3 replies, any message with an id. Without them (Libera.Chat,
+    /// most bouncers), a channel message from someone else, answered the
+    /// usual IRC way: "nick: " in the message box (`reply(to:uiState:)`).
     func canReply(to line: ChatLine) -> Bool {
-        session.supportsReplies && line.msgid != nil && buffer.kind != .server && !line.isRedacted
+        guard buffer.kind != .server, !line.isRedacted else { return false }
+        if repliesWithTags(to: line) { return true }
+        return addressesInstead(line) != nil
+    }
+
+    private func repliesWithTags(to line: ChatLine) -> Bool {
+        session.supportsReplies && line.msgid != nil
+    }
+
+    /// The nick a plain-IRC reply addresses, or nil where that makes no
+    /// sense: your own messages, events, and private conversations (it's
+    /// already just the two of you).
+    private func addressesInstead(_ line: ChatLine) -> String? {
+        guard buffer.kind == .channel, line.kind.isConversation, !line.isSelf,
+              let nick = line.nick, !nick.isEmpty else { return nil }
+        return nick
     }
 
     func canDelete(_ line: ChatLine) -> Bool {
@@ -295,6 +313,11 @@ final class MessageListController {
     }
 
     func reply(to line: ChatLine, uiState: UIState) {
+        if !repliesWithTags(to: line), let nick = addressesInstead(line) {
+            // As Mention does: "nick: " to start a message, the nick after text.
+            uiState.mentionRequest = MentionRequest(bufferID: buffer.id, nick: nick)
+            return
+        }
         uiState.replyTargets[buffer.id] = line
         uiState.focusInput()
     }
