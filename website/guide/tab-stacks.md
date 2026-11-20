@@ -46,14 +46,25 @@ The row of network tabs shows each network's connection status and a badge when 
 ## Using tabs
 
 - **Click** a tab to switch to it; **right-click** it for the same actions as in the sidebar (mark as read, mute, inline media, translation, Catch Me Up, leave, hide, remove, close).
-- **×** takes the place of a channel or conversation tab's **#** or avatar when you point at it. On a channel, it **leaves and removes** it: the tab goes. On a private conversation, it closes the conversation. Only that spot does this: a click anywhere else on the tab switches to it, and even a tab with a short name like **#dn** leaves plenty of room for that. A **middle-click** anywhere on a tab does the same as its **×**.
+- **×** takes the place of a channel or conversation tab's **#** or avatar when you point at it. On a channel, it **leaves and removes** it: the tab goes. On a private conversation, it closes the conversation. Only that spot does this: a click anywhere else on the tab switches to it, and even the narrowest tab, or one with a short name like **#dn**, leaves more than half of itself for that. A **middle-click** anywhere on a tab does the same as its **×**.
 - **Through a bouncer** (ZNC or soju), a channel's **×** leaves it only in Vela: the bouncer stays in it, **detached**, and keeps its history, and the tab stays, dimmed, so you can join again and catch up. On a detached channel, **×** **hides** the tab; the channel stays on the bouncer. To make **×** remove channels from the bouncer instead, turn on **Closing a channel removes it from the bouncer** in **Settings → Networks → Channels**. See [Through a bouncer](/guide/joining-channels#through-a-bouncer).
 - The **×**'s tooltip, and the action VoiceOver offers among each tab's actions, say what it does: **Remove Channel**, **Leave Channel**, **Hide Channel** or **Close Conversation**.
 - Vela asks before leaving or removing a channel; see [Leave or remove](/guide/joining-channels#leave-or-remove) to turn that off.
 - **Closed a tab by mistake?** <kbd>⌘Z</kbd> puts it back right away, and **File → Reopen Closed Channel** (<kbd>⇧⌘T</kbd>) reopens removed and hidden channels and closed conversations, newest first. **File → Recently Closed** lists the last 20. A reopened tab goes back where it was.
 - **Drag** a tab along its row to move it: networks among networks, channels among the network's channels, and private conversations among its conversations. <kbd>Esc</kbd> cancels. The sidebar uses the same order. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).
 - <kbd>⌘1</kbd> to <kbd>⌘9</kbd> jump to the selected network's first nine channels and conversations, in the order their tabs are in. The console tab has no number.
-- When a row has more tabs than fit, it scrolls, fading at the edges, and a **»** menu lists them all.
 - The **+** at the end of a row joins a channel or adds a network.
 
-All of these are also keys in [settings.json](/reference/settings#tabs): `tabs.placement`, `tabs.roundness`, `tabs.serverRow`, `tabs.height`, `tabs.showUnreadBadges` and `tabs.showCloseButtons`.
+## When tabs don't fit
+
+A row shows every tab before it scrolls, like Vivaldi:
+
+- **Tabs shrink to fit.** When a row's tabs are too wide for the window, the tabs you're not on get narrower, longest names first: short names like **#dn** stay whole, and the longer ones are all cut to the same width.
+- **The selected tab is always whole.** Its neighbors make room for it, and they grow and shrink smoothly as you switch tabs.
+- **Cut names fade out** on the right instead of ending in "…". The **#**, avatar or **×** and any unread or mention badge stay in full, and the tab's tooltip and VoiceOver always give the whole name.
+- **No tab gets narrower than about 58 points** at the default tab height (it grows with **Tab height** and rounder corners). When the tabs wouldn't fit even at that width, the row **scrolls** instead: every tab shows its whole name, the row fades at its edges, and a **»** menu lists every tab. Selecting a tab scrolls it into view.
+- Going back from scrolling to shrinking takes a little more room than going the other way, so a row doesn't flick between the two as you resize the window.
+
+The network row in the strip works the same way. In the title bar, networks keep their whole names in their compact group, and it scrolls when there are too many.
+
+The settings on this page are also keys in [settings.json](/reference/settings#tabs): `tabs.placement`, `tabs.roundness`, `tabs.serverRow`, `tabs.height`, `tabs.showUnreadBadges` and `tabs.showCloseButtons`.

@@ -21,6 +21,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **`/close` in the sidebar** now moves to the next channel, like closing a tab does, instead of leaving an empty view.
 - **A channel you close stays closed** even when messages are still arriving as you leave it.
 - **⌘1–⌘9 now always match the tabs' order** after joining, closing or reordering.
+- **Tabs shrink to fit before they scroll.** When a row of tabs is too wide for the window, the tabs you're not on get narrower, longest names first, so every tab stays in view: short names stay whole and long ones are cut to the same width. The selected tab always shows its whole name, and its neighbors make room as you switch. Cut names fade out on the right instead of ending in "…", keeping the **#**, avatar and unread badge, and the tooltip and VoiceOver give the whole name. Only when the tabs wouldn't fit at their narrowest does the row scroll, with every name whole and the **»** menu. Tabs can also be narrower than before: about 58 points at the default size (was 78), so short names like **#dn** take less room. The network row in the strip works the same way. See [Tab stacks](https://velairc.app/guide/tab-stacks#when-tabs-don-t-fit).
 
 ### Chat and messages
 

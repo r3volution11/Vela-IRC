@@ -13,6 +13,7 @@ struct ChannelTabRow: View {
     @Environment(TabInteraction.self) private var interaction
     @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.tabStripProbe) private var probe
 
     let session: NetworkSession
     let surface: TabSurface
@@ -46,7 +47,15 @@ struct ChannelTabRow: View {
 
         HStack(spacing: 2) {
             TabScroller(target: selectedID, dragsWindow: dragsWindow, reorder: reorder, isOverflowing: $isOverflowing) {
-                HStack(spacing: metrics.gap) {
+                // Unselected tabs shrink to fit the strip, and the row only
+                // scrolls when they'd go below the minimum width.
+                TabStripLayout(
+                    spacing: metrics.gap,
+                    minWidth: metrics.minWidth,
+                    outsideWidth: leadingInset + Self.trailingPadding,
+                    name: "channels",
+                    probe: probe
+                ) {
                     ForEach(buffers) { buffer in
                         let role = buffer.kind == .server ? nil : TabReorder(
                             controller: reorder,
@@ -86,15 +95,17 @@ struct ChannelTabRow: View {
                         .tabReorderItem(role)
                         .tabScrollID(buffer.id)
                         .transition(tabTransition)
-                        // Outermost, or the row doesn't see it: a lifted tab
-                        // draws over the tabs it passes.
+                        // Outside the reorder stack, or the row doesn't see
+                        // it: a lifted tab draws over the tabs it passes.
                         .zIndex(role?.isRaised == true ? 1 : 0)
+                        .tabStripRole(.tab(id: buffer.id, isSelected: buffer.id == selectedID))
                     }
                     TabAddMenu(session: session, height: metrics.height, palette: palette)
                         .padding(.leading, metrics.gap == 0 ? 4 : 2)
+                    TabStripWidthProbe()
                 }
                 .padding(.leading, leadingInset)
-                .padding(.trailing, 8)
+                .padding(.trailing, Self.trailingPadding)
                 .frame(height: rowHeight, alignment: rowAlignment)
                 .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: selectedID)
                 .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: ids)
@@ -124,6 +135,8 @@ struct ChannelTabRow: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Channels on \(session.displayName)")
     }
+
+    private static let trailingPadding: CGFloat = 8
 
     /// The tabs as drawn: mid-drag, the dragged one in the slot it would
     /// land in.
@@ -214,6 +227,7 @@ struct ServerTabRow: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.tabStripProbe) private var probe
 
     let surface: TabSurface
     /// Segmented group (title bar) rather than a full-width row.
@@ -254,7 +268,17 @@ struct ServerTabRow: View {
                     if contentWidth != width { contentWidth = width }
                 } : nil
             ) {
-                HStack(spacing: isSegmented ? 1 : metrics.gap) {
+                // In the strip, networks fit first like channels do. The
+                // title bar's group sizes itself to its tabs, so there they
+                // stay whole and scroll.
+                TabStripLayout(
+                    spacing: isSegmented ? 1 : metrics.gap,
+                    minWidth: metrics.minWidth,
+                    outsideWidth: TabMetrics.stripInset * 2,
+                    fitsFirst: !isSegmented,
+                    name: "networks",
+                    probe: probe
+                ) {
                     ForEach(sessions) { session in
                         let role = roles[session.id]
                         ServerTab(
@@ -283,10 +307,12 @@ struct ServerTabRow: View {
                         .tabScrollID(session.id)
                         .transition(reduceMotion ? .opacity : .scale(scale: 0.7).combined(with: .opacity))
                         .zIndex(role?.isRaised == true ? 1 : 0)
+                        .tabStripRole(.tab(id: session.id, isSelected: session.id == selectedID))
                     }
                     if !isSegmented {
                         TabAddNetworkButton(height: metrics.height, palette: palette)
                             .padding(.leading, 2)
+                        TabStripWidthProbe()
                     }
                 }
                 .padding(.horizontal, isSegmented ? segmentInset : TabMetrics.stripInset)

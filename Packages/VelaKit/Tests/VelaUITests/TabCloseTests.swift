@@ -48,7 +48,7 @@ extension LinkSelectionTests {
             }
         }
 
-        @Test func theMinimumWidthLeavesThreeSlotsToSelect() {
+        @Test func theMinimumWidthLeavesRoomToSelect() {
             for height in Self.heights {
                 for roundness in Self.roundnesses {
                     for appearance in Self.appearances {
@@ -57,11 +57,14 @@ extension LinkSelectionTests {
                             let insets = metrics.closeSlotInsets(glyphWidth: glyphWidth)
                             let selectable = metrics.minWidth - insets.leading - metrics.closeSlot
                             #expect(
-                                selectable >= metrics.closeSlot * 3,
+                                selectable >= metrics.closeSlot * 1.5,
                                 "height \(height), roundness \(roundness), \(appearance): \(selectable) beside a \(metrics.closeSlot) slot"
                             )
-                            // The middle of a tab is well clear of the slot.
-                            #expect(insets.leading + metrics.closeSlot <= metrics.minWidth / 2 - 8)
+                            // The middle of a tab is clear of the slot.
+                            #expect(
+                                insets.leading + metrics.closeSlot < metrics.minWidth / 2,
+                                "height \(height), roundness \(roundness): slot ends at \(insets.leading + metrics.closeSlot) of \(metrics.minWidth)"
+                            )
                         }
                     }
                 }

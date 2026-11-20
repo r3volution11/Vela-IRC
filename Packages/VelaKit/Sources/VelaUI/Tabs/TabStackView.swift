@@ -22,6 +22,9 @@ import VelaTheme
 ///
 /// Pill roundness (≥ 0.8) switches the strip to free-standing pills, since a
 /// pill can't attach to an edge.
+///
+/// A row too long for its strip shrinks its unselected tabs to fit, and
+/// only scrolls when they'd go below the minimum width (`TabStripLayout`).
 struct TabStackView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState

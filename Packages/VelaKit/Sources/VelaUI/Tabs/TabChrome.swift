@@ -48,10 +48,13 @@ struct TabMetrics: Equatable {
     /// holds the tab's `#`, `##` or avatar, and is the tab's close button:
     /// the × replaces the glyph in it, so nothing moves.
     var closeSlot: CGFloat
-    /// Narrowest a tab gets, so a short name like `#dn` still leaves plenty
-    /// of tab to click that isn't the close slot.
+    /// Narrowest a tab gets, whether its name is short (`#dn`) or trimmed
+    /// to fit the strip (`TabStripLayout`): still plenty of tab to click
+    /// that isn't the close slot.
     var minWidth: CGFloat
     var maxLabelWidth: CGFloat
+    /// The fade at the end of a title that's cut (`TabTitle`).
+    var titleFade: CGFloat
 
     init(style: ChatStyle, height: CGFloat, appearance: TabAppearance) {
         self.height = height
@@ -71,11 +74,14 @@ struct TabMetrics: Equatable {
         // Fits `##` at the tab's type and is an easy target, but no bigger:
         // 16 pt at the smallest tabs, 18 from about 30 pt tall.
         closeSlot = min(18, max(16, (fontSize * 1.4).rounded()))
-        // Past the slot, at least three slots' width that selects. The
-        // padding grows with the corner radius, so rounder tabs (and pills)
-        // keep the same clear area inside their curves.
-        minWidth = (horizontalPadding + closeSlot * 4).rounded()
+        // The tab's padding on both sides, its slot, and about a slot more
+        // of title: 58 pt at the default size, so more than half of even
+        // the narrowest tab is past the slot, and selects. The padding
+        // grows with the corner radius, so rounder tabs (and pills) keep
+        // the same clear area inside their curves.
+        minWidth = (horizontalPadding * 2 + closeSlot * 2.25).rounded()
         maxLabelWidth = max(120, height * 6)
+        titleFade = min(16, max(12, (fontSize * 1.2).rounded()))
     }
 
     /// Padding before the close slot and the space after it, for a glyph

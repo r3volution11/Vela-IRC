@@ -134,58 +134,51 @@ struct ChannelTab: View {
 
     /// `slotInsets`: room for the close slot (drawn over the label, so its
     /// clicks are its own), or nil for the server console, which has none.
+    ///
+    /// Never wider than its content, and given less (the row is short of
+    /// room), only the title gives way: it fades out where it's cut.
     private func label(_ name: (glyph: String, title: String), slotInsets: (leading: CGFloat, trailing: CGFloat)?) -> some View {
-        HStack(spacing: 0) {
-            if let slotInsets {
-                Color.clear.frame(width: metrics.closeSlot + slotInsets.trailing, height: metrics.closeSlot)
+        let padding = isIconOnly ? metrics.horizontalPadding * 0.8 : metrics.horizontalPadding
+        return TabLabelLayout(
+            leading: slotInsets.map { $0.leading + metrics.closeSlot + $0.trailing } ?? padding,
+            trailing: padding,
+            spacing: metrics.spacing,
+            // Short names leave the extra width after the title, keeping the
+            // close slot at the leading edge and the middle of the tab for selecting.
+            minWidth: isIconOnly ? metrics.height * 1.25 : metrics.minWidth,
+            centers: isIconOnly
+        ) {
+            if isServer {
+                Image(systemName: "server.rack")
+                    .font(.system(size: max(9, metrics.fontSize - 1), weight: .medium))
+                    .foregroundStyle(theme[textKey])
+                    .accessibilityHidden(true)
             }
-            HStack(spacing: metrics.spacing) {
-                if isServer {
-                    Image(systemName: "server.rack")
-                        .font(.system(size: max(9, metrics.fontSize - 1), weight: .medium))
-                        .foregroundStyle(theme[textKey])
-                        .accessibilityHidden(true)
-                }
-                if !isIconOnly {
-                    titleView(name.title)
-                }
-                if buffer.isMuted {
-                    Image(systemName: "bell.slash.fill")
-                        .font(.system(size: max(8, metrics.fontSize - 3)))
-                        .foregroundStyle(theme[palette.dimText])
-                        .accessibilityHidden(true)
-                }
-                if let badge {
-                    UnreadBadge(count: badge.count, isHighlight: badge.isHighlight, fontSize: metrics.badgeFontSize)
-                }
+            if !isIconOnly {
+                // Reserves its semibold width, so tabs don't change size
+                // when their unread state changes.
+                TabTitle(
+                    text: name.title,
+                    fontSize: metrics.fontSize,
+                    weight: titleWeight,
+                    color: theme[textKey],
+                    maxWidth: metrics.maxLabelWidth,
+                    fadeLength: metrics.titleFade
+                )
+                .tabLabelTitle()
+            }
+            if buffer.isMuted {
+                Image(systemName: "bell.slash.fill")
+                    .font(.system(size: max(8, metrics.fontSize - 3)))
+                    .foregroundStyle(theme[palette.dimText])
+                    .accessibilityHidden(true)
+            }
+            if let badge {
+                UnreadBadge(count: badge.count, isHighlight: badge.isHighlight, fontSize: metrics.badgeFontSize)
             }
         }
-        .padding(.leading, slotInsets?.leading ?? (isIconOnly ? metrics.horizontalPadding * 0.8 : metrics.horizontalPadding))
-        .padding(.trailing, isIconOnly ? metrics.horizontalPadding * 0.8 : metrics.horizontalPadding)
-        // Short names leave the extra width after the title, keeping the
-        // close slot at the leading edge and the middle of the tab for selecting.
-        .frame(minWidth: isIconOnly ? metrics.height * 1.25 : metrics.minWidth, alignment: isIconOnly ? .center : .leading)
         .frame(height: metrics.height)
-        // Tabs are always as wide as their content, never stretched by the row.
-        .fixedSize(horizontal: true, vertical: false)
         .contentShape(Rectangle())
-    }
-
-    /// The title reserves its semibold width, so tabs don't change size when
-    /// their unread state changes.
-    private func titleView(_ title: String) -> some View {
-        Text(title)
-            .font(.system(size: metrics.fontSize, weight: .semibold))
-            .lineLimit(1)
-            .hidden()
-            .frame(maxWidth: metrics.maxLabelWidth)
-            .overlay(alignment: .leading) {
-                Text(title)
-                    .font(.system(size: metrics.fontSize, weight: titleWeight))
-                    .foregroundStyle(theme[textKey])
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
     }
 
     private var titleWeight: Font.Weight { isEmphasized || context.isSelected ? .semibold : .regular }
@@ -319,15 +312,22 @@ struct ServerTab: View {
             .help(helpText)
     }
 
+    /// Never wider than its content; given less (a strip row short of
+    /// room), the name fades out where it's cut.
     private var label: some View {
-        HStack(spacing: metrics.spacing) {
+        TabLabelLayout(leading: metrics.horizontalPadding, trailing: metrics.horizontalPadding, spacing: metrics.spacing) {
             ConnectionDot(state: session.connectionState, size: max(5, (metrics.height * 0.24).rounded()), offlineKey: palette.dimText)
-            Text(session.displayName)
-                .font(.system(size: metrics.fontSize, weight: context.isSelected || highlights > 0 || unread > 0 ? .semibold : .medium))
-                .foregroundStyle(theme[textKey])
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: metrics.maxLabelWidth)
+            // Reserves its semibold width, so selecting a network doesn't
+            // change its tab's width.
+            TabTitle(
+                text: session.displayName,
+                fontSize: metrics.fontSize,
+                weight: context.isSelected || highlights > 0 || unread > 0 ? .semibold : .medium,
+                color: theme[textKey],
+                maxWidth: metrics.maxLabelWidth,
+                fadeLength: metrics.titleFade
+            )
+            .tabLabelTitle()
             if style.tabsShowUnreadBadges, highlights > 0 || unread > 0 {
                 UnreadBadge(
                     count: highlights > 0 ? highlights : unread,
@@ -336,9 +336,7 @@ struct ServerTab: View {
                 )
             }
         }
-        .padding(.horizontal, metrics.horizontalPadding)
         .frame(height: metrics.height)
-        .fixedSize(horizontal: true, vertical: false)
         .contentShape(Rectangle())
         .opacity(isOffline && !context.isSelected ? 0.85 : 1)
     }
