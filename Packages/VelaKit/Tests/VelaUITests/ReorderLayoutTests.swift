@@ -14,13 +14,33 @@ struct ReorderLayoutTests {
         spans: ["a": 0...20, "b": 22...42, "c": 44...64, "d": 66...86]
     )
 
-    @Test func landsPastEverySiblingWhoseMiddleItCrosses() {
+    @Test func landsPastEverySiblingWhoseMiddleItsEdgeCrosses() {
         #expect(layout.proposedIndex(for: "a", translation: 0) == 0)
-        #expect(layout.proposedIndex(for: "a", translation: 21) == 0)   // center 31: not past b's middle (32)
-        #expect(layout.proposedIndex(for: "a", translation: 23) == 1)
+        #expect(layout.proposedIndex(for: "a", translation: 11) == 0)   // trailing edge 31: not past b's middle (32)
+        #expect(layout.proposedIndex(for: "a", translation: 13) == 1)
         #expect(layout.proposedIndex(for: "a", translation: 70) == 3)
         #expect(layout.proposedIndex(for: "d", translation: -70) == 0)
-        #expect(layout.proposedIndex(for: "c", translation: -23) == 1)
+        #expect(layout.proposedIndex(for: "c", translation: -11) == 2)  // leading edge 33: not past b's middle
+        #expect(layout.proposedIndex(for: "c", translation: -13) == 1)
+    }
+
+    @Test func aWiderItemStillReachesBothEnds() {
+        // A wide tab between two narrow ones: held at the ends, its middle
+        // never gets past theirs, but its edges do.
+        let tabs = ReorderLayout(ids: [1, 2, 3], spans: [1: 0...30, 2: 34...134, 3: 138...168])
+        let front = tabs.clampedTranslation(-500, for: 2)
+        let back = tabs.clampedTranslation(500, for: 2)
+        #expect(front == -34)
+        #expect(back == 34)
+        #expect(tabs.proposedIndex(for: 2, translation: front) == 0)
+        #expect(tabs.proposedIndex(for: 2, translation: back) == 2)
+
+        // The wide one last: it reaches the front, and passes its neighbor
+        // as soon as its leading edge crosses that one's middle.
+        let last = ReorderLayout(ids: [1, 3, 2], spans: [1: 0...30, 3: 34...64, 2: 68...168])
+        #expect(last.proposedIndex(for: 2, translation: last.clampedTranslation(-500, for: 2)) == 0)
+        #expect(last.proposedIndex(for: 2, translation: -20) == 1)       // leading edge 48: past 3's middle (49)
+        #expect(last.proposedIndex(for: 2, translation: -18) == 2)
     }
 
     @Test func siblingsShiftByTheDraggedLengthAndGap() {
@@ -72,9 +92,11 @@ struct ReorderLayoutTests {
     @Test func variableWidthTabs() {
         // Tabs 0…80, 84…124, 128…228 (4pt gaps).
         let tabs = ReorderLayout(ids: [1, 2, 3], spans: [1: 0...80, 2: 84...124, 3: 128...228])
-        #expect(tabs.proposedIndex(for: 1, translation: 70) == 1)       // center 110 > 104
+        #expect(tabs.proposedIndex(for: 1, translation: 23) == 0)       // trailing edge 103 < 104
+        #expect(tabs.proposedIndex(for: 1, translation: 25) == 1)       // 105 > 104
         #expect(tabs.offset(of: 2, dragging: 1, to: 1) == -84)
-        #expect(tabs.proposedIndex(for: 3, translation: -75) == 1)      // center 103 < 104
+        #expect(tabs.proposedIndex(for: 3, translation: -23) == 2)      // leading edge 105 > 104
+        #expect(tabs.proposedIndex(for: 3, translation: -25) == 1)      // 103 < 104
         #expect(tabs.offset(of: 2, dragging: 3, to: 1) == 104)
     }
 }

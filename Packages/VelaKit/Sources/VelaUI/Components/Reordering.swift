@@ -35,15 +35,21 @@ struct ReorderLayout<ID: Hashable> {
     var spans: [ID: ClosedRange<CGFloat>]
 
     /// The index among `ids` that `dragged` would land at after moving by
-    /// `translation`: past every sibling whose middle it has crossed.
+    /// `translation`: past every sibling whose middle its leading edge
+    /// (moving back) or trailing edge (moving on) has crossed, as browser
+    /// tabs do. Going by its edges rather than its middle, an item wider
+    /// than the one at either end still gets past it, held at the ends by
+    /// `clampedTranslation`.
     func proposedIndex(for dragged: ID, translation: CGFloat) -> Int? {
         guard let from = ids.firstIndex(of: dragged), let span = spans[dragged] else { return nil }
-        let center = (span.lowerBound + span.upperBound) / 2 + translation
+        let leading = span.lowerBound + translation
+        let trailing = span.upperBound + translation
         var index = 0
         for (position, id) in ids.enumerated() where id != dragged {
             let before: Bool
             if let other = spans[id] {
-                before = (other.lowerBound + other.upperBound) / 2 < center
+                let middle = (other.lowerBound + other.upperBound) / 2
+                before = position < from ? leading > middle : trailing > middle
             } else {
                 before = position < from
             }
