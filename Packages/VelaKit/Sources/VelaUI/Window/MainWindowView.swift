@@ -76,6 +76,8 @@ struct MainWindowView: View {
         .background(WindowConfigurator(theme: theme, vibrancy: vibrancy, trafficLights: trafficLightLayout))
         .background(WindowUndoManagerBridge(app: app))
         .background { ChannelConfirmationDialog() }
+        // ⌘1–⌘9, with tabs or the sidebar.
+        .background { TabShortcutButtons() }
         .ignoresSafeArea()
         .frame(minWidth: 640, minHeight: 420)
         .animation(.snappy(duration: 0.2), value: showMembers)

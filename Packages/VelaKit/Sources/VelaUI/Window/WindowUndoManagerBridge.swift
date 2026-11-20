@@ -9,7 +9,7 @@ import VelaCore
 /// Hands the main window's undo manager to `AppModel`, so leaving or
 /// removing a channel and closing a conversation go on the same undo stack
 /// as typing in the message box: ⌘Z undoes whatever you did last, as in any
-/// Mac app.
+/// Mac app. Also registers the window as a main window (`MainWindows`).
 struct WindowUndoManagerBridge: NSViewRepresentable {
     let app: AppModel
 
@@ -32,7 +32,10 @@ struct WindowUndoManagerBridge: NSViewRepresentable {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             // The window's own, which the message box's text view uses too.
-            if let window { app?.undoManager = window.undoManager }
+            if let window {
+                app?.undoManager = window.undoManager
+                MainWindows.register(window)
+            }
         }
     }
 }

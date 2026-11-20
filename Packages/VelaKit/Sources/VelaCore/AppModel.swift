@@ -38,6 +38,9 @@ public final class AppModel: SessionHost {
 
     public private(set) var sessions: [NetworkSession] = []
     public private(set) var selectedBufferID: BufferID?
+    /// The buffer last selected on each network, so going back to a network
+    /// (its tab, ⌃⌘[ / ⌃⌘]) returns to where you were there.
+    @ObservationIgnored private var lastSelectedOnNetwork: [UUID: BufferID] = [:]
     public private(set) var lastError: String?
     /// True once ``start()`` has restored saved networks and buffers, with
     /// each buffer's recent history (at once in demo mode). Siri and
@@ -405,6 +408,7 @@ public final class AppModel: SessionHost {
         // The buffer being left was on screen: it's read to its newest line.
         if isWindowActive, let previous = selectedBuffer { selectedSession?.markRead(previous) }
         selectedBufferID = buffer.id
+        lastSelectedOnNetwork[buffer.id.networkID] = buffer.id
         prepareUnreadMarker(buffer)
         session(for: buffer.id.networkID)?.markRead(buffer)
         // Demo mode shares the real app's defaults; don't replace the
@@ -420,6 +424,40 @@ public final class AppModel: SessionHost {
     /// Every selectable buffer, in sidebar order.
     public var orderedBuffers: [BufferModel] {
         sessions.flatMap { $0.isBouncerControl ? [$0.serverBuffer] : $0.allBuffers }
+    }
+
+    /// The buffer you were last on in `session` (its console if none, or
+    /// if that one's gone).
+    public func lastSelectedBuffer(in session: NetworkSession) -> BufferModel {
+        if let id = lastSelectedOnNetwork[session.id], let buffer = session.buffer(id: id) { return buffer }
+        return session.serverBuffer
+    }
+
+    /// ⇧⌘[ / ⇧⌘] and ⌃⇧Tab / ⌃Tab: the previous or next tab of the selected
+    /// network (its console, channels, then conversations), wrapping
+    /// around at the ends, like a browser's tabs.
+    public func selectAdjacentTab(forward: Bool) {
+        guard let session = selectedSession ?? sessions.first else { return }
+        let tabs = session.allBuffers
+        guard tabs.count > 1 else { return }
+        guard let index = tabs.firstIndex(where: { $0.id == selectedBufferID }) else {
+            select(tabs[forward ? 0 : tabs.count - 1])
+            return
+        }
+        select(tabs[(index + (forward ? 1 : -1) + tabs.count) % tabs.count])
+    }
+
+    /// ⌃⌘[ / ⌃⌘]: the previous or next network, in the order of the
+    /// sidebar and the network tabs, wrapping around, on the buffer you
+    /// were last on there.
+    public func selectAdjacentNetwork(forward: Bool) {
+        guard !sessions.isEmpty else { return }
+        guard let current = selectedSession, let index = sessions.firstIndex(where: { $0.id == current.id }) else {
+            select(lastSelectedBuffer(in: sessions[forward ? 0 : sessions.count - 1]))
+            return
+        }
+        guard sessions.count > 1 else { return }
+        select(lastSelectedBuffer(in: sessions[(index + (forward ? 1 : -1) + sessions.count) % sessions.count]))
     }
 
     public func selectAdjacentBuffer(forward: Bool, unreadOnly: Bool = false) {

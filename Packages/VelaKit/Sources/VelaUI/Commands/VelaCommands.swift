@@ -22,7 +22,7 @@ struct VelaCommands: Commands {
         self.app = app
         self.themeStore = themeStore
         self.uiState = uiState
-        PaletteHotKeys.installIfNeeded()
+        AlternateShortcuts.installIfNeeded()
         PaletteHistory.shared.startTracking(app)
     }
 
@@ -179,6 +179,10 @@ private struct GoMenuItems: View {
 
         CommandMenuButton(commands.previousBuffer)
         CommandMenuButton(commands.nextBuffer)
+        CommandMenuButton(commands.previousTab)
+        CommandMenuButton(commands.nextTab)
+        CommandMenuButton(commands.previousNetwork)
+        CommandMenuButton(commands.nextNetwork)
 
         Divider()
 

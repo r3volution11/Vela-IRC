@@ -76,9 +76,11 @@ The list of people in the channel, grouped by rank. See [Member list](/guide/mem
 | To | Press |
 | --- | --- |
 | Go to any channel or conversation | <kbd>⌘P</kbd> or <kbd>⌘K</kbd> |
-| Previous / next conversation | <kbd>⌥⌘↑</kbd> / <kbd>⌥⌘↓</kbd> |
+| Previous / next tab of this network (wraps around) | <kbd>⇧⌘[</kbd> / <kbd>⇧⌘]</kbd> or <kbd>⌃⇧Tab</kbd> / <kbd>⌃Tab</kbd> |
+| Previous / next network, back where you were on it | <kbd>⌃⌘[</kbd> / <kbd>⌃⌘]</kbd> |
+| Previous / next conversation, across networks | <kbd>⌥⌘↑</kbd> / <kbd>⌥⌘↓</kbd> |
 | Previous / next with unread messages | <kbd>⌥⇧⌘↑</kbd> / <kbd>⌥⇧⌘↓</kbd> |
-| Tabs 1–9 (tab stacks) | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
+| This network's channels and conversations 1–9 | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
 | Focus the message field | <kbd>⌘L</kbd> |
 
 All of them are listed in [Keyboard shortcuts](/reference/keyboard-shortcuts).

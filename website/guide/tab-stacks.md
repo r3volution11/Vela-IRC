@@ -53,6 +53,7 @@ The row of network tabs shows each network's connection status and a badge when 
 - **Closed a tab by mistake?** <kbd>⌘Z</kbd> puts it back right away, and **File → Reopen Closed Channel** (<kbd>⇧⌘T</kbd>) reopens removed and hidden channels and closed conversations, newest first. **File → Recently Closed** lists the last 20. A reopened tab goes back where it was.
 - **Drag** a tab along its row to move it: networks among networks, channels among the network's channels, and private conversations among its conversations. <kbd>Esc</kbd> cancels. The sidebar uses the same order. See [Arranging networks and channels](/guide/the-window#arranging-networks-and-channels).
 - <kbd>⌘1</kbd> to <kbd>⌘9</kbd> jump to the selected network's first nine channels and conversations, in the order their tabs are in. The console tab has no number.
+- <kbd>⇧⌘[</kbd> and <kbd>⇧⌘]</kbd> (or <kbd>⌃⇧Tab</kbd> and <kbd>⌃Tab</kbd>) go to the previous and next tab, wrapping around at the ends. <kbd>⌃⌘[</kbd> and <kbd>⌃⌘]</kbd> go to the previous and next network, on the tab you were last on there.
 - The **+** at the end of a row joins a channel or adds a network.
 
 ## When tabs don't fit

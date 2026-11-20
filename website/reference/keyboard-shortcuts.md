@@ -21,11 +21,15 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 
 | Action | Shortcut |
 | --- | --- |
-| Previous conversation | <kbd>⌥⌘↑</kbd> |
-| Next conversation | <kbd>⌥⌘↓</kbd> |
+| Previous tab of this network: its console, channels and conversations, wrapping around at the ends (the same list in the sidebar) | <kbd>⇧⌘[</kbd> or <kbd>⌃⇧Tab</kbd> |
+| Next tab of this network | <kbd>⇧⌘]</kbd> or <kbd>⌃Tab</kbd> |
+| Previous network, on the channel or conversation you were last on there | <kbd>⌃⌘[</kbd> |
+| Next network | <kbd>⌃⌘]</kbd> |
+| Previous conversation, across every network | <kbd>⌥⌘↑</kbd> |
+| Next conversation, across every network | <kbd>⌥⌘↓</kbd> |
 | Previous conversation with unread messages | <kbd>⌥⇧⌘↑</kbd> |
 | Next conversation with unread messages | <kbd>⌥⇧⌘↓</kbd> |
-| Channel or conversation 1–9 of the current network, in tab order (tab stacks) | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
+| Channel or conversation 1–9 of the current network, in tab order (the console has no number) | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
 | Move between tabs, when a tab row has keyboard focus | <kbd>←</kbd> <kbd>→</kbd> <kbd>Home</kbd> <kbd>End</kbd> |
 
 ## View

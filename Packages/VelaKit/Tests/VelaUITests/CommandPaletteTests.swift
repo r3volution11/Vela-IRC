@@ -160,4 +160,13 @@ struct ShortcutGlyphTests {
         #expect(ShortcutGlyphs.string(for: all) == "⌃⌥⇧⌘↑")
         #expect(ShortcutGlyphs.spoken(shortcut) == "Shift Command P")
     }
+
+    /// ⇧⌘[ is written ⌘{ (what the keys type) and shown as the keys.
+    @Test func shiftedBracketsShowAsTheKeys() {
+        let previous = VelaCommandCatalog.Shortcuts.previousTab
+        #expect(ShortcutGlyphs.glyphs(for: previous) == ["⇧", "⌘", "["])
+        #expect(ShortcutGlyphs.string(for: VelaCommandCatalog.Shortcuts.nextTab) == "⇧⌘]")
+        #expect(ShortcutGlyphs.spoken(previous) == "Shift Command Left Bracket")
+        #expect(ShortcutGlyphs.string(for: VelaCommandCatalog.Shortcuts.nextNetwork) == "⌃⌘]")
+    }
 }

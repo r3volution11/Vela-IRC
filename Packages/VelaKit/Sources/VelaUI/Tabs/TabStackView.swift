@@ -48,10 +48,6 @@ struct TabStackView: View {
             }
         }
         .environment(interaction)
-        .background { TabShortcutButtons() }
-        .onChange(of: app.selectedBufferID, initial: true) { _, id in
-            TabMemory.record(id)
-        }
         .onAppear {
             interaction.installMiddleClickMonitor { [app, uiState] key in
                 TabActions.middleClick(key, app: app, uiState: uiState)

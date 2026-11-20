@@ -22,23 +22,6 @@ enum TabKey: Hashable {
     }
 }
 
-/// Remembers the buffer last selected on each network, so a server tab
-/// returns to where you were (like a Vivaldi stack remembering its active tab).
-enum TabMemory {
-    private static var lastSelected: [UUID: BufferID] = [:]
-
-    static func record(_ id: BufferID?) {
-        guard let id else { return }
-        lastSelected[id.networkID] = id
-    }
-
-    /// The remembered buffer of `session`, or its server buffer.
-    static func destination(in session: NetworkSession) -> BufferModel {
-        if let id = lastSelected[session.id], let buffer = session.buffer(id: id) { return buffer }
-        return session.serverBuffer
-    }
-}
-
 /// Hover state shared by both rows (for separators and hover fills) and
 /// middle-click-to-close, which SwiftUI has no gesture for. Pointing at a
 /// tab's close slot is the slot's own state (`TabCloseSlot`), not this.
@@ -85,9 +68,11 @@ final class TabInteraction {
 
 /// Actions shared by tabs, menus and shortcuts.
 enum TabActions {
-    /// Selects the network's remembered buffer.
+    /// Selects the buffer you were last on in the network, so a server tab
+    /// returns to where you were (like a Vivaldi stack remembering its
+    /// active tab).
     static func select(_ session: NetworkSession, app: AppModel) {
-        app.select(TabMemory.destination(in: session))
+        app.select(app.lastSelectedBuffer(in: session))
     }
 
     /// A tab's ×: removes a channel (asking first, by default), or, through
@@ -296,7 +281,8 @@ enum TabDrawOrder {
     }
 }
 
-/// Hidden ⌘1…⌘9 buttons; present only while the tab stack is on screen.
+/// Hidden ⌘1…⌘9 buttons in the main window, for tabs and the sidebar alike:
+/// the selected network's channels, then its conversations.
 ///
 /// Each press looks up its tab when it's pressed. SwiftUI keeps calling the
 /// action a shortcut button had when its shortcut was registered, so tabs

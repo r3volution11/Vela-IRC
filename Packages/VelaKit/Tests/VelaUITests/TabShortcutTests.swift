@@ -36,13 +36,17 @@ extension LinkSelectionTests {
             }
         }
 
-        private func host(_ placement: TabStackPlacement, serverRow: ServerTabRowMode) async throws -> Hosted {
+        private func host(_ placement: TabStackPlacement, serverRow: ServerTabRowMode, sidebar: Bool = false) async throws -> Hosted {
             let app = AppModel.demo()
-            app.settings[.navigationStyle] = .tabs
+            app.settings[.navigationStyle] = sidebar ? .sidebar : .tabs
             app.settings[.tabsPlacement] = placement
             app.settings[.tabsServerRow] = serverRow
             let size = CGSize(width: 1400, height: 120)
-            let view = TabStackView(placement: placement)
+            // The main window carries the ⌘1…⌘9 buttons, with or without tabs.
+            let view = ZStack {
+                if !sidebar { TabStackView(placement: placement) }
+            }
+            .background { TabShortcutButtons() }
                 .frame(width: size.width, height: size.height)
                 .environment(app)
                 .environment(UIState())
@@ -121,11 +125,12 @@ extension LinkSelectionTests {
             return (0..<9).map { tabs.indices.contains($0) ? tabs[$0] : nil }
         }
 
-        private func check(_ hosted: Hosted, _ step: String, sourceLocation: SourceLocation = #_sourceLocation) throws {
+        private func check(_ hosted: Hosted, _ step: String, tooltips checksTooltips: Bool = true, sourceLocation: SourceLocation = #_sourceLocation) throws {
             let session = try #require(hosted.app.selectedSession, sourceLocation: sourceLocation)
             let wanted = expected(session)
             let selected = try pressAll(in: hosted, session: session)
             #expect(selected == wanted, "\(step)", sourceLocation: sourceLocation)
+            guard checksTooltips else { return }
             // Each tab's tooltip names the shortcut that selects it.
             let tooltips = tooltipNumbers(in: hosted)
             for (index, name) in wanted.enumerated() {
@@ -170,6 +175,17 @@ extension LinkSelectionTests {
             app.select(try #require(ergo.channels.first))
             try await settle(hosted)
             try check(hosted, "on another network")
+        }
+
+        /// With the sidebar instead of tabs, ⌘1…⌘9 go to the same places.
+        @Test func shortcutsWorkWithTheSidebar() async throws {
+            let hosted = try await host(.top, serverRow: .auto, sidebar: true)
+            defer { hosted.close() }
+            try check(hosted, "with the sidebar", tooltips: false)
+            let ergo = try #require(hosted.app.sessions.first { $0.displayName == "Ergo Testnet" })
+            hosted.app.select(try #require(ergo.channels.first))
+            try await settle(hosted)
+            try check(hosted, "on another network", tooltips: false)
         }
     }
 }

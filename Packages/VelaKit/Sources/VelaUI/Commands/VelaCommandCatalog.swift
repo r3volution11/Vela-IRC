@@ -46,8 +46,8 @@ struct VelaCommandCatalog {
     enum Shortcuts {
         static let commandPalette = KeyboardShortcut("p", modifiers: [.command, .shift])
         static let goToConversation = KeyboardShortcut("p", modifiers: .command)
-        /// Also opens "Go to Conversation…" (handled by `PaletteHotKeys`; a
-        /// menu item can carry only one shortcut).
+        /// Also opens "Go to Conversation…" (handled by `AlternateShortcuts`;
+        /// a menu item can carry only one shortcut).
         static let goToConversationAlternate = KeyboardShortcut("k", modifiers: .command)
         static let selectTheme = KeyboardShortcut("t", modifiers: [.control, .command])
         static let toggleSidebar = KeyboardShortcut("s", modifiers: [.control, .command])
@@ -58,6 +58,13 @@ struct VelaCommandCatalog {
         static let reopenClosed = KeyboardShortcut("t", modifiers: [.command, .shift])
         static let previousBuffer = KeyboardShortcut(.upArrow, modifiers: [.option, .command])
         static let nextBuffer = KeyboardShortcut(.downArrow, modifiers: [.option, .command])
+        /// ⇧⌘[ / ⇧⌘], Safari's Show Previous/Next Tab. Written as the keys'
+        /// shifted characters: a menu matches what the keys type, so "[" with
+        /// ⇧ would never match. ⌃⇧Tab / ⌃Tab do the same (`AlternateShortcuts`).
+        static let previousTab = KeyboardShortcut("{", modifiers: .command)
+        static let nextTab = KeyboardShortcut("}", modifiers: .command)
+        static let previousNetwork = KeyboardShortcut("[", modifiers: [.control, .command])
+        static let nextNetwork = KeyboardShortcut("]", modifiers: [.control, .command])
         static let previousUnread = KeyboardShortcut(.upArrow, modifiers: [.shift, .option, .command])
         static let nextUnread = KeyboardShortcut(.downArrow, modifiers: [.shift, .option, .command])
         static let focusInput = KeyboardShortcut("l", modifiers: .command)
@@ -447,6 +454,47 @@ struct VelaCommandCatalog {
         ) { app.selectAdjacentBuffer(forward: true) }
     }
 
+    /// The selected network's previous tab (console, channels, then
+    /// conversations), wrapping around; the same list in the sidebar.
+    var previousTab: VelaCommand {
+        let app = app
+        return VelaCommand(
+            id: "go.previousTab", category: .go, title: "Previous Tab", menuTitle: "Show Previous Tab",
+            shortcut: Shortcuts.previousTab, keywords: ["channel", "conversation", "buffer", "left", "network"],
+            isEnabled: hasOtherTabs
+        ) { app.selectAdjacentTab(forward: false) }
+    }
+
+    var nextTab: VelaCommand {
+        let app = app
+        return VelaCommand(
+            id: "go.nextTab", category: .go, title: "Next Tab", menuTitle: "Show Next Tab",
+            shortcut: Shortcuts.nextTab, keywords: ["channel", "conversation", "buffer", "right", "network"],
+            isEnabled: hasOtherTabs
+        ) { app.selectAdjacentTab(forward: true) }
+    }
+
+    /// The previous network, on the tab you were last on there.
+    var previousNetwork: VelaCommand {
+        let app = app
+        return VelaCommand(
+            id: "go.previousNetwork", category: .go, title: "Previous Network",
+            shortcut: Shortcuts.previousNetwork, keywords: ["server", "switch"], isEnabled: app.sessions.count > 1
+        ) { app.selectAdjacentNetwork(forward: false) }
+    }
+
+    var nextNetwork: VelaCommand {
+        let app = app
+        return VelaCommand(
+            id: "go.nextNetwork", category: .go, title: "Next Network",
+            shortcut: Shortcuts.nextNetwork, keywords: ["server", "switch"], isEnabled: app.sessions.count > 1
+        ) { app.selectAdjacentNetwork(forward: true) }
+    }
+
+    private var hasOtherTabs: Bool {
+        ((app.selectedSession ?? app.sessions.first)?.allBuffers.count ?? 0) > 1
+    }
+
     var previousUnread: VelaCommand {
         let app = app
         return VelaCommand(
@@ -733,7 +781,7 @@ struct VelaCommandCatalog {
         commands += [textBigger, textSmaller, textActualSize]
         commands += [selectTheme, toggleFollowSystem, themeEditor, importTheme, revealThemesFolder]
         commands += [openSettings, searchSettings, openSettingsJSON]
-        commands += [previousBuffer, nextBuffer, previousUnread, nextUnread, focusInput]
+        commands += [previousBuffer, nextBuffer, previousTab, nextTab, previousNetwork, nextNetwork, previousUnread, nextUnread, focusInput]
         commands.append(markAllAsRead)
         commands += selectedBufferCommands
         commands.append(reopenClosed)

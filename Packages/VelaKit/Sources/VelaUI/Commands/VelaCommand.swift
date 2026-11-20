@@ -74,6 +74,7 @@ enum ShortcutGlyphs {
     }
 
     static func glyphs(modifiers: EventModifiers, key: KeyEquivalent) -> [String] {
+        let (modifiers, key) = unshifted(modifiers, key)
         var parts: [String] = []
         if modifiers.contains(.control) { parts.append("⌃") }
         if modifiers.contains(.option) { parts.append("⌥") }
@@ -81,6 +82,17 @@ enum ShortcutGlyphs {
         if modifiers.contains(.command) { parts.append("⌘") }
         parts.append(keyGlyph(key))
         return parts
+    }
+
+    /// A shortcut written as a shifted character (`⌘{`, which menus need
+    /// for ⇧⌘[) as the keys you press: ⇧ and the unshifted key, the way
+    /// the menu bar shows it.
+    static func unshifted(_ modifiers: EventModifiers, _ key: KeyEquivalent) -> (EventModifiers, KeyEquivalent) {
+        switch key.character {
+        case "{": (modifiers.union(.shift), "[")
+        case "}": (modifiers.union(.shift), "]")
+        default: (modifiers, key)
+        }
     }
 
     static func string(for shortcut: KeyboardShortcut) -> String {
@@ -110,12 +122,12 @@ enum ShortcutGlyphs {
     /// Spoken form for VoiceOver, e.g. "Shift Command M".
     static func spoken(_ shortcut: KeyboardShortcut) -> String {
         var words: [String] = []
-        let modifiers = shortcut.modifiers
+        let (modifiers, key) = unshifted(shortcut.modifiers, shortcut.key)
         if modifiers.contains(.control) { words.append("Control") }
         if modifiers.contains(.option) { words.append("Option") }
         if modifiers.contains(.shift) { words.append("Shift") }
         if modifiers.contains(.command) { words.append("Command") }
-        switch shortcut.key {
+        switch key {
         case .upArrow: words.append("Up Arrow")
         case .downArrow: words.append("Down Arrow")
         case .leftArrow: words.append("Left Arrow")
@@ -123,7 +135,10 @@ enum ShortcutGlyphs {
         case "+": words.append("Plus")
         case "-": words.append("Minus")
         case ",": words.append("Comma")
-        default: words.append(keyGlyph(shortcut.key))
+        case "[": words.append("Left Bracket")
+        case "]": words.append("Right Bracket")
+        case .tab: words.append("Tab")
+        default: words.append(keyGlyph(key))
         }
         return words.joined(separator: " ")
     }
