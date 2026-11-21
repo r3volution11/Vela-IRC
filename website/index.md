@@ -120,7 +120,7 @@ Prefer less? Switch to **compact** previews, turn media off for a channel, or al
   eyebrow="Apple Intelligence"
   title="See what you missed"
   src="/screenshots/ai-catch-up.webp"
-  alt="A Catch me up card in #swift: an overview of four new messages, a topic with who took part, and a note that it was summarized on this Mac"
+  alt="A Catch me up card in #swift: an overview of four new messages, a topic with who took part, a note that it was summarized on this Mac, and an Open Full Recap button"
   link="/guide/apple-intelligence"
   linkText="Apple Intelligence & translation"
   reverse

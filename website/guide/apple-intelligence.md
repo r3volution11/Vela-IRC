@@ -26,7 +26,7 @@ Catch me up and Writing Tools use **Apple Intelligence**, so they need:
 
 ## The Settings pane {#settings}
 
-<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Apple Intelligence: a green “Apple Intelligence is on” box, then the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages, and the Translation section" caption="Settings → Apple Intelligence." />
+<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Apple Intelligence: a green “Apple Intelligence is on” box, then the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages, the Recap section with Offer Recap on, and the start of the Translation section" caption="Settings → Apple Intelligence." />
 
 **Settings → Apple Intelligence** has a section each for Catch me up, [Recap](/guide/recap), Translation, Writing Tools and [Siri & Shortcuts](/guide/siri-shortcuts). At the top, a box says whether Apple Intelligence is ready:
 
@@ -42,7 +42,7 @@ While Apple Intelligence isn't available, the Catch me up settings are dimmed.
 
 ## Catch me up
 
-<Screenshot src="/screenshots/ai-catch-up.webp" alt="A Catch me up card under the New marker in #swift: “While you were away · 4 messages”, a one-line overview, a topic with who took part, and a note that it was summarized on this Mac" caption="Catch me up in #swift." />
+<Screenshot src="/screenshots/ai-catch-up.webp" alt="A Catch me up card under the New marker in #swift: “While you were away · 4 messages”, a one-line overview, a topic with who took part, a note that it was summarized on this Mac, and an Open Full Recap button" caption="Catch me up in #swift." />
 
 Come back to a busy channel and a **Catch me up** button appears at the end of the **New** marker, the line that shows where you stopped reading. Click it, and a card opens right there, under the marker:
 
