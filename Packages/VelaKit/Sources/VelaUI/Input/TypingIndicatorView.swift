@@ -36,6 +36,15 @@ struct TypingIndicatorView: View {
             .padding(.bottom, ListEndSpacing.typingLineBottomPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background { band }
+            .devTag(
+                "Typing line",
+                tokens: [ThemeKey.typingForeground],
+                font: style.font(size: max(9, style.fontSize - 2)),
+                padding: EdgeInsets(
+                    top: ListEndSpacing.typingLineTopPadding, leading: 0,
+                    bottom: ListEndSpacing.typingLineBottomPadding, trailing: style.rowHorizontalPadding
+                )
+            )
             .opacity(isShown ? 1 : 0)
             .allowsHitTesting(false)
             .accessibilityElement(children: .ignore)

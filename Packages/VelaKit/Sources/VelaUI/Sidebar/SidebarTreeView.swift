@@ -80,6 +80,7 @@ struct SidebarTreeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .surfaceBackground(ThemeKey.sidebarBackground, on: .sidebar, isFloating: isFloating)
+        .devTag("Sidebar", tokens: [ThemeKey.sidebarBackground, ThemeKey.sidebarForeground, ThemeKey.sidebarBorder])
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sidebar")
         .onChange(of: isReordering) { _, dragging in
@@ -290,6 +291,15 @@ struct SidebarNetworkHeader: View {
         .padding(.trailing, canCollapse ? 2 : SidebarMetrics.rowPadding)
         .frame(height: CGFloat(style.sidebarRowHeight) + 2)
         .background { SidebarRowBackground(isSelected: isSelected, isHovering: showsHover) }
+        .devTag(
+            "Sidebar network header",
+            tokens: [
+                foregroundKey,
+                isSelected ? ThemeKey.sidebarActiveBackground : showsHover ? ThemeKey.sidebarHoverBackground : ThemeKey.sidebarBackground,
+            ],
+            font: .system(size: fontSize, weight: .semibold),
+            padding: EdgeInsets(top: 0, leading: SidebarMetrics.rowPadding, bottom: 0, trailing: canCollapse ? 2 : SidebarMetrics.rowPadding)
+        )
         .keyboardFocusRing(showsKeyboardFocus, cornerRadius: SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
@@ -364,6 +374,15 @@ struct SidebarBufferRow: View {
         .padding(.horizontal, SidebarMetrics.rowPadding)
         .frame(height: style.sidebarRowHeight)
         .background { SidebarRowBackground(isSelected: isSelected, isHovering: hovering && !isReordering) }
+        .devTag(
+            "Sidebar row",
+            tokens: [
+                activity.foregroundKey(isSelected: isSelected),
+                isSelected ? ThemeKey.sidebarActiveBackground : hovering && !isReordering ? ThemeKey.sidebarHoverBackground : ThemeKey.sidebarBackground,
+            ],
+            font: .system(size: style.sidebarFontSize, weight: activity.isEmphasized && !isSelected ? .semibold : (isSelected ? .medium : .regular)),
+            padding: EdgeInsets(top: 0, leading: SidebarMetrics.rowPadding, bottom: 0, trailing: SidebarMetrics.rowPadding)
+        )
         .keyboardFocusRing(showsKeyboardFocus, cornerRadius: SidebarMetrics.cornerRadius(forRowHeight: style.sidebarRowHeight))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }

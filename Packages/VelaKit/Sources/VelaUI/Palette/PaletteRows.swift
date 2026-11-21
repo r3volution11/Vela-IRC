@@ -48,6 +48,15 @@ struct PaletteRowView: View {
             RoundedRectangle(cornerRadius: PaletteMetrics.rowCornerRadius, style: .continuous)
                 .fill(background)
         )
+        .devTag(
+            "Palette row",
+            tokens: [
+                ThemeKey.popoverForeground,
+                isSelected ? ThemeKey.chatSelectionBackground : isHovered ? ThemeKey.chatHoverBackground : ThemeKey.popoverBackground,
+                ThemeKey.accentText,
+            ],
+            padding: EdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 10)
+        )
         .overlay(alignment: .top) {
             if row.startsSection {
                 Rectangle()

@@ -76,6 +76,7 @@ struct SidebarRailView: View {
         .frame(width: SidebarMetrics.railWidth)
         .frame(maxHeight: .infinity)
         .surfaceBackground(ThemeKey.railBackground, on: .sidebar)
+        .devTag("Rail", tokens: [ThemeKey.railBackground, ThemeKey.railBorder])
         .overlay(alignment: .trailing) {
             Rectangle().fill(theme[ThemeKey.railBorder]).frame(width: 1)
         }
@@ -246,6 +247,14 @@ private struct RailItem<Tile: View>: View {
     var body: some View {
         tile(showsHover)
             .frame(width: SidebarMetrics.railTileSize, height: SidebarMetrics.railTileSize)
+            .devTag(
+                isRound ? "Rail network" : "Rail channel",
+                tokens: [
+                    isSelected ? ThemeKey.railActiveBackground : ThemeKey.railForeground,
+                    isSelected ? ThemeKey.railActiveIndicator : ThemeKey.railInactiveForeground,
+                    showsHover ? ThemeKey.sidebarHoverBackground : nil,
+                ].compactMap { $0 }
+            )
             .overlay {
                 // Just outside the tile, clear of its initials.
                 if showsKeyboardFocus {

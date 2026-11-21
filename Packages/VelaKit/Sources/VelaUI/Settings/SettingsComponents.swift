@@ -44,10 +44,12 @@ struct SettingsPage<Content: View>: View {
                 .padding(.top, 14)
                 .padding(.bottom, 32)
                 .frame(maxWidth: 720, alignment: .leading)
+                .devTag("Settings page content", padding: EdgeInsets(top: 14, leading: 28, bottom: 32, trailing: 28))
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.automatic)
             .background(theme[ThemeKey.settingsBackground])
+            .devTag("Settings page", tokens: [ThemeKey.settingsBackground, ThemeKey.settingsForeground])
             // A section asked for from elsewhere ("Use Your Own Key in
             // Settings" in the GIF picker): scrolled to once it's laid out.
             .onChange(of: uiState?.settingsSectionReveal, initial: true) { _, reveal in
@@ -94,6 +96,11 @@ struct SettingsPageHeader: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .devTag(
+            "Settings page title",
+            tokens: [ThemeKey.settingsForeground, ThemeKey.settingsSecondaryForeground],
+            font: .system(size: 22, weight: .bold)
+        )
     }
 }
 
@@ -144,6 +151,11 @@ struct SettingsSection<Content: View, Accessory: View>: View {
                     .padding(.horizontal, 4)
             }
         }
+        .devTag(
+            "Settings section",
+            tokens: [ThemeKey.settingsForeground, ThemeKey.settingsSecondaryForeground],
+            font: .system(size: 13, weight: .semibold)
+        )
     }
 }
 
@@ -182,6 +194,7 @@ struct SettingsCard<Content: View>: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(theme[ThemeKey.settingsBorder])
         )
+        .devTag("Settings card", tokens: [ThemeKey.settingsControlBackground, ThemeKey.settingsBorder])
     }
 }
 
@@ -237,6 +250,12 @@ struct SettingsRow<Control: View>: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
         .frame(minHeight: 40)
+        .devTag(
+            "Settings row",
+            tokens: [ThemeKey.settingsForeground, detail == nil ? nil : ThemeKey.settingsSecondaryForeground].compactMap { $0 },
+            font: .system(size: 13),
+            padding: EdgeInsets(top: 9, leading: 14, bottom: 9, trailing: 14)
+        )
     }
 }
 
@@ -416,6 +435,15 @@ struct ThemedTextField: View {
                     isFocused ? theme[ThemeKey.focusBorder] : theme[ThemeKey.settingsBorder],
                     lineWidth: isFocused ? 1.5 : 1
                 )
+        )
+        .devTag(
+            "Text field",
+            tokens: [
+                ThemeKey.settingsBackground, ThemeKey.settingsForeground, ThemeKey.settingsSecondaryForeground,
+                isFocused ? ThemeKey.focusBorder : ThemeKey.settingsBorder,
+            ],
+            font: monospaced ? .system(size: 12.5, design: .monospaced) : .system(size: 13),
+            padding: EdgeInsets(top: 5, leading: 8, bottom: 5, trailing: 8)
         )
     }
 

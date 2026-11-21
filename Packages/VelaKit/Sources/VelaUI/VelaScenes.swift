@@ -240,6 +240,10 @@ private struct VelaEnvironmentModifier: ViewModifier {
         let theme = themeStore.current
         let _ = localeRevision  // Re-run body (and rebuild ChatStyle) when it changes.
         content
+            #if DEBUG
+            // Vela Dev's developer tools (Developer menu); not in release builds.
+            .devToolsHost(isPrimary: isPrimary)
+            #endif
             .environment(app)
             .environment(themeStore)
             .environment(uiState)

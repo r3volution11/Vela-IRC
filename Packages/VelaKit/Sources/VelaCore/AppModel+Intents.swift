@@ -129,7 +129,12 @@ extension AppModel {
 
     /// Channels and private conversations (no network consoles), in sidebar order.
     public var conversationBuffers: [BufferModel] {
-        orderedBuffers.filter { $0.kind != .server }
+        #if DEBUG
+        // Vela Dev's simulator network stays out of Spotlight, Siri and Shortcuts.
+        return orderedBuffers.filter { $0.kind != .server && !DevSimulator.isSimulated($0.id.networkID) }
+        #else
+        return orderedBuffers.filter { $0.kind != .server }
+        #endif
     }
 
     /// The buffer and its session for `bufferID`, if it's open.

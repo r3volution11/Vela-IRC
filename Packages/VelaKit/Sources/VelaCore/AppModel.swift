@@ -416,8 +416,14 @@ public final class AppModel: SessionHost {
         prepareUnreadMarker(buffer)
         session(for: buffer.id.networkID)?.markRead(buffer)
         // Demo mode shares the real app's defaults; don't replace the
-        // channel Vela reopens with a demo one.
-        if !isDemo { UserDefaults.standard.set(buffer.id.description, forKey: "Vela.lastSelectedBuffer") }
+        // channel Vela reopens with a demo one (or, in Vela Dev, one of the
+        // developer simulator's).
+        #if DEBUG
+        let remembers = !isDemo && !DevSimulator.isSimulated(buffer.id.networkID)
+        #else
+        let remembers = !isDemo
+        #endif
+        if remembers { UserDefaults.standard.set(buffer.id.description, forKey: "Vela.lastSelectedBuffer") }
     }
 
     public func select(bufferID: BufferID) {
@@ -898,6 +904,31 @@ public final class AppModel: SessionHost {
         sessions = demoSessions
         if let buffer = demoSessions.first?.buffer(named: "#vela") ?? demoSessions.first?.channels.first { select(buffer) }
     }
+
+    #if DEBUG
+    // MARK: Developer simulator (Vela Dev only)
+
+    /// Adds a network made by `DevSimulator`. It's in memory only: not in
+    /// networks.json, and `host` keeps it out of chat logs, the Dock's
+    /// offline mark and saved settings.
+    func installSimulatedSession(_ session: NetworkSession, host: SessionHost) {
+        wire(session)
+        session.host = host
+        sessions.append(session)
+    }
+
+    /// Takes a simulated network away, selecting another buffer if one of
+    /// its buffers was selected.
+    func removeSimulatedSession(_ session: NetworkSession) {
+        session.shutdown()
+        let wasSelected = selectedBufferID?.networkID == session.id
+        sessions.removeAll { $0 === session }
+        lastSelectedOnNetwork[session.id] = nil
+        guard wasSelected else { return }
+        selectedBufferID = nil
+        if let buffer = orderedBuffers.first { select(buffer) }
+    }
+    #endif
 }
 
 /// Stores LinkPreview values in the SQLite cache, while `history.save` is

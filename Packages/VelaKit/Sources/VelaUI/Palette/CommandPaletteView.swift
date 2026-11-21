@@ -88,6 +88,7 @@ struct CommandPaletteView: View {
         .background(shape.fill(theme[ThemeKey.popoverBackground]))
         .clipShape(shape)
         .overlay(shape.strokeBorder(theme[ThemeKey.popoverBorder], lineWidth: 1))
+        .devTag("Command palette", tokens: [ThemeKey.popoverBackground, ThemeKey.popoverForeground, ThemeKey.popoverBorder])
         .shadow(color: shadowColor, radius: 22, y: 10)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)

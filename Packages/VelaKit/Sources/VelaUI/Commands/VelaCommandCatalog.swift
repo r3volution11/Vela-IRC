@@ -98,6 +98,13 @@ struct VelaCommandCatalog {
         static let textActualSize = KeyboardShortcut("0", modifiers: .command)
         /// Owned by the system's Settings… item; shown in the palette.
         static let settings = KeyboardShortcut(",", modifiers: .command)
+        #if DEBUG
+        /// Vela Dev's Developer menu (Debug builds only). ⌥⌘I is Safari's
+        /// Show Web Inspector.
+        static let inspectElement = KeyboardShortcut("i", modifiers: [.option, .command])
+        static let layoutOutlines = KeyboardShortcut("o", modifiers: [.option, .command])
+        static let performanceHUD = KeyboardShortcut("p", modifiers: [.option, .command])
+        #endif
     }
 
     // MARK: Palette
@@ -1015,6 +1022,9 @@ struct VelaCommandCatalog {
         commands.append(whatsNew)
         commands += aboutCommands
         commands.append(commandPalette)
+        #if DEBUG
+        commands += developerCommands
+        #endif
         return commands
     }
 }

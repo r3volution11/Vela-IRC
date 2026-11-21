@@ -7,7 +7,8 @@ import VelaCore
 import VelaStore
 import VelaTheme
 
-/// The app's menu bar: File, View, Theme, Go and Network.
+/// The app's menu bar: File, View, Theme, Go and Network (and, in Vela Dev,
+/// Developer).
 ///
 /// Every item comes from ``VelaCommandCatalog``, which the command palette
 /// lists too. Menu contents live in small `View`s so they observe
@@ -90,6 +91,16 @@ struct VelaCommands: Commands {
                 NetworkMenuItems(commands: commands)
             }
         }
+
+        #if DEBUG
+        // Vela Dev only: the developer tools and the state simulator, the
+        // last of the app's menus (before Window and Help).
+        CommandMenu("Developer") {
+            CommandItems(app: app, themeStore: themeStore, uiState: uiState) { commands in
+                DeveloperMenuItems(commands: commands)
+            }
+        }
+        #endif
 
         // Help → What's New in Vela.
         CommandGroup(after: .help) {

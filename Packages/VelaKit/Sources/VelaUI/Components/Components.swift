@@ -52,6 +52,14 @@ struct UnreadBadge: View {
             .background(
                 Capsule().fill(theme[isHighlight ? ThemeKey.sidebarHighlightBadgeBackground : ThemeKey.sidebarBadgeBackground])
             )
+            .devTag(
+                isHighlight ? "Mention badge" : "Unread badge",
+                tokens: isHighlight
+                    ? [ThemeKey.sidebarHighlightBadgeBackground, ThemeKey.sidebarHighlightBadgeForeground]
+                    : [ThemeKey.sidebarBadgeBackground, ThemeKey.sidebarBadgeForeground],
+                font: .system(size: fontSize, weight: .semibold).monospacedDigit(),
+                padding: EdgeInsets(top: 0, leading: 5, bottom: 0, trailing: 5)
+            )
             .accessibilityLabel(isHighlight ? "\(count) mentions" : "\(count) unread")
     }
 }
@@ -90,6 +98,15 @@ private struct ThemedButtonBody: View {
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(theme[ThemedButtonStyle.fillKey(prominent: prominent, isHovering: isHovering && isEnabled)])
                     .opacity(configuration.isPressed ? 0.8 : 1)
+            )
+            .devTag(
+                prominent ? "Button (primary)" : "Button",
+                tokens: [
+                    ThemedButtonStyle.fillKey(prominent: prominent, isHovering: isHovering && isEnabled),
+                    prominent ? ThemeKey.buttonForeground : ThemeKey.buttonSecondaryForeground,
+                ],
+                font: .system(size: 13, weight: .medium),
+                padding: EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14)
             )
             .opacity(isEnabled ? 1 : 0.45)
             .contentShape(Rectangle())

@@ -37,6 +37,12 @@ struct SurfaceFill: View {
     }
 
     var body: some View {
+        // Every surface fill, tagged once here for Vela Dev's inspector.
+        fill.devTag("Surface", tokens: [key])
+    }
+
+    @ViewBuilder
+    private var fill: some View {
         let color = theme.surfaceColor(key, on: surface, vibrancy: vibrancy).color
         switch vibrancy.material(for: surface) {
         case .sidebar:
@@ -66,6 +72,11 @@ struct WindowBackdrop: View {
     @Environment(\.effectiveVibrancy) private var vibrancy
 
     var body: some View {
+        backdrop.devTag("Window", tokens: [ThemeKey.windowBackground, ThemeKey.windowBorder])
+    }
+
+    @ViewBuilder
+    private var backdrop: some View {
         if vibrancy.material(for: .content) == .window {
             VisualEffectBackground(material: .underWindowBackground, blending: .behindWindow)
         } else {

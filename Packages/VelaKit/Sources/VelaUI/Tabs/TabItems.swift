@@ -119,6 +119,16 @@ struct ChannelTab: View {
                 }
             }
             .background { chrome }
+            .devTag(
+                isServer ? "Console tab" : "Tab",
+                tokens: [
+                    textKey,
+                    context.isSelected ? palette.selectedFill : context.isHovered ? palette.hoverFill : palette.background,
+                    context.isSelected ? palette.indicator : nil,
+                    palette.separator,
+                ].compactMap { $0 },
+                font: .system(size: metrics.fontSize, weight: titleWeight)
+            )
             .overlay(alignment: .trailing) {
                 TabSeparator(key: palette.separator, height: (metrics.height * 0.45).rounded())
                     .offset(x: (metrics.gap + 1) / 2)
@@ -293,6 +303,15 @@ struct ServerTab: View {
             .tabMoveActions(reorder)
             .tabDragHandle(reorder)
             .background { chrome }
+            .devTag(
+                "Network tab",
+                tokens: [
+                    textKey,
+                    context.isSelected ? palette.selectedFill : context.isHovered ? palette.hoverFill : palette.background,
+                    palette.separator,
+                ],
+                font: .system(size: metrics.fontSize, weight: context.isSelected || highlights > 0 || unread > 0 ? .semibold : .medium)
+            )
             .overlay(alignment: .trailing) {
                 TabSeparator(key: palette.separator, height: (metrics.height * 0.45).rounded())
                     .offset(x: (metrics.gap + 1) / 2)

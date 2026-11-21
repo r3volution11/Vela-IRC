@@ -11,7 +11,7 @@ Thanks for helping build Vela! This guide covers the basics.
    swift test  --package-path Packages/VelaKit
    ```
 3. Almost all code lives in `Packages/VelaKit`. The `Vela/` app target is intentionally tiny.
-4. Run the app with `scripts/run.sh --dev` (or ⌘R in Xcode). Debug builds are a separate app, **Vela Dev** (bundle id `io.github.r3volution11.Vela.dev`, a **DEV** badge on its Dock icon), with their own sandbox: settings, networks, history and Keychain items. They never touch the Vela you use every day, and the two can run at the same time. To try things without any network, add `--demo`.
+4. Run the app with `scripts/run.sh --dev` (or ⌘R in Xcode). Debug builds are a separate app, **Vela Dev** (bundle id `io.github.r3volution11.Vela.dev`, a **DEV** badge on its Dock icon), with their own sandbox: settings, networks, history and Keychain items. They never touch the Vela you use every day, and the two can run at the same time. To try things without any network, add `--demo`. Vela Dev also has a **Developer** menu: an element inspector, layout outlines, a performance HUD and a state simulator (see [Developer tools](#developer-tools-vela-dev)).
 5. GIF search in local builds needs Vela's KLIPY key, kept out of the repository: maintainers run `scripts/klipy-key.sh --local` once, which writes it from 1Password to the git-ignored `Config/Secrets.xcconfig`. Without it, use your own free key from [KLIPY](https://partner.klipy.com) in **Settings → Media → GIFs**.
 
 ## Code guidelines
@@ -29,9 +29,66 @@ Thanks for helping build Vela! This guide covers the basics.
   ```sh
   swift run --package-path Packages/VelaKit vela-theme-tool schema > schemas/vela-theme.schema.json
   ```
+- **Tag new surfaces for the inspector.** A new kind of row, bar or panel gets a `.devTag("Name", tokens: […])` after its padding and background, naming the tokens it draws with (see [Developer tools](#developer-tools-vela-dev)). It costs nothing in release builds.
 - **Tests use Swift Testing** (`import Testing`). Protocol code should be covered by `MockTransport`-driven tests.
 - **Scrolling has a budget.** Vela must scroll smoothly on the slowest Macs it supports (2019–2020 Intel Macs, an 8 GB M1). If you change the message list, its rows or inline media, run `scripts/benchmark-scroll.sh` before and after: it scrolls a big, fixed channel in a Release build and compares the numbers with `benchmarks/scroll-baseline.json`. Its window is invisible and never takes the focus or the pointer, so you can keep working while it runs (about 12 minutes). See [docs/RELEASING.md](docs/RELEASING.md#scroll-benchmark).
 - Keep pull requests focused. One feature or fix per PR is easiest to review.
+
+## Developer tools (Vela Dev)
+
+Vela Dev has a **Developer** menu, the last of the app's menus, with tools like a browser's devtools. The command palette lists them too, under "Developer:". They're compiled only into Debug builds (`#if DEBUG`): release builds have no menu, no tagging and none of the code.
+
+| Tool | Shortcut | What it does |
+| --- | --- | --- |
+| **Inspect Element** | ⌥⌘I | Point at something to see what it's drawn with: the theme tokens and their hex values in the current theme, its font (family, size, weight), its size and its padding, and the tagged views it's inside. Click to pin it; the pinned panel has **Open in Theme Editor** for each token, which leaves inspect mode and opens the theme editor searching for that token. Click it again to unpin. Esc leaves inspect mode. While you inspect, the window's content gets no clicks or hovers. |
+| **Layout Outlines** | ⌥⌘O | Outlines every tagged view with its name and size, shades its padding green and marks the gaps between neighbors (views directly inside the same tagged view) in pink, like a browser's box model. |
+| **Performance HUD** | ⌥⌘P | A panel at the top right of the main window. **frame**: the frame rate and frame time, with the worst of the last second; **dropped**: frames missed, in the last second and since the HUD opened; **hitches**: how late the late frames were, in ms per second (as `scripts/benchmark-scroll.sh` reports it); **stalls**: gaps of 50 ms or more, when the main thread was blocked; **memory**: the memory footprint (what Activity Monitor shows); **rows**: message list rows built per second and in all. The numbers come from the main window's display link on the main thread and refresh twice a second. The display link runs only while the HUD is showing. |
+
+### The state simulator
+
+The menu's **State Simulator** section puts the window into states that are hard to reach on demand:
+
+- **Network Offline**, **Network Connecting** and **Network Online**;
+- **Incoming Mention**: someone in #simulator says your nick. Be in another buffer to see the badge and the notification;
+- **Very Long Nick and Message**: a 64-character nick and a long message with an unbroken word and a long link;
+- **Huge Channel**: #huge, with 5,000 members and 10,000 messages;
+- **Reconnect Storm**: the connection drops and comes back 15 times in a row, with a netsplit's quits and joins each time. Choose it again to stop it;
+- **Remove Simulator Network**.
+
+All of it happens on a network of its own, **Simulator**, which the first of these adds. Your real networks are never touched, and nothing is saved: the network isn't in `networks.json` and has no message history, chat logs or Keychain items; it's never the channel Vela reopens at launch; Spotlight, Siri and Shortcuts never see it; and its connection is a stand-in that never opens a socket (**Connect** fails at once). Quitting forgets it. The states go through `NetworkSession`'s own event handling, the same code a server's lines go through. A mention posts a real notification, as one from a real network would. The code is `DevSimulator` in VelaCore.
+
+### Tagging views
+
+Inspect Element and Layout Outlines see the views tagged with `devTag`:
+
+```swift
+.padding(.horizontal, 14)
+.background(theme[ThemeKey.inputBackground])
+.devTag(
+    "Message box",
+    tokens: [ThemeKey.inputBackground, ThemeKey.inputForeground],
+    font: style.bodyFont,                                        // optional: what its text uses
+    padding: EdgeInsets(top: 0, leading: 14, bottom: 0, trailing: 14)  // optional: for the green band
+)
+```
+
+- **Put the tag after the view's padding and background,** so its frame is the view's box.
+- **List the tokens the view draws with now,** most telling first. A row's tokens can follow its state: hovered, selected, highlighted.
+- **`SurfaceFill` and `surfaceBackground` tag themselves** with their token, so every surface of the main window is covered. So are the shared components: message and event rows, sidebar and member rows, tabs, the header, the message box, badges, themed buttons and text fields, the palette and the settings pages, sections, cards and rows.
+- **What it costs.** In release builds `devTag` returns the view itself, and its arguments are never evaluated: no modifier, no stored properties, no environment reads. In Debug builds, with the tools off, a tagged view carries an empty background and one check of whether they're on. Only with Inspect Element or Layout Outlines on does each tagged view report its frame.
+- **What it doesn't see:** sheets, popovers and menus, which aren't in the window's own view tree.
+
+The code is in `Packages/VelaKit/Sources/VelaUI/DevTools/`. The tools draw in fixed colors rather than theme tokens, so they read the same over every theme: the one exception to never hard-coding colors.
+
+To check that a release build has none of it, build Release and look for the tools' symbols and strings. Every count should be 0:
+
+```sh
+xcodebuild -project Vela.xcodeproj -scheme Vela -configuration Release -destination 'platform=macOS' \
+  -derivedDataPath build/DerivedData-release build
+VELA=build/DerivedData-release/Build/Products/Release/Vela.app/Contents/MacOS/Vela
+nm -a "$VELA" | grep -c 'DevTag\|DevTools\|DevSimulator\|devToolsHost'
+strings -a "$VELA" | grep -c 'Inspect Element\|simulator.invalid\|Message row'
+```
 
 ## Media sites
 

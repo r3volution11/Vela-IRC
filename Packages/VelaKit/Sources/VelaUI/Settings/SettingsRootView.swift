@@ -177,6 +177,7 @@ private struct SettingsSidebar: View {
         .padding(.bottom, 14)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(theme[ThemeKey.settingsSidebarBackground])
+        .devTag("Settings sidebar", tokens: [ThemeKey.settingsSidebarBackground, ThemeKey.settingsSecondaryForeground])
     }
 
     /// ⌘[ / ⌘]: the previous or next section, wherever the focus is in
@@ -227,6 +228,12 @@ private struct SettingsSidebarItem: View {
             .background(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(background)
+            )
+            .devTag(
+                "Settings sidebar item",
+                tokens: isSelected ? [ThemeKey.accent, ThemeKey.accentForeground] : [ThemeKey.settingsForeground, ThemeKey.accent],
+                font: .system(size: 13, weight: isSelected ? .semibold : .regular),
+                padding: EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8)
             )
             .contentShape(Rectangle())
         }

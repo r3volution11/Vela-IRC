@@ -128,6 +128,12 @@ struct ChatHeaderView: View {
         .padding(.trailing, 12)
         .frame(height: 52)
         .surfaceBackground(ThemeKey.titleBarBackground, on: .content)
+        .devTag(
+            "Chat header",
+            tokens: [ThemeKey.titleBarBackground, ThemeKey.titleBarForeground, ThemeKey.titleBarSecondaryForeground, ThemeKey.titleBarBorder],
+            font: .system(size: 14, weight: .semibold),
+            padding: EdgeInsets(top: 0, leading: trafficLightInset(style: style, sidebarCollapsed: app.settings[.sidebarCollapsed]), bottom: 0, trailing: 12)
+        )
         .overlay(alignment: .bottom) {
             Rectangle().fill(theme[ThemeKey.titleBarBorder]).frame(height: 1)
         }
@@ -220,6 +226,12 @@ struct ConnectionPill: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(Capsule().fill(theme[key].opacity(0.12)))
+            .devTag(
+                "Connection pill",
+                tokens: [key],
+                font: .system(size: 10, weight: .medium),
+                padding: EdgeInsets(top: 2, leading: 6, bottom: 2, trailing: 6)
+            )
     }
 }
 

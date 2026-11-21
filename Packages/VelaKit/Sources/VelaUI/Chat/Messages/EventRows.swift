@@ -33,6 +33,11 @@ struct EventRow: View {
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
         }
+        .devTag(
+            "Event row",
+            tokens: [line.kind.eventTextColorKey, line.kind.eventSymbolColorKey, ThemeKey.chatTimestamp],
+            font: style.font(size: max(10, style.fontSize - 1))
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(controller.accessibilityLabel(for: line) {
             "\(line.time.formatted(date: .omitted, time: .shortened)), \(IRCFormatting.strip(line.text))"
@@ -235,6 +240,11 @@ struct MembershipRunRow: View {
                 .transition(.opacity)
             }
         }
+        .devTag(
+            "Join and part summary",
+            tokens: [ThemeKey.chatEvent, ThemeKey.chatSecondaryForeground, hovering ? ThemeKey.chatHoverBackground : nil].compactMap { $0 },
+            font: style.font(size: max(10, style.fontSize - 1))
+        )
     }
 }
 
@@ -258,6 +268,12 @@ struct DayDividerRow: View {
         .padding(.horizontal, style.rowHorizontalPadding)
         .padding(.top, style.layout == .grouped ? 16 : 10)
         .padding(.bottom, style.layout == .grouped ? 4 : 4)
+        .devTag(
+            "Day divider",
+            tokens: [ThemeKey.chatDayDividerForeground, ThemeKey.chatDayDivider],
+            font: style.font(size: max(10, style.fontSize - 2), weight: .semibold),
+            padding: EdgeInsets(top: style.layout == .grouped ? 16 : 10, leading: style.rowHorizontalPadding, bottom: 4, trailing: style.rowHorizontalPadding)
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityAddTraits(.isHeader)
@@ -296,6 +312,12 @@ struct UnreadMarkerRow: View {
         }
         .padding(.horizontal, style.rowHorizontalPadding)
         .padding(.vertical, 5)
+        .devTag(
+            "Unread marker",
+            tokens: [ThemeKey.chatUnreadMarker],
+            font: .system(size: max(9, style.fontSize - 3), weight: .bold),
+            padding: EdgeInsets(top: 5, leading: style.rowHorizontalPadding, bottom: 5, trailing: style.rowHorizontalPadding)
+        )
         .accessibilityElement(children: .contain)
     }
 }

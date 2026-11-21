@@ -69,6 +69,11 @@ struct MessageHoverToolbar: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(theme[ThemeKey.popoverBorder], lineWidth: 1)
         )
+        .devTag(
+            "Message toolbar",
+            tokens: [ThemeKey.popoverBackground, ThemeKey.popoverForeground, ThemeKey.popoverBorder],
+            padding: EdgeInsets(top: 2, leading: 2, bottom: 2, trailing: 2)
+        )
     }
 
     private var shadowColor: Color {

@@ -69,6 +69,16 @@ private struct ReactionChip: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .strokeBorder(theme[mine || hovering ? ThemeKey.reactionSelfBorder : ThemeKey.reactionBorder], lineWidth: 1)
             )
+            .devTag(
+                "Reaction",
+                tokens: [
+                    mine ? ThemeKey.reactionSelfBackground : ThemeKey.reactionBackground,
+                    mine ? ThemeKey.accentText : ThemeKey.reactionForeground,
+                    mine || hovering ? ThemeKey.reactionSelfBorder : ThemeKey.reactionBorder,
+                ],
+                font: .system(size: max(10, style.fontSize - 2), weight: .semibold).monospacedDigit(),
+                padding: EdgeInsets(top: 0, leading: 7, bottom: 0, trailing: 7)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

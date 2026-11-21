@@ -122,6 +122,7 @@ struct MessageListView: View {
             .themedScrollers()
             .background(ListScrollViewProbe { [controller] in controller.scrollView = $0 })
         }
+        .devTag("Message list", tokens: [ThemeKey.chatBackground, ThemeKey.chatForeground])
         // Behind the list, out of the rows: nothing per row, nothing while
         // scrolling.
         .background { MessageKeyboard(controller: controller, scrolling: keyboardScrolling) }
@@ -766,6 +767,12 @@ private struct JumpToPresentPill: View {
             .padding(.vertical, 7)
             .background(Capsule().fill(theme[ThemeKey.accent]))
             .overlay(Capsule().fill(hovering ? theme[ThemeKey.accentForeground].opacity(0.1) : .clear))
+            .devTag(
+                "Jump to present",
+                tokens: [ThemeKey.accent, ThemeKey.accentForeground],
+                font: .system(size: 12, weight: .semibold),
+                padding: EdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 14)
+            )
             .shadow(color: theme[ThemeKey.windowBackground].opacity(theme.kind == .dark ? 0.5 : 0.2), radius: 6, y: 2)
             .contentShape(Capsule())
         }

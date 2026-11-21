@@ -55,6 +55,10 @@ struct VelaCommand: Identifiable {
         case theme = "Theme"
         case typing = "Typing"
         case view = "View"
+        #if DEBUG
+        /// Vela Dev's Developer menu.
+        case developer = "Developer"
+        #endif
     }
 
     /// "View: Toggle Member List".

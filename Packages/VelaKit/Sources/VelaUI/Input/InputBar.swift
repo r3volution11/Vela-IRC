@@ -163,6 +163,11 @@ struct InputBar: View {
             .padding(.bottom, 12)
         }
         .surfaceBackground(ThemeKey.inputContainerBackground, on: .content)
+        .devTag(
+            "Message box area",
+            tokens: [ThemeKey.inputContainerBackground, ThemeKey.paneDivider],
+            padding: EdgeInsets(top: 11, leading: 14, bottom: 12, trailing: 14)
+        )
         .fixedSize(horizontal: false, vertical: true)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: pendingPaste != nil)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: replyTarget?.id)
@@ -258,6 +263,15 @@ struct InputBar: View {
                 shape.strokeBorder(theme[stroke.token], lineWidth: stroke.width)
             }
         }
+        .devTag(
+            "Message box",
+            tokens: [
+                ThemeKey.inputBackground, ThemeKey.inputForeground, ThemeKey.inputPlaceholder,
+                border.stroke(isFocused: isFocused)?.token,
+            ].compactMap { $0 },
+            font: style.bodyFont,
+            padding: EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 8)
+        )
         .modifier(ShakeEffect(shakes: reduceMotion ? 0 : CGFloat(rejectCount)))
         .animation(reduceMotion ? nil : .linear(duration: 0.32), value: rejectCount)
         .animation(reduceMotion || !border.changesWithFocus ? nil : .easeOut(duration: 0.12), value: isFocused)
@@ -532,6 +546,11 @@ private struct ReplyBar: View {
         .padding(.vertical, 6)
         .frame(minHeight: 30)
         .background(theme[ThemeKey.replyBackground])
+        .devTag(
+            "Reply bar",
+            tokens: [ThemeKey.replyBackground, ThemeKey.replyForeground, ThemeKey.replyQuoteBar],
+            padding: EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10)
+        )
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Replying to \(nick): \(snippet)")

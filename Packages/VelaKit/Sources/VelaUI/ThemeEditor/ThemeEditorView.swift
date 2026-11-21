@@ -92,6 +92,14 @@ struct ThemeEditorView: View {
             ThemeEditorHandoff.shared.requestedBase = nil
             requestSwitch(to: base)
         }
+        #if DEBUG
+        // Vela Dev's Inspect Element: "Open in Theme Editor" finds the token.
+        .onChange(of: DevTools.shared.requestedThemeToken, initial: true) { _, key in
+            guard let key else { return }
+            DevTools.shared.requestedThemeToken = nil
+            query = key
+        }
+        #endif
         .confirmationDialog(
             confirmationTitle,
             isPresented: Binding(

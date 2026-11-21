@@ -25,6 +25,10 @@ struct DisplayItemRow: View, Equatable {
     var selection: RowSelection?
 
     var body: some View {
+        #if DEBUG
+        // Vela Dev's Performance HUD counts the rows built.
+        let _ = DevCounters.messageRowBodies += 1
+        #endif
         switch item {
         case .dayDivider(let date, _):
             DayDividerRow(date: date)
@@ -77,6 +81,19 @@ struct MessageRow: View {
             .padding(.bottom, bottomPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background { background(for: line) }
+            .devTag(
+                "Message row",
+                tokens: [
+                    ThemeKey.chatForeground,
+                    line.isHighlight ? ThemeKey.chatHighlightBackground : line.isSelf ? ThemeKey.chatSelfMessageBackground : ThemeKey.chatBackground,
+                    line.isHighlight ? ThemeKey.chatHighlightBorder : nil,
+                    isHovered ? ThemeKey.chatHoverBackground : nil,
+                    line.isSelf ? ThemeKey.chatSelfNick : nil,
+                    style.showTimestamps ? ThemeKey.chatTimestamp : nil,
+                ].compactMap { $0 },
+                font: style.bodyFont,
+                padding: EdgeInsets(top: topPadding, leading: leadingPadding, bottom: bottomPadding, trailing: style.rowHorizontalPadding)
+            )
             .overlay(alignment: .leading) {
                 if line.isHighlight {
                     Rectangle()

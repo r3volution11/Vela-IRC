@@ -118,6 +118,7 @@ struct MemberListView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .surfaceBackground(ThemeKey.memberListBackground, on: .content)
+        .devTag("Member list", tokens: [ThemeKey.memberListBackground, ThemeKey.memberListForeground, ThemeKey.memberListBorder])
         .background {
             KeyboardFocusArea(
                 handle: keyboard.handle,
@@ -284,6 +285,12 @@ struct MemberListView: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(theme[ThemeKey.memberListBorder]).frame(height: 1)
         }
+        .devTag(
+            "Member list header",
+            tokens: [ThemeKey.memberListForeground, ThemeKey.memberListHeaderForeground, ThemeKey.memberListBorder],
+            font: .system(size: 13, weight: .semibold),
+            padding: EdgeInsets(top: 0, leading: 14, bottom: 0, trailing: 14)
+        )
         .contentShape(Rectangle())
         .windowTitleBarArea()
         .accessibilityElement(children: .combine)
@@ -338,6 +345,11 @@ struct MemberListView: View {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(theme[ThemeKey.memberListHoverBackground])
         )
+        .devTag(
+            "Member filter",
+            tokens: [ThemeKey.memberListHoverBackground, filterFocused ? ThemeKey.focusBorder : ThemeKey.memberListBorder, ThemeKey.memberListHeaderForeground],
+            padding: EdgeInsets(top: 0, leading: 7, bottom: 0, trailing: 7)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .strokeBorder(theme[filterFocused ? ThemeKey.focusBorder : ThemeKey.memberListBorder], lineWidth: filterFocused ? 1.5 : 1)
@@ -385,6 +397,12 @@ private struct MemberSectionHeader: View {
         .padding(.bottom, 3)
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceBackground(ThemeKey.memberListBackground, on: .content)
+        .devTag(
+            "Member section header",
+            tokens: [ThemeKey.memberListHeaderForeground, ThemeKey.memberListBackground],
+            font: .system(size: 10, weight: .semibold),
+            padding: EdgeInsets(top: 10, leading: 6, bottom: 3, trailing: 6)
+        )
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
     }
@@ -447,6 +465,17 @@ private struct MemberRow: View {
         .background(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(rowBackground)
+        )
+        .devTag(
+            "Member row",
+            tokens: [
+                ThemeKey.memberListPrefixForeground,
+                isSelf ? ThemeKey.chatSelfNick : (style.colorNicks ? nil : ThemeKey.memberListForeground),
+                member.isAway ? ThemeKey.memberListAwayForeground : nil,
+                isSelected ? ThemeKey.sidebarActiveBackground : hovering ? ThemeKey.memberListHoverBackground : nil,
+            ].compactMap { $0 },
+            font: .system(size: fontSize, weight: isSelf ? .semibold : .regular),
+            padding: EdgeInsets(top: 0, leading: 2, bottom: 0, trailing: 6)
         )
         .background {
             // Where Space or ⇧F10 opens the menu, and where the row is, so

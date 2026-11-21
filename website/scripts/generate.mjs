@@ -417,7 +417,8 @@ for (const name of commandNames) {
 // Every shortcut in VelaCommandCatalog.Shortcuts should be on the shortcuts page.
 const catalogPath = 'Packages/VelaKit/Sources/VelaUI/Commands/VelaCommandCatalog.swift'
 if (existsSync(join(repo, catalogPath))) {
-  const catalog = read(catalogPath)
+  // Vela Dev's Developer menu (`#if DEBUG`) isn't in the app people install.
+  const catalog = read(catalogPath).replace(/^[ \t]*#if DEBUG\n[\s\S]*?^[ \t]*#endif\n/gm, '')
   const keyGlyphs = { upArrow: '↑', downArrow: '↓', leftArrow: '←', rightArrow: '→', return: '↩', escape: '⎋', tab: '⇥' }
   const shortcutsPage = readFileSync(join(website, 'reference/keyboard-shortcuts.md'), 'utf8').replace(/−/g, '-')
   const shortcutRE = /static let (\w+) = KeyboardShortcut\((?:"(.)"|\.(\w+)), modifiers: \[?([^\])]*)\]?\)/g
