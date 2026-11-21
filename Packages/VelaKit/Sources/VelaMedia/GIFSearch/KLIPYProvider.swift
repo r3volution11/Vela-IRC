@@ -90,6 +90,18 @@ public struct KLIPYProvider: GIFSearchProvider {
         return URL(string: "https://klipy.com/gifs")!
     }
 
+    /// A GIF's page on klipy.com, from its slug: `https://klipy.com/gifs/<slug>`.
+    /// Nil for a blank slug or one that isn't a single path segment.
+    public static func pageURL(slug: String?) -> URL? {
+        guard let slug = slug?.trimmingCharacters(in: .whitespacesAndNewlines), !slug.isEmpty,
+              !slug.contains("/"), slug != ".", slug != ".."
+        else { return nil }
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/?#;%")
+        guard let encoded = slug.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
+        return URL(string: "https://klipy.com/gifs/" + encoded)
+    }
+
     // MARK: Reading results
 
     static func result(_ item: Item) -> GIFSearchResult? {
@@ -115,6 +127,7 @@ public struct KLIPYProvider: GIFSearchProvider {
             animations: animations,
             placeholder: GIFSearchSupport.dataFromURI(item.blurPreview),
             shareURL: share.url,
+            pageURL: pageURL(slug: item.slug),
             attribution: nil,
             aspectRatio: aspect
         )

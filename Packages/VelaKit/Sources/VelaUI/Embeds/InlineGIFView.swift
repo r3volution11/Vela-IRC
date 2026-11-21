@@ -8,9 +8,10 @@ import SwiftUI
 import VelaMedia
 import VelaTheme
 
-/// A GIF from Tenor, GIPHY or Imgur (`.gifv`), playing inline like a GIF,
-/// with a "via Tenor · tenor.com" caption that opens the link when clicked
-/// (and whose text can be selected).
+/// A GIF from Tenor, GIPHY, Imgur (`.gifv`) or KLIPY, playing inline like a
+/// GIF, with a "via Tenor · tenor.com" caption that opens the link when
+/// clicked (and whose text can be selected). KLIPY's opens the GIF's page on
+/// klipy.com instead, or klipy.com itself (see `GIFCaption`).
 ///
 /// The site's MP4 rendition plays muted in a loop, with no controls: a tenth
 /// of the GIF's size or less, and decoded by the GPU. Without one (stickers,
@@ -106,11 +107,12 @@ struct InlineGIFView: View {
     }
 
     /// "via GIPHY · giphy.com": the site the GIF comes from, as GIF sites ask.
-    /// A click opens the link; a drag selects the text.
+    /// A click opens what `GIFCaption` says; a drag selects the text.
     private var caption: some View {
-        HStack(spacing: 4) {
-            Text("via \(gif.provider.displayName)").fontWeight(.semibold)
-            Text("· \(EmbedActions.displayHost(linkURL))")
+        let caption = GIFCaption(provider: gif.provider, linkURL: linkURL)
+        return HStack(spacing: 4) {
+            Text("via \(caption.siteName)").fontWeight(.semibold)
+            Text("· \(caption.host)")
         }
         .font(style.font(size: max(9, style.fontSize - 2)))
         .foregroundStyle(theme[ThemeKey.embedSiteName])
@@ -118,15 +120,71 @@ struct InlineGIFView: View {
         .lineLimit(1)
         .truncationMode(.middle)
         .textSelection(.enabled)
-        .linkClickArea(linkURL)
+        .linkClickArea(caption.url)
         .onHover { captionHovering = $0 }
-        .help("Open \(linkURL.absoluteString)")
+        .help(caption.help)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Via \(gif.provider.displayName), \(EmbedActions.displayHost(linkURL))")
+        .accessibilityLabel(caption.accessibilityLabel)
         .accessibilityAddTraits(.isLink)
-        .accessibilityHint("Opens the link in your browser")
-        .accessibilityAction { EmbedActions.open(linkURL) }
-        .contextMenu { EmbedLinkMenuItems(url: linkURL, onHide: onHide) }
+        .accessibilityHint(caption.accessibilityHint)
+        .accessibilityAction { EmbedActions.open(caption.url) }
+        .contextMenu { EmbedLinkMenuItems(url: caption.url, onHide: onHide) }
+    }
+}
+
+/// What a GIF's "via …" caption says, and what a click on it opens.
+///
+/// Most sites' captions open the link as posted: a GIPHY or Tenor page, or
+/// a file on their servers. A KLIPY link is always a file, which names
+/// neither the GIF's page nor anything else, so its caption reads
+/// "via KLIPY · klipy.com" and opens the GIF's page on klipy.com when Vela
+/// knows it (a GIF you sent from the picker since Vela opened, in
+/// `SentGIFPages`), and klipy.com otherwise. Made when the caption is drawn:
+/// one dictionary lookup, for KLIPY only.
+struct GIFCaption: Equatable {
+    enum Destination: Equatable {
+        /// The link as posted.
+        case link
+        /// The GIF's own page on the site.
+        case gifPage
+        /// The site's home page, for a GIF whose page Vela doesn't know.
+        case homepage
+    }
+
+    /// "KLIPY".
+    let siteName: String
+    /// "klipy.com", or the link's own host ("media.giphy.com").
+    let host: String
+    /// What a click opens.
+    let url: URL
+    let destination: Destination
+
+    init(provider: GIFProvider, linkURL: URL, pages: SentGIFPages = .shared) {
+        siteName = provider.displayName
+        switch provider {
+        case .klipy:
+            let homepage = provider.homepage
+            let page = pages.page(for: linkURL)
+            host = EmbedActions.displayHost(homepage)
+            url = page ?? homepage
+            destination = page == nil ? .homepage : .gifPage
+        case .tenor, .giphy, .imgur:
+            host = EmbedActions.displayHost(linkURL)
+            url = linkURL
+            destination = .link
+        }
+    }
+
+    var help: String { "Open \(url.absoluteString)" }
+
+    var accessibilityLabel: String { "Via \(siteName), \(host)" }
+
+    var accessibilityHint: String {
+        switch destination {
+        case .link: "Opens the link in your browser"
+        case .gifPage: "Opens the GIF's page on \(siteName) in your browser"
+        case .homepage: "Opens \(host) in your browser"
+        }
     }
 }
 

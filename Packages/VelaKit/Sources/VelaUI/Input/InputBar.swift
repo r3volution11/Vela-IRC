@@ -414,6 +414,9 @@ struct InputBar: View {
             reject()
             return
         }
+        // Before the message's row is drawn, so its "via KLIPY" caption
+        // opens the GIF's page.
+        gif?.recordSent()
         send(message)
         InputHistoryStore.shared.push(message, for: buffer.id)
         history.reset()

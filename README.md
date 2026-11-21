@@ -124,7 +124,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **Inline images and animated GIFs.** Click one to view it full size.
 - **Link previews** with the page title, description, site name and thumbnail, accented with the page's own theme color.
 - **Video players** for YouTube, Vimeo, Twitch, Streamable and Reddit. The player loads only when you press play, and you can expand it to fill the window.
-- **GIFs from Tenor, GIPHY and Imgur** play inline, even from a link to the GIF's page. The website lists [every supported media site](https://velairc.app/reference/media-sites) and the links Vela recognizes on each; that list is generated from the code and checked against the real sites every week.
+- **GIFs from Tenor, GIPHY, Imgur and KLIPY** play inline, on Tenor and GIPHY even from a link to the GIF's page. The website lists [every supported media site](https://velairc.app/reference/media-sites) and the links Vela recognizes on each; that list is generated from the code and checked against the real sites every week.
 - **Your choice of size:** Minimal, Standard or Large link previews, full or compact videos, and full-size or thumbnail images.
 - **Site rules and an adult-site filter:** show everything, text only or nothing per site. Adult sites' previews are hidden by default, checked on your Mac against a list bundled with Vela. Images can stay blurred until clicked.
 - **[mIRC](https://www.mirc.com) formatting:** bold, italic, underline, strikethrough, monospace, colors (including hex) and reverse.

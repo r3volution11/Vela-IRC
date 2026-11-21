@@ -64,11 +64,19 @@ import Testing
         for link in [
             "https://media.tenor.com/WAeOn7-AdfgAAAAC/karate-kid-body-bag.gif",
             "https://i.giphy.com/JIX9t2j0ZTN9S.webp",
+            "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+            "https://static2.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/AVBuFxXW.webp",
+            "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/UyQzai4H0Ts6PCSwyQH.mp4",
         ] {
             let preview = try await service.preview(for: url(link), policy: policy)
             #expect(preview.kind == .gif)
             #expect(preview.gif?.isResolved == true)
             #expect(preview.displayTitle != nil)
+            if preview.gif?.provider == .klipy {
+                // Only the file the link names, which the view loads.
+                #expect(preview.mediaURL == url(link))
+                #expect(preview.siteName == "KLIPY")
+            }
         }
         #expect(server.requests.isEmpty)
     }

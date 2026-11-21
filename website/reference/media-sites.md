@@ -1,6 +1,6 @@
 ---
 title: Supported media sites
-description: Every site whose links Vela plays or previews (YouTube, Vimeo, Twitch, Tenor, GIPHY, Reddit, IMDb and more, plus image and video files), the links it recognizes and what it fetches.
+description: Every site whose links Vela plays or previews (YouTube, Vimeo, Twitch, Tenor, GIPHY, KLIPY, Reddit, IMDb and more, plus image and video files), the links it recognizes and what it fetches.
 ---
 
 # Supported media sites
@@ -41,17 +41,19 @@ Links to these sites show the video's title and thumbnail. Press **▶** to play
 
 ## GIFs
 
-Links to these sites play the GIF inline, even when the link is to the GIF's page. GIFs follow the image settings in **Settings → Media → Images**.
+Links to these sites play the GIF inline. On Tenor and GIPHY, so do links to the GIF's page. GIFs follow the image settings in **Settings → Media → Images**.
 
 | Site | Links | Vela shows | Site rule |
 | --- | --- | --- | --- |
 | [Tenor](https://tenor.com) | `tenor.com/view/<title>-gif-<id>` (also with a language, as in `tenor.com/de/view/…`): reads the page<br>`tenor.com/view/<title>-sticker-<id>`: reads the page<br>`tenor.com/<code>.gif`: follows the link, then reads the page<br>`media.tenor.com/<id>/<name>.gif` (also `.mp4` and `.webp`, and on `media1.tenor.com` and `c.tenor.com`): nothing else to fetch | The GIF, played from its small video copy. Stickers, from their see-through animated image. | `tenor.com`, which also covers `media.tenor.com` (the GIFs and their video copies) |
 | [GIPHY](https://giphy.com) | `giphy.com/gifs/<title>-<id>` (the page is read only for a text-only preview): nothing else to fetch<br>`giphy.com/embed/<id>`: nothing else to fetch<br>`giphy.com/stickers/<title>-<id>`: nothing else to fetch<br>`gph.is/<code>`: follows the link, then reads the page<br>`media.giphy.com/media/<id>/giphy.gif` (also `.mp4` and `.webp`, and on `media0.giphy.com` to `media4.giphy.com`): nothing else to fetch<br>`i.giphy.com/<id>.gif`: nothing else to fetch | The GIF, played from its small video copy. Stickers, from their see-through animated image. | `giphy.com`, which also covers `gph.is` (short links) |
 | [Imgur](https://imgur.com) | `i.imgur.com/<id>.gifv` (also on `imgur.com`; other Imgur images, such as `i.imgur.com/<id>.jpg`, show like any image file) | The GIF, played from its small video copy. The link names the file, so Vela fetches nothing else. | Each domain's own: `i.imgur.com` (links and the video copies) and `imgur.com` (links) |
+| [KLIPY](https://klipy.com) | `static.klipy.com/ii/<id>/<xx>/<xx>/<name>.gif` (also `.webp`, and on `static1.klipy.com` and `static2.klipy.com`)<br>`static.klipy.com/ii/<id>/<xx>/<xx>/<name>.mp4` (the GIF's video copy) | The GIF or WebP itself, as linked. The GIF, played from its small video copy. The link names the file, so Vela fetches nothing else. | `klipy.com`, which also covers `static.klipy.com` (the GIFs and their video copies, also on `static1.klipy.com` and `static2.klipy.com`) |
 
 - **Tenor:** A link to a GIF file needs no page: Vela loads only the GIF's video copy from `media.tenor.com`. Pages and short links are fetched to find the GIF.
 - **GIPHY:** Links that name the GIF (pages, embeds and files) need no page: Vela loads only the GIF's video copy from GIPHY's servers. `gph.is` short links are followed to find the GIF.
 - **Imgur:** Vela loads the GIF's video copy (`i.imgur.com/<id>.mp4`) and never the `.gifv` page.
+- **KLIPY:** Vela loads only the file the link names, from KLIPY's servers, and never a page. Each copy of a KLIPY GIF has an address of its own, so a `.gif` link plays the GIF itself rather than a smaller video copy. Links to GIF pages (`klipy.com/gifs/<name>`) get an ordinary link preview.
 
 ## Reddit
 

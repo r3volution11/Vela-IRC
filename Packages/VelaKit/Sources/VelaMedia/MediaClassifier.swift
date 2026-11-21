@@ -13,7 +13,7 @@ public enum MediaClassification: Sendable, Hashable {
     case video(URL)
     /// A video from a site whose player can be embedded.
     case embed(EmbedInfo)
-    /// An animation from a GIF site (Tenor, GIPHY, Imgur `.gifv`). Resolved
+    /// An animation from a GIF site (Tenor, GIPHY, Imgur `.gifv`, KLIPY). Resolved
     /// when the link says where the animation is; otherwise its page is
     /// fetched to find out (`GIFInfo.isResolved`).
     case gif(GIFInfo)

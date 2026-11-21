@@ -153,6 +153,92 @@ import Testing
         #expect(MediaClassifier.classify(url("https://imgur.com/gallery/AbCd123")) == .page(url("https://imgur.com/gallery/AbCd123")))
     }
 
+    // MARK: KLIPY
+
+    @Test(arguments: [
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+        "https://static.klipy.com/ii/263d75c9c6d04df878152f91dbffb873/1b/1d/6Sod6SaO.gif",
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/AVBuFxXW.webp",
+        "https://static1.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+        "https://static2.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/AVBuFxXW.webp",
+        "https://STATIC.klipy.com/ii/D7AEC6F6F171607374B2065C836F92F4/3D/31/08K8MgEk.GIF",
+        "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-md.gif",
+    ])
+    func klipyImagesPlayAsLinked(_ link: String) throws {
+        let info = try #require(gif(link))
+        #expect(info.provider == .klipy)
+        #expect(info.isResolved)
+        // Every file has a name of its own, so the link names no video copy.
+        #expect(info.imageURL == url(link))
+        #expect(info.videoURL == nil)
+        #expect(info.primaryURL == url(link))
+        #expect(!info.isSticker)
+    }
+
+    @Test(arguments: [
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/UyQzai4H0Ts6PCSwyQH.mp4",
+        "https://static2.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/UyQzai4H0Ts6PCSwyQH.mp4",
+    ])
+    func klipyVideosLoopLikeAGIF(_ link: String) throws {
+        let info = try #require(gif(link))
+        #expect(info.provider == .klipy)
+        #expect(info.videoURL == url(link))
+        #expect(info.imageURL == nil)
+        #expect(info.primaryURL == url(link))
+    }
+
+    @Test func klipyStillsStayImages() {
+        let still = url("https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/Xy12AbCd.jpg")
+        #expect(MediaClassifier.classify(still) == .image(still))
+        let png = url("https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/Xy12AbCd.png")
+        #expect(MediaClassifier.classify(png) == .image(png))
+    }
+
+    @Test(arguments: [
+        // Pages sit behind a bot check: ordinary links.
+        "https://klipy.com/gifs/awesome-ok--ksMzbJP8D",
+        "https://www.klipy.com/gifs/cc-220--ksMzbJP8D",
+        "https://klipy.com/",
+        "https://klipy.com/search/thumbs-up",
+        "https://klipy.com/stickers/awesome-ok--ksMzbJP8D",
+        // Not the shape of a GIF's file.
+        "https://klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+        "https://api.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31",
+        "https://static.klipy.com/xx/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92/3d/31/08K8MgEk.gif",
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92fz/3d/31/08K8MgEk.gif",
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d3/31/08K8MgEk.gif",
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/extra/08K8MgEk.gif",
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/.gif",
+        "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.jpg",
+        "https://static123.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+        "https://staticx.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+        // Lookalikes.
+        "https://static.notklipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+        "https://static.klipy.com.example/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif",
+    ])
+    func otherKLIPYLinksAreNotGIFs(_ link: String) {
+        #expect(gif(link) == nil)
+    }
+
+    @Test func klipyRulesCoverItsServers() {
+        #expect(SiteRules.suggestedRuleDomain(for: url("https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif")) == "klipy.com")
+        #expect(SiteRules.suggestedRuleDomain(for: url("https://static2.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif")) == "klipy.com")
+        #expect(SiteRules.suggestedRuleDomain(for: url("https://klipy.com/gifs/awesome-ok--ksMzbJP8D")) == "klipy.com")
+
+        let file = url("https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif")
+        let blocked = MediaPolicy(siteRules: SiteRules(["klipy.com": "block"]))
+        #expect(blocked.verdict(for: file).block?.reason == .userBlocked)
+        #expect(blocked.verdict(for: file).block?.domain == "klipy.com")
+        #expect(!blocked.allowsImage(file))
+        #expect(MediaPolicy(siteRules: SiteRules(["klipy.com": "textOnly"])).verdict(for: file) == .textOnly)
+        #expect(MediaPolicy().allowsImage(file))
+        // A rule of its own wins.
+        let own = MediaPolicy(siteRules: SiteRules(["klipy.com": "block", "static.klipy.com": "allow"]))
+        #expect(own.verdict(for: file) == .everything)
+    }
+
     @Test func otherGIFsStayImages() {
         let earth = url("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Rotating_earth_animated.gif/250px-Rotating_earth_animated.gif")
         #expect(MediaClassifier.classify(earth) == .image(earth))
@@ -245,7 +331,8 @@ import Testing
         #expect(info.pixelSize == nil)
         #expect(!GIFInfo(provider: .tenor).isResolved)
         #expect(GIFInfo(provider: .tenor, imageURL: url("https://x.example/a.gif")).primaryURL == url("https://x.example/a.gif"))
-        #expect(GIFProvider.allCases.map(\.displayName) == ["Tenor", "GIPHY", "Imgur"])
+        #expect(GIFProvider.allCases.map(\.displayName) == ["Tenor", "GIPHY", "Imgur", "KLIPY"])
+        #expect(GIFProvider.klipy.homepage == url("https://klipy.com"))
     }
 
     @Test func infoRoundTripsWithoutTheStickerHint() throws {

@@ -130,7 +130,7 @@ extension MediaSite.Category {
         case .videos:
             "Links to these sites show the video's title and thumbnail. Press **▶** to play it right there. **Settings → Media → Videos** chooses a full player, a compact one or a plain link preview."
         case .gifs:
-            "Links to these sites play the GIF inline, even when the link is to the GIF's page. GIFs follow the image settings in **Settings → Media → Images**."
+            "Links to these sites play the GIF inline. On Tenor and GIPHY, so do links to the GIF's page. GIFs follow the image settings in **Settings → Media → Images**."
         case .reddit:
             "Reddit videos play in Vela's own player, and links to posts get a preview with the post's title, subreddit and author."
         case .files:
@@ -156,6 +156,7 @@ extension MediaSite.Presentation {
         case .videoPlayer: "The title and thumbnail, then the site's own player when you press ▶."
         case .nativePlayer: "The title, subreddit and author, then Vela's own player when you press ▶. No picture shows before that."
         case .gif: "The GIF, played from its small video copy."
+        case .gifFile: "The GIF or WebP itself, as linked."
         case .sticker: "Stickers, from their see-through animated image."
         case .image: "The image. GIF, APNG and WebP animate."
         case .videoFile: "A still frame; the video plays when you click it."

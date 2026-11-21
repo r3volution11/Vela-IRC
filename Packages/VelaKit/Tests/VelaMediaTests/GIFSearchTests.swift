@@ -116,6 +116,26 @@ struct KLIPYProviderTests {
         #expect(first.animation(forPixelWidth: 200)?.url.lastPathComponent == "hello-hi-662-sm.webp")
         #expect(first.still(forPixelWidth: 600)?.url.lastPathComponent == "hello-hi-662-sm.jpg")
         #expect(first.accessibilityDescription == "Hello")
+        // The page, from the slug: never sent, only remembered for the caption.
+        #expect(page.results.map(\.pageURL?.absoluteString) == ["https://klipy.com/gifs/hello-hi-662", "https://klipy.com/gifs/wave-goodbye-31"])
+    }
+
+    @Test func knowsAPageOnlyFromASlug() throws {
+        #expect(KLIPYProvider.pageURL(slug: "awesome-ok--ksMzbJP8D")?.absoluteString == "https://klipy.com/gifs/awesome-ok--ksMzbJP8D")
+        #expect(KLIPYProvider.pageURL(slug: " cc-220--ksMzbJP8D\n")?.absoluteString == "https://klipy.com/gifs/cc-220--ksMzbJP8D")
+        #expect(KLIPYProvider.pageURL(slug: "café-ok")?.absoluteString == "https://klipy.com/gifs/caf%C3%A9-ok")
+        #expect(KLIPYProvider.pageURL(slug: "a?b#c")?.absoluteString == "https://klipy.com/gifs/a%3Fb%23c")
+        for slug in [nil, "", "  ", "a/b", ".", ".."] {
+            #expect(KLIPYProvider.pageURL(slug: slug) == nil, "\(slug ?? "nil")")
+        }
+        // A result without a slug has an id, but no page.
+        let json = #"""
+        {"result":true,"data":{"data":[{"id":7,"title":"No slug","type":"gif","file":{"md":{"gif":{"url":"https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif","width":480,"height":270}}}}],"has_next":false}}
+        """#
+        let page = try klipy.decode(Data(json.utf8), response: response(), query: .trending, page: nil)
+        let result = try #require(page.results.first)
+        #expect(result.id == "7")
+        #expect(result.pageURL == nil)
     }
 
     @Test func endsWhenThereIsNoNextPage() throws {
@@ -190,6 +210,8 @@ struct GIPHYProviderTests {
         #expect(first.stills[0].width == 100)
         #expect(first.attribution == "@haydiroket")
         #expect(first.accessibilityDescription == "summer surf GIF, by @haydiroket")
+        // GIPHY's links name the GIF, and its caption opens the link: no page is kept.
+        #expect(first.pageURL == nil)
         // No user: the site it came from.
         #expect(page.results[1].attribution == "reddit.com")
     }

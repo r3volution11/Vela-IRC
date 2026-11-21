@@ -71,6 +71,7 @@ nonisolated struct FakeGIFProvider: GIFSearchProvider {
                 stills: [GIFRendition(url: item.still, width: item.width, height: item.height)],
                 animations: [GIFRendition(url: item.animation, width: item.width, height: item.height)],
                 shareURL: item.share,
+                pageURL: URL(string: "https://gifs.test/site/gifs/\(item.id)"),
                 attribution: "@maker",
                 aspectRatio: CGFloat(item.width) / CGFloat(item.height)
             )

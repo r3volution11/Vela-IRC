@@ -15,6 +15,10 @@ struct ComposerGIF: Equatable, Identifiable {
     let id: String
     /// What's sent: the service's GIF, exactly as it gave it.
     let url: URL
+    /// The GIF's page on the service, when it said (KLIPY's
+    /// `klipy.com/gifs/<slug>`). Never sent: once the message goes out,
+    /// the "via KLIPY" caption under it opens this page.
+    let pageURL: URL?
     let title: String
     /// "KLIPY".
     let serviceName: String
@@ -25,10 +29,18 @@ struct ComposerGIF: Equatable, Identifiable {
     init(result: GIFSearchResult, provider: any GIFSearchProvider) {
         id = result.id
         url = result.shareURL
+        pageURL = result.pageURL
         title = result.title
         serviceName = provider.displayName
         stillURL = result.still(forPixelWidth: 96)?.url
         placeholder = result.placeholder
+    }
+
+    /// Remembers the GIF's page for its link, in memory, so the caption
+    /// under the message can open it. Called as the message is sent.
+    func recordSent(in pages: SentGIFPages = .shared) {
+        guard let pageURL else { return }
+        pages.record(page: pageURL, for: url)
     }
 
     /// The message that's sent: the text, then the link.

@@ -260,10 +260,14 @@ extension LinkSelectionTests {
             #expect(gif.url.absoluteString == "https://media.test/share/trending-all-1-1.gif")
             #expect(try await hosted.wait { hosted.element("GIF: Trending 101", prefix: true) != nil }, "no chip")
             #expect(try await hosted.wait { hosted.window.firstResponder === composer })
+            // Picked isn't sent: the GIF's page isn't remembered yet.
+            #expect(SentGIFPages.shared.page(for: gif.url) == nil)
             // Words, then Return: the words and the link, as one message.
             composer.insertText("nice", replacementRange: composer.selectedRange())
             try await hosted.press(.returnKey, in: hosted.window, settling: 300)
             #expect(InputHistoryStore.shared.entries(for: hosted.buffer.id).last == "nice https://media.test/share/trending-all-1-1.gif")
+            // Sent: its page is, for the caption under the message.
+            #expect(SentGIFPages.shared.page(for: gif.url)?.absoluteString == "https://gifs.test/site/gifs/trending-all-1-1")
             #expect(composer.string.isEmpty)
             #expect(hosted.uiState.composerGIFs[hosted.buffer.id] == nil)
             #expect(try await hosted.wait { hosted.element("GIF: ", prefix: true) == nil }, "the chip stayed")
@@ -274,9 +278,10 @@ extension LinkSelectionTests {
             try await waitForResults(hosted, prefix: "Trending 100")
             try await hosted.press(.down, in: again)
             try await hosted.press(.returnKey, in: again, settling: 400)
-            #expect(hosted.uiState.composerGIFs[hosted.buffer.id] != nil)
+            let removed = try #require(hosted.uiState.composerGIFs[hosted.buffer.id])
             try await hosted.press(.delete, in: hosted.window)
             #expect(hosted.uiState.composerGIFs[hosted.buffer.id] == nil)
+            #expect(SentGIFPages.shared.page(for: removed.url) == nil, "a GIF taken out was remembered")
 
             // A GIF alone, sent with the send button.
             try await hosted.openPicker()
@@ -560,6 +565,30 @@ struct ComposerPickerPieceTests {
         #expect(ComposerGIF.message(text: "look ", gif: gif) == "look https://static.klipy.com/a.gif")
         #expect(ComposerGIF.message(text: "/me waves", gif: gif) == "/me waves https://static.klipy.com/a.gif")
         #expect(ComposerGIF.message(text: "plain", gif: nil) == "plain")
+    }
+
+    @Test func sendingAGIFRemembersItsPage() throws {
+        let link = URL(string: "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif")!
+        let page = URL(string: "https://klipy.com/gifs/awesome-ok--ksMzbJP8D")!
+        let result = GIFSearchResult(id: "awesome-ok--ksMzbJP8D", title: "Man Gives Awesome Thumbs Up", stills: [], animations: [],
+                                     shareURL: link, pageURL: page)
+        let gif = ComposerGIF(result: result, provider: KLIPYProvider())
+        #expect(gif.pageURL == page)
+        // What's sent is the file's link alone, never the page.
+        #expect(ComposerGIF.message(text: "yes", gif: gif) == "yes \(link.absoluteString)")
+
+        let pages = SentGIFPages()
+        #expect(pages.page(for: link) == nil, "picked isn't sent")
+        gif.recordSent(in: pages)
+        #expect(pages.page(for: link) == page)
+
+        // Without a page (GIPHY), nothing is kept.
+        let giphy = ComposerGIF(
+            result: GIFSearchResult(id: "x", title: "", stills: [], animations: [], shareURL: URL(string: "https://media.giphy.com/media/x/giphy.gif")!),
+            provider: GIPHYProvider()
+        )
+        giphy.recordSent(in: pages)
+        #expect(pages.count == 1)
         #expect(gif.serviceName == "KLIPY")
     }
 

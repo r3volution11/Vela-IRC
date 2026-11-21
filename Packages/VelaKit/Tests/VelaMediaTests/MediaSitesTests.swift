@@ -117,7 +117,15 @@ import Testing
     static func shows(_ classification: MediaClassification) -> MediaSite.Presentation {
         switch classification {
         case .embed(let info): info.provider.playsNatively ? .nativePlayer : .videoPlayer
-        case .gif(let info): info.isSticker ? .sticker : .gif
+        case .gif(let info):
+            if info.isSticker {
+                .sticker
+            } else if info.isResolved, info.videoURL == nil {
+                // No video copy to play: the GIF or WebP as linked.
+                .gifFile
+            } else {
+                .gif
+            }
         case .image: .image
         case .video: .videoFile
         case .page: .linkPreview
@@ -217,6 +225,7 @@ import Testing
             let sites = MediaSites.all.filter { $0.gifProvider == provider }
             #expect(sites.count == 1, "\(provider.displayName) has \(sites.count) entries")
             #expect(sites.first?.ruleDomain == provider.mainDomain)
+            #expect(sites.first?.homepage == provider.homepage.absoluteString, "\(provider.displayName)'s home page")
             if let main = provider.mainDomain {
                 let listed = domains(ruledBy: main)
                 for domain in [main] + provider.assetDomains {
@@ -293,6 +302,8 @@ import Testing
         "https://giphy.com/gifs/funny-cats",
         "https://imgur.com/gallery/abc123",
         "https://i.imgur.com/abc123",
+        "https://klipy.com/gifs/awesome-ok--ksMzbJP8D",
+        "https://klipy.com/search/thumbs-up",
         "https://www.reddit.com/r/LoveTrash/",
         "https://old.reddit.com/user/downtune79",
         "https://github.com/r3volution11/Vela-IRC",

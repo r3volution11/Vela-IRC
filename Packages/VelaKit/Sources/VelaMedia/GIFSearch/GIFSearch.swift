@@ -86,6 +86,11 @@ public struct GIFSearchResult: Sendable, Hashable, Identifiable {
     /// The link put in the message: a GIF the service hosts, exactly as
     /// the service gave it.
     public var shareURL: URL
+    /// The GIF's own page on the service's website, when the service says
+    /// which it is and `shareURL` doesn't (KLIPY's `klipy.com/gifs/<slug>`).
+    /// Sending the GIF remembers it (`SentGIFPages`) for the message's
+    /// "via KLIPY" caption.
+    public var pageURL: URL?
     /// Who made it or where it's from ("@haydiroket", "tumblr.com"), when
     /// the service says.
     public var attribution: String?
@@ -99,6 +104,7 @@ public struct GIFSearchResult: Sendable, Hashable, Identifiable {
         animations: [GIFRendition],
         placeholder: Data? = nil,
         shareURL: URL,
+        pageURL: URL? = nil,
         attribution: String? = nil,
         aspectRatio: CGFloat = 1
     ) {
@@ -108,6 +114,7 @@ public struct GIFSearchResult: Sendable, Hashable, Identifiable {
         self.animations = animations
         self.placeholder = placeholder
         self.shareURL = shareURL
+        self.pageURL = pageURL
         self.attribution = attribution
         self.aspectRatio = aspectRatio
     }

@@ -39,7 +39,7 @@ The **GIFs** tab shows what's trending until you search. Type at least two lette
 
 Picking a GIF adds it to the message field as a small **GIF** chip. Add some words if you like, then press <kbd>Return</kbd>. To take the GIF out, click **×** on the chip, or press <kbd>Delete</kbd> at the start of the message.
 
-**On IRC, a GIF is a link.** Your message goes out as your words followed by the GIF's address. People whose client shows images, Vela included, see the GIF play; everyone else sees the link.
+**On IRC, a GIF is a link.** Your message goes out as your words followed by the GIF's address. People whose client shows images, Vela included, see the GIF play; everyone else sees the link. In Vela, the **via KLIPY · klipy.com** line under a GIF you sent opens the GIF's own page on klipy.com until you quit; under anyone else's KLIPY GIF, it opens klipy.com.
 
 GIF previews play while they're in view. To show still images instead, turn off **Play previews** in **Settings → Media → GIFs**. With **Reduce Motion** on in macOS, they're always still.
 
@@ -85,7 +85,7 @@ Keys are kept in your Keychain, never in settings.json. **Remove** forgets yours
 - **A search sends what you type, and your IP address, to KLIPY (or GIPHY).** So does loading the previews. Nothing else about you or your conversations goes with it.
 - **Recipients load the GIF from the service** when their client shows it, as with any link. They learn nothing about you from that.
 - **GIPHY's links carry a tracking token** (`cid`). Its terms don't allow removing it, so everyone who sees the GIF loads it with that token. Settings mentions this when you choose GIPHY.
-- **Nothing is kept on disk.** Previews stay in memory while Vela is open.
+- **Nothing is kept on disk.** Previews stay in memory while Vela is open, and so does the klipy.com page of each GIF you send, for the **via KLIPY** line under it.
 
 See [Privacy](/help/privacy) for everything Vela connects to.
 

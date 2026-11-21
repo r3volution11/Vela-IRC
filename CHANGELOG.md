@@ -67,6 +67,10 @@ Vela 1.1 brings an updater, the whole window from the keyboard, and a choice abo
 - **Mention** in a sender's menu or the member list now always puts their nick in the message box. When the message box didn't have the focus, it could flash in and vanish.
 - The newest message no longer ends up out of view (under the message box) when something arrives just as you send.
 
+### Inline media
+
+- **GIFs from KLIPY play inline,** like those from Tenor, GIPHY and Imgur: links to a GIF's `.gif`, `.webp` or `.mp4` file on KLIPY's servers (`static.klipy.com`), with a **via KLIPY · klipy.com** line under them that opens klipy.com. Your media settings apply to them as to other GIFs, and a site rule for `klipy.com` covers them. See [Supported media sites](https://velairc.app/reference/media-sites#gifs).
+
 ### Appearance
 
 - **A new welcome screen.** The sailboat is gone. Before you add a network, or when no conversation is open, Vela shows a picture of a river winding through a mountain valley. Dark themes get night: a full moon, Vela's stars and a stargazer at a telescope. Light themes get day: the sun, clouds, birds and a kayaker paddling upstream. It's drawn in your theme's colors and accent, so a custom theme, a new accent color or your color customizations change it too. It grows and shrinks with the window, and it's drawn only when the window shows, resizes or changes theme. The drawing code is published on its own as [Savage](https://github.com/r3volution11/Savage), an open-source (MIT) Swift package that draws a picture on screen and writes the same picture as an SVG.

@@ -35,6 +35,8 @@ public struct MediaSite: Sendable, Hashable, Identifiable {
         case nativePlayer
         /// The GIF, played from the site's silent, looping video copy (or the GIF itself).
         case gif
+        /// The GIF or WebP as linked, when the link names no video copy (KLIPY).
+        case gifFile
         /// A see-through animated sticker, played from its animated image.
         case sticker
         /// The image; GIF, APNG and WebP animate.
@@ -479,6 +481,39 @@ public enum MediaSites {
                 .init("https://i.imgur.com/fv0qgkc.gifv", form: "gifv", .gif(.imgur, resolved: true),
                       live: [.loopingVideo],
                       note: "From Imgur's .gifv launch in 2014."),
+            ]
+        ),
+
+        MediaSite(
+            id: "klipy",
+            name: "KLIPY",
+            homepage: "https://klipy.com",
+            category: .gifs,
+            gifProvider: .klipy,
+            ruleDomain: "klipy.com",
+            domains: [
+                .init("klipy.com", "the site"),
+                .init("static.klipy.com", "the GIFs and their video copies, also on `static1.klipy.com` and `static2.klipy.com`"),
+            ],
+            forms: [
+                .init("file", "static.klipy.com/ii/<id>/<xx>/<xx>/<name>.gif", shows: .gifFile,
+                      note: "also `.webp`, and on `static1.klipy.com` and `static2.klipy.com`"),
+                .init("video", "static.klipy.com/ii/<id>/<xx>/<xx>/<name>.mp4", shows: .gif,
+                      note: "the GIF's video copy"),
+            ],
+            privacy: "Vela loads only the file the link names, from KLIPY's servers, and never a page. Each copy of a KLIPY GIF has an address of its own, so a `.gif` link plays the GIF itself rather than a smaller video copy. Links to GIF pages (`klipy.com/gifs/<name>`) get an ordinary link preview.",
+            samples: [
+                .init("https://static.klipy.com/ii/263d75c9c6d04df878152f91dbffb873/1b/1d/6Sod6SaO.gif", form: "file", .gif(.klipy, resolved: true),
+                      live: [.kind(.gif), .animatedImage],
+                      note: "“Charlie Day Thumbs Up”."),
+                .init("https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/AVBuFxXW.webp", form: "file", .gif(.klipy, resolved: true),
+                      live: [.animatedImage],
+                      note: "“Man Gives Awesome Thumbs Up”, as an animated WebP."),
+                .init("https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/UyQzai4H0Ts6PCSwyQH.mp4", form: "video", .gif(.klipy, resolved: true),
+                      live: [.kind(.gif), .loopingVideo],
+                      note: "The same GIF's video copy."),
+                .init("https://static2.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/3d/31/08K8MgEk.gif", form: "file", .gif(.klipy, resolved: true),
+                      note: "Offline only: the same GIF again, as a GIF (6 MB), from another of KLIPY's servers."),
             ]
         ),
 

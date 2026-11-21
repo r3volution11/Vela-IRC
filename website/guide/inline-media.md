@@ -11,7 +11,7 @@ When someone posts a link, Vela can show what's behind it right in the conversat
 
 - **Images** (JPEG, PNG, WebP and others) appear inline. Animated **GIF, APNG and WebP** play inline; with **Reduce Motion** turned on in macOS, they show the first frame and a play button. Click an image to open it full size (<kbd>Esc</kbd> closes it). Right-click to open it in your browser or copy it.
 - **Link previews** show a page's site name and icon, title, description and image, in [three sizes](#link-previews).
-- **GIFs from Tenor, GIPHY and Imgur** play inline too, even when the link is to the GIF's page rather than the GIF itself. See [GIFs](#gifs).
+- **GIFs from Tenor, GIPHY, Imgur and KLIPY** play inline too, on Tenor and GIPHY even when the link is to the GIF's page rather than the GIF itself. See [GIFs](#gifs).
 - **YouTube, Vimeo, Twitch, Streamable and Reddit** video links show the video's title, and (except on [Reddit](#reddit)) its thumbnail. Press **▶** to [play it right there](#videos).
 - **Video files** (`.mp4`, `.mov`) show a still frame. They never play until you click.
 
@@ -109,23 +109,24 @@ From the command palette: **Media: Full-Size Images** and **Image Thumbnails**.
 
 <Screenshot src="/screenshots/media-gifs.webp" alt="Two GIFs in a channel: a night rocket launch, captioned “via GIPHY · giphy.com”, and the space station above Earth, captioned “via Tenor · tenor.com”, each with a GIF badge in the corner" caption="GIFs from GIPHY and Tenor play right in the conversation." />
 
-Links to GIFs on these sites play inline, even when the link is to the site's page rather than to the GIF itself:
+Links to GIFs on these sites play inline. On Tenor and GIPHY, so do links to the site's page rather than to the GIF itself:
 
 | Site | Links |
 | --- | --- |
 | **Tenor** | Pages (`tenor.com/view/…`), short links such as `tenor.com/RaDD.gif`, and GIF files on `media.tenor.com` |
 | **GIPHY** | Pages (`giphy.com/gifs/…`, `giphy.com/stickers/…`), `gph.is` short links, and files on `media.giphy.com` and `i.giphy.com` |
 | **Imgur** | `.gifv` links |
+| **KLIPY** | GIF files on `static.klipy.com` (`.gif`, `.webp` and `.mp4`). A link to a GIF's page on `klipy.com` gets an ordinary [link preview](#link-previews). |
 
 Any other link to a `.gif`, `.webp` or `.apng` file plays inline as an [image](#images). For every link form, see [Supported media sites](/reference/media-sites#gifs).
 
-- **Small and smooth.** These sites keep a video copy of every GIF, usually a tenth of its size or less, and Vela plays that copy: silent, looping and without controls, just like a GIF. Stickers, which have see-through backgrounds, play from the GIF itself. If the video copy can't be loaded, Vela plays the GIF instead.
+- **Small and smooth.** These sites keep a video copy of every GIF, usually a tenth of its size or less, and Vela plays that copy: silent, looping and without controls, just like a GIF. Stickers, which have see-through backgrounds, play from the GIF itself. If the video copy can't be loaded, Vela plays the GIF instead. A KLIPY link leads only to the file it names, so a KLIPY GIF plays as it was linked: the GIF or WebP itself, or the video copy when the link is to the `.mp4`.
 - **Sized like images.** GIFs follow the [Images](#images) settings: **Full size**, up to the **Maximum image height**, or **Thumbnail**, which plays while the pointer is over it. A GIF bigger than **Largest image to load automatically** shows a chip that opens it in your browser.
 - **Pause and play** with the **GIF** badge in the corner, or by right-clicking the GIF. A GIF starts a moment after it scrolls into view, showing its first frame until then, so scrolling quickly past GIFs stays smooth. GIFs pause while they're scrolled out of view. With **Reduce Motion** turned on in macOS, they show their first frame and a play button.
-- **Click a GIF** to see it larger (<kbd>Esc</kbd> closes it). The line underneath, such as **via GIPHY · giphy.com**, says where it's from; click it to open the GIF's page in your browser, or drag across it to select it.
+- **Click a GIF** to see it larger (<kbd>Esc</kbd> closes it). The line underneath, such as **via GIPHY · giphy.com**, says where it's from; click it to open the GIF's page in your browser, or drag across it to select it. Under a KLIPY GIF it reads **via KLIPY · klipy.com**: it opens the GIF's own page on klipy.com when you sent the GIF with [GIF search](/guide/emoji-and-gifs#gifs) since you opened Vela, and klipy.com otherwise, since a KLIPY link doesn't say which page is the GIF's.
 - **Your other settings apply** as they do to images: [blur](#blur), [site rules](#site-rules), the [adult-site filter](#adult-sites), **Load previews automatically** (a **Load GIF** button until you click it) and turning media off for a channel. On a site set to **Text only**, a GIF link gets a link preview with the GIF's title and no animation.
 
-To find the GIF behind a page or a short link, Vela fetches the page, as it does for any [link preview](#what-vela-fetches-and-what-that-means-for-privacy). A link that already says which GIF it is, such as a GIPHY page or a file on Tenor's or GIPHY's servers, needs no page: Vela loads only the GIF.
+To find the GIF behind a page or a short link, Vela fetches the page, as it does for any [link preview](#what-vela-fetches-and-what-that-means-for-privacy). A link that already says which GIF it is, such as a GIPHY page or a file on Tenor's, GIPHY's or KLIPY's servers, needs no page: Vela loads only the GIF.
 
 ## What Vela fetches, and what that means for privacy
 
@@ -135,7 +136,7 @@ To build a preview, Vela downloads the linked page or image **from your Mac**. T
 - **Vela sends no cookies** and identifies itself honestly as Vela's link previewer. It doesn't run the page's scripts; it reads only the page's title, description and image.
 - **Except for sites that need a browser.** When a site answers with a bot check instead of the page, Vela loads it in a private Safari engine session where the page's scripts run, as they would in Safari, then throws the session away. Images, other sites and your local network are blocked there. See [Sites that need a browser](#sites-that-need-a-browser), and turn it off with **Load previews from sites that need a browser**.
 - **Video links contact the video site before you press play.** When previews load automatically, Vela fetches the video's title and thumbnail from the video site (from YouTube's, Vimeo's, Streamable's or Reddit's oEmbed service, or from the Twitch page), so that site sees your IP address like any other preview. For a Reddit video, Vela also follows the link to its post and reads the video's playlist, to learn its shape and whether it has sound. The player itself, with its scripts and cookies, loads only when you press **▶**. YouTube plays from `youtube-nocookie.com`, and nothing the player stores is kept after it closes.
-- **GIF links contact the GIF site.** Vela fetches a Tenor page or short link (or a `gph.is` link) to find its GIF, then downloads the GIF's video copy from Tenor, GIPHY or Imgur, with the same size limit and [site rules](#site-rules) as images. Downloaded GIFs are kept in a temporary folder that Vela empties each time it starts.
+- **GIF links contact the GIF site.** Vela fetches a Tenor page or short link (or a `gph.is` link) to find its GIF, then downloads the GIF's video copy from Tenor, GIPHY or Imgur (from KLIPY, the file the link names), with the same size limit and [site rules](#site-rules) as images. Downloaded GIFs are kept in a temporary folder that Vela empties each time it starts.
 - **Your local network is off-limits.** Vela never fetches previews from `localhost`, private and link-local IP addresses, or names like `router.local`, so a link in a channel can't make Vela probe devices on your network.
 - **Previews are kept,** so scrolling back doesn't fetch them again. With **Save message history** off (the default for new installs), page previews and images are kept in memory while Vela is open, and fetched again after a restart. With it on, they're cached on your Mac: page previews are refreshed after a week, and cached previews older than 30 days are deleted when Vela starts. See [Scrollback and history](/guide/messages-and-layouts#scrollback-and-history).
 
@@ -208,7 +209,7 @@ Sites without a rule follow your other settings.
 - **A rule covers subdomains.** A rule for `example.com` also covers `img.example.com`, but not `badexample.com`.
 - **The most specific rule wins.** A rule for `i.example.com` beats one for `example.com`, so you can block a site but allow its image host, or the other way round.
 - **Your rules beat the adult list.**
-- **Video and GIF sites follow their main domain.** A rule for `youtube.com` also covers `youtu.be` links and YouTube's thumbnails. The same goes for `vimeo.com`, `twitch.tv` and `streamable.com`, and for `reddit.com`, whose rule also covers `redd.it` links, Reddit videos (`v.redd.it`), its images (`i.redd.it`, `preview.redd.it`) and its other media servers. Likewise `tenor.com` covers `media.tenor.com`, and `giphy.com` covers `gph.is` links and GIPHY's media servers. [Supported media sites](/reference/media-sites) lists the domains each site's rule covers.
+- **Video and GIF sites follow their main domain.** A rule for `youtube.com` also covers `youtu.be` links and YouTube's thumbnails. The same goes for `vimeo.com`, `twitch.tv` and `streamable.com`, and for `reddit.com`, whose rule also covers `redd.it` links, Reddit videos (`v.redd.it`), its images (`i.redd.it`, `preview.redd.it`) and its other media servers. Likewise `tenor.com` covers `media.tenor.com`, `giphy.com` covers `gph.is` links and GIPHY's media servers, and `klipy.com` covers KLIPY's GIF servers (`static.klipy.com`). [Supported media sites](/reference/media-sites) lists the domains each site's rule covers.
 - **Rules apply wherever a site turns up:** a link to it, a redirect to it, or an image from it in another site's preview.
 
 ### From a preview

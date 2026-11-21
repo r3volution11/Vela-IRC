@@ -7,7 +7,7 @@ import Foundation
 
 /// Sites whose GIF links Vela shows as looping animations.
 public enum GIFProvider: String, Sendable, Codable, Hashable, CaseIterable {
-    case tenor, giphy, imgur
+    case tenor, giphy, imgur, klipy
 
     /// The name shown in the "via …" caption.
     public var displayName: String {
@@ -15,17 +15,30 @@ public enum GIFProvider: String, Sendable, Codable, Hashable, CaseIterable {
         case .tenor: "Tenor"
         case .giphy: "GIPHY"
         case .imgur: "Imgur"
+        case .klipy: "KLIPY"
+        }
+    }
+
+    /// The site's home page.
+    public var homepage: URL {
+        switch self {
+        case .tenor: URL(string: "https://tenor.com")!
+        case .giphy: URL(string: "https://giphy.com")!
+        case .imgur: URL(string: "https://imgur.com")!
+        case .klipy: URL(string: "https://klipy.com")!
         }
     }
 
     /// The domain a site rule for this provider is written for. Rules for it
-    /// also cover `assetDomains` (short links) unless those have rules of
-    /// their own. Nil for Imgur, whose image host keeps rules of its own.
+    /// also cover its subdomains (`media.tenor.com`, `static.klipy.com`) and
+    /// `assetDomains` (short links) unless those have rules of their own.
+    /// Nil for Imgur, whose image host keeps rules of its own.
     public var mainDomain: String? {
         switch self {
         case .tenor: "tenor.com"
         case .giphy: "giphy.com"
         case .imgur: nil
+        case .klipy: "klipy.com"
         }
     }
 
@@ -33,7 +46,7 @@ public enum GIFProvider: String, Sendable, Codable, Hashable, CaseIterable {
     public var assetDomains: [String] {
         switch self {
         case .giphy: ["gph.is"]
-        case .tenor, .imgur: []
+        case .tenor, .imgur, .klipy: []
         }
     }
 
@@ -50,8 +63,8 @@ public enum GIFProvider: String, Sendable, Codable, Hashable, CaseIterable {
 
 /// An animation from a GIF site and where its renditions are.
 ///
-/// A link that names the animation (a Tenor or GIPHY file, a GIPHY page,
-/// an Imgur `.gifv`) is resolved offline by `MediaClassifier`; a page link
+/// A link that names the animation (a Tenor, GIPHY or KLIPY file, a GIPHY
+/// page, an Imgur `.gifv`) is resolved offline by `MediaClassifier`; a page link
 /// that doesn't (`tenor.com/view/…`, `tenor.com/<code>.gif`, `gph.is/…`) is
 /// resolved by `LinkPreviewService` from the page's metadata.
 public struct GIFInfo: Sendable, Codable, Hashable {
@@ -113,7 +126,7 @@ public struct GIFInfo: Sendable, Codable, Hashable {
 /// URL patterns of the GIF sites. Pure and synchronous, like `MediaClassifier`.
 enum GIFLinks {
     static func classify(_ parts: MediaClassifier.URLParts) -> GIFInfo? {
-        tenor(parts) ?? giphy(parts) ?? imgur(parts)
+        tenor(parts) ?? giphy(parts) ?? imgur(parts) ?? klipy(parts)
     }
 
     // MARK: Tenor
@@ -269,12 +282,60 @@ enum GIFLinks {
         return GIFInfo(provider: .imgur, videoURL: video)
     }
 
+    // MARK: KLIPY
+
+    /// `static.klipy.com/ii/<hash>/<xx>/<xx>/<name>.gif`: one file of a KLIPY
+    /// GIF (also `.webp` and `.mp4`, and on `static1` and `static2`).
+    ///
+    /// Each file of a GIF has a random name of its own, so a link to one
+    /// names no other: a `.gif` or `.webp` plays as it is, with no video copy
+    /// to play instead, and an `.mp4` plays as the GIF's video copy, with no
+    /// image to fall back to. Nor does it name the GIF's page, whose slug
+    /// isn't in it (`SentGIFPages` remembers the pages of GIFs sent from the
+    /// picker). Pages (`klipy.com/gifs/<slug>`) sit behind a bot check, so
+    /// they stay ordinary links, and stills (`.jpg`) ordinary images.
+    private static func klipy(_ parts: MediaClassifier.URLParts) -> GIFInfo? {
+        guard isKLIPYMediaHost(parts.host) else { return nil }
+        let segments = parts.segments
+        guard segments.count == 5, segments[0] == "ii",
+              isHex(segments[1], count: 32), isHex(segments[2], count: 2), isHex(segments[3], count: 2)
+        else { return nil }
+        let file = segments[4]
+        let stem = (file as NSString).deletingPathExtension
+        guard (1...64).contains(stem.utf8.count), stem.unicodeScalars.allSatisfy(isIDScalar) else { return nil }
+        switch (file as NSString).pathExtension.lowercased() {
+        case "gif", "webp": return GIFInfo(provider: .klipy, imageURL: parts.url)
+        case "mp4": return GIFInfo(provider: .klipy, videoURL: parts.url)
+        default: return nil
+        }
+    }
+
+    /// `static.klipy.com`, `static1.klipy.com`, `static2.klipy.com`…
+    private static func isKLIPYMediaHost(_ host: String) -> Bool {
+        let suffix = ".klipy.com"
+        guard host.hasSuffix(suffix) else { return false }
+        let name = host.dropLast(suffix.count)
+        guard name.hasPrefix("static") else { return false }
+        let number = name.dropFirst("static".count)
+        return number.count <= 2 && number.unicodeScalars.allSatisfy { ("0"..."9").contains($0) }
+    }
+
     // MARK: Character classes
 
     private static func isIDScalar(_ scalar: Unicode.Scalar) -> Bool {
         switch scalar {
         case "a"..."z", "A"..."Z", "0"..."9", "-", "_": true
         default: false
+        }
+    }
+
+    /// Exactly `count` hex digits, in either case.
+    private static func isHex(_ value: String, count: Int) -> Bool {
+        value.utf8.count == count && value.unicodeScalars.allSatisfy { scalar in
+            switch scalar {
+            case "0"..."9", "a"..."f", "A"..."F": true
+            default: false
+            }
         }
     }
 
