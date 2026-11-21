@@ -170,6 +170,26 @@ struct VelaCommandCatalog {
         }
     }
 
+    var toggleChannelTitleBar: VelaCommand {
+        Self.channelTitleBarCommand(settings: settings, uiState: uiState)
+    }
+
+    /// View → Show Channel Title Bar: checked while the channel's name and
+    /// topic show above the conversation. Unchecking it moves the tabs into
+    /// the title bar, and checking it puts them back (`ChannelTitleBar`).
+    /// Only with tabs; the sidebar always has the title bar. Static so tests
+    /// can build it from a bare settings store.
+    static func channelTitleBarCommand(settings: SettingsStore, uiState: UIState) -> VelaCommand {
+        VelaCommand(
+            id: "view.toggleChannelTitleBar", category: .view, title: ChannelTitleBar.showTitle,
+            keywords: ["header", "topic", "title strip", "hide", "tabs in title bar"],
+            isEnabled: settings[.navigationStyle] == .tabs,
+            isChecked: ChannelTitleBar.isShown(settings)
+        ) {
+            ChannelTitleBar.toggle(settings: settings, uiState: uiState)
+        }
+    }
+
     var toggleFullScreen: VelaCommand {
         VelaCommand(
             id: "view.toggleFullScreen", category: .view, title: "Toggle Full Screen",
@@ -982,7 +1002,7 @@ struct VelaCommandCatalog {
     var all: [VelaCommand] {
         var commands: [VelaCommand] = [
             goToConversation,
-            toggleSidebar, toggleMemberList, toggleFullScreen,
+            toggleSidebar, toggleMemberList, toggleChannelTitleBar, toggleFullScreen,
         ]
         commands += navigationStyles
         commands += tabPlacements

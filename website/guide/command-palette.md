@@ -27,7 +27,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 
 | Category | Commands |
 | --- | --- |
-| **View** | Toggle Sidebar, Toggle Member List, Toggle Full Screen |
+| **View** | Toggle Sidebar, Toggle Member List, Show Channel Title Bar (with tabs), Toggle Full Screen |
 | **Navigation** | Use Sidebar, Use Tabs |
 | **Tabs** | Move to Top, Move to Title Bar, Move to Bottom, Always Show Server Row, Move Channel Left / Right (Up / Down with the sidebar, and Move Conversation for a conversation) |
 | **Layout** | Classic, Modern Grouped, Compact Columns |

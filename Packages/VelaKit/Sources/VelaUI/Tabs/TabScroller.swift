@@ -52,16 +52,16 @@ struct TabScroller<ID: Hashable, Content: View>: View {
         ScrollView(.horizontal) {
             ZStack(alignment: .leading) {
                 if dragsWindow {
-                    // In the title bar, empty space after the tabs still
-                    // drags the window: this fills the visible width behind
+                    // In the title bar, empty space after and between the
+                    // tabs still drags the window (and offers Show Channel
+                    // Title Bar): this fills the visible width behind
                     // them. Sized by layout rather than by the measured
                     // width, so the content never resizes in response to
                     // its own scroll geometry.
                     Color.clear
                         .containerRelativeFrame(.horizontal)
                         .contentShape(Rectangle())
-                        .windowTitleBarArea()
-                        .allowsWindowActivationEvents(true)
+                        .titleBarTabStripArea()
                 }
                 content
                     .environment(\.tabFrameStore, frames)

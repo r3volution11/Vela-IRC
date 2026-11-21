@@ -23,6 +23,16 @@ Put the tab stacks where they suit you, in **Settings → Layout → Placement**
 
 <Screenshot src="/screenshots/tabs-bottom.webp" alt="Tab stacks at the bottom of the window, just above the message field" caption="At the bottom, above the message field." />
 
+### Hide the channel title bar
+
+With tabs at the top or the bottom, the channel title bar shows the channel's name, how many people are in it and the topic. To give that room to the conversation, right-click the title bar and choose **Hide Channel Title Bar**. The tabs move up into the title bar, next to the window buttons, and the topic moves behind the **ⓘ** button.
+
+To bring it back, right-click an empty part of the title bar, before or after the tabs, and choose **Show Channel Title Bar**. The tabs go back where they were, at the top or the bottom. If they've been in the title bar since you opened Vela, they go to the top. Right-clicking a tab still opens the tab's own menu.
+
+**View → Show Channel Title Bar** does the same. It has a checkmark while the title bar is showing. Hiding the title bar is the same as choosing **Title bar** for **Placement**, so **Settings → Layout** shows the change. With the sidebar, the title bar always shows.
+
+With VoiceOver, the channel's name in the title bar has a **Hide Channel Title Bar** action, and the channel tabs in the title bar have **Show Channel Title Bar**.
+
 ## Roundness
 
 **Roundness** goes from square corners (0) to fully rounded pills (1). At about 0.8 and above, tabs become free-standing pills rather than tabs attached to the conversation.

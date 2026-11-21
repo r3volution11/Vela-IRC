@@ -63,6 +63,8 @@ The header shows the channel name, how many people are in it and the topic. On t
 - **Media** (picture icon) turns inline images and previews on or off for this channel. See [Inline media & privacy](/guide/inline-media).
 - **Members** (people icon) shows or hides the member list (<kbd>⇧⌘M</kbd>).
 
+With [tabs](/guide/tab-stacks) at the top or the bottom, you can hide the header. Right-click it and choose **Hide Channel Title Bar**, or use **View → Show Channel Title Bar**. The tabs move up into the title bar, and the topic moves behind the **ⓘ** button. See [Hide the channel title bar](/guide/tab-stacks#hide-the-channel-title-bar).
+
 When you're offline or connecting, the header says so, and the message field offers a **Reconnect** button. If you've left a channel, it offers **Join** instead. Otherwise it ends with a smiley, which opens the [emoji picker](/guide/emoji-and-gifs), and a send button, unless you've hidden it. See [Sending messages](/guide/sending-messages).
 
 Messages are separated by **day dividers**. A **New** marker shows where you stopped reading (in a busy channel, with a **Catch me up** button that [summarizes what you missed](/guide/apple-intelligence#catch-me-up)), and when you've scrolled up, a **Jump to present** button takes you back to the newest messages. See [Messages & layouts](/guide/messages-and-layouts).

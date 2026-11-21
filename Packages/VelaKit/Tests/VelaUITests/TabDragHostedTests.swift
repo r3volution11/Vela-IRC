@@ -187,6 +187,30 @@ extension LinkSelectionTests {
             #expect(hosted.channelNames == before, "\(swapped) → \(hosted.channelNames)")
         }
 
+        /// In the title bar, where the empty space behind the tabs drags the
+        /// window and has its own menu (Show Channel Title Bar), a tab
+        /// still drags to move, both ways.
+        @Test func aChannelMovesAlongTheTitleBar() async throws {
+            let hosted = try await host(.titleBar, width: 1200) { app in
+                self.addChannels(app.sessions[0], ["#alpha", "#bravo", "#charlie"])
+            }
+            defer { hosted.close() }
+            let before = hosted.channelNames
+            let first = before[0]
+            let frames = tabFrames(in: hosted)
+            let firstFrame = try #require(frames[first], "\(first) not in \(frames.keys.sorted())")
+            let lastFrame = try #require(frames[before.last!])
+
+            try await drag(first, by: lastFrame.maxX - firstFrame.maxX + 10, in: hosted)
+            #expect(hosted.channelNames.last == first, "\(before) → \(hosted.channelNames)")
+
+            let atEnd = hosted.channelNames
+            let moved = try #require(tabFrames(in: hosted)[first])
+            let front = try #require(tabFrames(in: hosted)[atEnd[0]])
+            try await drag(first, by: front.minX - moved.minX - 10, in: hosted)
+            #expect(hosted.channelNames == before, "\(atEnd) → \(hosted.channelNames)")
+        }
+
         @Test func aChannelDraggedToTheEndComesBack() async throws {
             let hosted = try await host { app in
                 self.addChannels(app.sessions[0], ["#alpha", "#bravo", "#charlie", "#delta"])

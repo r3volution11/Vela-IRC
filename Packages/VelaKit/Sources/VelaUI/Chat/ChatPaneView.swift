@@ -38,6 +38,7 @@ struct ChatColumnView: View {
                 Color.clear.frame(height: 52)
                     .background { if onMaterial { SurfaceFill(ThemeKey.chatBackground, on: .content) } }
                     .windowTitleBarArea()
+                    .channelTitleBarMenu()
             }
 
             if usesTabs && style.tabPlacement == .top {
@@ -82,9 +83,12 @@ func trafficLightInset(style: ChatStyle, sidebarCollapsed: Bool) -> CGFloat {
 }
 
 /// The themed title strip. It doubles as the window's drag area, since the
-/// system title bar is hidden.
+/// system title bar is hidden. With tabs, right-clicking it offers Hide
+/// Channel Title Bar, which moves the tabs up into the title bar
+/// (`ChannelTitleBar`).
 struct ChatHeaderView: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     let buffer: BufferModel
@@ -100,6 +104,14 @@ struct ChatHeaderView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(theme[ThemeKey.titleBarForeground])
                         .lineLimit(1)
+                        // The title bar's right-click menu, for VoiceOver.
+                        .accessibilityActions {
+                            if ChannelTitleBar.canHide(app.settings) {
+                                Button(ChannelTitleBar.hideTitle) {
+                                    ChannelTitleBar.hide(settings: app.settings, uiState: uiState)
+                                }
+                            }
+                        }
                     if buffer.kind == .channel {
                         Text("\(buffer.memberCount)")
                             .font(.system(size: 11, weight: .medium).monospacedDigit())
@@ -139,6 +151,7 @@ struct ChatHeaderView: View {
         }
         .windowTitleBarArea()
         .allowsWindowActivationEvents(true)
+        .channelTitleBarMenu()
     }
 }
 

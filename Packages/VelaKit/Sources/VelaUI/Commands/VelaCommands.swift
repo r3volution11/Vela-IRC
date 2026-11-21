@@ -176,6 +176,7 @@ private struct ViewMenuItems: View {
 
         CommandMenuButton(commands.toggleSidebar)
         CommandMenuButton(commands.toggleMemberList)
+        CommandMenuToggle(commands.toggleChannelTitleBar)
 
         Divider()
 

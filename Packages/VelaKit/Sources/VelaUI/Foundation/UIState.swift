@@ -60,8 +60,18 @@ public final class UIState {
     var composerPickerToken = 0
     /// A Settings section to scroll to when its pane shows (Media's GIFs).
     var settingsSectionReveal: SettingsReveal?
+    /// Where the tabs were last shown outside the title bar, top or bottom,
+    /// this session: **Show Channel Title Bar** puts them back there
+    /// (`ChannelTitleBar`). Not saved, and read only by that command, so
+    /// not observed.
+    @ObservationIgnored private(set) var stripTabPlacement: TabStackPlacement?
 
     public init() {}
+
+    /// The tabs are showing at `placement` (`TabStackView`, on appear).
+    func noteStripTabPlacement(_ placement: TabStackPlacement) {
+        if placement != .titleBar { stripTabPlacement = placement }
+    }
 
     public func focusInput() { focusInputToken &+= 1 }
 

@@ -31,7 +31,7 @@ struct LayoutPane: View {
             ) {
                 SettingsSegmentedRow(
                     title: "Placement",
-                    detail: "Title bar puts tabs beside the window buttons; the topic moves to a popover.",
+                    detail: "Title bar puts tabs beside the window buttons; the topic moves to a popover. You can also right-click the channel title bar to hide it.",
                     selection: $settings[.tabsPlacement],
                     options: [(.top, "Top"), (.titleBar, "Title bar"), (.bottom, "Bottom")]
                 )

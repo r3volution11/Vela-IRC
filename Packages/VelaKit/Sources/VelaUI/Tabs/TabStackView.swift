@@ -15,7 +15,8 @@ import VelaTheme
 /// - `.titleBar` replaces the title strip. Networks become a compact
 ///   segmented group next to the traffic lights, the channel tabs follow,
 ///   and the header's accessory buttons (with a topic popover) sit trailing.
-///   Empty space drags the window.
+///   Empty space drags the window, and right-clicking it offers Show
+///   Channel Title Bar (`ChannelTitleBar`).
 /// - `.top` sits under the header; the selected channel tab merges into the
 ///   conversation below it like a browser tab.
 /// - `.bottom` sits above the input, with tabs hanging from the conversation.
@@ -66,6 +67,8 @@ struct TabStackView: View {
             interaction.keyboardFocus.focus()
         }
         .onAppear {
+            // For Show Channel Title Bar, to put the tabs back here.
+            uiState.noteStripTabPlacement(placement)
             interaction.installMiddleClickMonitor { [app, uiState] key in
                 TabActions.middleClick(key, app: app, uiState: uiState)
             }
@@ -144,6 +147,7 @@ struct TabStackView: View {
 /// `tabs.placement = titleBar`: the whole stack lives in the title strip.
 private struct TitleBarTabStack: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
     let session: NetworkSession?
@@ -173,6 +177,10 @@ private struct TitleBarTabStack: View {
                     dragsWindow: true,
                     leadingInset: showsServers ? 0 : 2
                 )
+                // The strip's right-click menu, for VoiceOver.
+                .accessibilityAction(named: ChannelTitleBar.showTitle) {
+                    ChannelTitleBar.show(settings: app.settings, uiState: uiState)
+                }
             } else {
                 Spacer(minLength: 0)
                 TabAddMenu(session: nil, height: tabHeight, palette: palette)
@@ -187,8 +195,7 @@ private struct TitleBarTabStack: View {
         .frame(height: barHeight)
         .background {
             SurfaceFill(palette.background, on: .tabs)
-                .windowTitleBarArea()
-                .allowsWindowActivationEvents(true)
+                .titleBarTabStripArea()
         }
         .overlay(alignment: .bottom) {
             Rectangle().fill(theme[palette.border]).frame(height: 1)
