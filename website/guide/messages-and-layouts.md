@@ -126,6 +126,8 @@ In settings.json these are [`chat.openAt`](/reference/settings#chat.openAt) (`"f
 
 Each channel keeps the most recent **1,000** messages in memory (**Messages kept in memory**). Scroll up and older messages load from disk, if you save history, then from the server if it supports [`chathistory`](/reference/ircv3).
 
+<Screenshot src="/screenshots/settings-history.webp" alt="Settings → Messages, below the end of the Typing section: the Memory section, with Messages kept in memory set to 1,000, then the History section with Save message history off, Keep messages dimmed at Forever, and Saved history reading Nothing is saved on this Mac beside a dimmed Delete Saved History… button" caption="Memory and History in Settings → Messages, as a new install has them." />
+
 **Save message history**, in **Settings → Messages → History**, decides whether messages are kept on your Mac:
 
 - **Off** (the default for new installs): messages, reactions and link previews live in memory while Vela is open. When you connect again, a [bouncer](/guide/bouncers) or a server with `chathistory` sends the latest messages, and older ones as you scroll up. Without one, a channel starts empty after a restart.

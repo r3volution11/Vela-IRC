@@ -44,7 +44,7 @@ Every theme has an **accent color**, used for buttons, the selected channel, lin
 - **Colors with a meaning never change.** Errors, warnings, success, and joins, parts and quits keep their colors, even if they matched the old accent.
 - **Each theme keeps its own choice.** With **Match System Appearance** on and different themes for Dark and Light Mode, there are two rows, **Dark Mode accent** and **Light Mode accent**.
 
-<Screenshot src="/screenshots/accent-cyan.webp" alt="Vela in Palenight with a cyan accent: the selected channel, the private message badge and the message field's focus ring are cyan instead of purple" caption="Palenight with its Cyan accent." />
+<Screenshot src="/screenshots/accent-cyan.webp" alt="Vela in Palenight with a cyan accent: the selected channel, the private message badge, the mention highlight, your own nick and the message box's emoji and send buttons are cyan instead of purple" caption="Palenight with its Cyan accent." />
 
 From the [command palette](/guide/command-palette): **Theme: Next Accent Color** steps through the swatches (after the last, it's back to Default), and **Theme: Reset Accent Color** goes back to the theme's own accent.
 

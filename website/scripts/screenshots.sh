@@ -1,7 +1,9 @@
 #!/bin/zsh
 # Regenerates every screenshot on velairc.app from Vela's demo mode (the main
-# window, or a Settings pane), plus the social card. Shots render offscreen (no screen-recording permission) with
-# scripts/demo-screenshot.sh, then are downscaled with sips and encoded as WebP.
+# window, or a Settings pane), plus the social card and the README's
+# screenshots. Shots render offscreen (no screen-recording permission, and
+# Vela never takes the focus) with scripts/demo-screenshot.sh, then are
+# downscaled with sips and encoded as WebP.
 #
 #   website/scripts/screenshots.sh                  # build Release, then shoot everything
 #   website/scripts/screenshots.sh build/Vela.app   # use an existing build
@@ -114,13 +116,20 @@ pane() {
   shift 3
   shot "$name" "$size" 1200 --theme Palenight --preset modern --settings-pane "$pane" "$@"
 }
-pane settings-intelligence 820x530 intelligence
-pane settings-siri         820x620 intelligence --settings-scroll 9999
-# Typing, Memory and History; Chat logs follows them at the end of the pane.
+pane settings-intelligence 820x612 intelligence
+pane settings-siri         820x640 intelligence --settings-scroll 9999
 # Timestamps, with Position for the current layout (Modern) and Other layouts.
-pane settings-timestamps   820x450 messages --settings-scroll 915
-pane settings-typing       820x708 messages --settings-scroll 1944
-pane settings-chat-logs    820x425 messages --settings-scroll 9999 --set logging.enabled=true
+pane settings-timestamps   820x450 messages --settings-scroll 949
+# Typing; then Memory and History (Save message history, off as for a new
+# install); Chat logs follows them at the end of the pane.
+pane settings-typing       820x517 messages --settings-scroll 2029
+pane settings-history      820x450 messages --settings-scroll 2486
+pane settings-chat-logs    820x450 messages --settings-scroll 9999 --set logging.enabled=true
+# The network list, Connection, and Channels (asking before leaving or
+# removing a channel, and bouncers).
+pane settings-channels     820x736 networks
+# Updates, in the demo's "up to date" state.
+pane settings-updates      820x460 updates
 pane settings-accent       820x705 appearance --accent Cyan
 # The last two rows of theme cards, drawn from each theme's colors, down to
 # the end of "Make your own".
@@ -129,7 +138,7 @@ pane settings-app-icon     820x600 appearance --settings-scroll 9999 --set appea
 pane settings-dock         820x450 notifications --settings-scroll 262
 # A theme file with typos (screenshot-themes/harbor.json, copied into the
 # demo's own Themes folder): what Settings → Appearance says about it.
-pane settings-theme-problems 820x438 appearance --themes-dir "$root/website/scripts/screenshot-themes" \
+pane settings-theme-problems 820x450 appearance --themes-dir "$root/website/scripts/screenshot-themes" \
   --settings-scroll 2050
 
 # The settings editor (Settings → Advanced): the UI view, filtered to
@@ -198,3 +207,18 @@ if (( ! ${#only} )) || (( ${only[(Ie)og-image]} )); then
   sips -s format jpeg -s formatOptions 86 "$work/og-image.png" --out "$public/og-image.jpg" >/dev/null
   printf '%-28s %s\n' "og-image.jpg" "$(du -h "$public/og-image.jpg" | cut -f1)"
 fi
+
+# The README's screenshots (docs/screenshots), as PNGs 1600 pixels wide.
+readme() {
+  local name=$1 size=$2
+  shift 2
+  if (( ${#only} )) && (( ! ${only[(Ie)$name]} )); then return; fi
+  "$root/scripts/demo-screenshot.sh" "$app" "$work/$name.png" \
+    --size "$size" --snapshot-delay 8 --select "#vela" "$@" >/dev/null
+  sips -Z 1600 "$work/$name.png" --out "$root/docs/screenshots/$name.png" >/dev/null
+  printf '%-28s %s\n' "$name.png" "$(du -h "$root/docs/screenshots/$name.png" | cut -f1)"
+}
+readme modern-palenight     1400x900 --theme Palenight       --preset modern
+readme classic-graphite     1400x900 --theme "Vela Graphite" --preset classic
+readme focus-tabs-palenight 1280x800 --theme Palenight       --preset focus
+readme tabbed-lighter       1280x800 --theme Lighter         --preset tabbed

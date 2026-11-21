@@ -35,7 +35,7 @@ Type `@` for filters, which you can combine with words and with each other:
 
 The chips under the field do the same for categories: **All**, **Appearance**, **Layout**, **Messages**, **Typing**, **History**, **Media**, **Notifications**, **Connection**, **Moderation**, **Apple Intelligence** and **Updates**. An **Unknown** chip, with a warning sign, appears when settings.json has keys Vela doesn't know.
 
-<Screenshot src="/screenshots/settings-editor-modified.webp" alt="The settings editor filtered with @modified: the Modified button is on, with a count of 20, and the list shows only the Appearance and Layout settings that are set in settings.json, each with an accent bar on its left" caption="@modified: only what's set in settings.json." />
+<Screenshot src="/screenshots/settings-editor-modified.webp" alt="The settings editor filtered with @modified: the Modified button is on, with a count of 22, and the list shows only the Appearance and Layout settings that are set in settings.json, each with an accent bar on its left" caption="@modified: only what's set in settings.json." />
 
 ## The list {#list}
 

@@ -40,6 +40,8 @@ With **Check for updates automatically** on, Vela checks once a day, in the back
 
 ## Settings
 
+<Screenshot src="/screenshots/settings-updates.webp" alt="Settings → Updates: Vela 1.0.0 with “Vela is up to date. Last checked 2 hours ago.” and a Check for Updates button, then the Automatic updates section with Check for updates automatically on and Install updates automatically off, and a link to what an update check sends" caption="Settings → Updates." />
+
 Open **Settings → Updates**.
 
 | Setting | What it does |

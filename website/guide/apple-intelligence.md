@@ -25,7 +25,7 @@ Catch me up and Writing Tools use **Apple Intelligence**, so they need:
 
 ## The Settings pane {#settings}
 
-<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Apple Intelligence: a green “Apple Intelligence is on” box, then the Catch me up and Translation sections" caption="Settings → Apple Intelligence." />
+<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Apple Intelligence: a green “Apple Intelligence is on” box, then the Catch me up section, with Use Private Cloud Compute for long catch-ups off, and the Translation section" caption="Settings → Apple Intelligence." />
 
 **Settings → Apple Intelligence** has a section each for Catch me up, Translation, Writing Tools and [Siri & Shortcuts](/guide/siri-shortcuts). On macOS 27 or later, the Catch me up section also has **Use Private Cloud Compute for long catch-ups** ([see below](#private-cloud-compute)). At the top, a box says whether Apple Intelligence is ready:
 

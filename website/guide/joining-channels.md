@@ -49,6 +49,8 @@ Through a bouncer, leaving works differently: the bouncer stays in the channel. 
 
 ### Asking first
 
+<Screenshot src="/screenshots/settings-channels.webp" alt="Settings → Networks: the list of networks, the Connection section, then the Channels section with Ask before leaving a channel and Ask before removing a channel on, and Closing a channel removes it from the bouncer off" caption="The Channels section of Settings → Networks." />
+
 Vela asks before you leave or remove a channel, including with a tab's **×**, and the sheet has a **Don't ask again** checkbox. To turn either question back on or off, use **Ask before leaving a channel** and **Ask before removing a channel** in **Settings → Networks → Channels**, or set `channels.confirmLeave` and `channels.confirmRemove` in [settings.json](/reference/settings#channels). `/part` and `/close` never ask, and closing a conversation or hiding a channel doesn't either.
 
 ### Changed your mind?
