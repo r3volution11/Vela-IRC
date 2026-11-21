@@ -66,7 +66,8 @@ The release build you ship uses the same identity as the `build/Vela.app` that `
    - To sign release tags, set up signing in git, such as an SSH key in 1Password. Publishing signs the tag whenever git has a signing key (`user.signingkey`, or `tag.gpgSign`).
 5. **Set up the 1Password CLI**, which reads the update signing key: `brew install 1password-cli`, then in the 1Password app turn on **Settings → Developer → Integrate with 1Password CLI**. Check it with `op --account my.1password.com vault list`.
 6. **Create the update signing key, once:** `scripts/sparkle-key.sh --create`, then paste the public key it prints into `Vela/Info.plist` (replacing `SPARKLE_PUBLIC_KEY_PLACEHOLDER`) and commit it. See [The update signing key](#the-update-signing-key). Until then, every release build refuses to start.
-7. **Do a dry run.** `scripts/release.sh --skip-notarize --skip-preflight` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work. `--skip-preflight` leaves out the [release checks](#release-checks), which would otherwise stop the build until everything is ready to ship; the post-build checks still run.
+7. **Save the GIF key** (KLIPY, for the emoji and GIF picker) in 1Password as an API Credential item, "Vela - KLIPY - Mac API Credentials", in the Personal vault, with the key in its **credential** field. Check it with `scripts/klipy-key.sh --check`. See [The GIF key](#the-gif-key).
+8. **Do a dry run.** `scripts/release.sh --skip-notarize --skip-preflight` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work. `--skip-preflight` leaves out the [release checks](#release-checks), which would otherwise stop the build until everything is ready to ship; the post-build checks still run.
 
 ## Before each release
 
@@ -206,6 +207,7 @@ Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts 
 | Update settings | `Info.plist` has the feed `https://velairc.app/appcast.xml`, the installer service (`SUEnableInstallerLauncherService`), automatic checks on, a daily interval, no system profile, no downloader service, and verification before extraction. | Check `Vela/Info.plist`, and that the Release configuration's `INFOPLIST_FILE` is `Vela/Info.plist`. |
 | Update key | `SUPublicEDKey` is a public key, not the placeholder. | See [The update signing key](#the-update-signing-key). `--adhoc` only notes it. |
 | Sparkle | `Sparkle.framework` is the version `Package.resolved` pins, and it, `Installer.xpc`, `Downloader.xpc`, `Autoupdate` and `Updater.app` each verify, with the hardened runtime, a Developer ID certificate of the app's team and a secure timestamp (`--adhoc`: they verify). | Archive and export with `scripts/release.sh`. Never add `--deep` to the signing flags: Sparkle's services need their own signatures. |
+| GIF key | `Info.plist` has `VelaKLIPYAPIKey`, the KLIPY key read from 1Password. | Check that `scripts/klipy-key.sh --check` passes, and build with `scripts/release.sh`. `--adhoc` skips it. |
 | App Shortcuts | The app's App Intents metadata (`Contents/Resources/Metadata.appintents/extract.actionsdata`) has as many App Shortcuts as `Vela/VelaShortcuts.swift` declares (7 today). | Xcode's App Intents metadata processor dropped some. Its lines are kept out of the build output but saved in `build/release/archive.log`: fix what they point at and build again. |
 | App Intents actions | The metadata has **Catch Me Up** (`CatchMeUpIntent`) and **Open Channel** (`OpenChannelIntent`) from the VelaIntents module. | As for App Shortcuts. |
 | App Intents package | `extract.packagedata` includes `VelaIntentsPackage`, which brings in the VelaIntents package's intents. | Check that `VelaAppIntentsPackage` in `Vela/VelaShortcuts.swift` lists `VelaIntentsPackage`, then build again. |
@@ -463,6 +465,15 @@ scripts/test-update.sh --clean     # deletes the test apps, their container and 
 1. Pick a version that has been out for at least two weeks, from [Sparkle's releases](https://github.com/sparkle-project/Sparkle/releases), and read its release notes.
 2. In Xcode → the Vela project → **Package Dependencies**, set Sparkle to that exact version. This updates `Vela.xcodeproj/project.pbxproj` and `Package.resolved`.
 3. Build, run `scripts/test-update.sh`, then commit. The **Sparkle** post-build check compares the framework's version with `Package.resolved`.
+
+## The GIF key
+
+The [emoji and GIF picker](https://velairc.app/guide/emoji-and-gifs) searches KLIPY with Vela's own key, so GIFs work for everyone without setting anything up. KLIPY requires its API to be called from the app itself, so the key is in every copy of Vela (`VelaKLIPYAPIKey` in `Info.plist`) and anyone with the app can read it. It's only kept out of the repository.
+
+- **Where it is:** the 1Password item "Vela - KLIPY - Mac API Credentials" (an API Credential, Personal vault, account `my.1password.com`), in its **credential** field. `VELA_OP_ACCOUNT`, `VELA_KLIPY_VAULT` and `VELA_KLIPY_ITEM` override those; `scripts/lib/klipy.zsh` has the defaults.
+- **Release builds:** `scripts/release.sh` checks it can read the key before building (1Password asks you then), and hands it to `xcodebuild` in an xcconfig only you can read, deleted as soon as the archive is done, so the key isn't in the logs or the process list. The **GIF key** post-build check confirms it's in the app. `--adhoc` builds go on without it; their GIFs tab says GIFs aren't set up.
+- **Local builds (Vela Dev):** `scripts/klipy-key.sh --local` writes the key to `Config/Secrets.xcconfig`, which git ignores and only you can read; `Config/Vela.xcconfig` includes it. `--remove` deletes it.
+- **Limits:** while KLIPY has the key in testing mode, it allows 100 requests an hour, shared by everyone using Vela. Once KLIPY approves production access (requested in KLIPY's Partner Panel), the same key has no limit, and installed copies need no update. Changing the key, such as if it's revoked, needs a new release.
 
 ## When the media check fails
 

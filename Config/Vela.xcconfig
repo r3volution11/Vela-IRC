@@ -1,0 +1,11 @@
+// Build settings shared by the Vela target's Debug and Release configurations.
+
+// The KLIPY API key the GIF picker uses, built into Info.plist as
+// VelaKLIPYAPIKey (Config/Debug-Info.plist, Vela/Info.plist). It's never
+// committed:
+// - scripts/release.sh reads it from 1Password and hands it to xcodebuild;
+// - local builds (Vela Dev) read it from Secrets.xcconfig, which git ignores
+//   and `scripts/klipy-key.sh --local` writes from 1Password.
+// Without it, the GIFs tab says GIFs aren't set up in this build.
+VELA_KLIPY_API_KEY =
+#include? "Secrets.xcconfig"

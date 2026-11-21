@@ -13,6 +13,9 @@ build/
 *.dSYM.zip
 *.dSYM
 
+# Local secrets (scripts/klipy-key.sh --local)
+Config/Secrets.xcconfig
+
 # Swift Package Manager
 .build/
 .swiftpm/

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Merged into the Info.plist Xcode generates for Debug builds (Vela Dev).
+  Release builds use Vela/Info.plist, which also has Sparkle's keys: a
+  development build never updates itself.
+-->
+<dict>
+	<!-- The GIF picker's KLIPY key (Config/Vela.xcconfig). -->
+	<key>VelaKLIPYAPIKey</key>
+	<string>$(VELA_KLIPY_API_KEY)</string>
+</dict>
+</plist>

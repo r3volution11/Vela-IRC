@@ -13,6 +13,8 @@
 
 /* Begin PBXFileReference section */
 		7E1A00000000000000000001 /* Vela.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vela.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7E1A00000000000000000017 /* Vela.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Vela.xcconfig; sourceTree = "<group>"; };
+		7E1A00000000000000000018 /* Debug-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Debug-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -53,8 +55,18 @@
 			isa = PBXGroup;
 			children = (
 				7E1A00000000000000000002 /* Vela */,
+				7E1A00000000000000000019 /* Config */,
 				7E1A00000000000000000004 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		7E1A00000000000000000019 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				7E1A00000000000000000017 /* Vela.xcconfig */,
+				7E1A00000000000000000018 /* Debug-Info.plist */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		7E1A00000000000000000004 /* Products */ = {
@@ -213,6 +225,7 @@
 		};
 		7E1A0000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7E1A00000000000000000017 /* Vela.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -225,6 +238,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Debug-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Vela Dev";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Doug C. Hardester and contributors. MPL-2.0.";
@@ -244,6 +258,7 @@
 		};
 		7E1A0000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7E1A00000000000000000017 /* Vela.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

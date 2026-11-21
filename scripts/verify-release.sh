@@ -51,6 +51,7 @@ script="${0:A}"
 cd "${0:A:h}/.."
 source scripts/lib/release-checks.zsh
 source scripts/lib/sparkle.zsh
+source scripts/lib/klipy.zsh
 
 usage() { sed -n '2,/^set -euo/p' "$script" | sed -e '$d' -e 's/^# \{0,1\}//'; }
 needs_value() { [[ $# -ge 2 && -n "$2" ]] || { print -u2 -r -- "$1 needs a value"; exit 2; } }
@@ -182,6 +183,18 @@ fi
 app_team=$(codesign -dvv "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p' | head -n 1 || true)
 [[ $app_team == "not set" ]] && app_team=""
 check_update_support "$app" "$entitlements" "$adhoc" "${team:-$app_team}"
+
+# GIF search: the KLIPY key (lib/klipy.zsh) made it into Info.plist.
+klipy_key=$(plist_value VelaKLIPYAPIKey)
+if klipy_key_is_valid "$klipy_key"; then
+  check_pass "GIF key" "VelaKLIPYAPIKey is set (${#klipy_key} characters)"
+elif (( adhoc )); then
+  check_skip "GIF key" "not set; ad hoc builds can go without GIF search"
+else
+  check_fail "GIF key" "VelaKLIPYAPIKey is ${klipy_key:-missing}" \
+    "Build with scripts/release.sh, which reads the key from 1Password (scripts/klipy-key.sh --check)."
+fi
+unset klipy_key
 
 # Siri, Shortcuts and Spotlight: the App Intents metadata (lib/release-checks.zsh).
 check_app_intents "$app" Vela/VelaShortcuts.swift

@@ -88,6 +88,7 @@ invoked_from=$PWD
 cd "${0:A:h}/.."
 source scripts/lib/release-checks.zsh
 source scripts/lib/sparkle.zsh
+source scripts/lib/klipy.zsh
 
 notarize=1
 adhoc=0
@@ -218,6 +219,19 @@ if ! sparkle_key_is_valid "$public_key"; then
   else
     fail "$sparkle_info_plist has no update key yet (SUPublicEDKey is ${public_key:-missing}). Create it once with scripts/sparkle-key.sh --create and paste the public key it prints (docs/RELEASING.md, \"The update signing key\")."
   fi
+fi
+
+# ---------------------------------------------------------------- GIF key
+# The GIF picker's KLIPY key comes from 1Password (lib/klipy.zsh). A release
+# can't ship without it, and 1Password asks now, not after the long build.
+# Ad hoc builds go on without it: their GIFs tab says GIFs aren't set up.
+klipy_ready=0
+if command -v op >/dev/null && scripts/klipy-key.sh --check >/dev/null 2>&1; then
+  klipy_ready=1
+elif (( adhoc )); then
+  print -P "    %F{yellow}note:%f the KLIPY key couldn't be read from 1Password, so this build has no GIF search."
+else
+  fail "The KLIPY key couldn't be read from 1Password. Check that 1Password is unlocked and scripts/klipy-key.sh --check passes (docs/RELEASING.md, \"The GIF key\")."
 fi
 
 # ---------------------------------------------------------------- signing setup
@@ -362,6 +376,16 @@ if (( ! adhoc )); then
   # Developer ID signs Sparkle too, so library validation stays on.
   sign_settings+=(CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$team" OTHER_CODE_SIGN_FLAGS="--timestamp" CODE_SIGN_ENTITLEMENTS=Vela/Vela.entitlements)
 fi
+# The KLIPY key goes to xcodebuild in an xcconfig only you can read, not on
+# the command line, so it stays out of the logs and the process list; the
+# file is deleted as soon as the archive is done.
+klipy_args=()
+klipy_dir=""
+if (( klipy_ready )); then
+  klipy_dir=$(mktemp -d -t vela-klipy)
+  klipy_write_xcconfig "$klipy_dir/klipy.xcconfig" || { rm -rf "$klipy_dir"; fail "Couldn't read the KLIPY key from 1Password."; }
+  klipy_args=(-xcconfig "$klipy_dir/klipy.xcconfig")
+fi
 xcodebuild archive \
   -project Vela.xcodeproj \
   -scheme Vela \
@@ -369,9 +393,11 @@ xcodebuild archive \
   -destination 'generic/platform=macOS' \
   -archivePath "$out/Vela.xcarchive" \
   -derivedDataPath "$derived_data" \
+  "${klipy_args[@]}" \
   ONLY_ACTIVE_ARCH=NO \
   "${sign_settings[@]}" \
   -quiet 2>&1 | tee "$out/archive.log" | grep -vE "CoreSimulator|appintentsmetadataprocessor" || true
+[[ -n "$klipy_dir" ]] && rm -rf "$klipy_dir"
 # The App Intents metadata processor's lines are kept out of the way above but
 # stay in archive.log; the post-build checks look at what it wrote.
 [[ -d "$out/Vela.xcarchive/Products/Applications/Vela.app" ]] || fail "Archive failed."
