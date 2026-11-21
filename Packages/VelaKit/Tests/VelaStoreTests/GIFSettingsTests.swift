@@ -10,7 +10,10 @@ import VelaFoundation
 @Suite("GIF settings")
 struct GIFSettingsTests {
     @Test func defaultsAndValues() {
-        #expect(SettingKey<Bool>.gifsEnabled.defaultValue == true)
+        // Off until KLIPY approves Vela's key; only in development builds meanwhile.
+        #expect(SettingKey<Bool>.gifsEnabled.defaultValue == false)
+        #expect(GIFAvailability.isBuiltIn, "tests run as a development build")
+        #expect(SettingsCatalog.all.contains { $0.key == "gifs.enabled" })
         #expect(SettingKey<Bool>.gifsAnimatePreviews.defaultValue == true)
         #expect(SettingKey<GIFService>.gifsProvider.defaultValue == .klipy)
         // "IRC is really a service for adults": the loosest rating.

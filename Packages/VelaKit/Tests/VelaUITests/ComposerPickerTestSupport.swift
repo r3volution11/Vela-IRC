@@ -250,6 +250,9 @@ final class PickerHost {
         DemoContent.populate(app)
         app.settings[.mediaShowLinkCards] = false
         app.settings[.mediaAutoLoad] = false
+        // Off by default (and only in development builds, as these tests are):
+        // on here, as for someone trying GIFs in Vela Dev.
+        app.settings[.gifsEnabled] = true
         configure(app)
         let session = try #require(app.sessions.first)
         let buffer = session.ensureBuffer(name: "##picker", kind: .channel, persist: false)

@@ -116,7 +116,10 @@ struct MediaPane: View {
                 }
             }
 
-            GIFSettingsSection()
+            // Only in development builds for now (GIFAvailability).
+            if GIFAvailability.isBuiltIn {
+                GIFSettingsSection()
+            }
 
             SettingsSection(
                 "Restrictions",

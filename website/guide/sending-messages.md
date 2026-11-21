@@ -9,7 +9,7 @@ Type in the message field at the bottom of the window and press **Return** to se
 
 At the right end of the field are two buttons:
 
-- **Emoji & GIFs**, the smiley, opens a picker for emoji and GIFs. So does <kbd>⇧⌘E</kbd>. See [Emoji & GIFs](/guide/emoji-and-gifs).
+- **Emoji**, the smiley, opens the emoji picker. So does <kbd>⇧⌘E</kbd>. GIFs join it in a later version. See [Emoji & GIFs](/guide/emoji-and-gifs).
 - **Send**, the arrow in a circle, sends, just like <kbd>Return</kbd>. With nothing typed, clicking it does nothing. If you only use <kbd>Return</kbd>, turn off **Show the send button** in **Settings → Messages → Typing**.
 
 Both buttons are your theme's accent color while you're typing in the message field (or the picker is open), and muted otherwise.

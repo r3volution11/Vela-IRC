@@ -170,7 +170,7 @@ struct SettingsEditorView: View {
         let lastWord = query.last?.isWhitespace == false ? String(query.split(whereSeparator: \.isWhitespace).last ?? "") : ""
         let completions = SettingsQuery.filterCompletions(
             for: lastWord,
-            categories: SettingsCategory.allCases,
+            categories: SettingsCategory.allCases.filter { $0 != .gifs || GIFAvailability.isBuiltIn },
             panes: SettingsPane.allCases
                 .filter { !SettingsCategory.categories(forPane: $0.rawValue).isEmpty }
                 .map { ($0.rawValue, $0.title) }

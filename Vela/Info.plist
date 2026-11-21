@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Sparkle's settings for the in-app updater, and the GIF picker's key. Only
-  the Release configuration uses this file (INFOPLIST_FILE); Xcode merges it
-  with the Info.plist it generates from the INFOPLIST_KEY_* build settings.
-  Debug builds ("Vela Dev") use Config/Debug-Info.plist, which has only the
-  GIF key: no update feed, and their code never starts the updater either.
+  Sparkle's settings for the in-app updater. Only the Release configuration
+  uses this file (INFOPLIST_FILE); Xcode merges it with the Info.plist it
+  generates from the INFOPLIST_KEY_* build settings. Debug builds ("Vela
+  Dev") use Config/Debug-Info.plist instead: no update feed (their code never
+  starts the updater either), and the GIF picker's KLIPY key, since GIF
+  search is only in development builds for now (GIFAvailability).
 
   Every key is explained at https://sparkle-project.org/documentation/customization/.
   docs/RELEASING.md, "Updates", says how releases use them, and
@@ -13,14 +14,6 @@
 -->
 <plist version="1.0">
 <dict>
-	<!--
-	  The GIF picker's KLIPY key (Config/Vela.xcconfig): scripts/release.sh
-	  reads it from 1Password at build time. It's not secret from anyone who
-	  has the app (KLIPY requires calls from the app itself), only kept out of
-	  the repository.
-	-->
-	<key>VelaKLIPYAPIKey</key>
-	<string>$(VELA_KLIPY_API_KEY)</string>
 	<!-- The appcast, served by velairc.app (website/public/appcast.xml). -->
 	<key>SUFeedURL</key>
 	<string>https://velairc.app/appcast.xml</string>

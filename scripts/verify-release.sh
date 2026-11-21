@@ -51,7 +51,6 @@ script="${0:A}"
 cd "${0:A:h}/.."
 source scripts/lib/release-checks.zsh
 source scripts/lib/sparkle.zsh
-source scripts/lib/klipy.zsh
 
 usage() { sed -n '2,/^set -euo/p' "$script" | sed -e '$d' -e 's/^# \{0,1\}//'; }
 needs_value() { [[ $# -ge 2 && -n "$2" ]] || { print -u2 -r -- "$1 needs a value"; exit 2; } }
@@ -184,15 +183,14 @@ app_team=$(codesign -dvv "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p' | head -n 
 [[ $app_team == "not set" ]] && app_team=""
 check_update_support "$app" "$entitlements" "$adhoc" "${team:-$app_team}"
 
-# GIF search: the KLIPY key (lib/klipy.zsh) made it into Info.plist.
+# GIF search is only in development builds for now (GIFAvailability): a
+# release carries no KLIPY key until KLIPY approves it for production.
 klipy_key=$(plist_value VelaKLIPYAPIKey)
-if klipy_key_is_valid "$klipy_key"; then
-  check_pass "GIF key" "VelaKLIPYAPIKey is set (${#klipy_key} characters)"
-elif (( adhoc )); then
-  check_skip "GIF key" "not set; ad hoc builds can go without GIF search"
+if [[ -z "$klipy_key" ]]; then
+  check_pass "GIF key" "none (GIF search is in development builds only)"
 else
-  check_fail "GIF key" "VelaKLIPYAPIKey is ${klipy_key:-missing}" \
-    "Build with scripts/release.sh, which reads the key from 1Password (scripts/klipy-key.sh --check)."
+  check_fail "GIF key" "Info.plist has VelaKLIPYAPIKey" \
+    "Releases carry no GIF key yet: check Vela/Info.plist and the build settings (docs/RELEASING.md, \"The GIF key\")."
 fi
 unset klipy_key
 

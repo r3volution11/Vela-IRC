@@ -67,7 +67,8 @@ struct ComposerPickerView: View {
     static let gridHeight: CGFloat = 292
 
     private var services: GIFSearchServices { injectedServices ?? .shared }
-    private var gifsEnabled: Bool { app.settings[.gifsEnabled] }
+    /// Only in development builds for now (`GIFAvailability`), and only when turned on.
+    private var gifsEnabled: Bool { GIFAvailability.isBuiltIn && app.settings[.gifsEnabled] }
     /// The tab on screen: Emoji whenever GIFs are off.
     var shownTab: ComposerPickerTab { gifsEnabled ? tab : .emoji }
 

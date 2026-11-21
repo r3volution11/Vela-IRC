@@ -574,7 +574,7 @@ struct VelaCommandCatalog {
     static func emojiAndGIFs(settings: SettingsStore, uiState: UIState, hasBuffer: Bool) -> VelaCommand {
         VelaCommand(
             id: "messageBox.emojiAndGIFs", category: .messageBox,
-            title: settings[.gifsEnabled] ? "Emoji & GIFs…" : "Emoji…",
+            title: GIFAvailability.isBuiltIn && settings[.gifsEnabled] ? "Emoji & GIFs…" : "Emoji…",
             shortcut: Shortcuts.emojiAndGIFs,
             keywords: ["emoji", "gif", "gifs", "smiley", "picker", "klipy", "giphy", "composer", "insert", "reaction"],
             isEnabled: hasBuffer

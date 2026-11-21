@@ -118,7 +118,7 @@ With the member list focused (<kbd>⌥⌘4</kbd>). The highlighted person has a 
 | Scroll to the oldest message loaded / the newest | <kbd>Home</kbd> / <kbd>End</kbd> or <kbd>fn←</kbd> / <kbd>fn→</kbd> |
 | Move to the start / end of what you've typed | <kbd>⌘↑</kbd> / <kbd>⌘↓</kbd> |
 | Undo typing (and, after it, leaving or closing a channel) | <kbd>⌘Z</kbd> |
-| Emoji & GIFs (open or close the picker) | <kbd>⇧⌘E</kbd> |
+| Emoji (open or close the picker; GIFs join it in a later version) | <kbd>⇧⌘E</kbd> |
 | Emoji & Symbols (macOS) | <kbd>⌃⌘Space</kbd> |
 | Remove the GIF you picked (at the start of the message) | <kbd>Delete</kbd> |
 | Show Spelling and Grammar | <kbd>⌘:</kbd> |

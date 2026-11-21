@@ -513,26 +513,26 @@ extension SettingKey where Value == Double {
 
 extension SettingKey where Value == Bool {
     public static var gifsEnabled: SettingKey<Bool> {
-        .init("gifs.enabled", default: true,
-              summary: "Show the GIFs tab in the message box's emoji picker (⇧⌘E) and search GIFs there. Off hides the tab, and Vela never contacts a GIF service.")
+        .init("gifs.enabled", default: false,
+              summary: "Show the GIFs tab in the message box's emoji picker (⇧⌘E) and search GIFs there. Off hides the tab, and Vela never contacts a GIF service. Development builds only for now.")
     }
     public static var gifsAnimatePreviews: SettingKey<Bool> {
         .init("gifs.animatePreviews", default: true,
-              summary: "Play the GIFs in the picker while they're in view. Off shows still images (so does Reduce Motion).")
+              summary: "Play the GIFs in the picker while they're in view. Off shows still images (so does Reduce Motion). Development builds only for now.")
     }
 }
 
 extension SettingKey where Value == GIFService {
     public static var gifsProvider: SettingKey<GIFService> {
         .init("gifs.provider", default: .klipy,
-              summary: "Where GIF search looks: klipy (with the key built into Vela, or your own) or giphy (needs your own key). Keys you enter in Settings → Media are kept in your Keychain, never in this file.")
+              summary: "Where GIF search looks: klipy (with the key built into Vela, or your own) or giphy (needs your own key). Keys you enter in Settings → Media are kept in your Keychain, never in this file. Development builds only for now.")
     }
 }
 
 extension SettingKey where Value == GIFRating {
     public static var gifsRating: SettingKey<GIFRating> {
         .init("gifs.rating", default: .r,
-              summary: "The most explicit GIFs search shows, as film ratings: g, pg, pg-13 or r (the loosest).")
+              summary: "The most explicit GIFs search shows, as film ratings: g, pg, pg-13 or r (the loosest). Development builds only for now.")
     }
 }
 
@@ -773,7 +773,11 @@ extension SettingKey where Value == JSONValue {
 /// The list of known settings plus helpers that render it as documentation.
 public enum SettingsCatalog {
     public static var all: [SettingDescriptor] {
-        [
+        // GIF search is only in development builds for now (GIFAvailability).
+        // website/scripts/generate.mjs reads the list below up to its first
+        // closing bracket, so keep the filter after it.
+        let gifsBuiltIn = GIFAvailability.isBuiltIn
+        return ([
             SettingKey.appearanceTheme.descriptor,
             SettingKey.appearancePreferredDarkTheme.descriptor,
             SettingKey.appearancePreferredLightTheme.descriptor,
@@ -877,7 +881,7 @@ public enum SettingsCatalog {
 
             SettingKey.updatesCheckAutomatically.descriptor,
             SettingKey.updatesInstallAutomatically.descriptor,
-        ] + NavigationSettingsCatalog.descriptors
+        ] + NavigationSettingsCatalog.descriptors).filter { gifsBuiltIn || !$0.key.hasPrefix("gifs.") }
     }
 
     public static func descriptor(forKey key: String) -> SettingDescriptor? {

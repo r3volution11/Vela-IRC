@@ -5,7 +5,11 @@ description: Vela's emoji and GIF picker for the message field, opened with the 
 
 # Emoji & GIFs
 
-Click the **smiley** at the right end of the message field, or press <kbd>⇧⌘E</kbd>, to open the picker. It has two tabs, **Emoji** and **GIFs**, and a search field that's ready for typing. It opens on the tab you used last.
+Click the **smiley** at the right end of the message field, or press <kbd>⇧⌘E</kbd>, to open the picker, with a search field that's ready for typing.
+
+::: info GIF search is coming in a later version
+This version of Vela has the **Emoji** tab. **GIF search** (the **GIFs** tab, described below) is being tested and arrives in a later version, once KLIPY, the GIF service it uses, has approved Vela. Until then, it's only in development builds.
+:::
 
 ## From the keyboard {#keys}
 
@@ -27,6 +31,8 @@ Search by name or by a familiar word: "thumbs", "+1", "lol" or "tada". With noth
 Picking one puts it in the message field where your cursor was, and you carry on typing. The keyboard button at the bottom right opens the system's Character Viewer.
 
 ## GIFs
+
+*In a later version of Vela (see above).* With GIFs, the picker has two tabs, **Emoji** and **GIFs**, and opens on the one you used last.
 
 The **GIFs** tab shows what's trending until you search. Type at least two letters: the search starts once you pause, or straight away when you press <kbd>Return</kbd>. Scroll down for more.
 
