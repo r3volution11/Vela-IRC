@@ -4,6 +4,8 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ## Unreleased
 
+## 1.1.0 - 2026-11-21
+
 Vela 1.1 brings an updater, the whole window from the keyboard, and a choice about saving your chat history. The highlights:
 
 - **Vela updates itself.** It checks once a day and offers a new version when you open Vela, never in the middle of a conversation. Vela 1.0 has no updater, so download this version once from [velairc.app](https://velairc.app/guide/install#from-1-0); after that, updates come to you.
