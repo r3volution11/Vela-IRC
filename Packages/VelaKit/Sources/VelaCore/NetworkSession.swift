@@ -1173,8 +1173,27 @@ public final class NetworkSession: Identifiable {
     }
 
     public func send(_ message: IRCMessage) {
-        guard let client else { return }
+        guard let client else {
+            if echoesWithoutServer { echoAsServer(message) }
+            return
+        }
         Task { await client.send(message) }
+    }
+
+    /// Demo networks (`DemoContent`) have no server, so what you send would
+    /// go nowhere: with this on, chat comes back as a server echoes it
+    /// (echo-message), so sent messages, GIFs and replies show in the
+    /// conversation. Off for real networks.
+    @ObservationIgnored public var echoesWithoutServer = false
+
+    private func echoAsServer(_ message: IRCMessage) {
+        guard ["PRIVMSG", "NOTICE", "TAGMSG"].contains(message.command) else { return }
+        var tags = message.tags
+        tags["msgid"] = "demo-\(UUID().uuidString)"
+        tags["time"] = ISO8601DateFormatter().string(from: Date())
+        let echoed = IRCMessage(tags: tags, source: IRCSource(nick: nick, user: nick, host: "vela.demo"), command: message.command, params: message.params)
+        // On the next turn, as a reply from a server would come.
+        Task { [weak self] in self?.handle(.message(echoed, batch: nil)) }
     }
 
     public func sendRaw(_ line: String) {

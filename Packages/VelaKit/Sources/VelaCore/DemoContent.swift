@@ -43,6 +43,7 @@ enum DemoContent {
         let config = NetworkConfig(name: name, host: host, nick: nick)
         let session = NetworkSession(config: config, database: nil)
         session.connectionState = .connected
+        session.echoesWithoutServer = true
         session.nick = nick
         session.capabilities = ["server-time", "message-tags", "echo-message", "batch", "draft/chathistory", "away-notify", "draft/message-redaction"]
         var support = ISupport()
