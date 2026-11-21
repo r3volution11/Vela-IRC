@@ -58,7 +58,15 @@ final class MessageListController {
     @ObservationIgnored var bottomCheck: Task<Void, Never>?
     /// The `NSScrollView` behind the list (`ListScrollViewProbe`), whose
     /// clip view is where the list really is (`ClipViewSync`).
-    @ObservationIgnored weak var scrollView: NSScrollView?
+    @ObservationIgnored weak var scrollView: NSScrollView? {
+        didSet {
+            guard scrollView !== oldValue else { return }
+            watchClipHeight()
+        }
+    }
+    @ObservationIgnored private var clipFrameObserver: NSObjectProtocol?
+    @ObservationIgnored private var clipHeight: CGFloat?
+    @ObservationIgnored private var clipBottomCheckQueued = false
     @ObservationIgnored private var clipSync = ClipViewSync()
     @ObservationIgnored private var clipCheckQueued = false
     /// The user is dragging or flinging the list (trackpad or wheel gesture).
@@ -182,11 +190,62 @@ final class MessageListController {
         clipSync.observe(reportedMinY: metrics.visibleMinY, clipMinY: clipMinY)
     }
 
-    /// Whether the clip view shows the list where SwiftUI reports it (true
-    /// when either isn't known yet).
-    var clipViewAgrees: Bool {
-        guard let metrics, let clipMinY = scrollView?.contentView.bounds.minY else { return true }
-        return ClipViewSync.agree(reportedMinY: metrics.visibleMinY, clipMinY: clipMinY)
+    isolated deinit {
+        if let clipFrameObserver { NotificationCenter.default.removeObserver(clipFrameObserver) }
+    }
+
+    // MARK: The clip view getting shorter
+
+    /// Watches the clip view's height, for `clipGotShorter()`.
+    private func watchClipHeight() {
+        if let clipFrameObserver { NotificationCenter.default.removeObserver(clipFrameObserver) }
+        clipFrameObserver = nil
+        clipHeight = nil
+        guard let clip = scrollView?.contentView else { return }
+        clipHeight = clip.bounds.height
+        clip.postsFrameChangedNotifications = true
+        clipFrameObserver = NotificationCenter.default.addObserver(
+            forName: NSView.frameDidChangeNotification, object: clip, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.clipFrameChanged() }
+        }
+    }
+
+    private func clipFrameChanged() {
+        guard let clip = scrollView?.contentView else { return }
+        let height = clip.bounds.height
+        defer { clipHeight = height }
+        guard let clipHeight, height < clipHeight - 0.5 else { return }
+        clipGotShorter()
+    }
+
+    /// The list got shorter while following the newest line: once that's
+    /// laid out (on the next turn), makes sure the scroll view really shows
+    /// the bottom, scrolling it there itself if it doesn't.
+    ///
+    /// Normally SwiftUI reports the shorter list and the pinning logic takes
+    /// it from there (`ScrollPinning.mustScrollToBottomAnew`). On macOS 27.0
+    /// it can miss the change: showing the channel title bar again took 65 pt
+    /// from the list, SwiftUI kept reporting the old height, judged the list
+    /// at the bottom and never scrolled, and the newest line sat under the
+    /// bottom edge. So the clip view's own geometry decides here. One
+    /// comparison per height change; nothing per frame.
+    private func clipGotShorter() {
+        guard !clipBottomCheckQueued else { return }
+        clipBottomCheckQueued = true
+        Task { [weak self] in
+            guard let self else { return }
+            self.clipBottomCheckQueued = false
+            guard self.isPinnedToBottom, self.scrollDriver == .idle,
+                  let scrollView = self.scrollView, let document = scrollView.documentView else { return }
+            let clip = scrollView.contentView
+            let visible = clip.bounds
+            let shortOfBottom = document.isFlipped ? document.frame.height - visible.maxY : visible.minY
+            guard shortOfBottom > ClipViewSync.tolerance else { return }
+            let bottomY = document.isFlipped ? max(0, document.frame.height - visible.height) : 0
+            clip.scroll(to: NSPoint(x: visible.minX, y: bottomY))
+            scrollView.reflectScrolledClipView(clip)
+        }
     }
 
     /// The list should follow the newest line while the reader scrolls: it

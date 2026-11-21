@@ -5,7 +5,8 @@
 import AppKit
 import SwiftUI
 import Testing
-import VelaCore
+@testable import VelaCore
+import VelaIRC
 import VelaStore
 @testable import VelaUI
 
@@ -400,6 +401,16 @@ extension LinkSelectionTests {
             #expect(try await eventually(timeout: .seconds(8)) { try abs(list.frame.height - height) < 0.5 && distanceFromBottom(list) < 2 },
                     "shown: height \(height) → \(list.frame.height), \((try? distanceFromBottom(list)) ?? -1) from the bottom")
             #expect(try messageList(hosted) === list)
+            // It stays there (nothing pulls it back up)…
+            try await Task.sleep(for: .milliseconds(500))
+            #expect(try distanceFromBottom(list) < 2, "shown, a moment later: \((try? distanceFromBottom(list)) ?? -1) from the bottom")
+            // …and follows the next line.
+            let buffer = try #require(hosted.app.selectedBuffer)
+            let session = try #require(hosted.app.session(for: buffer.id.networkID))
+            let contentHeight = list.documentView?.frame.height ?? 0
+            session.handle(.message(try #require(IRCMessage(line: ":gus!g@host PRIVMSG \(buffer.name) :one more line")), batch: nil))
+            #expect(try await eventually(timeout: .seconds(8)) { try (list.documentView?.frame.height ?? 0) > contentHeight && distanceFromBottom(list) < 2 },
+                    "a new line: \((try? distanceFromBottom(list)) ?? -1) from the bottom")
         }
 
         /// Waits up to `timeout` for `condition`. A fast Mac gets there in a
