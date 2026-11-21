@@ -368,19 +368,28 @@ extension LinkSelectionTests {
             let hosted = try await host()
             defer { hosted.close() }
             let composer = try #require(hosted.composer)
-            let send = try await hosted.waitForElement("Send message")
-            #expect(send.isAccessibilityEnabled?() == false, "send is enabled with nothing to send")
+            // With nothing to send, it keeps its color and a click does nothing.
+            let sentBefore = InputHistoryStore.shared.entries(for: hosted.buffer.id).count
+            try await hosted.press("Send message")
+            try await hosted.settle()
+            #expect(InputHistoryStore.shared.entries(for: hosted.buffer.id).count == sentBefore)
             hosted.window.makeFirstResponder(composer)
             composer.insertText("from the button", replacementRange: composer.selectedRange())
             try await hosted.settle()
-            let enabled = try await hosted.waitForElement("Send message")
-            #expect(enabled.isAccessibilityEnabled?() == true)
             hosted.window.makeFirstResponder(nil)
             try await hosted.press("Send message")
             try await hosted.settle(300)
             #expect(InputHistoryStore.shared.entries(for: hosted.buffer.id).last == "from the button")
             #expect(composer.string.isEmpty)
             #expect(try await hosted.wait { hosted.window.firstResponder === composer }, "the message box didn't get the focus back")
+        }
+
+        /// The smiley is solid on this macOS, whichever symbol name draws it.
+        @Test func theSmileyIsSolid() {
+            #expect(SolidSmiley.isSolid(SolidSmiley.name), "\(SolidSmiley.name) isn't filled in")
+            // The outline one isn't mistaken for it.
+            let outline = SolidSmiley.candidates.first { !SolidSmiley.isSolid($0) }
+            #expect(outline != SolidSmiley.name)
         }
 
         @Test func theButtonsFollowTheSettingAndTheConnection() async throws {

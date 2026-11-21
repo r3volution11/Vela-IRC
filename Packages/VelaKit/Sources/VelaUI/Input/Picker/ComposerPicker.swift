@@ -332,26 +332,59 @@ struct GIFAttributionBar: View {
 }
 
 /// The smiley at the end of the message box: opens the picker (as ⇧⌘E does).
+/// Like the send button beside it, it's the accent color while the message
+/// box is active (`isActive`: typing, or the picker open) and muted otherwise.
 struct ComposerPickerButton: View {
     @Environment(\.theme) private var theme
     @Binding var isPresented: Bool
-    @State private var hovering = false
+    let isActive: Bool
 
     var body: some View {
         Button {
             isPresented.toggle()
         } label: {
-            Image(systemName: "face.smiling.fill")
+            Image(systemName: SolidSmiley.name)
                 .symbolRenderingMode(.monochrome)
                 .font(.system(size: 17, weight: .regular))
-                .foregroundStyle(theme[hovering || isPresented ? ThemeKey.accent : ThemeKey.inputIconForeground])
+                .foregroundStyle(theme[isActive ? ThemeKey.accent : ThemeKey.inputIconForeground])
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
         .help("Emoji & GIFs (⇧⌘E)")
         .accessibilityLabel("Emoji and GIFs")
         .accessibilityHint("Opens the emoji and GIF picker")
+    }
+}
+
+/// The solid smiley: a filled face with its eyes and smile cut out. Which
+/// symbol draws that has changed between macOS versions: on macOS 27,
+/// `face.smiling` is solid and `face.smiling.fill` (now another name for
+/// `face.smiling.inverse`) is the outline. So the first time it's needed,
+/// it draws each once, small, and takes the one that's filled in.
+enum SolidSmiley {
+    static let name: String = candidates.first { isSolid($0) } ?? candidates[0]
+
+    static let candidates = ["face.smiling", "face.smiling.inverse"]
+
+    /// Whether `symbol` is filled in at a cheek: inside the face, clear of
+    /// the eyes and the smile, where an outline face is empty.
+    static func isSolid(_ symbol: String) -> Bool {
+        guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 32, weight: .regular)),
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: 48, pixelsHigh: 48, bitsPerSample: 8, samplesPerPixel: 4,
+                hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+            ),
+            let context = NSGraphicsContext(bitmapImageRep: rep)
+        else { return false }
+        let size = image.size
+        let scale = min(48 / size.width, 48 / size.height)
+        let drawn = NSSize(width: size.width * scale, height: size.height * scale)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        image.draw(in: NSRect(x: (48 - drawn.width) / 2, y: (48 - drawn.height) / 2, width: drawn.width, height: drawn.height))
+        NSGraphicsContext.restoreGraphicsState()
+        return (rep.colorAt(x: 11, y: 24)?.alphaComponent ?? 0) > 0.5
     }
 }

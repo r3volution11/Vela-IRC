@@ -116,24 +116,30 @@ struct ComposerGIFChip: View {
     }
 }
 
-/// The send button at the end of the message box: what Return does.
+/// The send button at the end of the message box: what Return does. A solid
+/// circle with the arrow cut out, in the same color as the smiley beside it:
+/// the accent while the message box is active, muted otherwise. With nothing
+/// to send it keeps its color, and a click does nothing.
 struct ComposerSendButton: View {
     @Environment(\.theme) private var theme
     let canSend: Bool
+    let isActive: Bool
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "arrow.up.circle.fill")
+        Button {
+            if canSend { action() }
+        } label: {
+            Image(systemName: "arrow.right.circle.fill")
                 .symbolRenderingMode(.monochrome)
                 .font(.system(size: 19, weight: .regular))
-                .foregroundStyle(canSend ? theme[ThemeKey.accent] : theme[ThemeKey.inputIconForeground].opacity(0.45))
+                .foregroundStyle(theme[isActive ? ThemeKey.accent : ThemeKey.inputIconForeground])
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!canSend)
         .help("Send (Return)")
         .accessibilityLabel("Send message")
+        .accessibilityHint(canSend ? "" : "Type a message first")
     }
 }

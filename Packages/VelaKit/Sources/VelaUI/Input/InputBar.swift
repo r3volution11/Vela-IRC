@@ -272,7 +272,7 @@ struct InputBar: View {
                 MessageSplitHint(text: text, target: buffer.name)
                     .padding(.trailing, 2)
             }
-            ComposerPickerButton(isPresented: $isPickerShown)
+            ComposerPickerButton(isPresented: $isPickerShown, isActive: isFocused || isPickerShown)
                 .popover(isPresented: $isPickerShown, arrowEdge: .top) {
                     if isPickerShown || keepsPickerContent {
                         picker
@@ -293,7 +293,7 @@ struct InputBar: View {
                     .accessibilityLabel("Connecting")
             case .ready:
                 if app.settings[.inputShowSendButton] {
-                    ComposerSendButton(canSend: hasSomethingToSend) {
+                    ComposerSendButton(canSend: hasSomethingToSend, isActive: isFocused || isPickerShown) {
                         submit()
                         uiState.focusInput()
                     }
