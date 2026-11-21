@@ -12,7 +12,8 @@ import VelaStore
 /// Summarizes what you missed in a channel with Apple Intelligence. Siri
 /// speaks the overview; the snippet lists the topics. A stretch too long
 /// to wait for opens Vela to the channel instead, with the Catch me up
-/// card summarizing all of it (see ``SiriCatchUp``).
+/// card summarizing all of it (see ``SiriCatchUp``), or, when it's longer
+/// than a card reads, a Recap of it (``RecapIntent``).
 public struct CatchMeUpIntent: AppIntent {
     /// What Siri says instead of catching up, if it can't at all: while
     /// Catch me up is turned off (`intelligence.catchUp`).
@@ -138,8 +139,14 @@ public struct CatchMeUpIntent: AppIntent {
         let store = services.catchUp
         let mode = systemContext.currentMode
         let inFront = mode == .foreground || mode.canContinueInForeground
+        // Longer than a card reads: a Recap covers it, in a window of its own.
+        let recap = inFront && !isEarlierStretch && catchUp.handsToRecap(recapOffered: app.settings[.intelligenceRecap])
         if mode != .foreground, mode.canContinueInForeground {
-            try await continueInForeground("\(catchUp.openingDialog)", alwaysConfirm: false)
+            try await continueInForeground("\(recap ? catchUp.recapOpeningDialog : catchUp.openingDialog)", alwaysConfirm: false)
+        }
+        if recap {
+            services.recaps.open(RecapScope(place: .buffer(buffer.id), span: .sinceUnread, output: .summary))
+            return catchUp.recapOpenedDialog
         }
         if isEarlierStretch {
             store.reopen(buffer.id, reveal: inFront)

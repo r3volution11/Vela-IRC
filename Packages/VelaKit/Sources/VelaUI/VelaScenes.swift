@@ -18,6 +18,7 @@ public struct VelaScenes: Scene {
     @State private var uiState: UIState
     @State private var services: SceneServices
     @State private var siri: SiriSceneSupport
+    @State private var recaps: RecapWindowRouter
 
     /// Makes the app's models and services and registers them with App
     /// Intents (`AppDependencyManager`). Call it from the app's `init()`,
@@ -48,6 +49,7 @@ public struct VelaScenes: Scene {
         _uiState = State(initialValue: shared.uiState)
         _services = State(initialValue: shared.services)
         _siri = State(initialValue: shared.siri)
+        _recaps = State(initialValue: shared.recaps)
     }
 
     public var body: some Scene {
@@ -67,7 +69,7 @@ public struct VelaScenes: Scene {
         .commands {
             VelaCommands(app: app, themeStore: themeStore, uiState: uiState)
             AboutCommands(updates: services.updates)
-            ShowRequestCommands(router: siri.showRequests)
+            ShowRequestCommands(router: siri.showRequests, recaps: recaps)
         }
 
         Settings {
@@ -98,6 +100,20 @@ public struct VelaScenes: Scene {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
+        // Recaps: one window per Recap, several at once, none restored.
+        // Opened from Go → Recap…, the palette, context menus, the Catch me
+        // up card and Siri (`RecapActions`, `RecapWindowRouter`).
+        WindowGroup("Recap", id: WindowID.recap, for: RecapWindowValue.self) { $value in
+            RecapWindowView(value: $value)
+                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified(showsTitle: false))
+        .defaultSize(width: 780, height: 820)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+        .commandsRemoved()
+
         // Vela → About Vela, in place of the standard About panel.
         Window("About Vela", id: WindowID.about) {
             AboutView()
@@ -116,6 +132,7 @@ public enum WindowID {
     public static let themeEditor = "theme-editor"
     public static let whatsNew = "whats-new"
     public static let about = "about"
+    public static let recap = "recap"
 }
 
 extension View {
@@ -137,6 +154,8 @@ private final class AppInstances {
     let uiState: UIState
     let services: SceneServices
     let siri: SiriSceneSupport
+    /// Opens Recap windows asked for by Siri, Shortcuts and AppKit menus.
+    let recaps: RecapWindowRouter
     /// Shows the chosen Dock icon (`appearance.appIcon`), the DEV band and
     /// the offline mark. Snapshot runs leave the Dock alone.
     let dockIcon: DockIconController?
@@ -198,6 +217,9 @@ private final class AppInstances {
         self.uiState = uiState
         self.services = services
         self.siri = SiriSceneSupport(app: app, uiState: uiState, appShortcuts: appShortcuts)
+        let recaps = RecapWindowRouter(intelligence: services.intelligence)
+        RecapWindowRouter.shared = recaps
+        self.recaps = recaps
         // Applies updates.checkAutomatically and updates.installAutomatically,
         // then starts the updater (nothing for Vela Dev or a stand-in).
         if !automated {
@@ -367,10 +389,11 @@ final class ShowRequestRouter {
 /// bar exists even when every window is closed.
 private struct ShowRequestCommands: Commands {
     let router: ShowRequestRouter
+    let recaps: RecapWindowRouter
 
     var body: some Commands {
         CommandGroup(after: .windowArrangement) {
-            OpenWindowBridge(router: router)
+            OpenWindowBridge(router: router, recaps: recaps)
         }
     }
 }
@@ -378,9 +401,11 @@ private struct ShowRequestCommands: Commands {
 private struct OpenWindowBridge: View {
     @Environment(\.openWindow) private var openWindow
     let router: ShowRequestRouter
+    let recaps: RecapWindowRouter
 
     var body: some View {
         let _ = router.install(openWindow)
+        let _ = recaps.install(openWindow)
         EmptyView()
     }
 }

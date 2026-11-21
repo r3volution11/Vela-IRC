@@ -102,6 +102,23 @@ struct SiriCatchUp {
         "That's \(Self.messages(request.lines.count)) in \(request.bufferName). Opening Vela to catch you up."
     }
 
+    /// Whether a stretch too long for Siri opens as a Recap rather than on
+    /// the card: one longer than a card reads (``CatchUpRequest/maximumLines``),
+    /// while Recap is offered. A Recap reads more, and in a window of its own.
+    func handsToRecap(recapOffered: Bool) -> Bool {
+        recapOffered && request.lines.count > CatchUpRequest.maximumLines
+    }
+
+    /// What Siri says as it opens a Recap for a very long stretch.
+    var recapOpeningDialog: String {
+        "That's \(Self.messages(request.lines.count)) in \(request.bufferName). Opening a Recap in Vela."
+    }
+
+    /// What Siri says once the Recap is open.
+    var recapOpenedDialog: String {
+        "Here's a Recap of \(request.bufferName). Apple Intelligence is writing it now."
+    }
+
     /// What Siri says once Vela is in front with the card.
     var openedDialog: String {
         "Here's \(request.bufferName). Its summary is on the way."

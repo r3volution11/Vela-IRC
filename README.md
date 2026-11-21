@@ -134,6 +134,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 ### Apple Intelligence, Siri and Shortcuts
 
 - **Catch me up:** back in a busy channel, an Apple Intelligence summary of what you missed, topic by topic, made on your Mac, including what your bouncer replayed. Letting long ones use Apple's Private Cloud Compute (macOS 27, opt-in) comes in a later version; for now it's only in development builds.
+- **Recap:** a report in a window of its own, for a channel, a network or everything, for anyone or one person, since your first unread message or over any span: an overview, the topics, what was for you (and whether you answered), what was decided and who'll do what, and the links shared, each linked to its message, with **More detail** on any of them. Or the same messages as a plain log, no Apple Intelligence needed. Copy or save it as Markdown; nothing is kept once you close it.
 - **Translation:** translate a message from another language, or a whole channel as messages arrive, on your Mac with Apple's Translation framework. No Apple Intelligence needed.
 - **Writing Tools** in the message field, where Apple Intelligence is available.
 - **Siri and Shortcuts:** ask Siri to catch you up, check your mentions, send a message, open a channel or set you away, and use the same actions in your own shortcuts. Your channels show up in Spotlight (names only).
@@ -195,6 +196,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 | Join channel | ⌘J |
 | Close the tab / the window | ⌘W / ⇧⌘W |
 | Reopen closed channel or conversation | ⇧⌘T |
+| Recap the channel you're in | ⇧⌘R |
 | Undo leaving, removing, hiding or closing | ⌘Z |
 | Bigger / smaller / actual-size text | ⌘+ / ⌘− / ⌘0 |
 | Settings | ⌘, |
@@ -236,7 +238,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **No previews from your local network.** Vela never fetches previews from private, local or LAN addresses.
 - **No GIF search in this version,** so Vela never contacts a GIF service. When GIF search arrives (it's in development builds for now), it sends what you search for, and your IP address, to KLIPY (or GIPHY, with your own key), only while the GIFs tab is open. A GIF is sent as its link, which others' clients load from the service. Turning off **Search GIFs** (`gifs.enabled`) stops it contacting anyone.
 - **Passwords, channel keys and certificates** are stored in the macOS Keychain. Vela is sandboxed.
-- **On-device intelligence.** Catch me up summaries and translations are made on your Mac. A later version will let you send long catch-ups to Apple's Private Cloud Compute (off by default; encrypted, not stored, not readable by Apple); this one never does. Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
+- **On-device intelligence.** Catch me up summaries, Recaps and translations are made on your Mac. A later version will let you send long catch-ups to Apple's Private Cloud Compute (off by default; encrypted, not stored, not readable by Apple); this one never does. Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
 - **The website is separate.** velairc.app uses Google Analytics, asks visitors in the EU, EEA, UK and Switzerland first, and honors Global Privacy Control. The app never does any of this. See [Privacy](https://velairc.app/help/privacy#this-website).
 
 ## Building from source
@@ -280,7 +282,7 @@ Packages/VelaKit/
   Sources/VelaTheme      Token registry, theme loading, VS Code import, live reload
   Sources/VelaMedia      Link detection, previews, images, video embeds
   Sources/VelaCore       App and session models tying it together
-  Sources/VelaIntelligence Catch me up summaries and message translation (Apple Intelligence, Translation)
+  Sources/VelaIntelligence Catch me up summaries, Recaps and message translation (Apple Intelligence, Translation)
   Sources/VelaIntents    Siri, Shortcuts and Spotlight (App Intents)
   Sources/VelaUI         SwiftUI views, scenes, command palette
 schemas/                 JSON Schema for theme files

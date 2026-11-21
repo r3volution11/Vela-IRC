@@ -68,11 +68,12 @@ let package = Package(
             swiftSettings: mainActorByDefault
         ),
 
-        // Apple Intelligence on this Mac: Catch me up summaries (Foundation
-        // Models), message translation (Translation, NaturalLanguage).
+        // Apple Intelligence on this Mac: Catch me up summaries and Recaps
+        // (Foundation Models), message translation (Translation,
+        // NaturalLanguage). VelaMedia finds and sorts a Recap's links.
         .target(
             name: "VelaIntelligence",
-            dependencies: ["VelaCore", "VelaIRC", "VelaStore", "VelaFoundation"],
+            dependencies: ["VelaCore", "VelaIRC", "VelaStore", "VelaFoundation", "VelaMedia"],
             swiftSettings: mainActorByDefault
         ),
 
@@ -116,7 +117,7 @@ let package = Package(
         .testTarget(name: "VelaCoreTests", dependencies: ["VelaCore", "VelaIRC"]),
         .testTarget(
             name: "VelaIntelligenceTests",
-            dependencies: ["VelaIntelligence", "VelaCore"],
+            dependencies: ["VelaIntelligence", "VelaCore", "VelaStore", "VelaIRC"],
             swiftSettings: mainActorByDefault
         ),
         .testTarget(

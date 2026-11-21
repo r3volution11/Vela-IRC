@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaStore
 import VelaTheme
 
@@ -17,11 +18,17 @@ import VelaTheme
 ///     Vela --demo --snapshot /tmp/editor.png --theme-editor "Palenight"
 ///     Vela --demo --snapshot /tmp/about.png --about [--size 440x560]
 ///     Vela --demo --snapshot /tmp/welcome.png --no-networks --theme Lighter
+///     Vela --demo --snapshot /tmp/recap.png --recap [--recap-place network] [--recap-span 240]
+///         [--recap-output log] [--recap-person wren] [--recap-detail] [--size 780x1000]
 ///
 /// The main UI (or, with `--settings-pane <id>`, the Settings window on that
 /// pane; ids are `SettingsPane` raw values; with `--theme-editor <theme>`,
 /// the Theme Editor started from that theme; with `--about`, the About
-/// window) is hosted in a transparent
+/// window; with `--recap`, a Recap window with canned results, for the
+/// selected buffer, or its network or every network with `--recap-place
+/// network|everywhere`, over `--recap-span <minutes>|today|unread`, as a
+/// summary or a log, about `--recap-person <nick>`, with `--recap-detail`
+/// opening More detail on its first topic) is hosted in a transparent
 /// offscreen window (independent of SwiftUI's scene restoration), rendered
 /// to a PNG after the delay, and the app quits. `--settings-scroll <points>`
 /// scrolls the pane down before the capture, and `--accent <name>` picks
@@ -79,6 +86,12 @@ enum SnapshotSupport {
                     .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
             )
             defaultSize = CGSize(width: 760, height: 680)
+        } else if arguments.contains("--recap") {
+            content = AnyView(
+                RecapSnapshotView(scope: recapScope(app: app), expandsDetail: arguments.contains("--recap-detail"))
+                    .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
+            )
+            defaultSize = CGSize(width: 780, height: 1000)
         } else if arguments.contains("--about") {
             content = AnyView(
                 AboutView()
@@ -135,6 +148,26 @@ enum SnapshotSupport {
             DemoScratch.removeOwn()
             exit(0)
         }
+    }
+
+    /// The Recap `--recap` shows: the selected buffer (or `--recap-place`),
+    /// since the first unread message (or `--recap-span`).
+    private static func recapScope(app: AppModel) -> RecapScope {
+        let buffer = app.selectedBuffer
+        var place: RecapScope.Place = buffer.map { $0.kind == .server ? .network($0.id.networkID) : .buffer($0.id) } ?? .everywhere
+        switch value(after: "--recap-place") {
+        case "network": if let id = buffer?.id.networkID ?? app.sessions.first?.id { place = .network(id) }
+        case "everywhere": place = .everywhere
+        default: break
+        }
+        var span = RecapScope.Span.sinceUnread
+        switch value(after: "--recap-span") {
+        case "today": span = .today
+        case "unread", nil: break
+        case let minutes?: if let count = Int(minutes) { span = .last(minutes: count) }
+        }
+        let output: RecapScope.Output = value(after: "--recap-output") == "log" ? .log : .summary
+        return RecapScope(place: place, person: value(after: "--recap-person"), span: span, output: output)
     }
 
     /// Switches the theme in use to its accent swatch called `name` ("Cyan",

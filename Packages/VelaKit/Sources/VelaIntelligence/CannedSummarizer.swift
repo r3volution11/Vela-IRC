@@ -12,7 +12,7 @@ import Foundation
 /// from the request (who spoke, how much, who mentioned you). Results
 /// stream in three steps, like the real model's.
 public final class CannedSummarizer: ConversationSummarizer {
-    private let stepDelay: Duration
+    let stepDelay: Duration
 
     /// - Parameter stepDelay: The pause before each streamed step.
     public init(stepDelay: Duration = .milliseconds(350)) {
@@ -206,7 +206,7 @@ nonisolated private struct DemoScript {
                 Topic(
                     anchor: "sidebar rail PR",
                     title: "Sidebar rail review",
-                    summary: "wren asked doug to review the sidebar rail pull request, and doug said he's on it.",
+                    summary: "wren asked doug to review the sidebar rail pull request, and doug agreed to do it.",
                     participants: ["wren", "doug"],
                     gist: "a pull request review"
                 ),

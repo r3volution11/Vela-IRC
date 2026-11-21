@@ -14,12 +14,17 @@ import VelaStore
 /// Compute is in development builds only for now
 /// (`PrivateCloudComputeAvailability`).
 public final class FoundationModelSummarizer: ConversationSummarizer {
-    private let availability: IntelligenceAvailability
+    let availability: IntelligenceAvailability
     /// Whether long catch-ups may use Private Cloud Compute: the setting.
-    private let usesPrivateCloudCompute: () -> Bool
+    let usesPrivateCloudCompute: () -> Bool
     /// How Private Cloud Compute has done this session: how long it takes,
     /// and whether it failed lately.
-    private let cloudTimings = CatchUpCloudTimings()
+    let cloudTimings = CatchUpCloudTimings()
+    /// How long a Recap's requests take on this Mac, this session.
+    let recapTimings = RecapTimings()
+    /// One summary at a time: Catch me up cards, Recaps and More detail
+    /// take turns with Apple Intelligence.
+    let lane = ModelLane()
 
     /// - Parameters:
     ///   - usesPrivateCloudCompute: Read before each summary; true lets
@@ -34,7 +39,9 @@ public final class FoundationModelSummarizer: ConversationSummarizer {
             let task = Task {
                 do {
                     let router = try await self.router(checkingAvailability: true)
-                    let summary = try await router.run(request) { continuation.yield($0) }
+                    let summary = try await self.lane.run {
+                        try await router.run(request) { continuation.yield($0) }
+                    }
                     continuation.yield(summary)
                     continuation.finish()
                 } catch {
@@ -68,7 +75,7 @@ public final class FoundationModelSummarizer: ConversationSummarizer {
     /// Private Cloud Compute, where the system has it (macOS 27+), in
     /// development builds only for now (`PrivateCloudComputeAvailability`):
     /// a release never sets up the cloud path.
-    private nonisolated static func privateCloudCompute(timings: CatchUpCloudTimings) -> (any CatchUpCloud)? {
+    nonisolated static func privateCloudCompute(timings: CatchUpCloudTimings) -> (any CatchUpCloud)? {
         guard PrivateCloudComputeAvailability.isBuiltIn else { return nil }
         if #available(macOS 27.0, *) {
             return PrivateCloudComputeCloud(timings: timings)

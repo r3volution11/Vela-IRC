@@ -8,10 +8,11 @@ description: Catch up on busy IRC channels with on-device Apple Intelligence sum
 Vela uses Apple's built-in intelligence to help with busy channels and other languages:
 
 - **[Catch me up](#catch-me-up)** summarizes what you missed in a channel.
+- **[Recap](/guide/recap)** writes a fuller report of a channel, a network or everything, for anyone or one person, over any span, in a window of its own.
 - **[Translate](#translate-messages)** shows messages from other languages in yours.
 - **[Writing Tools](#writing-tools)** proofreads and rewrites what you type.
 
-Summaries and translations are made on your Mac. Vela doesn't send your conversations to Apple, to a server of its own or anywhere else. See [Privacy](#privacy) for the details. ([Private Cloud Compute](#private-cloud-compute) for long catch-ups, which you'll be able to turn on, comes in a later version.)
+Summaries, Recaps and translations are made on your Mac. Vela doesn't send your conversations to Apple, to a server of its own or anywhere else. See [Privacy](#privacy) for the details. ([Private Cloud Compute](#private-cloud-compute) for long catch-ups, which you'll be able to turn on, comes in a later version.)
 
 ## What you need {#requirements}
 
@@ -27,7 +28,7 @@ Catch me up and Writing Tools use **Apple Intelligence**, so they need:
 
 <Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Apple Intelligence: a green “Apple Intelligence is on” box, then the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages, and the Translation section" caption="Settings → Apple Intelligence." />
 
-**Settings → Apple Intelligence** has a section each for Catch me up, Translation, Writing Tools and [Siri & Shortcuts](/guide/siri-shortcuts). At the top, a box says whether Apple Intelligence is ready:
+**Settings → Apple Intelligence** has a section each for Catch me up, [Recap](/guide/recap), Translation, Writing Tools and [Siri & Shortcuts](/guide/siri-shortcuts). At the top, a box says whether Apple Intelligence is ready:
 
 | Status | What it means |
 | --- | --- |
@@ -50,6 +51,8 @@ Come back to a busy channel and a **Catch me up** button appears at the end of t
 - **You were mentioned**, when people said something to you.
 
 The buttons at the top of the card copy the summary (**Copy Summary**), write a new one (**Regenerate**) and close the card (**Dismiss**). The card stays until you dismiss it. Go to another channel while it's being written and it keeps going: it's there, finished, when you come back.
+
+**Open Full Recap**, under the card, opens a [Recap](/guide/recap) of the same messages: a fuller report in a window of its own, with what was decided, who said they'd do what, the links shared and **More detail** on anything. Use it when there's more than a card covers.
 
 **Messages your bouncer replays count as new.** When Vela connects to ZNC, soju or a server with chat history, the messages it replays from while you were away count as unread once they're newer than where you stopped reading, so the New line and Catch me up cover them. See [Bouncers](/guide/bouncers).
 
@@ -79,7 +82,7 @@ In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#int
 ### What it reads, and how long it takes {#catch-up-limits}
 
 - **The new messages, actions and notices** after the New marker (or where it would be, with the New line off). Joins, parts, other events and deleted messages are left out, and links are reduced to the site they point to.
-- **At most the latest 600.** For a longer stretch, the card says "Covers the latest 600 messages."
+- **At most the latest 600.** For a longer stretch, the card says "Covers the latest 600 messages." A [Recap](/guide/recap) reads up to 2,000.
 - **It takes a while.** On a fast Mac, about 10 seconds for a few dozen messages and about a minute for 600, most of it spent reading the parts. A slower Mac, or one on macOS 26.0–26.3 (whose model reads less at a time), can take a few minutes for a long stretch. You can go to another channel meanwhile.
 - **Long stretches are read in parts.** The card counts them ("Reading… 3 of 8"), then says "Writing the summary…" until the first words appear. Before that, a short stretch says "Reading 40 messages…".
 - **One summary at a time.** Ask in several channels and they're summarized in turn, in the order you asked, so a Mac with 8 GB of memory isn't running several at once. A card waiting its turn says so ("Waiting… 1 summary ahead"); dismiss it to take it out of line. A summary [Siri](/guide/siri-shortcuts#siri) is waiting for goes next.
@@ -152,8 +155,8 @@ Writing Tools leaves commands, nicks, channel names, links and code alone, and i
 
 ## Privacy
 
-- **Catch me up runs on your Mac,** on the Apple Intelligence model that macOS keeps on it. The messages it reads and the summary it writes stay on your Mac, and summaries are kept only in memory.
-- **Apple Intelligence reads the messages and your nick,** so the summary can say what was asked of "you". It isn't told the channel's or the network's name.
+- **Catch me up and Recap run on your Mac,** on the Apple Intelligence model that macOS keeps on it. The messages they read and the summaries they write stay on your Mac, and summaries are kept only in memory: a Recap only as long as its window is open.
+- **Apple Intelligence reads the messages and your nick,** so the summary can say what was asked of "you". It isn't told the channel's or the network's name, or who a Recap is about.
 - **Private Cloud Compute comes in a later version.** In it, you'll be able to send a catch-up too long for one pass on your Mac to Apple's Private Cloud Compute (macOS 27 or later, off by default): encrypted, used only to write the summary, not stored, and not readable by Apple. See [Private Cloud Compute for long catch-ups](#private-cloud-compute).
 - **Translation runs on your Mac,** with Apple's Translation framework, and so does working out a message's language. Only the language downloads come from Apple, and macOS asks before each one. Translations are kept only in memory.
 - **Writing Tools is Apple's.** Vela hands it the text in the message field, and Apple Intelligence handles it as it does in any app.

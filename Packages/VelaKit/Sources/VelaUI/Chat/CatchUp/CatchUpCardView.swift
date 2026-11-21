@@ -48,6 +48,7 @@ struct CatchUpCardView: View {
     @Environment(IntelligenceServices.self) private var intelligence
     @Environment(MessageListController.self) private var controller
     @Environment(UIState.self) private var uiState
+    @Environment(\.openWindow) private var openWindow
     let card: CatchUpCard
 
     static let maxWidth: CGFloat = 560
@@ -117,10 +118,39 @@ struct CatchUpCardView: View {
     }
 
     private var footer: some View {
-        Text(Self.footerText(card.summary, messageCount: card.messageCount))
-            .font(style.font(size: max(9, style.fontSize - 3)))
-            .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
-            .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(Self.footerText(card.summary, messageCount: card.messageCount))
+                .font(style.font(size: max(9, style.fontSize - 3)))
+                .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
+                .fixedSize(horizontal: false, vertical: true)
+            if !card.isNothingNew, RecapActions.isOffered(app.settings) {
+                Button("Open Full Recap") { openFullRecap() }
+                    .buttonStyle(CatchUpCapsuleButtonStyle())
+                    .help(Self.fullRecapHelp(messageCount: card.messageCount))
+                    .accessibilityHint("Opens a fuller report of these messages in a window of its own")
+            }
+        }
+    }
+
+    /// The card covers the latest 600 messages, six topics and three
+    /// mentions; a Recap goes further.
+    nonisolated static func fullRecapHelp(messageCount: Int) -> String {
+        messageCount > CatchUpRequest.maximumLines
+            ? "This card covers the latest \(CatchUpRequest.maximumLines) of \(messageCount.formatted()) messages. A Recap covers more, with decisions, follow-ups and links."
+            : "A fuller report of these messages, with decisions, follow-ups and links, in a window of its own."
+    }
+
+    /// A Recap of the card's stretch: since the first unread message, or,
+    /// with the New marker gone, back to the stretch's first message.
+    private func openFullRecap() {
+        let buffer = controller.buffer
+        var scope = RecapActions.scope(for: buffer, intelligence: intelligence)
+        if buffer.unreadMarkerAfter == nil {
+            let start = card.request.lines.first?.time ?? card.anchor
+            let minutes = Int((Date().timeIntervalSince(start) / 60).rounded(.up)) + 1
+            scope.span = .last(minutes: max(1, min(minutes, 60 * 24 * 30)))
+        }
+        RecapActions.open(scope, openWindow: openWindow)
     }
 
     /// The note under the summary: how much it covers, what was left out,

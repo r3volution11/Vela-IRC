@@ -100,6 +100,7 @@ With the member list focused (<kbd>⌥⌘4</kbd>). The highlighted person has a 
 | Move the channel or conversation one place left or right (up or down in the sidebar) | <kbd>⌥⇧⌘[</kbd> / <kbd>⌥⇧⌘]</kbd> |
 | Move the network one place left or right (up or down in the sidebar) | <kbd>⌃⌥⌘[</kbd> / <kbd>⌃⌥⌘]</kbd> |
 | Reopen what you closed last: a channel you removed or hid, or a conversation (again to go further back) | <kbd>⇧⌘T</kbd> |
+| [Recap](/guide/recap) the channel or conversation you're in, or the whole network from its console (**Go → Recap…**) | <kbd>⇧⌘R</kbd> |
 | Undo leaving, removing, hiding or closing, right after (Edit → Undo) | <kbd>⌘Z</kbd> |
 | Redo it | <kbd>⇧⌘Z</kbd> |
 | Cancel dragging a network, channel or tab (it goes back where it was) | <kbd>Esc</kbd> |
@@ -155,6 +156,18 @@ Press <kbd>⌥⌘2</kbd> (**Go → Focus Messages**), or <kbd>F6</kbd> until you
 | Back to the message field | <kbd>Esc</kbd> |
 
 Typing anything else goes back to the message field and types it there.
+
+## The Recap window {#recap}
+
+In a [Recap](/guide/recap) window:
+
+| Action | Shortcut |
+| --- | --- |
+| Stop writing (what's written stays) | <kbd>⌘.</kbd> |
+| Regenerate | <kbd>⌘R</kbd> |
+| Save as Markdown… | <kbd>⌘S</kbd> |
+| Start a long Recap after its estimate | <kbd>Return</kbd> |
+| Close the window (and forget the Recap) | <kbd>⌘W</kbd> |
 
 ## In the palette
 

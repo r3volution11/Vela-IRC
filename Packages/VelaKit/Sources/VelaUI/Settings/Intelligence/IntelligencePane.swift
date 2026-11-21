@@ -29,6 +29,7 @@ struct IntelligencePane: View {
         ) {
             status
             IntelligenceCatchUpSection()
+            IntelligenceRecapSection()
             IntelligenceTranslationSection()
             SettingsSection(
                 "Writing Tools",

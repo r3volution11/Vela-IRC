@@ -719,6 +719,10 @@ extension SettingKey where Value == Bool {
         .init("intelligence.catchUp", default: true,
               summary: "Offer \"Catch me up\": an Apple Intelligence summary of what you missed in a busy channel, made on your Mac. Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri.")
     }
+    public static var intelligenceRecap: SettingKey<Bool> {
+        .init("intelligence.recap", default: true,
+              summary: "Offer Recap: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a span you pick, written by Apple Intelligence on your Mac or shown as a log. Reports are kept only while their window is open. Off hides it everywhere: the menus, the command palette, the Catch me up card and Siri.")
+    }
     public static var intelligencePrivateCloudCompute: SettingKey<Bool> {
         .init("intelligence.privateCloudCompute", default: false,
               summary: "On macOS 27 or later, send long catch-ups (too long for one pass of the model on your Mac) to Apple's Private Cloud Compute: encrypted, never stored, and not readable by Apple. Short catch-ups, translation and everything else stay on your Mac. If Private Cloud Compute isn't available or its daily limit is reached, the summary is made on your Mac. Development builds only for now.")
@@ -877,6 +881,7 @@ public enum SettingsCatalog {
 
             SettingKey.intelligenceCatchUp.descriptor,
             SettingKey.intelligenceCatchUpThreshold.descriptor,
+            SettingKey.intelligenceRecap.descriptor,
             SettingKey.intelligencePrivateCloudCompute.descriptor,
             SettingKey.intelligenceSpotlightChannels.descriptor,
             SettingKey.translationLanguage.descriptor,

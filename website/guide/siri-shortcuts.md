@@ -18,6 +18,7 @@ If you're in channels with the same name on more than one network, add the netwo
 | To | Say |
 | --- | --- |
 | Get a summary of what you missed | "Catch me up in Vela", "Catch me up on #vela in Vela", "What did I miss in Vela", "Summarize #vela in Vela" |
+| Open a [Recap](/guide/recap) | "Open a recap in Vela", "Recap my channels in Vela", "Recap #vela in Vela", "Recap today in Vela" |
 | Hear who mentioned you | "Check my Vela mentions", "Check mentions in Vela", "Who mentioned me in Vela" |
 | Send a message | "Send a message with Vela", "Send a message to #vela with Vela", "Message #vela in Vela" |
 | Open a channel | "Open #vela in Vela", "Open #vela on Libera.Chat in Vela", "Show #vela in Vela", "Go to #vela in Vela" |
@@ -33,6 +34,7 @@ The phrases are in English, so they work when Siri's language is English. In oth
 
 - **A short stretch** (about 100 messages, which your Mac reads in one quick pass) Siri summarizes and reads out itself.
 - **A longer one opens Vela.** Siri says so ("That's 412 messages in #vela. Opening Vela to catch you up."), and Vela opens to the channel with the [Catch me up card](/guide/apple-intelligence#catch-me-up) summarizing all of it. Siri may ask first whether to open Vela.
+- **One longer than a card covers** (over 600 messages) opens a [Recap](/guide/recap) of the channel instead, which reads more: "That's 1240 messages in #vela. Opening a Recap in Vela." In an automation that runs in the background, it opens the card as above.
 - **With [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) on** (in a later version, on macOS 27 or later), Siri will summarize a long stretch itself, as long as Private Cloud Compute can read it in one pass and is expected to answer in about 15 seconds. Otherwise it will open Vela as above.
 - **A summary already made** in the channel's card is used as it is, however long the stretch.
 - **Siri waits about 15 seconds at most.** If the summary isn't ready by then (another channel's summary is being written first, say), Siri opens Vela, where the card carries on with it rather than starting over.
@@ -47,6 +49,7 @@ In the **Shortcuts** app, search for "Vela" to find its actions, or click **Open
 | **Send Message** | Message, Channel | Sends the message and replies "Sent to #vela on Libera.Chat." Text that starts with `/` is sent as it is, not run as a command. |
 | **Join Channel** | Channel, Network (optional), Key (optional) | Joins the channel (adding `#` if you leave it out) without switching to it, and returns it. Without a network, it uses the only network you're connected to, or the one you're looking at, or asks. |
 | **Check Mentions** | | Says how many mentions and private messages are waiting ("You have 3 mentions in #vela."), shows up to six channels and conversations, and returns them. |
+| **Open Recap** | Channel (optional), Person (optional), Network (optional), Time Span | Opens a [Recap](/guide/recap) in Vela: the channel, else the network, else every network; with a person, their conversations on that network; since your first unread message, or the last 30 minutes, hour, 4 hours, today, the last day, 3 days or week. Apple Intelligence writes it in Vela, or it shows as a log when Apple Intelligence isn't available. |
 | **Catch Me Up** | Channel (optional) | Summarizes what's new with Apple Intelligence: the overview as the result, the topics underneath. A stretch too long to summarize quickly opens Vela to the channel, with the Catch me up card summarizing all of it. Without a channel, it picks the unmuted one with the most unread messages. |
 | **Set Away** | Message (optional) | Marks you away on every network you're connected to, like `/away`. The message defaults to "Away". |
 | **Set Back** | | Marks you back on every connected network, like `/back`. |

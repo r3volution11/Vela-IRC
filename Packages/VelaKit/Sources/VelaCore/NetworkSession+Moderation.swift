@@ -260,7 +260,7 @@ extension NetworkSession {
         case .kickBan: execute(.kickBan(nicks: nicks, reason: nil), in: buffer)
         case .quiet: execute(.quiet(masks: masks), in: buffer)
         case .unquiet: execute(.unquiet(masks: masks), in: buffer)
-        case .mention, .copyNick, .copyHostMask, .kickWithReason, .kickBanWithReason:
+        case .mention, .copyNick, .copyHostMask, .kickWithReason, .kickBanWithReason, .recap:
             break
         }
     }

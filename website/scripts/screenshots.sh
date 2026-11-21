@@ -111,6 +111,12 @@ shot ai-catch-up  1280x800 1400 --theme Palenight --preset modern --select "#swi
   --set intelligence.catchUpThreshold=1 --catch-up
 shot ai-translate 1280x800 1400 --theme Palenight --preset modern --select "#vela-offtopic"
 
+# Recap: Libera.Chat's last four hours (canned results), and in Lighter,
+# #vela's, scrolled down to More detail on its first topic and For you.
+shot recap-palenight 780x1000 1100 --theme Palenight --preset modern --recap --recap-place network --recap-span 240
+shot recap-lighter   780x1000 1100 --theme Lighter --preset modern --recap --recap-span 240 \
+  --recap-detail --settings-scroll 290
+
 # A theme accent other than the default, in the main window.
 shot accent-cyan  1280x800 1400 --theme Palenight --preset modern --accent Cyan
 

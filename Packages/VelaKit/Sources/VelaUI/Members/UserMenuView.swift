@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaIRC
 import VelaStore
 import VelaTheme
@@ -29,7 +30,8 @@ struct UserMenuActions {
 
     /// The menu for `targets`.
     func menu(for targets: [UserMenuTarget]) -> UserMenu {
-        session.userMenu(for: targets, in: buffer)
+        let menu = session.userMenu(for: targets, in: buffer)
+        return RecapActions.isOffered(app.settings) ? menu.addingRecap(for: targets) : menu
     }
 
     /// `nick` as a menu sees them here (`userHost` from one of their
@@ -50,6 +52,10 @@ struct UserMenuActions {
             copy(targets.map(\.nick).joined(separator: " "))
         case .copyHostMask:
             if let mask = first.hostMask { copy(mask) }
+        case .recap:
+            // Their conversations across the network: channels and your
+            // private conversation with them.
+            RecapWindowRouter.shared?.open(RecapWindowValue(scope: RecapScope(place: .network(session.id), person: first.nick)))
         case .kickWithReason, .kickBanWithReason:
             uiState.kickRequest = KickRequest(
                 bufferID: buffer.id,

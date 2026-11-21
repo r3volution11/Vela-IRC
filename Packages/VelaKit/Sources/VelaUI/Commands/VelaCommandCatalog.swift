@@ -83,6 +83,9 @@ struct VelaCommandCatalog {
         /// The message box's emoji and GIF picker. ⌃⌘Space stays the
         /// system's Emoji & Symbols.
         static let emojiAndGIFs = KeyboardShortcut("e", modifiers: [.shift, .command])
+        /// Go → Recap…: a Recap of the selected channel. Free in the menus,
+        /// AppKit's text views and macOS's standard set.
+        static let recap = KeyboardShortcut("r", modifiers: [.shift, .command])
         /// ⌥⌘1–⌥⌘4: the window's areas in screen order (`FocusArea`), with
         /// ⌥⌘3, the message box, forwarded to ⌘L (`AlternateShortcuts`).
         /// F6 / ⇧F6 go round them, as in Slack.
@@ -1029,6 +1032,8 @@ struct VelaCommandCatalog {
         commands += hiddenChannelCommands
         commands += typingCommands + messageBoxBorderCommands
         commands += catchUpCommands
+        commands.append(recap)
+        commands += recapCommands
         commands += translationCommands
         commands += historyCommands
         commands += chatLogCommands

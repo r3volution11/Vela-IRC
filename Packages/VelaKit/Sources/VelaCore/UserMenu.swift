@@ -38,12 +38,14 @@ nonisolated public enum UserAction: Hashable, Sendable {
     case kickBanWithReason
     case quiet
     case unquiet
+    /// Open a Recap of conversations with them.
+    case recap
 
     /// Actions the app does itself (the pasteboard, the message box, a
     /// sheet) rather than by sending something.
     public var isHandledByApp: Bool {
         switch self {
-        case .mention, .copyNick, .copyHostMask, .kickWithReason, .kickBanWithReason: true
+        case .mention, .copyNick, .copyHostMask, .kickWithReason, .kickBanWithReason, .recap: true
         default: false
         }
     }
@@ -179,6 +181,20 @@ nonisolated public struct UserMenu: Hashable, Sendable {
 
     public func item(_ action: UserAction) -> UserMenuItem? {
         items.first { $0.action == action }
+    }
+
+    /// The menu with "Recap Conversations with alice…" at the end of its
+    /// first section, for one person other than you. The app adds it while
+    /// Recap is offered (`intelligence.recap`).
+    public func addingRecap(for targets: [UserMenuTarget]) -> UserMenu {
+        guard targets.count == 1, let target = targets.first, !target.isSelf, !sections.isEmpty else { return self }
+        var copy = self
+        copy.sections[0].append(.item(UserMenuItem(
+            action: .recap,
+            title: "Recap Conversations with \(target.nick)…",
+            systemImage: "doc.text"
+        )))
+        return copy
     }
 
     /// The entries of the submenu titled `title`.

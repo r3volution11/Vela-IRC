@@ -229,6 +229,7 @@ private struct GoMenuItems: View {
         CommandMenuButton(commands.previousUnread)
         CommandMenuButton(commands.nextUnread)
         CommandMenuButton(commands.markAllAsRead)
+        CommandMenuButton(commands.recap)
 
         Divider()
 

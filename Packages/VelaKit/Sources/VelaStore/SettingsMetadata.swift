@@ -193,6 +193,7 @@ public enum SettingsMetadata {
         "chat.timestampPosition.columns": "Timestamp Position in Compact Columns",
         "intelligence.catchUp": "Catch Me Up",
         "intelligence.catchUpThreshold": "Catch Me Up After",
+        "intelligence.recap": "Recap",
         "intelligence.privateCloudCompute": "Private Cloud Compute",
         "intelligence.spotlightChannels": "Channels in Spotlight",
         "translation.autoTranslate": "Auto-Translated Channels",

@@ -29,6 +29,17 @@ struct VelaShortcuts: AppShortcutsProvider {
             systemImageName: "sparkles"
         )
         AppShortcut(
+            intent: RecapIntent(),
+            phrases: [
+                "Open a recap in \(.applicationName)",
+                "Recap my channels in \(.applicationName)",
+                "Recap \(\.$channel) in \(.applicationName)",
+                "Recap \(\.$span) in \(.applicationName)",
+            ],
+            shortTitle: "Recap",
+            systemImageName: "doc.text"
+        )
+        AppShortcut(
             intent: CheckMentionsIntent(),
             phrases: [
                 "Check my \(.applicationName) mentions",

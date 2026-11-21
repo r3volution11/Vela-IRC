@@ -32,6 +32,7 @@ struct BufferContextMenuItems: View {
             TranslationBufferMenuItems(buffer: buffer)
             ChatLogBufferMenuItems(buffer: buffer)
             CatchUpBufferMenuItems(buffer: buffer, session: session)
+            RecapBufferMenuItems(buffer: buffer)
             Divider()
             if buffer.kind == .channel {
                 // Leave keeps it in the list, dimmed (through a bouncer, it
@@ -86,6 +87,7 @@ struct ServerContextMenuItems: View {
         CommandMenuToggle(VelaCommandCatalog.networkBlurCommand(app: app, networkID: session.id))
         TranslationNetworkMenuItems(session: session)
         ChatLogNetworkMenuItems(session: session)
+        RecapNetworkMenuItems(session: session)
         Divider()
         Button("Edit Network…") {
             uiState.networkEditor = .existing(session.config.parentNetworkID ?? session.id)

@@ -140,6 +140,66 @@ public final class VelaDatabase: Sendable {
         )
     }
 
+    // MARK: Recaps
+
+    /// What people said on a network (or in one of its buffers) after
+    /// `after`, up to `limit` of the newest, ascending: messages, actions
+    /// and notices that aren't redacted. With `mentioning`, only lines by
+    /// that nick, naming it or in a private conversation with it (matched
+    /// loosely here, ignoring ASCII case; the caller checks each line
+    /// properly). Read on GRDB's reader, off the main thread, with the
+    /// `messages_buffer_time` or `messages_network_time` index.
+    public func conversation(
+        networkID: UUID,
+        bufferName: String? = nil,
+        after: Date,
+        mentioning nick: String? = nil,
+        limit: Int
+    ) async throws -> [MessageRecord] {
+        guard limit > 0 else { return [] }
+        var sql = """
+            SELECT \(Self.messageColumns) FROM messages
+            WHERE network_id = ?
+            """
+        var arguments: StatementArguments = [networkID.uuidString]
+        if let bufferName {
+            sql += " AND buffer_name = ?"
+            arguments += [bufferName]
+        }
+        sql += " AND time > ? AND kind IN ('message', 'action', 'notice') AND is_redacted = 0"
+        arguments += [after.timeIntervalSince1970]
+        if let nick, !nick.isEmpty {
+            let escaped = nick
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "%", with: "\\%")
+                .replacingOccurrences(of: "_", with: "\\_")
+            sql += " AND (nick = ? COLLATE NOCASE OR buffer_name = ? COLLATE NOCASE OR text LIKE ? ESCAPE '\\')"
+            arguments += [nick, nick, "%\(escaped)%"]
+        }
+        sql += " ORDER BY time DESC, seq DESC LIMIT ?"
+        arguments += [limit]
+        return try await fetchMessages(sql: sql, arguments: arguments, reverse: true)
+    }
+
+    /// The oldest saved message's time in each of a network's buffers
+    /// (case-folded names), so a Recap can say how far back it goes.
+    public func oldestMessageTimes(networkID: UUID) async throws -> [String: Date] {
+        try await writer.read { db in
+            var times: [String: Date] = [:]
+            let rows = try Row.fetchAll(
+                db,
+                sql: "SELECT buffer_name, MIN(time) AS oldest FROM messages WHERE network_id = ? GROUP BY buffer_name",
+                arguments: [networkID.uuidString]
+            )
+            for row in rows {
+                let name: String = row["buffer_name"]
+                let oldest: Double = row["oldest"]
+                times[name] = Date(timeIntervalSince1970: oldest)
+            }
+            return times
+        }
+    }
+
     /// The message with the given IRCv3 `msgid` in a buffer (e.g. to render
     /// reply context), if stored.
     public func message(msgid: String, in buffer: BufferKey) async throws -> MessageRecord? {
