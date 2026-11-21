@@ -5,7 +5,7 @@ description: React to messages with emoji, reply to a specific message, see who'
 
 # Reactions, replies & typing
 
-Modern IRC servers support a few things chat apps have made familiar. Vela supports them all, and quietly hides them on servers that don't.
+Modern IRC servers support a few things chat apps have made familiar. Vela supports them all, and quietly hides them on servers that don't. **Reply** works everywhere: without server support, it answers the usual IRC way.
 
 ## Reactions
 

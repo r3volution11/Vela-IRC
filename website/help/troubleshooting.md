@@ -140,6 +140,16 @@ Type what you're looking for in the **Search** field at the top of the Settings 
 
 Two settings have moved: **Reconnect automatically** is in **Settings → Networks**, and **Keep messages** is in **Settings → Messages → History**.
 
+### My messages are gone after I restart Vela {#history-gone}
+
+**Save message history** is off unless you turn it on (in **Settings → Messages → History**), so messages are kept only while Vela is open. A bouncer or a server with chat history fills your channels in again when you reconnect. Your channels and where you stopped reading are saved either way. To keep messages on your Mac, turn on **Save message history**. See [Scrollback and history](/guide/messages-and-layouts#scrollback-and-history).
+
+If you used Vela before this setting existed, nothing changed for you: your history is still saved.
+
+### ⌘W closed a channel instead of the window {#command-w}
+
+<kbd>⌘W</kbd> closes the tab, as in a browser: it does what the selected tab's **×** does, and asks first where that asks. <kbd>⇧⌘W</kbd> closes the window. Closed something by mistake? <kbd>⌘Z</kbd> right away, or **File → Reopen Closed Channel** (<kbd>⇧⌘T</kbd>), brings it back. See [Leave or remove](/guide/joining-channels#leave-or-remove).
+
 ### Which macOS versions does Vela support?
 
 macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writing Tools need Apple Intelligence, which needs Apple silicon; [translation](/guide/apple-intelligence#translate-messages) doesn't. On macOS 27, [Siri can do more](/guide/siri-shortcuts#macos-27) with Vela.
@@ -154,7 +164,7 @@ Yes. Vela is free and open source under the [Mozilla Public License 2.0](/help/l
 
 ### Does Vela update itself?
 
-Yes, from version 1.1. It checks once a day and offers a new version when you open Vela; **Vela → Check for Updates…** checks right away, and **Settings → Updates** turns the checks off or installs updates automatically. To get 1.1 from 1.0, download it from the [Install](/guide/install#updating) page once. See [Updates](/guide/updates).
+Yes, from version 1.1. It checks once a day and offers a new version when you open Vela; **Vela → Check for Updates…** checks right away, and **Settings → Updates** turns the checks off or installs updates automatically. Vela 1.0 has no updater, so it never offers 1.1: download the new version from the [Install](/guide/install#from-1-0) page and replace the old one, once. After that, updates come to you. See [Updates](/guide/updates).
 
 ### An update won't install
 

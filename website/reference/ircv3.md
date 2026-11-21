@@ -36,7 +36,7 @@ These ride on `message-tags`. Vela respects the server's `CLIENTTAGDENY`, so a f
 | Tag | Used for |
 | --- | --- |
 | `+draft/react`, `+draft/unreact` | [Reactions](/guide/reactions-replies-typing#reactions) |
-| `+draft/reply` | [Replies](/guide/reactions-replies-typing#replies) |
+| `+draft/reply` | [Replies](/guide/reactions-replies-typing#replies). Without it, **Reply** starts your message with the sender's `nick: `, the usual IRC way. |
 | `+typing` | [Typing indicators](/guide/reactions-replies-typing#typing-indicators) (sending them can be turned off) |
 
 ## Bouncer extensions
@@ -44,9 +44,11 @@ These ride on `message-tags`. Vela respects the server's `CLIENTTAGDENY`, so a f
 | Capability | What Vela does with it |
 | --- | --- |
 | `soju.im/bouncer-networks`, `soju.im/bouncer-networks-notify` | Lists the networks on your [soju](https://soju.im) bouncer, adds each one to the sidebar, and keeps the list in sync. |
-| `znc.in/playback` | Asks [ZNC](https://znc.in) only for messages Vela hasn't stored yet. |
+| `znc.in/playback` | Asks [ZNC](https://znc.in) only for messages Vela doesn't have yet, when you connect and when you join a channel you left on the bouncer. |
 | `znc.in/self-message` | Shows messages you sent from your other clients. |
 | `znc.in/server-time-iso`, `znc.in/batch` | ZNC's older names for `server-time` and `batch`. |
+
+**Leave Channel** through a bouncer detaches the channel with the bouncer's own command, so the bouncer stays in it: `detach #channel` to ZNC's `*status`, or `channel update #channel -detached true` to soju's `BouncerServ`. Joining the channel again reattaches it.
 
 See [Connecting through a bouncer](/guide/bouncers).
 

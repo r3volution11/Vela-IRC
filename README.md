@@ -63,7 +63,7 @@ Requirements:
 - macOS 26 Tahoe or later, on Apple silicon or Intel.
 - Releases are signed with a Developer ID and notarized by Apple, so they open without security warnings.
 
-Vela updates itself from version 1.1: it checks once a day and offers a new version when you open it. **Vela → Check for Updates…** checks right away, and **Settings → Updates** has the switches. See [Updates](https://velairc.app/guide/updates).
+Vela updates itself from version 1.1: it checks once a day and offers a new version when you open it. **Vela → Check for Updates…** checks right away, and **Settings → Updates** has the switches. See [Updates](https://velairc.app/guide/updates). Vela 1.0 has no updater, so to move from 1.0, quit it and install the latest Vela.dmg over it once; your settings, networks and saved history stay.
 
 The full user guide is at **[velairc.app](https://velairc.app)**.
 
@@ -105,7 +105,8 @@ IRC is simple, open and everywhere, but IRC clients on the Mac have stood still.
   - **Classic** — `[12:01] <nick> text`
   - **Modern grouped** — one name header per run of messages
   - **Compact columns** — time, right-aligned nick, then text
-- **Density controls:** fonts (including a monospace mode), line and message spacing, timestamps, nick colors and optional avatars. Join/part/quit noise can be shown, collapsed into one line, or hidden.
+- **Density controls:** fonts (including a monospace mode), line and message spacing, timestamps, nick colors (in message text too) and optional avatars. Join/part/quit noise can be shown, collapsed into one line, or hidden.
+- **Tabs fit the window:** when a row is too wide, the other tabs shrink, longest names first, so every tab stays in view, and the selected one keeps its whole name.
 
 ### Presets
 
@@ -114,7 +115,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 | Preset | What you get |
 |---|---|
 | **Classic IRC** | Sidebar, one-line monospace messages, dense spacing, minimal link previews |
-| **Modern Chat** | Sidebar, grouped messages, full inline media |
+| **Modern Chat** | Sidebar, grouped messages, roomy spacing, full inline media |
 | **Tabbed** | Tab stacks at the top, grouped messages, rounded tabs |
 | **Focus** | Pill tabs in the title bar, compact columns, no join/part noise, member list hidden |
 
@@ -132,7 +133,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ### Apple Intelligence, Siri and Shortcuts
 
-- **Catch me up:** back in a busy channel, an Apple Intelligence summary of what you missed, topic by topic, made on your Mac. On macOS 27, long ones can use Apple's Private Cloud Compute, if you turn it on.
+- **Catch me up:** back in a busy channel, an Apple Intelligence summary of what you missed, topic by topic, made on your Mac, including what your bouncer replayed. On macOS 27, long ones can use Apple's Private Cloud Compute, if you turn it on.
 - **Translation:** translate a message from another language, or a whole channel as messages arrive, on your Mac with Apple's Translation framework. No Apple Intelligence needed.
 - **Writing Tools** in the message field, where Apple Intelligence is available.
 - **Siri and Shortcuts:** ask Siri to catch you up, check your mentions, send a message, open a channel or set you away, and use the same actions in your own shortcuts. Your channels show up in Spotlight (names only).
@@ -153,10 +154,11 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ### Fast to drive
 
+- **The whole window from the keyboard:** ⌥⌘1 to ⌥⌘4 (or F6) move the keyboard between the sidebar or tabs, the messages, the message box and the member list. Pick a message with the arrow keys, then reply, react, copy or translate it with one key. ⌘W closes the tab and ⇧⌘W the window, as in a browser.
 - **Command palette** (⇧⌘P) runs any command: layouts, presets, themes, network actions, settings and more.
 - **Settings editor:** every setting in one searchable list, VS Code style, with filters such as `@modified`, plus a JSON view of `settings.json` that suggests settings and values, flags mistakes as you type and shows docs on hover.
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
-- **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. An emoji picker (⇧⌘E) and a send button. GIF search (KLIPY or GIPHY, sent as links) is in development builds for now. Pasting multiple lines asks for confirmation before sending.
+- **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. An emoji picker (⇧⌘E) and a send button. GIF search (KLIPY or GIPHY, sent as links) comes in a later version; for now it's only in development builds. Pasting multiple lines asks for confirmation before sending.
 - **Typing options:** spelling, grammar, autocorrect, text replacements and smart quotes, following your Mac's settings until you change them. Commands, nicks, channel names, links and code are never corrected.
 - **User menu:** right-click a nick in the member list or in a message for Message, Mention, Whois, Ping, CTCP, Invite and Ignore, plus the ops, voices, kicks, bans and quiets your rank in the channel allows. Select several people in the member list to act on them all.
 - **Slash commands:**
@@ -187,11 +189,13 @@ One click sets navigation, layout, density and media together. Presets never tou
 | Collapse/expand sidebar | ⌃⌘S |
 | Previous / next conversation | ⌥⌘↑ / ⌥⌘↓ |
 | Next unread | ⌥⇧⌘↓ |
-| Focus the message field | ⌘L |
+| Focus the sidebar or tabs / messages / message box / member list | ⌥⌘1 / ⌥⌘2 / ⌥⌘3 (or ⌘L) / ⌥⌘4 |
+| Previous / next tab | ⇧⌘[ / ⇧⌘] |
 | Add network | ⇧⌘N |
 | Join channel | ⌘J |
+| Close the tab / the window | ⌘W / ⇧⌘W |
 | Reopen closed channel or conversation | ⇧⌘T |
-| Undo leaving, removing or closing | ⌘Z |
+| Undo leaving, removing, hiding or closing | ⌘Z |
 | Bigger / smaller / actual-size text | ⌘+ / ⌘− / ⌘0 |
 | Settings | ⌘, |
 
@@ -230,8 +234,8 @@ One click sets navigation, layout, density and media together. Presets never tou
   - Disable media for a network or channel.
   - Set per-site rules: everything, text only or nothing.
 - **No previews from your local network.** Vela never fetches previews from private, local or LAN addresses.
-- **GIF search** sends what you search for, and your IP address, to KLIPY (or GIPHY, with your own key), only while the GIFs tab is open. A GIF is sent as its link, which others' clients load from the service. Turn off **Search GIFs** (`gifs.enabled`) and Vela never contacts a GIF service.
-- **Passwords, certificates and GIF service keys** are stored in the macOS Keychain. Vela is sandboxed.
+- **No GIF search in this version,** so Vela never contacts a GIF service. When GIF search arrives (it's in development builds for now), it sends what you search for, and your IP address, to KLIPY (or GIPHY, with your own key), only while the GIFs tab is open. A GIF is sent as its link, which others' clients load from the service. Turning off **Search GIFs** (`gifs.enabled`) stops it contacting anyone.
+- **Passwords, channel keys and certificates** are stored in the macOS Keychain. Vela is sandboxed.
 - **On-device intelligence.** Catch me up summaries and translations are made on your Mac, unless you let long catch-ups use Apple's Private Cloud Compute (off by default; encrypted, not stored, not readable by Apple). Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
 - **The website is separate.** velairc.app uses Google Analytics, asks visitors in the EU, EEA, UK and Switzerland first, and honors Global Privacy Control. The app never does any of this. See [Privacy](https://velairc.app/help/privacy#this-website).
 
@@ -252,7 +256,7 @@ Or open `Vela.xcodeproj` in Xcode (the project file, not the folder), choose the
 **Release and development builds run side by side.** Debug builds (`scripts/run.sh --dev`, or ⌘R in Xcode) are a separate app, **Vela Dev** (bundle id `io.github.r3volution11.Vela.dev`), with a **DEV** badge on its Dock icon. Because macOS keys an app's sandbox to its bundle id, Vela Dev has its own settings, networks, message history, Keychain items, notifications and Siri & Shortcuts registration. So you can keep your everyday Vela connected while you test changes, and nothing you do in the dev build touches it. `scripts/run.sh` with no flag builds the Release configuration as `build/Vela.app`, the same identity that `scripts/release.sh` signs and ships.
 
 ```sh
-swift test --package-path Packages/VelaKit                    # unit tests (1,200+)
+swift test --package-path Packages/VelaKit                    # unit tests (2,000+)
 VELA_LIVE_TESTS=1 swift test --package-path Packages/VelaKit \
   --filter "LiveNetwork|LiveSession"                          # live TLS + IRCv3 checks against public servers
 scripts/check-media-sites.sh                                  # check the supported media sites against the real sites

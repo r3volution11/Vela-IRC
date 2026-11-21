@@ -112,7 +112,7 @@ Prefer less? Switch to **compact** previews, turn media off for a channel, or al
 - **Reactions, replies, typing indicators** and message deletion where the server supports them.
 - **`server-time`, `chathistory`, `echo-message`** and the rest of the modern basics, plus STS upgrades.
 - **SASL PLAIN and EXTERNAL**, client certificates and TLS, with secrets in your Keychain.
-- **[ZNC](https://znc.in) and [soju](https://soju.im)**: playback and self-message for ZNC, automatic network discovery and history for soju.
+- **[ZNC](https://znc.in) and [soju](https://soju.im)**: playback and self-message for ZNC, automatic network discovery and history for soju, and channels you leave stay on the bouncer.
 
 </ShowcaseRow>
 
@@ -143,7 +143,7 @@ Back to a busy channel? **Catch me up** summarizes what you missed, topic by top
   linkText="How Vela handles your data"
 >
 
-Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add and, if you let it, to the sites behind the links people post. Summaries and translations are made on your Mac, unless you let long summaries use Apple's Private Cloud Compute.
+Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add, to velairc.app once a day to check for updates (sending only its version; you can turn that off), and, if you let it, to the sites behind the links people post. Summaries and translations are made on your Mac, unless you let long summaries use Apple's Private Cloud Compute, and saving your message history on your Mac is up to you.
 
 Link previews tell those sites your IP address, so you decide: automatic, click-to-load, per channel, or only from an allow list. Vela never fetches previews from addresses on your local network.
 
@@ -152,7 +152,7 @@ Link previews tell those sites your IP address, so you decide: automatic, click-
 <div class="home-cta">
   <img src="/vela-icon.webp" alt="" width="96" height="96">
   <h2>Free and open source</h2>
-  <p>Vela is written in Swift and SwiftUI, with no web views except the video players, and built in the open under the Mozilla Public License 2.0. <a href="/help/license">See the credits</a>.</p>
+  <p>Vela is written in Swift and SwiftUI, with web views only for video players, previews of sites that need a browser and an update's release notes, and built in the open under the Mozilla Public License 2.0. <a href="/help/license">See the credits</a>.</p>
   <div class="home-cta__actions">
     <a class="vela-button vela-button--brand no-icon" href="https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg">Download for macOS</a>
     <a class="vela-button vela-button--alt" href="/guide/install">Read the guide</a>

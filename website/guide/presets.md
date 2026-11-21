@@ -25,7 +25,11 @@ Apply it again to get these two settings. Until you do, Settings → Presets sho
 
 <Screenshot src="/screenshots/preset-modern.webp" alt="The Modern Chat preset: a sidebar, grouped messages and full inline media" />
 
-Sidebar with grouped messages (one name header per run of messages) and full inline media: full-size images, standard link previews and video players. Joins and parts are collapsed into one line.
+Vela's defaults: a sidebar with grouped messages (one name header per run of messages), roomy spacing between lines and messages, and full inline media: full-size images, standard link previews and video players. Joins and parts are collapsed into one line.
+
+::: tip Applied Modern Chat before?
+Apply it again to get its spacing: 4 points between lines and 12 between messages. Until you do, your spacing stays as it was and Settings → Presets shows your setup as Custom.
+:::
 
 ## Tabbed
 

@@ -25,9 +25,9 @@ Under each network are its channels (`#`) and private conversations. A channel's
 - **Brighter text** means unread messages; a **number** counts them.
 - An **accent-colored badge** counts mentions of you and private messages.
 - A **bell with a slash** means the channel is muted.
-- **Dimmed** names are channels you've left or networks that are offline.
+- **Dimmed** names are channels you've left (or left on a [bouncer](/guide/bouncers), detached) and networks that are offline.
 
-Drag the sidebar's edge to resize it, and drag networks and channels to [rearrange them](#arranging-networks-and-channels). The **+** at the bottom adds a network or joins a channel. Right-click anything for more: mark as read, mute, inline media, [automatic translation](/guide/apple-intelligence#automatic), [Catch Me Up](/guide/apple-intelligence#catch-me-up), leave, close and network actions.
+Drag the sidebar's edge to resize it, and drag networks and channels to [rearrange them](#arranging-networks-and-channels). The **+** at the bottom adds a network or joins a channel. Right-click anything for more: mark as read, mute, inline media, [automatic translation](/guide/apple-intelligence#automatic), [Catch Me Up](/guide/apple-intelligence#catch-me-up), leave, hide or remove a channel (see [Leave or remove](/guide/joining-channels#leave-or-remove)), close a conversation, and network actions. <kbd>⌘W</kbd> closes the selected channel or conversation as a tab's **×** would, and the **File** menu item says what it will do (**Remove Channel…**, for example). <kbd>⇧⌘W</kbd> closes the window.
 
 ## The rail
 
@@ -63,7 +63,7 @@ The header shows the channel name, how many people are in it and the topic. On t
 - **Media** (picture icon) turns inline images and previews on or off for this channel. See [Inline media & privacy](/guide/inline-media).
 - **Members** (people icon) shows or hides the member list (<kbd>⇧⌘M</kbd>).
 
-When you're offline or connecting, the header says so, and the message field offers a **Reconnect** button. If you've left a channel, it offers **Join** instead.
+When you're offline or connecting, the header says so, and the message field offers a **Reconnect** button. If you've left a channel, it offers **Join** instead. Otherwise it ends with a smiley, which opens the [emoji picker](/guide/emoji-and-gifs), and a send button, unless you've hidden it. See [Sending messages](/guide/sending-messages).
 
 Messages are separated by **day dividers**. A **New** marker shows where you stopped reading (in a busy channel, with a **Catch me up** button that [summarizes what you missed](/guide/apple-intelligence#catch-me-up)), and when you've scrolled up, a **Jump to present** button takes you back to the newest messages. See [Messages & layouts](/guide/messages-and-layouts).
 
@@ -94,7 +94,7 @@ All of them are listed in [Keyboard shortcuts](/reference/keyboard-shortcuts).
 
 Each part of the window can have the keyboard. **Go → Focus Sidebar** (or **Focus Tabs**), **Focus Messages**, **Focus Message Box** and **Focus Member List** go straight to one, and <kbd>F6</kbd> goes round them. The row or tab the keyboard is on has a ring in your theme's focus color.
 
-- **In the sidebar or the rail**, <kbd>↑</kbd> and <kbd>↓</kbd> select as they go, like Mail's mailbox list. <kbd>←</kbd> goes from a channel to its network, and on a network folds its channels away. <kbd>→</kbd> shows them again. Type the first letters of a name to go to it.
+- **In the sidebar or the rail**, <kbd>↑</kbd> and <kbd>↓</kbd> select as they go, like Mail's mailbox list, and <kbd>Home</kbd> and <kbd>End</kbd> go to the first and the last. <kbd>←</kbd> goes from a channel to its network, and on a network folds its channels away. <kbd>→</kbd> shows them again. Type the first letters of a name to go to it.
 - **In the tabs**, <kbd>←</kbd> and <kbd>→</kbd> select the tab beside, and <kbd>↑</kbd> and <kbd>↓</kbd> go between the network row and the channel row.
 - **In the member list**, the keys move a highlight. See [Member list](/guide/member-list#with-the-keyboard).
 

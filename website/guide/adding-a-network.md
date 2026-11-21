@@ -53,9 +53,11 @@ Set **Type** to **soju** or **ZNC** if this entry is a bouncer rather than an IR
 
 Channels to join after connecting, each with an optional key (password). Vela adds the `#` if you leave it out. When you connect through a bouncer, the bouncer rejoins channels itself, so this list only matters for direct connections.
 
-When you [drag the network's channels](/guide/the-window#arranging-networks-and-channels) into a new order, or sort them A–Z, this list follows.
+When you [drag the network's channels](/guide/the-window#arranging-networks-and-channels) into a new order, or sort them A–Z, this list follows. Leaving or removing a channel takes it off the list, and joining it again puts it back where it was, with its key. See [Leave or remove](/guide/joining-channels#leave-or-remove).
 
-Channels you join later are remembered too: Vela rejoins the channels you had open unless you left them with `/part`.
+Channels you join later are remembered too: Vela rejoins the channels you had open unless you left them (with **Leave Channel** or `/part`) or removed them.
+
+Through a bouncer, channels you've hidden are listed under **Hidden channels**, with **Show** and **Join** for each. See [Hidden channels](/guide/joining-channels#hidden-channels).
 
 ## Perform on connect
 
@@ -80,6 +82,8 @@ Perform commands are saved in `networks.json` as plain text. Don't put passwords
 **Connect automatically** connects this network when Vela opens. It's on by default.
 
 Whether Vela reconnects after a dropped connection, and after your Mac wakes, is one setting for all networks: **Reconnect automatically** in **Settings → Networks → Connection** ([`connection.autoReconnect`](/reference/settings#connection.autoReconnect)). It's on by default.
+
+**Settings → Networks → Channels** decides whether Vela asks before you leave or remove a channel, and whether a tab's **×** removes a channel from a bouncer. See [Leave or remove](/guide/joining-channels#leave-or-remove).
 
 **Settings → Networks → Moderation** sets the ban mask and the default kick reason that bans and kicks use on every network. See [Ban masks](/guide/user-menu#ban-masks) and [Kick reasons](/guide/user-menu#kick-reasons).
 

@@ -29,7 +29,7 @@ Siri asks for anything you leave out, such as the message. Before sending, it ma
 
 The phrases are in English, so they work when Siri's language is English. In other languages, use Vela's actions in the [Shortcuts app](#shortcuts) instead.
 
-**Catch me up** needs [Apple Intelligence](/guide/apple-intelligence#requirements). Siri reads the overview aloud and shows the topics. With nothing unread, it says "You're all caught up." Siri never cuts a catch-up short:
+**Catch me up** needs [Apple Intelligence](/guide/apple-intelligence#requirements). Siri reads the overview aloud and shows the topics. With nothing unread, it says "You're all caught up." Name a channel you've already caught up on and Siri gives you that summary again, until you quit Vela; with no summary to give, it says "There's nothing new in #vela." Siri never cuts a catch-up short:
 
 - **A short stretch** (about 100 messages, which your Mac reads in one quick pass) Siri summarizes and reads out itself.
 - **A longer one opens Vela.** Siri says so ("That's 412 messages in #vela. Opening Vela to catch you up."), and Vela opens to the channel with the [Catch me up card](/guide/apple-intelligence#catch-me-up) summarizing all of it. Siri may ask first whether to open Vela.

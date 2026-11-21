@@ -58,12 +58,26 @@
 - [x] **Typing:** IRC-safe spelling, grammar, autocorrect, text replacements and smart quotes, following macOS until changed
 - [x] **Apple Intelligence**
   - [x] Catch me up: on-device summaries of what you missed
-  - [x] Private Cloud Compute for long catch-ups (opt-in, macOS 27)
   - [x] Writing Tools in the message field
   - [x] On-device message translation, per message or per channel
 - [x] **Siri, Shortcuts and Spotlight:** App Shortcuts phrases, Shortcuts actions, channel names in Spotlight, and the macOS 27 Siri messages domain
 
+## Milestone 2: updates and the keyboard (1.1.0)
+
+- [x] **Updates:** Vela updates itself with [Sparkle](https://sparkle-project.org), from a signed feed on velairc.app, with an About window and **Settings → Updates**
+- [x] **What's New** after an update, with notices about anything that changed for you
+- [x] **Keyboard navigation everywhere:** focus areas for the sidebar or tabs, the messages, the message box and the member list (⌥⌘1–⌥⌘4, F6), messages from the keyboard, Safari-style tab switching, moving tabs, and ⌘W to close the tab
+- [x] **Channels:** Leave and Remove, detach and hide on bouncers, Reopen Closed Channel (⇧⌘T) and undo
+- [x] **Message history saving is optional,** off for new installs
+- [x] **Emoji picker and send button** in the message box
+- [x] **Tabs shrink to fit** before they scroll
+- [x] **Nick colors in message text,** with your own nick's color kept for you
+- [x] **Catch me up:** bouncer replays count, one summary at a time, progress, Siri hands long catch-ups to Vela, and Private Cloud Compute for long catch-ups (opt-in, macOS 27)
+- [x] **A redesigned welcome screen**
+
 ## Later
+
+- **GIF search** in releases (built, in development builds for now), once KLIPY approves Vela's key
 
 - **Uploads:** paste or drag images, via IRCv3 FILEHOST (soju) and a custom uploader config
 - **Distribution:** a Mac App Store build, and a beta channel for testing releases early

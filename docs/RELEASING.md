@@ -333,9 +333,11 @@ Fix what the failed check says, then run the commands. If `gh` made the release 
 Without `--notes`, the release notes are:
 
 1. the body of this version's section in `CHANGELOG.md`, without its `## <version>` heading. Relative links, such as `ROADMAP.md`, point at the file on GitHub as of the tag;
-2. then `scripts/release-notes-footer.md`: Requirements, Install and Learn more. It's the same for every release; edit it there.
+2. then `scripts/release-notes-footer.md`: Requirements, Install, Update (with how to update from 1.0, which has no updater) and Learn more. It's the same for every release; edit it there.
 
 They're written to `build/release/release-notes.md` when the build starts (after the preflight checks), so you can read them while Vela builds.
+
+The changelog section can start with a short paragraph and a few highlights before its `###` headings, as 1.0.0 and 1.1.0 do. The same section is the update window's release notes and **What's New**, so highlights written there reach everyone, while a `--notes` file changes only the GitHub release.
 
 To write your own, such as a short, friendly rewrite with highlights first, pass the file: `scripts/release.sh --publish --notes ~/release-notes.md`. Link the full [changelog](https://velairc.app/changelog), and don't commit the file.
 

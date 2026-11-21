@@ -30,10 +30,10 @@ Type `@` for filters, which you can combine with words and with each other:
 | --- | --- |
 | `@modified` | Settings set in settings.json. The **Modified** button beside the field, with its count, turns this on and off. |
 | `@unknown` | Keys in settings.json that Vela doesn't know. |
-| `@category:chat` | One category, by its id or its name: `appearance`, `layout`, `chat` (or `messages`), `typing`, `history`, `media`, `gifs`, `notifications`, `connection`, `moderation`, `intelligence` and `updates`. |
+| `@category:chat` | One category, by its id or its name: `appearance`, `layout`, `chat` (or `messages`), `typing`, `history`, `media`, `notifications`, `connection`, `moderation`, `intelligence` and `updates`. |
 | `@pane:messages` | The settings on one pane: `appearance`, `layout`, `messages`, `media`, `networks`, `notifications`, `intelligence` or `updates`. This is what **Show in settings editor** uses. |
 
-The chips under the field do the same for categories: **All**, **Appearance**, **Layout**, **Messages**, **Typing**, **History**, **Media**, **Notifications**, **Connection**, **Moderation** and **Apple Intelligence**. An **Unknown** chip, with a warning sign, appears when settings.json has keys Vela doesn't know.
+The chips under the field do the same for categories: **All**, **Appearance**, **Layout**, **Messages**, **Typing**, **History**, **Media**, **Notifications**, **Connection**, **Moderation**, **Apple Intelligence** and **Updates**. An **Unknown** chip, with a warning sign, appears when settings.json has keys Vela doesn't know.
 
 <Screenshot src="/screenshots/settings-editor-modified.webp" alt="The settings editor filtered with @modified: the Modified button is on, with a count of 20, and the list shows only the Appearance and Layout settings that are set in settings.json, each with an accent bar on its left" caption="@modified: only what's set in settings.json." />
 

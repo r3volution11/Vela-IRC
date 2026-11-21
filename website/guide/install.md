@@ -28,16 +28,20 @@ Continue with [First launch](/guide/first-launch) to add your first network.
 
 ## Updating
 
-Vela updates itself. It checks for a new version once a day and offers it when you open Vela, never in the middle of a conversation; **Vela → Check for Updates…** checks right away. See [Updates](/guide/updates) for the settings and what a check sends.
+From version 1.1, Vela updates itself. It checks for a new version once a day and offers it when you open Vela, never in the middle of a conversation; **Vela → Check for Updates…** checks right away. See [Updates](/guide/updates) for the settings and what a check sends.
 
-Vela 1.0 doesn't have the updater yet. To update from it, or any time you'd rather do it yourself:
+The first time a new version opens, **What's New in Vela** shows what changed in it, with anything you need to know first, such as a setting that works differently now. Press <kbd>Return</kbd> or <kbd>Esc</kbd> to close it, and choose **Help → What's New in Vela** (or **Help: What's New in Vela** in the [command palette](/guide/command-palette)) to see it again. The [changelog](/changelog) lists what changed in every release.
+
+### From Vela 1.0 {#from-1-0}
+
+Vela 1.0 has no updater, so it never offers a new version, and its **Vela** menu has no **Check for Updates…**. Update it by hand once, and from then on Vela updates itself:
 
 1. Quit Vela (<kbd>⌘Q</kbd>).
-2. Download the latest **Vela.dmg** and drag Vela into Applications again. Choose **Replace** when asked.
+2. Download the latest **[Vela.dmg](https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg)** and drag Vela into Applications again. Choose **Replace** when asked.
+
+The same steps work from any version, whenever you'd rather update by hand.
 
 Your networks, settings, themes and saved history are kept. They live outside the app, so replacing it doesn't touch them.
-
-The first time the new version opens, **What's New in Vela** shows what changed in it, with anything you need to know first, such as a setting that works differently now. Press <kbd>Return</kbd> or <kbd>Esc</kbd> to close it, and choose **Help → What's New in Vela** (or **Help: What's New in Vela** in the [command palette](/guide/command-palette)) to see it again. The [changelog](/changelog) lists what changed in every release.
 
 ## Uninstalling
 

@@ -38,7 +38,7 @@ The icon you choose shows in the **Dock** and the **app switcher** (<kbd>⌘Tab<
 - in the **Dock while Vela is quit**, if you keep it there;
 - for a moment as Vela opens, before it switches to your choice.
 
-That's a limit of macOS, not a setting you've missed. Mac apps can't switch icons the way iPhone and iPad apps can. While an app is running it can change its Dock icon, but the icon Finder and Spotlight show is part of the app itself. Vela never changes its own app: it's sandboxed, and its files are signed and notarized by Apple, so they stay exactly as they were installed.
+That's a limit of macOS, not a setting you've missed. Mac apps can't switch icons the way iPhone and iPad apps can. While an app is running it can change its Dock icon, but the icon Finder and Spotlight show is part of the app itself. Vela never changes its own app: it's sandboxed, and its files are signed and notarized by Apple, so they stay exactly as they were installed until an [update](/guide/updates) replaces the whole app with the next signed version.
 
 ## Icon & widget style {#icon-and-widget-style}
 

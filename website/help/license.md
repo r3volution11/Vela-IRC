@@ -32,7 +32,7 @@ Vela was made with the help of AI. Its source code is open, so anyone can read e
 | [Foundation](https://developer.apple.com/documentation/foundation) | Everything underneath: files, dates, text and link fetching |
 | [Network](https://developer.apple.com/documentation/network) | IRC connections over TCP and TLS, and noticing when your Mac's network changes |
 | [Security](https://developer.apple.com/documentation/security) | The Keychain for passwords, and client certificates for TLS and SASL EXTERNAL |
-| [WebKit](https://developer.apple.com/documentation/webkit) | The YouTube, Vimeo, Twitch and Streamable players, which load only when you press play |
+| [WebKit](https://developer.apple.com/documentation/webkit) | The YouTube, Vimeo, Twitch and Streamable players, which load only when you press play, and previews of [sites that need a browser](/guide/inline-media#sites-that-need-a-browser) |
 | [AVKit](https://developer.apple.com/documentation/avkit) and [AVFoundation](https://developer.apple.com/documentation/avfoundation) | Playing links to video files |
 | [Image I/O](https://developer.apple.com/documentation/imageio) and [Core Image](https://developer.apple.com/documentation/coreimage) | Decoding images and animated GIFs, and blurring media until you click it |
 | [User Notifications](https://developer.apple.com/documentation/usernotifications) | Notifications for highlights and private messages |
@@ -59,7 +59,7 @@ Vela also uses [Observation](https://developer.apple.com/documentation/observati
 | --- | --- | --- |
 | [Sinfonietta/hostfiles](https://github.com/Sinfonietta/hostfiles) `pornography-hosts` | The bundled list behind [Hide previews of adult sites](/guide/inline-media#adult-sites) | MIT, © 2016 Sinfonietta |
 
-Emoji in the reaction picker are searched by their [Unicode](https://unicode.org/emoji/) names, and `:shortcode:` names follow the spellings common in chat apps. Both are built into Vela's code; no emoji data file is bundled.
+Emoji in the [emoji picker](/guide/emoji-and-gifs) and the reaction picker are searched by their [Unicode](https://unicode.org/emoji/) names, and `:shortcode:` names follow the spellings common in chat apps. Both are built into Vela's code; no emoji data file is bundled.
 
 ## IRC specifications {#specifications}
 

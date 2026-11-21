@@ -279,7 +279,7 @@ Besides tokens, a theme has two palettes.
 
 ### Nick colors {#nick-colors}
 
-`nickColors` is the list of colors nicknames are drawn in, when **Colored nicknames** is on in **Settings → Messages**. Your own nick isn't from the palette; it uses `chat.selfNick`.
+`nickColors` is the list of colors nicknames are drawn in, when **Colored nicknames** is on in **Settings → Messages**: on messages, in the member list, and where a message mentions someone (unless **Color nicks in messages** is off). Avatars are tinted from it too. Your own nick isn't from the palette; it uses `chat.selfNick` everywhere.
 
 ```jsonc
 "nickColors": ["#F28C8C", "#F2A65A", "#E8D27A", "#A6D98C", "#7FD1C2", "#7FB8E6", "#A99BF0", "#E39BD9"]
@@ -490,7 +490,7 @@ A theme has to work with every layout, so try yours in more than one. With your 
 3. **The sidebar's other forms.** Collapse the sidebar to the rail with <kbd>⌃⌘S</kbd>, and try tab stacks at the top, in the title bar and at the bottom (**Settings → Layout**).
 4. **Light and dark.** If you made a pair, switch macOS between Dark Mode and Light Mode, and check that menus and alerts match each theme.
 5. **States.** Look at the selected channel, unread and mention badges, a disconnected network, a message that mentions you, your own messages, the New line, day dividers, notices, `/me` actions and errors.
-6. **Selection and hover.** Select text in a message, and hover messages and sidebar rows.
+6. **Selection, hover and the keyboard.** Select text in a message, and hover messages and sidebar rows. Press <kbd>⌥⌘1</kbd>, <kbd>⌥⌘2</kbd> and <kbd>⌥⌘4</kbd> to see the `focusBorder` ring on a sidebar row or tab, a message and a person in the member list, and the selected message in `chat.selectionBackground`.
 7. **Media and IRCv3.** Look at link previews, images and videos, and, on a network that supports them, reactions, replies and typing lines.
 8. **Popovers.** Open the command palette (<kbd>⇧⌘P</kbd>) and the emoji picker.
 9. **The Settings window.** It uses the `settings.*` colors; open a few panes, including **Advanced**.

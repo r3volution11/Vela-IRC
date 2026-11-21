@@ -13,7 +13,7 @@ Vela can lay out a conversation three ways. Switch in **Settings → Messages**,
 
 One line per message, `[12:01] <nick> text`, like [Textual](https://www.textualapp.com) or [irssi](https://irssi.org). Long messages wrap and hang under the text, clear of the timestamp column. Actions read `* nick waves`.
 
-Pair it with **Monospace** (below) for a terminal feel; the **Classic IRC** [preset](/guide/presets) does exactly that.
+Pair it with **Use a monospace font** (below) for a terminal feel; the **Classic IRC** [preset](/guide/presets) does exactly that.
 
 ## Modern grouped
 
@@ -34,9 +34,9 @@ Like [WeeChat](https://weechat.org): time, a right-aligned nick, then the text, 
 In **Settings → Messages**:
 
 - **Font** is the system font by default; choose any font installed on your Mac.
-- **Monospace** renders all chat text in the monospace font, like irssi or WeeChat. **Monospace font** (SF Mono by default) is also used for code and for the columns layout's fixed-width parts.
-- **Font size** goes from 9 to 28 points. **View → Bigger** (<kbd>⌘+</kbd>), **Smaller** (<kbd>⌘−</kbd>) and **Actual Size** (<kbd>⌘0</kbd>) change it from anywhere.
-- **Line spacing** adds space between the lines of one message; **Message spacing** adds space between messages and groups.
+- **Use a monospace font** renders all chat text in the monospace font, like irssi or WeeChat. **Monospace font** (SF Mono by default) is also used for code and for the columns layout's fixed-width parts.
+- **Size** sets the font size, from 9 to 28 points (13 by default). **View → Bigger** (<kbd>⌘+</kbd>), **Smaller** (<kbd>⌘−</kbd>) and **Actual Size** (<kbd>⌘0</kbd>) change it from anywhere.
+- **Line spacing** adds space between the lines of one message (4 points by default); **Message spacing** adds space between messages and groups (12 points by default). In settings.json they're [`chat.lineSpacing`](/reference/settings#chat.lineSpacing) and [`chat.messageSpacing`](/reference/settings#chat.messageSpacing).
 
 ## Timestamps
 
@@ -114,6 +114,8 @@ The same choices are in **View → Message Layout**.
 
 **Show the New line** is on by default. Turn it off and messages appear just as they came in, with nothing marking which are new. With **Jump to first unread**, channels still open at the first message you haven't read; it just isn't marked.
 
+Messages a [bouncer](/guide/bouncers) or a server with chat history replays when Vela connects count as unread too, once they're newer than where you stopped reading, so the New line covers what you missed while Vela was closed. Replayed messages never pop up notifications or play sounds.
+
 Either way, unread counts in the sidebar, the rail and on tabs work as usual. Without the New line, the **Catch me up** button isn't offered, because it sits on the line; right-click the channel and choose **Catch Me Up**, or use the [command palette](/guide/command-palette), instead. See [Catch me up](/guide/apple-intelligence#catch-me-up).
 
 For a classic IRC feel, where everything is simply there as it came in, choose **Show newest** and turn off the New line. The **Classic IRC** [preset](/guide/presets) does both.
@@ -131,7 +133,7 @@ Each channel keeps the most recent **1,000** messages in memory (**Messages kept
 
 Either way, Vela saves your channels and conversations, where you stopped reading, and whether each is muted, so unread counts, the **New** line and [Catch me up](/guide/apple-intelligence#catch-me-up) still work with what a bouncer replays. In settings.json it's [`history.save`](/reference/settings#history.save); in the [command palette](/guide/command-palette), **Chat: Save Message History**.
 
-**Turning it off** asks what to do with the history already saved: **Delete Saved History** removes it from your Mac, and **Keep What's Saved** leaves it, so it still shows in your channels while nothing new is added. **Delete Saved History…**, under the setting, removes saved messages, reactions and link previews whenever you like. Your channels, read positions, settings and chat logs stay, and the messages on screen stay until you quit.
+**Turning it off** asks what to do with the history already saved: **Delete Saved History** removes it from your Mac, and **Keep What's Saved** leaves it, so it still shows in your channels while nothing new is added. **Delete Saved History…**, under the setting (or **Chat: Delete Saved History…** in the command palette), removes saved messages, reactions and link previews whenever you like, after asking. Your channels, read positions, settings and chat logs stay, and the messages on screen stay until you quit.
 
 To limit how much saved history is kept, set **Keep messages** (from a week to two years). Older messages are removed when Vela starts. By default saved history is kept forever. In settings.json it's [`history.retentionDays`](/reference/settings#history.retentionDays), which takes any number of days. It applies while history is saved, and to history you kept when you turned saving off.
 

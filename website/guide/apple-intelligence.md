@@ -34,7 +34,7 @@ Catch me up and Writing Tools use **Apple Intelligence**, so they need:
 | **Apple Intelligence is on** | Everything's ready. |
 | **Apple Intelligence is off** | Click **Open System Settings** and turn it on in **Apple Intelligence & Siri**. |
 | **Not available on this Mac** | Apple Intelligence needs a Mac with Apple silicon. Translation still works. |
-| **Apple Intelligence is getting ready** | macOS is still downloading the model. Try again in a little while. |
+| **Apple Intelligence is getting ready** | macOS is still downloading the model. Catch me up is ready, and this box says so, as soon as the download finishes. |
 | **Language not supported yet** | Apple Intelligence doesn't support your Mac's language yet. **Open System Settings** takes you there. |
 
 While Apple Intelligence isn't available, the Catch me up settings are dimmed.
@@ -96,7 +96,7 @@ On macOS 27 or later, **Use Private Cloud Compute for long catch-ups** in **Sett
 - **What's sent:** the messages in that stretch, with their nicks (links reduced to the site they point to, as always), and your nick, so the summary can say when you were mentioned. Not the channel's or the network's name.
 - **Apple's guarantees:** the request is encrypted on its way to Private Cloud Compute, used only to write the summary, and not stored afterwards. Apple can't read it, and independent experts can check the software that runs it.
 - **Everything else stays on your Mac:** short catch-ups, translation and the rest of Vela. Vela still sends nothing to its developers.
-- **If it can't be used, your Mac does it.** When Private Cloud Compute isn't available, can't be reached, or you've reached its daily limit, the summary is made on your Mac instead, without asking. The card's footer says where each summary was made: "Summarized by Apple Intelligence with Private Cloud Compute", or "Summarized on this Mac by Apple Intelligence" with the reason Private Cloud Compute wasn't used. After a failure, Vela waits a few minutes before trying it again.
+- **If it can't be used, your Mac does it.** When Private Cloud Compute isn't available, can't be reached, or you've reached its daily limit, the summary is made on your Mac instead, without asking. The card's footer says where each summary was made: "Summarized by Apple Intelligence with Private Cloud Compute", or "Summarized on this Mac by Apple Intelligence" with the reason Private Cloud Compute wasn't used. After a failure, Vela waits about 10 minutes before trying it again.
 - **Siri can answer long catch-ups itself** with it on. See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts#siri).
 
 In settings.json, it's [`intelligence.privateCloudCompute`](/reference/settings#intelligence.privateCloudCompute). It has no effect on macOS 26.

@@ -1,6 +1,6 @@
 ---
 title: Sending messages
-description: Vela's message field, with the send button, emoji and GIFs, Tab completion, history and drafts, replies, paste confirmation, slash commands, and IRC-safe spelling, autocorrect and Writing Tools.
+description: Vela's message field, with the send button, the emoji picker, Tab completion, history and drafts, replies, paste confirmation, slash commands, and IRC-safe spelling, autocorrect and Writing Tools.
 ---
 
 # Sending messages
@@ -51,7 +51,7 @@ Unsent text is kept per channel, so you can switch away mid-sentence and pick up
 
 Hover a message and click the **reply** arrow (or right-click it and choose **Reply**). From the keyboard, press <kbd>⌥⌘2</kbd>, pick the message with <kbd>↑</kbd> and <kbd>↓</kbd>, and press <kbd>R</kbd>. A bar above the field shows who you're replying to; press <kbd>Esc</kbd> or click **×** to cancel.
 
-Replies need server support (IRCv3 message tags). On servers without it, the bar says **sent as a normal message**. See [Reactions, replies & typing](/guide/reactions-replies-typing).
+Replies need server support (IRCv3 message tags). On servers without it, such as Libera.Chat or through most bouncers, **Reply** answers the usual IRC way instead: it puts the sender's nick in the field, as in `wren: `, with no bar, and your message goes out as a normal one. See [Reactions, replies & typing](/guide/reactions-replies-typing#replies).
 
 ## Pasting several lines
 
@@ -71,7 +71,7 @@ Commands Vela doesn't know are sent to the server as typed, so commands like `/l
 
 ## When you can't send
 
-If you're offline, or you've left the channel, the field says so (**Offline — reconnect to send** or **Not in channel — /join to rejoin**) and shows a **Reconnect** or **Join** button in place of the send button. Commands still work, and so does the smiley: you can add emoji to a message before you're back.
+If you're offline, or you've left the channel, the field says so (**Offline — reconnect to send** or **Not in channel — /join to rejoin**) and shows a **Reconnect** or **Join** button in place of the send button. A channel you left on a [bouncer](/guide/bouncers) says **Left here, still on your bouncer — join to catch up**, and **Join** reattaches it. While Vela is connecting, a spinner takes the button's place. Commands still work, and so does the smiley: you can add emoji to a message before you're back. See [Leave or remove](/guide/joining-channels#leave-or-remove).
 
 ## Typing options {#typing}
 

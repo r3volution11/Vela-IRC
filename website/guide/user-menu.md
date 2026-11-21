@@ -9,8 +9,9 @@ Right-click someone's nick to see what you can do with them. The same menu opens
 
 - the [member list](/guide/member-list);
 - a nick in a message, in every layout: the name above a message in Modern (or its avatar), `<nick>` in Classic, and the nick column in Compact columns;
-- a nick mentioned in a message's text, when that person is in the channel;
-- a message's own menu (right-click elsewhere on the message, or click **…**), under a submenu named after the person who wrote it.
+- a nick mentioned in a message's text, when that person is in the channel, or is the person you're talking with in a private conversation (with **Color nicks in messages** on, those nicks are colored);
+- a message's own menu (right-click elsewhere on the message, or click **…**), under a submenu named after the person who wrote it;
+- the keyboard: <kbd>Space</kbd> or <kbd>⇧F10</kbd> in the [member list](/guide/member-list#with-the-keyboard), or <kbd>U</kbd> on a message you've selected with <kbd>⌥⌘2</kbd> (see [The messages](/reference/keyboard-shortcuts#the-messages)).
 
 The menu only shows what you can actually do. If your rank in the channel doesn't allow something, it isn't there. Things that need a connection, such as **Whois**, are grayed out while you're offline.
 

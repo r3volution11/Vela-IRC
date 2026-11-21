@@ -1,6 +1,6 @@
 ---
 title: Emoji & GIFs
-description: Vela's emoji and GIF picker for the message field, opened with the smiley or ⇧⌘E. Search emoji and GIFs from KLIPY or GIPHY, pick from the keyboard, and send a GIF as a link.
+description: Vela's emoji picker for the message field, opened with the smiley or ⇧⌘E. Search emoji and pick from the keyboard. GIF search, from KLIPY or GIPHY and sent as a link, comes in a later version.
 ---
 
 # Emoji & GIFs
@@ -8,7 +8,7 @@ description: Vela's emoji and GIF picker for the message field, opened with the 
 Click the **smiley** at the right end of the message field, or press <kbd>⇧⌘E</kbd>, to open the picker, with a search field that's ready for typing.
 
 ::: info GIF search is coming in a later version
-This version of Vela has the **Emoji** tab. **GIF search** (the **GIFs** tab, described below) is being tested and arrives in a later version, once KLIPY, the GIF service it uses, has approved Vela. Until then, it's only in development builds.
+In this version of Vela the picker has emoji only, with no tabs and no GIF settings. **GIF search** (the **GIFs** tab, described below) is being tested and arrives in a later version, once KLIPY, the GIF service it uses, has approved Vela. Until then, it's only in development builds, and off until you turn it on.
 :::
 
 ## From the keyboard {#keys}
@@ -16,13 +16,14 @@ This version of Vela has the **Emoji** tab. **GIF search** (the **GIFs** tab, de
 | Key | Does |
 | --- | --- |
 | Type | Search |
-| <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> | Move through the emoji or GIFs |
-| <kbd>Return</kbd> | Pick the selected one; with nothing selected, the first emoji found |
-| <kbd>Tab</kbd> or <kbd>⌃Tab</kbd> | Switch between **Emoji** and **GIFs** |
+| <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> | Move through the emoji |
+| <kbd>Return</kbd> | Pick the selected one; while searching with nothing selected, the first emoji found |
 | <kbd>Esc</kbd> | Close, back to the message field |
 | <kbd>⇧⌘E</kbd> | Open or close the picker |
 
-**Edit → Emoji & GIFs…** opens it too, and so does **Message Box: Emoji & GIFs…** in the [command palette](/guide/command-palette). The system's **Emoji & Symbols** viewer is still <kbd>⌃⌘Space</kbd>, and `:shortcode:` completion still works as you type (see [Tab completion](/guide/sending-messages#tab-completion)).
+With GIFs (in a later version), <kbd>Tab</kbd> or <kbd>⌃Tab</kbd> switches between **Emoji** and **GIFs**, and the arrows move through the GIFs too.
+
+**Edit → Emoji…** opens it too, and so does **Message Box: Emoji…** in the [command palette](/guide/command-palette). The system's **Emoji & Symbols** viewer is still <kbd>⌃⌘Space</kbd>, and `:shortcode:` completion still works as you type (see [Tab completion](/guide/sending-messages#tab-completion)).
 
 ## Emoji
 
@@ -50,7 +51,7 @@ Vela never mixes services or changes their results: you see them in the order th
 
 ### Turning GIFs off {#turning-off}
 
-Turn off **Search GIFs** in **Settings → Media → GIFs** and the **GIFs** tab goes away. Vela then never contacts a GIF service. Nothing is sent until you open the **GIFs** tab anyway: opening the picker on **Emoji** contacts nobody.
+**Search GIFs** in **Settings → Media → GIFs** shows or hides the **GIFs** tab. It's off to start with. While it's off, Vela never contacts a GIF service. Nothing is sent until you open the **GIFs** tab anyway: opening the picker on **Emoji** contacts nobody.
 
 ### Content rating {#rating}
 
@@ -90,11 +91,11 @@ See [Privacy](/help/privacy) for everything Vela connects to.
 
 ## Settings {#settings}
 
-All of these are in **Settings → Media → GIFs**, and in [settings.json](/reference/settings#gifs):
+In development builds, and in the later version that brings GIF search, these are in **Settings → Media → GIFs** and in [settings.json](/reference/settings#gifs). This version of Vela doesn't show them.
 
 | Setting | Key | Default |
 | --- | --- | --- |
-| **Search GIFs** | [`gifs.enabled`](/reference/settings#gifs.enabled) | On |
+| **Search GIFs** | [`gifs.enabled`](/reference/settings#gifs.enabled) | Off |
 | **Service** | [`gifs.provider`](/reference/settings#gifs.provider) | KLIPY |
 | **Content rating** | [`gifs.rating`](/reference/settings#gifs.rating) | R |
 | **Play previews** | [`gifs.animatePreviews`](/reference/settings#gifs.animatePreviews) | On |

@@ -10,7 +10,12 @@
 2. Open it and drag **Vela** into **Applications**. Vela is signed and notarized by Apple, so it opens without security warnings.
 3. Open Vela from Applications or Spotlight, and add your first network.
 
-To update, quit Vela, then drag the new **Vela** into **Applications** and replace the old one. Your settings, networks and history stay.
+## Update
+
+- **From Vela 1.1 or later:** Vela updates itself. It offers this version within a day, or choose **Vela → Check for Updates…** to get it now.
+- **From Vela 1.0:** 1.0 has no updater, so update by hand this once. Quit Vela, download **Vela.dmg** below, and drag the new **Vela** into **Applications**, replacing the old one. From then on, Vela updates itself.
+
+Either way, your settings, networks and saved history stay.
 
 ## Learn more
 

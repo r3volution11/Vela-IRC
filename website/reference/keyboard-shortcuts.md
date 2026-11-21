@@ -95,12 +95,12 @@ With the member list focused (<kbd>⌥⌘4</kbd>). The highlighted person has a 
 | --- | --- |
 | Add Network… | <kbd>⇧⌘N</kbd> |
 | Join Channel… | <kbd>⌘J</kbd> |
-| Close the tab: what its **×** does (remove a channel, leave it on a bouncer, hide a detached one, close a conversation), asking first where that asks | <kbd>⌘W</kbd> |
+| Close the tab: what its **×** does (remove a channel, leave it on a bouncer, hide a detached one, close a conversation), asking first where that asks. Nothing on a network's console, which has no **×** | <kbd>⌘W</kbd> |
 | Close the window | <kbd>⇧⌘W</kbd> |
 | Move the channel or conversation one place left or right (up or down in the sidebar) | <kbd>⌥⇧⌘[</kbd> / <kbd>⌥⇧⌘]</kbd> |
 | Move the network one place left or right (up or down in the sidebar) | <kbd>⌃⌥⌘[</kbd> / <kbd>⌃⌥⌘]</kbd> |
-| Reopen the channel you removed or the conversation you closed last (again to go further back) | <kbd>⇧⌘T</kbd> |
-| Undo leaving, removing or closing, right after (Edit → Undo) | <kbd>⌘Z</kbd> |
+| Reopen what you closed last: a channel you removed or hid, or a conversation (again to go further back) | <kbd>⇧⌘T</kbd> |
+| Undo leaving, removing, hiding or closing, right after (Edit → Undo) | <kbd>⌘Z</kbd> |
 | Redo it | <kbd>⇧⌘Z</kbd> |
 | Cancel dragging a network, channel or tab (it goes back where it was) | <kbd>Esc</kbd> |
 
@@ -118,23 +118,22 @@ With the member list focused (<kbd>⌥⌘4</kbd>). The highlighted person has a 
 | Scroll to the oldest message loaded / the newest | <kbd>Home</kbd> / <kbd>End</kbd> or <kbd>fn←</kbd> / <kbd>fn→</kbd> |
 | Move to the start / end of what you've typed | <kbd>⌘↑</kbd> / <kbd>⌘↓</kbd> |
 | Undo typing (and, after it, leaving or closing a channel) | <kbd>⌘Z</kbd> |
-| Emoji (open or close the picker; GIFs join it in a later version) | <kbd>⇧⌘E</kbd> |
+| Open or close the emoji picker (**Edit → Emoji…**) | <kbd>⇧⌘E</kbd> |
 | Emoji & Symbols (macOS) | <kbd>⌃⌘Space</kbd> |
-| Remove the GIF you picked (at the start of the message) | <kbd>Delete</kbd> |
 | Show Spelling and Grammar | <kbd>⌘:</kbd> |
 | Check Document Now (check the message's spelling) | <kbd>⌘;</kbd> |
 
-## The emoji and GIF picker {#emoji-and-gifs}
+## The emoji picker {#emoji-and-gifs}
 
-Press <kbd>⇧⌘E</kbd>, or click the smiley in the message field, to open the [emoji and GIF picker](/guide/emoji-and-gifs). Its search field has the keyboard.
+Press <kbd>⇧⌘E</kbd>, or click the smiley in the message field, to open the [emoji picker](/guide/emoji-and-gifs). Its search field has the keyboard.
 
 | Action | Shortcut |
 | --- | --- |
-| Move through the emoji or GIFs | <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> |
-| Pick the selected one (with nothing selected, the first emoji found) | <kbd>Return</kbd> |
-| Send a GIF search now, without waiting | <kbd>Return</kbd> |
-| Switch between Emoji and GIFs | <kbd>Tab</kbd> or <kbd>⌃Tab</kbd> |
+| Move through the emoji | <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> |
+| Pick the selected one (while searching with nothing selected, the first emoji found) | <kbd>Return</kbd> |
 | Close, back to the message field | <kbd>Esc</kbd> |
+
+GIF search joins the picker in a later version (it's only in development builds for now). With it, <kbd>Tab</kbd> or <kbd>⌃Tab</kbd> switches between **Emoji** and **GIFs**, <kbd>Return</kbd> sends a GIF search without waiting, and <kbd>Delete</kbd> at the start of the message removes the GIF you picked.
 
 ## The messages
 

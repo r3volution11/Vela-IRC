@@ -38,7 +38,7 @@ The port is whatever you configured for the listener in ZNC; it's often not 6697
 
 ### What Vela does with ZNC
 
-- **Playback.** If ZNC's `playback` module is loaded, Vela asks for only the messages it hasn't seen yet each time it connects, so nothing is shown twice.
+- **Playback.** If ZNC's `playback` module is loaded, Vela asks for only the messages it hasn't seen yet each time it connects, so nothing is shown twice. After a restart with **Save message history** off (the default for new installs), that's everything ZNC has kept, since Vela keeps messages only in memory.
 - **What you missed counts as unread.** Messages ZNC replays that are newer than where you stopped reading count in the unread and mention badges, put the **New** line above them, and can be summarized with [Catch me up](/guide/apple-intelligence#catch-me-up). They never pop up notifications or play sounds. A channel Vela has never had open starts counting from when it first joins it, so its older history stays read. The same goes for history from soju or any server with chat history.
 - **Your own messages from other clients.** With `self-message`, messages you send from another client connected to the same ZNC appear in Vela too. Vela and your other clients can stay connected at the same time.
 - **Accurate timestamps** with `server-time`.
@@ -66,7 +66,9 @@ Each network provided by soju uses the bouncer's server, identity and login. You
 
 ### History
 
-soju supports `chathistory`, so Vela fetches the messages you missed when it connects, and scrolling up past what's stored on your Mac loads older history from the bouncer.
+soju supports `chathistory`, so Vela fetches the messages you missed when it connects, and scrolling up past the oldest message Vela has loads older history from the bouncer.
+
+With **Save message history** off (the default for new installs), Vela keeps messages only in memory, so after a restart soju fills your channels in again with what it has kept. See [Scrollback and history](/guide/messages-and-layouts#scrollback-and-history).
 
 ### Leaving a channel detaches it
 
@@ -78,18 +80,18 @@ On a ZNC or soju network, Vela keeps your channels on the bouncer unless you ask
 
 | You | Vela | The bouncer |
 | --- | --- | --- |
-| **Leave Channel**, a tab's **×** or a middle-click | Shows the channel dimmed, "detached" | Stays in it, keeps its history, stops sending it to Vela |
+| **Leave Channel**, a tab's **×**, a middle-click or <kbd>⌘W</kbd> | Shows the channel dimmed, "detached" | Stays in it, keeps its history, stops sending it to Vela |
 | **Join Channel** on a detached channel | Joins it and catches up | Reattaches it and plays back what you missed |
-| **Hide Channel**, or **×** on a detached channel | Takes it out of the list | Stays in it, detached |
+| **Hide Channel**, or **×** or <kbd>⌘W</kbd> on a detached channel | Takes it out of the list | Stays in it, detached |
 | **Remove Channel…**, `/close` or `/part` | Parts it (`/part` keeps it in the list, dimmed) | Leaves it and forgets it |
 
 - Leaving asks first, while **Ask before leaving a channel** is on: "Leave #vela? Your bouncer stays in the channel and keeps its history; join it again to catch up."
 - A detached channel stays detached when you quit and reopen Vela, and so does a hidden one.
 - To get a hidden channel back, right-click the network, choose **Edit Network…** and click **Show** or **Join** under **Hidden channels**, or choose **Show #channel (Network)** in the command palette (<kbd>⇧⌘P</kbd>). <kbd>⌘Z</kbd> and **File → Reopen Closed Channel** (<kbd>⇧⌘T</kbd>) bring back one you just hid.
-- A message the bouncer passes on from a detached channel counts as unread, or as a mention, and leaves the channel detached. One from a hidden channel is saved for when you show it.
+- A message the bouncer passes on from a detached channel counts as unread, or as a mention, and leaves the channel detached. One from a hidden channel never brings it back; if you [save message history](/guide/messages-and-layouts#scrollback-and-history), it's kept for when you show it.
 - If the bouncer doesn't confirm a detach within a few seconds, Vela says so in the network's console and keeps you in the channel. It never parts the channel instead.
 - Detached or removed while you weren't connected to the bouncer? Vela tells the bouncer after your next connection, even if you quit Vela in between.
-- To make a tab's **×** and middle-click remove channels from the bouncer instead, turn on **Settings → Networks → Channels → Closing a channel removes it from the bouncer** (`channels.bouncerCloseRemoves`).
+- To make a tab's **×**, a middle-click and <kbd>⌘W</kbd> remove channels from the bouncer instead, turn on **Settings → Networks → Channels → Closing a channel removes it from the bouncer** (`channels.bouncerCloseRemoves`).
 
 Vela knows a network is a bouncer from **Bouncer → Type** in the network editor. For a network set up without one, it goes by what the server offers when you connect: soju's `soju.im/bouncer-networks`, or ZNC's `znc.in/…` capabilities.
 

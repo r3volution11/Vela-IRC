@@ -9,6 +9,10 @@ Vela updates itself. Once a day it checks for a new version, and when there's on
 
 Every update is signed, and Vela checks the signature before it installs anything. Your networks, settings, themes and saved history stay as they are.
 
+::: tip Still on Vela 1.0?
+Vela updates itself from version 1.1. Version 1.0 has no updater, so it never offers a new version: download the latest version once, as [Install → From Vela 1.0](/guide/install#from-1-0) explains, and from then on updates come to you.
+:::
+
 ## Checking for updates
 
 Choose **Vela → Check for Updates…**. If there's a new version, a window shows what's new in it, with three choices:

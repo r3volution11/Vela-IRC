@@ -19,7 +19,7 @@ When someone posts a link, Vela can show what's behind it right in the conversat
 
 Hover a message's previews and click the chevron to hide them, or right-click a preview and choose **Hide Previews**.
 
-The settings below are in **Settings → Media**, and most are in the [command palette](/guide/command-palette) too (type "media"). [Presets](/guide/presets) choose link, video and image sizes for you. GIF search, also in **Settings → Media**, has its own page: [Emoji & GIFs](/guide/emoji-and-gifs).
+The settings below are in **Settings → Media**, and most are in the [command palette](/guide/command-palette) too (type "media"). [Presets](/guide/presets) choose link, video and image sizes for you. GIF search, which comes in a later version, has its own page: [Emoji & GIFs](/guide/emoji-and-gifs).
 
 ## Link previews
 
@@ -51,7 +51,7 @@ Some sites, such as [IMDb](/reference/media-sites#link-previews-behind-bot-check
 - **Only what the check needs loads:** the page, its scripts and the check's own servers. Images, video, fonts, style sheets and requests to other sites (ads and analytics, for example) are blocked, and so is your local network. Vela stops the page as soon as its title and description are in. The preview's image then loads like any other, under your image settings and [site rules](#site-rules).
 - **Nothing appears or opens.** The page is never shown, and it can't open windows, start downloads, play sound or ask for your camera or microphone. Nothing is handed to your browser.
 - **Honest.** The site sees WebKit, Safari's engine, because that's what loads the page. Vela never pretends to be another app and never answers a check itself.
-- **A second or two, once.** It happens only for sites that need it, one page at a time, and the preview is saved like any other, so the page isn't loaded again. On IMDb it takes a second or so and moves about 0.7 MB, mostly the check's own script and the page itself; without the blocking it would be nearly 2 MB.
+- **A second or two, once.** It happens only for sites that need it, one page at a time, and the preview is [kept like any other](#what-vela-fetches-and-what-that-means-for-privacy), so the page isn't loaded again. On IMDb it takes a second or so and moves about 0.7 MB, mostly the check's own script and the page itself; without the blocking it would be nearly 2 MB.
 - **When it doesn't work.** If a check doesn't let the engine through, the link keeps a plain preview with just the site's name (or none), and Vela doesn't try that link again until it restarts.
 - **Never where your settings say no:** blocked sites, adult sites, your local network, or a link waiting for you to click **Load preview**. Sites set to **Text only** work as usual, since only text is read.
 
@@ -137,7 +137,7 @@ To build a preview, Vela downloads the linked page or image **from your Mac**. T
 - **Video links contact the video site before you press play.** When previews load automatically, Vela fetches the video's title and thumbnail from the video site (from YouTube's, Vimeo's, Streamable's or Reddit's oEmbed service, or from the Twitch page), so that site sees your IP address like any other preview. For a Reddit video, Vela also follows the link to its post and reads the video's playlist, to learn its shape and whether it has sound. The player itself, with its scripts and cookies, loads only when you press **▶**. YouTube plays from `youtube-nocookie.com`, and nothing the player stores is kept after it closes.
 - **GIF links contact the GIF site.** Vela fetches a Tenor page or short link (or a `gph.is` link) to find its GIF, then downloads the GIF's video copy from Tenor, GIPHY or Imgur, with the same size limit and [site rules](#site-rules) as images. Downloaded GIFs are kept in a temporary folder that Vela empties each time it starts.
 - **Your local network is off-limits.** Vela never fetches previews from `localhost`, private and link-local IP addresses, or names like `router.local`, so a link in a channel can't make Vela probe devices on your network.
-- **Previews are cached** on your Mac, so scrolling back doesn't fetch them again. Page previews are refreshed after a week, and cached previews older than 30 days are deleted when Vela starts.
+- **Previews are kept,** so scrolling back doesn't fetch them again. With **Save message history** off (the default for new installs), page previews and images are kept in memory while Vela is open, and fetched again after a restart. With it on, they're cached on your Mac: page previews are refreshed after a week, and cached previews older than 30 days are deleted when Vela starts. See [Scrollback and history](/guide/messages-and-layouts#scrollback-and-history).
 
 If that's more than you want, the rest of this page shows how to turn previews off, limit them per channel or per site, hide previews of adult sites and blur images.
 
