@@ -8,7 +8,7 @@
 #
 # Source:  https://github.com/Sinfonietta/hostfiles (pornography-hosts)
 # Commit:  46f3097d7bcfc9eea323fe365074dfd771d0d17c
-# Date:    2026-11-16
+# Date:    2026-11-21
 # Domains: 41841
 #
 # The list is derived from Sinfonietta/hostfiles, used under its license:
