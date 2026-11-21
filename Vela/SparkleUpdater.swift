@@ -87,16 +87,24 @@ final class SparkleUpdater: NSObject, AppUpdater {
         set { UserDefaults.standard.set(newValue, forKey: Self.waitingVersionKey) }
     }
 
-    /// Whether `bundle` has an https feed and a real public key: base64 of
-    /// 32 bytes, not the placeholder Vela/Info.plist ships with until the
+    /// Whether `bundle` has a feed it may use and a real public key: base64
+    /// of 32 bytes, not the placeholder Vela/Info.plist ships with until the
     /// signing key exists.
     static func isConfigured(_ bundle: Bundle) -> Bool {
-        guard let feed = bundle.object(forInfoDictionaryKey: "SUFeedURL") as? String,
-              URL(string: feed)?.scheme == "https",
+        guard let feed = (bundle.object(forInfoDictionaryKey: "SUFeedURL") as? String).flatMap(URL.init(string:)),
+              isAllowedFeed(feed),
               let key = bundle.object(forInfoDictionaryKey: "SUPublicEDKey") as? String,
               Data(base64Encoded: key)?.count == 32
         else { return false }
         return true
+    }
+
+    /// https, or plain http on this Mac only: scripts/test-update.sh serves
+    /// its feed from localhost. Releases always have velairc.app's https feed
+    /// (scripts/verify-release.sh checks it).
+    static func isAllowedFeed(_ url: URL) -> Bool {
+        if url.scheme == "https" { return true }
+        return url.scheme == "http" && ["localhost", "127.0.0.1"].contains(url.host())
     }
 
     override init() {

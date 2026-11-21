@@ -23,9 +23,10 @@
 #      release notes from CHANGELOG.md included.
 #   4. Serves the feed and the DMG on localhost:<port>, and checks that both
 #      download.
-#   5. Without --prepare: opens the old app. It checks at launch (it has
-#      never checked) and shows Sparkle's update window; choose Install
-#      Update (or Vela Update Test → Check for Updates… if it doesn't show).
+#   5. Without --prepare: opens the old app. When it checks (if it hasn't
+#      by itself within 30 seconds, the script says to choose Vela Update
+#      Test → Check for Updates…), Sparkle's update window shows; choose
+#      Install Update.
 #      The script waits until the app at build/update-test is 99.0.0,
 #      running and correctly signed, then says so.
 #
@@ -246,14 +247,22 @@ fi
 # ---------------------------------------------------------------- the real thing
 check_section "Updating"
 print
-print -P "    %BOpening $display_name 1.0.0.%b It checks for updates as it starts, because it never has."
-print -r -- "    In Sparkle's window, choose Install Update. (If it doesn't show, choose"
-print -r -- "    $display_name → Check for Updates….) It quits, installs 99.0.0 and opens again."
+print -P "    %BOpening $display_name 1.0.0.%b"
+print -r -- "    In Sparkle's window, choose Install Update. It quits, installs 99.0.0 and opens again."
 print -r -- "    Waiting up to 10 minutes; Ctrl-C stops the test."
 print
+feed_requests() { grep -c 'GET /appcast.xml' "$work/server.log" 2>/dev/null || print 0; }
+requests_before=$(feed_requests)
 open "$old_app"
+# Sparkle may leave an app's very first launch alone; if the app hasn't
+# asked for the feed after 30 seconds, ask for the check by hand.
+asked=0
 updated=0
 for attempt in {1..300}; do
+  if (( ! asked && attempt == 15 )) && (( $(feed_requests) == requests_before )); then
+    asked=1
+    print -P "    %F{yellow}It hasn't checked by itself.%f Choose $display_name → Check for Updates… now."
+  fi
   if [[ $(plutil -extract CFBundleVersion raw -o - "$old_app/Contents/Info.plist" 2>/dev/null || true) == 99 ]] \
       && pgrep -f "$PWD/$old_app/Contents/MacOS/" >/dev/null; then
     updated=1
