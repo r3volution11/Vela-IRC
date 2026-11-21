@@ -24,13 +24,14 @@ public final class IntelligenceServices {
     }
 
     /// The real models: on this Mac, and Private Cloud Compute for long
-    /// catch-ups while `settings` allow it (`intelligence.privateCloudCompute`).
+    /// catch-ups while `settings` allow it (`intelligence.privateCloudCompute`),
+    /// in development builds only for now (`PrivateCloudComputeAvailability`).
     public static func live(settings: SettingsStore) -> IntelligenceServices {
         let availability = IntelligenceAvailability.live()
         return IntelligenceServices(
             availability: availability,
             summarizer: FoundationModelSummarizer(availability: availability) { [weak settings] in
-                settings?[.intelligencePrivateCloudCompute] ?? false
+                PrivateCloudComputeAvailability.isBuiltIn && (settings?[.intelligencePrivateCloudCompute] ?? false)
             }
         )
     }

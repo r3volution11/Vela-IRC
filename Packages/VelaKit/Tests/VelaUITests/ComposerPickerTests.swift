@@ -62,9 +62,12 @@ extension LinkSelectionTests {
             let window = try #require(hosted.pickerWindow)
             command.perform()
             #expect(try await hosted.wait { !window.isVisible }, "⇧⌘E didn't close the picker")
-            // Without GIFs it's just emoji.
+            #expect(command.keywords.contains("gif"))
+            // Without GIFs it's just emoji, and searching "gif" doesn't find it.
             hosted.app.settings[.gifsEnabled] = false
-            #expect(VelaCommandCatalog.emojiAndGIFs(settings: hosted.app.settings, uiState: hosted.uiState, hasBuffer: true).title == "Emoji…")
+            let emoji = VelaCommandCatalog.emojiAndGIFs(settings: hosted.app.settings, uiState: hosted.uiState, hasBuffer: true)
+            #expect(emoji.title == "Emoji…")
+            #expect(!emoji.keywords.contains { $0.contains("gif") || $0 == "klipy" || $0 == "giphy" })
             #expect(!VelaCommandCatalog.emojiAndGIFs(settings: hosted.app.settings, uiState: hosted.uiState, hasBuffer: false).isEnabled)
         }
 
@@ -418,6 +421,26 @@ extension LinkSelectionTests {
             hosted.session.connectionState = .connected
             try await hosted.settle()
             #expect(try await hosted.shows("Send message"))
+            // GIFs off (and in a release, which has no GIF search yet): the
+            // smiley is just for emoji.
+            hosted.app.settings[.gifsEnabled] = false
+            try await hosted.settle()
+            #expect(try await hosted.shows("Emoji"))
+            #expect(try await hosted.hides("Emoji and GIFs"))
+        }
+
+        /// The smiley's tooltip and VoiceOver text mention GIFs only while
+        /// the picker has them.
+        @Test func theSmileyMentionsGIFsOnlyWithGIFSearch() {
+            let gifs = ComposerPickerButton.labels(showsGIFs: true)
+            #expect(gifs.help == "Emoji & GIFs (⇧⌘E)")
+            #expect(gifs.label == "Emoji and GIFs")
+            #expect(gifs.hint == "Opens the emoji and GIF picker")
+            let emoji = ComposerPickerButton.labels(showsGIFs: false)
+            #expect(emoji.help == "Emoji (⇧⌘E)")
+            #expect(emoji.label == "Emoji")
+            #expect(emoji.hint == "Opens the emoji picker")
+            for text in [emoji.help, emoji.label, emoji.hint] { #expect(!text.contains("GIF")) }
         }
 
         /// The smiley and send button sit centered on the first line, inside

@@ -80,6 +80,43 @@ struct WhatsNewTests {
         #expect(WhatsNewNotice.current(in: later).isEmpty)
     }
 
+    /// The Modern Chat spacing notice, for a Mac whose 1.0 spacing moved.
+    private func spacingContext(version: String, movedIn movedVersion: String?, spacing: (line: Double, message: Double)?) throws -> (WhatsNewContext, URL) {
+        let (context, directory) = try context(version: version, save: nil, keptIn: nil)
+        if let spacing {
+            context.settings[.chatLineSpacing] = spacing.line
+            context.settings[.chatMessageSpacing] = spacing.message
+        }
+        if let movedVersion { context.record.recordEvent(ModernChatSpacingMigration.movedEvent, version: movedVersion) }
+        return (context, directory)
+    }
+
+    @Test func spacingNoticeWhenModernChatSpacingMoved() throws {
+        let (context, directory) = try spacingContext(version: "1.1.0", movedIn: "1.1.0", spacing: (4, 12))
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let notices = WhatsNewNotice.current(in: context)
+        #expect(notices.map(\.id) == ["chat.modernSpacingMoved"])
+        #expect(notices.first?.message == "Modern Chat now has 4 points between lines and 12 between messages, up from 2 and 6. Your spacing was Modern Chat's, so it moved with it. You can change it in Settings → Messages.")
+        #expect(notices.first?.settingsPane == "messages")
+    }
+
+    @Test func spacingNoticeOnlyWhileItApplies() throws {
+        // Nothing moved (a new install, or other spacing).
+        let (untouched, untouchedDirectory) = try spacingContext(version: "1.1.0", movedIn: nil, spacing: nil)
+        defer { try? FileManager.default.removeItem(at: untouchedDirectory) }
+        #expect(WhatsNewNotice.current(in: untouched).isEmpty)
+
+        // Moved, then changed since: "it moved with it" isn't what you have.
+        let (changed, changedDirectory) = try spacingContext(version: "1.1.0", movedIn: "1.1.0", spacing: (3, 12))
+        defer { try? FileManager.default.removeItem(at: changedDirectory) }
+        #expect(WhatsNewNotice.current(in: changed).isEmpty)
+
+        // A later release's What's New doesn't repeat it.
+        let (later, laterDirectory) = try spacingContext(version: "1.2.0", movedIn: "1.1.0", spacing: (4, 12))
+        defer { try? FileManager.default.removeItem(at: laterDirectory) }
+        #expect(WhatsNewNotice.current(in: later).isEmpty)
+    }
+
     @Test func noticesAreDataDriven() throws {
         let (context, directory) = try context(version: "2.0.0", save: nil, keptIn: nil)
         defer { try? FileManager.default.removeItem(at: directory) }

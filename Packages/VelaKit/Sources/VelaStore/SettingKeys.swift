@@ -717,11 +717,11 @@ extension SettingKey where Value == SystemFollowingBool {
 extension SettingKey where Value == Bool {
     public static var intelligenceCatchUp: SettingKey<Bool> {
         .init("intelligence.catchUp", default: true,
-              summary: "Offer \"Catch me up\": an Apple Intelligence summary of what you missed in a busy channel, made on your Mac (long ones can use Private Cloud Compute; see intelligence.privateCloudCompute). Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri.")
+              summary: "Offer \"Catch me up\": an Apple Intelligence summary of what you missed in a busy channel, made on your Mac. Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri.")
     }
     public static var intelligencePrivateCloudCompute: SettingKey<Bool> {
         .init("intelligence.privateCloudCompute", default: false,
-              summary: "On macOS 27 or later, send long catch-ups (too long for one pass of the model on your Mac) to Apple's Private Cloud Compute: encrypted, never stored, and not readable by Apple. Short catch-ups, translation and everything else stay on your Mac. If Private Cloud Compute isn't available or its daily limit is reached, the summary is made on your Mac.")
+              summary: "On macOS 27 or later, send long catch-ups (too long for one pass of the model on your Mac) to Apple's Private Cloud Compute: encrypted, never stored, and not readable by Apple. Short catch-ups, translation and everything else stay on your Mac. If Private Cloud Compute isn't available or its daily limit is reached, the summary is made on your Mac. Development builds only for now.")
     }
     public static var intelligenceSpotlightChannels: SettingKey<Bool> {
         .init("intelligence.spotlightChannels", default: true,
@@ -773,10 +773,13 @@ extension SettingKey where Value == JSONValue {
 /// The list of known settings plus helpers that render it as documentation.
 public enum SettingsCatalog {
     public static var all: [SettingDescriptor] {
-        // GIF search is only in development builds for now (GIFAvailability).
+        // GIF search and Private Cloud Compute are only in development
+        // builds for now (GIFAvailability, PrivateCloudComputeAvailability).
         // website/scripts/generate.mjs reads the list below up to its first
         // closing bracket, so keep the filter after it.
         let gifsBuiltIn = GIFAvailability.isBuiltIn
+        let privateCloudComputeBuiltIn = PrivateCloudComputeAvailability.isBuiltIn
+        let privateCloudComputeKey = SettingKey.intelligencePrivateCloudCompute.key
         return ([
             SettingKey.appearanceTheme.descriptor,
             SettingKey.appearancePreferredDarkTheme.descriptor,
@@ -881,7 +884,10 @@ public enum SettingsCatalog {
 
             SettingKey.updatesCheckAutomatically.descriptor,
             SettingKey.updatesInstallAutomatically.descriptor,
-        ] + NavigationSettingsCatalog.descriptors).filter { gifsBuiltIn || !$0.key.hasPrefix("gifs.") }
+        ] + NavigationSettingsCatalog.descriptors).filter { descriptor in
+            (gifsBuiltIn || !descriptor.key.hasPrefix("gifs."))
+                && (privateCloudComputeBuiltIn || descriptor.key != privateCloudComputeKey)
+        }
     }
 
     public static func descriptor(forKey key: String) -> SettingDescriptor? {

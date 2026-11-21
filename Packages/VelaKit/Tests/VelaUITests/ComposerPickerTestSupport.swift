@@ -479,7 +479,8 @@ final class PickerHost {
 
     /// Opens the picker with the smiley and waits for its search field.
     func openPicker() async throws {
-        try await press("Emoji and GIFs")
+        // "Emoji and GIFs", or just "Emoji" with GIFs off.
+        try await press(ComposerPickerButton.labels(showsGIFs: GIFAvailability.isOn(in: app.settings)).label)
         #expect(try await wait { searchField?.currentEditor() != nil }, "the picker didn't open with its search field focused")
         try await settle(200)
     }

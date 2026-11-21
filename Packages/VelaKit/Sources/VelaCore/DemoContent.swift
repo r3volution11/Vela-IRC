@@ -10,7 +10,8 @@ import VelaStore
 /// Sample networks, channels and conversations shown in demo mode
 /// (`-VelaDemoMode YES`) and SwiftUI previews. Nothing connects.
 enum DemoContent {
-    static func populate(_ app: AppModel) {
+    /// Adds the sample networks, selecting #vela unless `selectsChannel` is false.
+    static func populate(_ app: AppModel, selectsChannel: Bool = true) {
         let libera = makeSession(name: "Libera.Chat", host: "irc.libera.chat", nick: "doug")
         let oftc = makeSession(name: "OFTC", host: "irc.oftc.net", nick: "doug")
         let soju = makeSession(name: "Ergo Testnet", host: "testnet.ergo.chat", nick: "doug")
@@ -20,7 +21,7 @@ enum DemoContent {
         populateErgo(soju)
         oftc.connectionState = .disconnected
 
-        app.installDemoSessions([libera, oftc, soju])
+        app.installDemoSessions([libera, oftc, soju], selectsChannel: selectsChannel)
         applyDemoMediaSettings(app, libera: libera)
     }
 

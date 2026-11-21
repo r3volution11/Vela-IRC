@@ -22,11 +22,23 @@ public struct CatchMeUpIntent: AppIntent {
     }
 
     public static let title: LocalizedStringResource = "Catch Me Up"
+    // Private Cloud Compute is in development builds only for now
+    // (PrivateCloudComputeAvailability), so a release doesn't mention it.
+    // The description is App Intents metadata, fixed when Vela is built;
+    // scripts/verify-release.sh checks a release's.
+    #if DEBUG
     public static let description = IntentDescription(
         "Summarizes what you missed in a channel or conversation with Apple Intelligence, on this Mac. Long stretches use Private Cloud Compute if you turn it on in Vela's settings, or open in Vela.",
         categoryName: "Messages",
         searchKeywords: ["summary", "summarize", "unread", "apple intelligence"]
     )
+    #else
+    public static let description = IntentDescription(
+        "Summarizes what you missed in a channel or conversation with Apple Intelligence, on this Mac. Long stretches open in Vela.",
+        categoryName: "Messages",
+        searchKeywords: ["summary", "summarize", "unread", "apple intelligence"]
+    )
+    #endif
     /// In the background, and in front when a long stretch opens Vela to
     /// its card (`continueInForeground`).
     public static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]

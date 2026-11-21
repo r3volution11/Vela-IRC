@@ -7,6 +7,8 @@ description: What you see the first time you open Vela, how to add your first IR
 
 The first time you open Vela, the window says **Welcome to Vela** and offers one button: **Add Network…**. Vela doesn't connect anywhere until you add a network.
 
+<Screenshot src="/screenshots/welcome-palenight.webp" light="/screenshots/welcome-lighter.webp" alt="Vela's window on first launch: an empty sidebar, and a river winding through a mountain valley, at night with a full moon, stars and a stargazer at a telescope in a dark theme, or by day with the sun, clouds, birds and a kayaker in a light theme, above “Welcome to Vela”, “Add an IRC network or bouncer to get started.” and an Add Network… button" caption="The welcome screen in Palenight, or in Lighter while this site is light." />
+
 Above the welcome is a picture of a river winding through a mountain valley, drawn in your theme's colors. With a dark theme it's night, with a full moon, Vela's stars and a stargazer at a telescope. With a light theme it's day, with a kayaker paddling toward the sun. Later, when no conversation is open, the same picture says **Pick a conversation**.
 
 ## 1. Add a network

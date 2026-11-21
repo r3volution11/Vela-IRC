@@ -27,8 +27,8 @@ Apply it again to get these two settings. Until you do, Settings → Presets sho
 
 Vela's defaults: a sidebar with grouped messages (one name header per run of messages), roomy spacing between lines and messages, and full inline media: full-size images, standard link previews and video players. Joins and parts are collapsed into one line.
 
-::: tip Applied Modern Chat before?
-Apply it again to get its spacing: 4 points between lines and 12 between messages. Until you do, your spacing stays as it was and Settings → Presets shows your setup as Custom.
+::: info Modern Chat in Vela 1.0
+Vela 1.1 gave Modern Chat more room: 4 points between lines and 12 between messages, up from 2 and 6. If you applied it in 1.0 and kept its spacing, Vela moved yours to the new values when it updated, and What's New said so. Spacing you'd changed stays as you set it.
 :::
 
 ## Tabbed

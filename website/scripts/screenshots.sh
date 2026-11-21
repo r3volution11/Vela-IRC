@@ -41,14 +41,15 @@ app="${app:A}"
 mkdir -p "$out"
 
 # shot <name> <window size> <output width> [demo args…]
-# Shows #vela unless the demo args --select another buffer. Remote media in
-# the demo needs a few seconds, hence --snapshot-delay 8.
+# Shows #vela unless the demo args --select another buffer, or open none
+# (--no-networks, --no-selection). Remote media in the demo needs a few
+# seconds, hence --snapshot-delay 8.
 shot() {
   local name=$1 size=$2 width=$3
   shift 3
   if (( ${#only} )) && (( ! ${only[(Ie)$name]} )); then return; fi
   local select=(--select "#vela")
-  (( ${argv[(Ie)--select]} )) && select=()
+  (( ${argv[(Ie)--select]} || ${argv[(Ie)--no-networks]} || ${argv[(Ie)--no-selection]} )) && select=()
   "$root/scripts/demo-screenshot.sh" "$app" "$work/$name.png" \
     --size "$size" --snapshot-delay 8 "${select[@]}" "$@" >/dev/null
   sips -Z "$width" "$work/$name.png" >/dev/null
@@ -59,6 +60,11 @@ shot() {
 # Home page: the hero in the default dark and light themes.
 shot home-palenight 1400x900 1600 --theme Palenight --preset modern
 shot home-lighter   1400x900 1600 --theme Lighter   --preset modern
+
+# First launch: the welcome screen before any network is added, at night
+# in the default dark theme and by day in the light one.
+shot welcome-palenight 1280x800 1400 --theme Palenight --preset modern --no-networks
+shot welcome-lighter   1280x800 1400 --theme Lighter   --preset modern --no-networks
 
 # Presets, all in Palenight so they compare at a glance.
 for preset in classic modern tabbed focus; do
@@ -116,7 +122,7 @@ pane() {
   shift 3
   shot "$name" "$size" 1200 --theme Palenight --preset modern --settings-pane "$pane" "$@"
 }
-pane settings-intelligence 820x612 intelligence
+pane settings-intelligence 820x534 intelligence
 pane settings-siri         820x640 intelligence --settings-scroll 9999
 # Timestamps, with Position for the current layout (Modern) and Other layouts.
 pane settings-timestamps   820x450 messages --settings-scroll 949

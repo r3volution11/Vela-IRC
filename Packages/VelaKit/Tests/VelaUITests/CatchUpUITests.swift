@@ -391,8 +391,11 @@ struct CatchUpUITests {
     // MARK: Private Cloud Compute
 
     /// The switch is offered only on macOS 27 or later, off by default, and
-    /// says plainly what turning it on sends where.
+    /// says plainly what turning it on sends where. Only development builds
+    /// have it for now (`PrivateCloudComputeAvailability`), and tests are one.
     @Test func privateCloudComputeIsOfferedOnMacOS27() {
+        #expect(PrivateCloudComputeAvailability.isBuiltIn, "tests run as a development build")
+        #expect(SettingsCatalog.all.contains { $0.key == "intelligence.privateCloudCompute" })
         if #available(macOS 27.0, *) {
             #expect(IntelligenceCatchUpSection.offersPrivateCloudCompute)
         } else {

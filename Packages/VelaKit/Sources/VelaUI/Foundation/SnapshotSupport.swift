@@ -16,6 +16,7 @@ import VelaTheme
 ///     Vela --demo --snapshot /tmp/shot.png --themes-dir /path/in/container --theme "My Theme"
 ///     Vela --demo --snapshot /tmp/editor.png --theme-editor "Palenight"
 ///     Vela --demo --snapshot /tmp/about.png --about [--size 440x560]
+///     Vela --demo --snapshot /tmp/welcome.png --no-networks --theme Lighter
 ///
 /// The main UI (or, with `--settings-pane <id>`, the Settings window on that
 /// pane; ids are `SettingsPane` raw values; with `--theme-editor <theme>`,
@@ -25,6 +26,9 @@ import VelaTheme
 /// to a PNG after the delay, and the app quits. `--settings-scroll <points>`
 /// scrolls the pane down before the capture, and `--accent <name>` picks
 /// one of the theme's accent swatches, as Settings → Appearance would.
+/// `--no-networks` starts the demo without networks, so the main window
+/// shows the welcome screen of a first launch, and `--no-selection` keeps
+/// the networks but opens no conversation ("Pick a conversation").
 /// Demo mode uses a temporary Themes folder (see `DemoArguments`), which
 /// `--themes-dir` fills with copies of a folder's themes. Used by
 /// `scripts/demo-screenshot.sh`, CI and docs.

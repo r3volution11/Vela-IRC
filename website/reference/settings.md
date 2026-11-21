@@ -11,6 +11,6 @@ Every setting Vela knows, as it appears in [settings.json](/customize/settings-j
 This list is generated from Vela's source code each time the site is built, so it matches the latest release.
 :::
 
-The `gifs` settings are for [GIF search](/guide/emoji-and-gifs), which arrives in a later version. Until then only development builds know them: the released app doesn't show them in the settings editor, and lists them as unknown keys if they're in settings.json.
+The `gifs` settings are for [GIF search](/guide/emoji-and-gifs), and [`intelligence.privateCloudCompute`](#intelligence.privateCloudCompute) is for [Private Cloud Compute for long catch-ups](/guide/apple-intelligence#private-cloud-compute). Both arrive in a later version. Until then only development builds know them: the released app doesn't show them in the settings editor, and lists them as unknown keys if they're in settings.json.
 
 <!--@include: ../_generated/settings.md-->

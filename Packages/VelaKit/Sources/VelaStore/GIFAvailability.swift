@@ -13,4 +13,13 @@ public enum GIFAvailability {
     #else
     public static let isBuiltIn = false
     #endif
+
+    /// Whether the picker offers GIF search now: built in, and turned on
+    /// (`gifs.enabled`). The picker's GIFs tab, its smiley's tooltip and
+    /// VoiceOver label, and the Edit menu item all follow this, so a
+    /// release (or GIFs turned off) never mentions GIFs there.
+    @MainActor
+    public static func isOn(in settings: SettingsStore) -> Bool {
+        isBuiltIn && settings[.gifsEnabled]
+    }
 }

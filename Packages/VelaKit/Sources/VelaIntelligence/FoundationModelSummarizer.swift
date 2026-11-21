@@ -4,12 +4,15 @@
 
 import Foundation
 import FoundationModels
+import VelaStore
 
 /// Summarizes with Apple's Foundation Models (``CatchUpEngine`` over
 /// ``FoundationModelsCatchUpModel``), on this Mac. With
 /// `intelligence.privateCloudCompute` on, on macOS 27 or later, a stretch
 /// too long for one on-device pass goes to Private Cloud Compute instead
-/// (see ``CatchUpRouter``); everything else stays on the Mac.
+/// (see ``CatchUpRouter``); everything else stays on the Mac. Private Cloud
+/// Compute is in development builds only for now
+/// (`PrivateCloudComputeAvailability`).
 public final class FoundationModelSummarizer: ConversationSummarizer {
     private let availability: IntelligenceAvailability
     /// Whether long catch-ups may use Private Cloud Compute: the setting.
@@ -62,8 +65,11 @@ public final class FoundationModelSummarizer: ConversationSummarizer {
         )
     }
 
-    /// Private Cloud Compute, where the system has it (macOS 27+).
+    /// Private Cloud Compute, where the system has it (macOS 27+), in
+    /// development builds only for now (`PrivateCloudComputeAvailability`):
+    /// a release never sets up the cloud path.
     private nonisolated static func privateCloudCompute(timings: CatchUpCloudTimings) -> (any CatchUpCloud)? {
+        guard PrivateCloudComputeAvailability.isBuiltIn else { return nil }
         if #available(macOS 27.0, *) {
             return PrivateCloudComputeCloud(timings: timings)
         }

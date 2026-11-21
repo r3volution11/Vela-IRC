@@ -68,7 +68,7 @@ struct ComposerPickerView: View {
 
     private var services: GIFSearchServices { injectedServices ?? .shared }
     /// Only in development builds for now (`GIFAvailability`), and only when turned on.
-    private var gifsEnabled: Bool { GIFAvailability.isBuiltIn && app.settings[.gifsEnabled] }
+    private var gifsEnabled: Bool { GIFAvailability.isOn(in: app.settings) }
     /// The tab on screen: Emoji whenever GIFs are off.
     var shownTab: ComposerPickerTab { gifsEnabled ? tab : .emoji }
 
@@ -337,10 +337,12 @@ struct GIFAttributionBar: View {
 /// box is active (`isActive`: typing, or the picker open) and muted otherwise.
 struct ComposerPickerButton: View {
     @Environment(\.theme) private var theme
+    @Environment(AppModel.self) private var app
     @Binding var isPresented: Bool
     let isActive: Bool
 
     var body: some View {
+        let labels = Self.labels(showsGIFs: GIFAvailability.isOn(in: app.settings))
         Button {
             isPresented.toggle()
         } label: {
@@ -352,9 +354,18 @@ struct ComposerPickerButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Emoji & GIFs (⇧⌘E)")
-        .accessibilityLabel("Emoji and GIFs")
-        .accessibilityHint("Opens the emoji and GIF picker")
+        .help(labels.help)
+        .accessibilityLabel(labels.label)
+        .accessibilityHint(labels.hint)
+    }
+
+    /// The tooltip, and VoiceOver's label and hint. GIFs are mentioned only
+    /// while the picker has them (``GIFAvailability/isOn(in:)``), so never
+    /// in a release for now.
+    static func labels(showsGIFs: Bool) -> (help: String, label: String, hint: String) {
+        showsGIFs
+            ? ("Emoji & GIFs (⇧⌘E)", "Emoji and GIFs", "Opens the emoji and GIF picker")
+            : ("Emoji (⇧⌘E)", "Emoji", "Opens the emoji picker")
     }
 }
 

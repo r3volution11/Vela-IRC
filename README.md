@@ -133,7 +133,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ### Apple Intelligence, Siri and Shortcuts
 
-- **Catch me up:** back in a busy channel, an Apple Intelligence summary of what you missed, topic by topic, made on your Mac, including what your bouncer replayed. On macOS 27, long ones can use Apple's Private Cloud Compute, if you turn it on.
+- **Catch me up:** back in a busy channel, an Apple Intelligence summary of what you missed, topic by topic, made on your Mac, including what your bouncer replayed. Letting long ones use Apple's Private Cloud Compute (macOS 27, opt-in) comes in a later version; for now it's only in development builds.
 - **Translation:** translate a message from another language, or a whole channel as messages arrive, on your Mac with Apple's Translation framework. No Apple Intelligence needed.
 - **Writing Tools** in the message field, where Apple Intelligence is available.
 - **Siri and Shortcuts:** ask Siri to catch you up, check your mentions, send a message, open a channel or set you away, and use the same actions in your own shortcuts. Your channels show up in Spotlight (names only).
@@ -236,7 +236,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **No previews from your local network.** Vela never fetches previews from private, local or LAN addresses.
 - **No GIF search in this version,** so Vela never contacts a GIF service. When GIF search arrives (it's in development builds for now), it sends what you search for, and your IP address, to KLIPY (or GIPHY, with your own key), only while the GIFs tab is open. A GIF is sent as its link, which others' clients load from the service. Turning off **Search GIFs** (`gifs.enabled`) stops it contacting anyone.
 - **Passwords, channel keys and certificates** are stored in the macOS Keychain. Vela is sandboxed.
-- **On-device intelligence.** Catch me up summaries and translations are made on your Mac, unless you let long catch-ups use Apple's Private Cloud Compute (off by default; encrypted, not stored, not readable by Apple). Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
+- **On-device intelligence.** Catch me up summaries and translations are made on your Mac. A later version will let you send long catch-ups to Apple's Private Cloud Compute (off by default; encrypted, not stored, not readable by Apple); this one never does. Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
 - **The website is separate.** velairc.app uses Google Analytics, asks visitors in the EU, EEA, UK and Switzerland first, and honors Global Privacy Control. The app never does any of this. See [Privacy](https://velairc.app/help/privacy#this-website).
 
 ## Building from source
@@ -262,6 +262,7 @@ VELA_LIVE_TESTS=1 swift test --package-path Packages/VelaKit \
 scripts/check-media-sites.sh                                  # check the supported media sites against the real sites
 scripts/demo-screenshot.sh build/Vela.app shot.png --theme Lighter --preset tabbed   # offscreen screenshot
 scripts/demo-screenshot.sh build/Vela.app shot.png --themes-dir my-themes --theme "Harbor"  # with themes from a folder
+scripts/demo-screenshot.sh build/Vela.app shot.png --no-networks --theme Lighter  # the welcome screen, with no networks
 ```
 
 Demo mode uses a temporary Themes folder, so it never shows or changes your

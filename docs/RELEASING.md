@@ -208,6 +208,7 @@ Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts 
 | Update key | `SUPublicEDKey` is a public key, not the placeholder. | See [The update signing key](#the-update-signing-key). `--adhoc` only notes it. |
 | Sparkle | `Sparkle.framework` is the version `Package.resolved` pins, and it, `Installer.xpc`, `Downloader.xpc`, `Autoupdate` and `Updater.app` each verify, with the hardened runtime, a Developer ID certificate of the app's team and a secure timestamp (`--adhoc`: they verify). | Archive and export with `scripts/release.sh`. Never add `--deep` to the signing flags: Sparkle's services need their own signatures. |
 | GIF key | `Info.plist` has no `VelaKLIPYAPIKey`: GIF search is only in development builds until KLIPY approves Vela's key. | Check `Vela/Info.plist` and the build settings. See [The GIF key](#the-gif-key). |
+| Private Cloud Compute | The app doesn't offer it: the switch's title ("Use Private Cloud Compute for long catch-ups") isn't in its code, Catch Me Up's description in the App Intents metadata doesn't mention it, and it doesn't have the `com.apple.developer.private-cloud-compute` entitlement. It's only in development builds until Apple grants Vela the entitlement. | See [Private Cloud Compute](#private-cloud-compute). |
 | App Shortcuts | The app's App Intents metadata (`Contents/Resources/Metadata.appintents/extract.actionsdata`) has as many App Shortcuts as `Vela/VelaShortcuts.swift` declares (7 today). | Xcode's App Intents metadata processor dropped some. Its lines are kept out of the build output but saved in `build/release/archive.log`: fix what they point at and build again. |
 | App Intents actions | The metadata has **Catch Me Up** (`CatchMeUpIntent`) and **Open Channel** (`OpenChannelIntent`) from the VelaIntents module. | As for App Shortcuts. |
 | App Intents package | `extract.packagedata` includes `VelaIntentsPackage`, which brings in the VelaIntents package's intents. | Check that `VelaAppIntentsPackage` in `Vela/VelaShortcuts.swift` lists `VelaIntentsPackage`, then build again. |
@@ -478,6 +479,12 @@ The [emoji and GIF picker](https://velairc.app/guide/emoji-and-gifs) searches KL
 - **Release builds:** none for now (above). When GIFs ship, pass the key to `xcodebuild` in an xcconfig only you can read, deleted as soon as the archive is done, so it isn't in the logs or the process list.
 - **Local builds (Vela Dev):** `scripts/klipy-key.sh --local` writes the key to `Config/Secrets.xcconfig`, which git ignores and only you can read; `Config/Vela.xcconfig` includes it. `--remove` deletes it.
 - **Limits:** while KLIPY has the key in testing mode, it allows 100 requests an hour, shared by everyone using Vela. Once KLIPY approves production access (requested in KLIPY's Partner Panel), the same key has no limit, and installed copies need no update. Changing the key, such as if it's revoked, needs a new release.
+
+## Private Cloud Compute
+
+**For now, Private Cloud Compute for long catch-ups is only in development builds (Vela Dev).** Using it needs Apple's `com.apple.developer.private-cloud-compute` entitlement, which Vela doesn't have yet, so in a release every request would fall back to the Mac. `PrivateCloudComputeAvailability` leaves it out of release builds: no `intelligence.privateCloudCompute` in the settings catalog, no switch in **Settings → Apple Intelligence** (compiled out with `#if DEBUG` in `IntelligenceCatchUpSection`), no cloud path for Catch me up (`IntelligenceServices`, `FoundationModelSummarizer`), and a description of **Catch Me Up** for Siri and Shortcuts that doesn't mention it (`CatchMeUpIntent`). The **Private Cloud Compute** post-build check fails a release that offers it, or that has the entitlement.
+
+Once Apple grants the entitlement, add it to `Vela/Vela.entitlements`, flip `PrivateCloudComputeAvailability`, drop the `#if DEBUG` around the switch and the intent's description, update the post-build check, and update the website (Apple Intelligence, Siri & Shortcuts, Privacy, the settings reference), the README and the roadmap.
 
 ## When the media check fails
 

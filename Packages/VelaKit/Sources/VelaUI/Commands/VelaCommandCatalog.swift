@@ -599,11 +599,13 @@ struct VelaCommandCatalog {
 
     /// Static so tests can build it from a bare settings store.
     static func emojiAndGIFs(settings: SettingsStore, uiState: UIState, hasBuffer: Bool) -> VelaCommand {
-        VelaCommand(
+        let gifs = GIFAvailability.isOn(in: settings)
+        return VelaCommand(
             id: "messageBox.emojiAndGIFs", category: .messageBox,
-            title: GIFAvailability.isBuiltIn && settings[.gifsEnabled] ? "Emoji & GIFs…" : "Emoji…",
+            title: gifs ? "Emoji & GIFs…" : "Emoji…",
             shortcut: Shortcuts.emojiAndGIFs,
-            keywords: ["emoji", "gif", "gifs", "smiley", "picker", "klipy", "giphy", "composer", "insert", "reaction"],
+            keywords: ["emoji", "smiley", "picker", "composer", "insert", "reaction"]
+                + (gifs ? ["gif", "gifs", "klipy", "giphy"] : []),
             isEnabled: hasBuffer
         ) { uiState.toggleComposerPicker() }
     }

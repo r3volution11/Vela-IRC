@@ -10,6 +10,8 @@
 #            --set key=value (any settings.json key), --size WxH,
 #            --snapshot-delay <seconds> (default 3; raise it for remote images),
 #            --select <buffer> ("#swift" or "OFTC/#debian"), --catch-up,
+#            --no-networks (no networks: the first launch's welcome screen),
+#            --no-selection (the demo's networks with no conversation open),
 #            --accent <name> (one of the theme's accent swatches, e.g. Cyan),
 #            --settings-pane <pane> (presets, appearance, layout, messages,
 #              media, networks, notifications, intelligence, updates,

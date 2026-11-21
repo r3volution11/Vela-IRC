@@ -72,12 +72,13 @@
 - [x] **Emoji picker and send button** in the message box
 - [x] **Tabs shrink to fit** before they scroll
 - [x] **Nick colors in message text,** with your own nick's color kept for you
-- [x] **Catch me up:** bouncer replays count, one summary at a time, progress, Siri hands long catch-ups to Vela, and Private Cloud Compute for long catch-ups (opt-in, macOS 27)
+- [x] **Catch me up:** bouncer replays count, one summary at a time, progress, and Siri hands long catch-ups to Vela
 - [x] **A redesigned welcome screen**
 
 ## Later
 
 - **GIF search** in releases (built, in development builds for now), once KLIPY approves Vela's key
+- **Private Cloud Compute for long catch-ups** in releases (opt-in, macOS 27; built, in development builds for now), once Apple grants Vela the entitlement
 
 - **Uploads:** paste or drag images, via IRCv3 FILEHOST (soju) and a custom uploader config
 - **Distribution:** a Mac App Store build, and a beta channel for testing releases early

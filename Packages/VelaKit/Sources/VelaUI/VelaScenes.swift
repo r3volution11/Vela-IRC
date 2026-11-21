@@ -164,7 +164,11 @@ private final class AppInstances {
         // The scroll benchmark's media comes from local stand-ins, set up
         // before anything can fetch.
         if ScrollBenchmark.isActive { ScrollBenchmark.prepareMedia() }
-        let app = demo ? AppModel.demo() : AppModel.live()
+        // --no-networks: the welcome screen of a first launch; --no-selection:
+        // the demo's networks with nothing open ("Pick a conversation").
+        let app = demo
+            ? AppModel.demo(networks: !arguments.contains("--no-networks"), selectsChannel: !arguments.contains("--no-selection"))
+            : AppModel.live()
         if demo {
             DemoArguments.apply(arguments, to: app.settings)
             DemoArguments.selectBuffer(from: arguments, in: app)

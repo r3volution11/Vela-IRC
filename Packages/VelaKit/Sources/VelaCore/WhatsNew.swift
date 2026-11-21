@@ -88,6 +88,7 @@ public struct WhatsNewNotice: Identifiable {
     /// Every notice Vela knows, in the order they're shown.
     public static let all: [WhatsNewNotice] = [
         .historyKeptOnUpgrade,
+        .modernChatSpacingMoved,
     ]
 
     /// The notices that apply in `context`.
@@ -106,5 +107,20 @@ public struct WhatsNewNotice: Identifiable {
     ) { context in
         context.record.event(HistorySaveMigration.keptHistoryEvent) == context.version
             && context.settings[.historySave]
+    }
+
+    /// For a Mac that still had Vela 1.0's Modern Chat spacing: it moved
+    /// to the new spacing with the preset (``ModernChatSpacingMigration``),
+    /// unless it's been changed since.
+    public static let modernChatSpacingMoved = WhatsNewNotice(
+        id: "chat.modernSpacingMoved",
+        title: "More room between messages",
+        message: "Modern Chat now has 4 points between lines and 12 between messages, up from 2 and 6. Your spacing was Modern Chat's, so it moved with it. You can change it in Settings → Messages.",
+        settingsPane: "messages",
+        settingsButtonTitle: "Open Messages Settings"
+    ) { context in
+        context.record.event(ModernChatSpacingMigration.movedEvent) == context.version
+            && context.settings[.chatLineSpacing] == ModernChatSpacingMigration.newSpacing.line
+            && context.settings[.chatMessageSpacing] == ModernChatSpacingMigration.newSpacing.message
     }
 }

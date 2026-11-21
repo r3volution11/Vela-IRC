@@ -156,7 +156,7 @@ macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writin
 
 ### Does Vela send my messages to an AI service?
 
-No. [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. The one exception is yours to make: on macOS 27 or later, you can let long catch-ups use Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute), which is off by default. Requests to it are encrypted and not stored, and Apple can't read them. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
+No. [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. A later version will let you send long catch-ups to Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) (macOS 27 or later, off by default), where requests are encrypted and not stored, and Apple can't read them. This version never does. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
 
 ### Is Vela free?
 

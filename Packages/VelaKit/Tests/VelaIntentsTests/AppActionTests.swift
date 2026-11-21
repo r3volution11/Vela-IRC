@@ -21,6 +21,17 @@ struct AppActionTests {
         return (app, libera, oftc)
     }
 
+    /// The demo, with the actions' waits for a connection on a
+    /// ``ManualActionClock``: they take the clock's time, not the
+    /// machine's, so a busy test run can't stretch them, and a test makes
+    /// its changes while the action is known to be waiting.
+    private func demoOnAClock() async throws -> (AppModel, ManualActionClock, libera: NetworkSession, oftc: NetworkSession) {
+        let (app, libera, oftc) = try await demo()
+        let clock = ManualActionClock()
+        app.actionClock = clock.actionClock
+        return (app, clock, libera, oftc)
+    }
+
     // MARK: Sending
 
     @Test func sendsTextAsIsEvenWithASlash() async throws {
@@ -55,16 +66,14 @@ struct AppActionTests {
         }
     }
 
+    /// A network that isn't connecting gets a moment (Vela may be about to
+    /// connect it), then sending gives up, well before the 10 s timeout.
     @Test func notConnectedGivesUpQuickly() async throws {
-        let (app, _, oftc) = try await demo()
+        let (app, clock, _, oftc) = try await demoOnAClock()
         let debian = try #require(oftc.buffer(named: "#debian"))
-        let start = Date()
-        await #expect(throws: AppActionError.notConnected(network: "OFTC")) {
-            try await app.send("hi", to: debian.id, connectionTimeout: .milliseconds(300))
-        }
-        // Well short of the 10 s default; loose enough for a busy test run,
-        // where the main actor is shared with every other test.
-        #expect(Date().timeIntervalSince(start) < 5)
+        let sent = await clock.run { try await app.send("hi", to: debian.id) }
+        #expect(throws: AppActionError.notConnected(network: "OFTC")) { try sent.result.get() }
+        #expect(sent.took >= .milliseconds(1500) && sent.took < .seconds(10))
     }
 
     @Test func notJoined() async throws {
@@ -76,16 +85,21 @@ struct AppActionTests {
     }
 
     @Test func waitsForAConnectionInProgress() async throws {
-        let (app, _, oftc) = try await demo()
+        let (app, clock, _, oftc) = try await demoOnAClock()
         let debian = try #require(oftc.buffer(named: "#debian"))
         oftc.connectionState = .connecting
-        Task {
-            try? await Task.sleep(for: .milliseconds(300))
-            oftc.connectionState = .connected
-            debian.isJoined = true
-        }
-        try await app.send("back online", to: debian.id, connectionTimeout: .seconds(5))
+        let sent = await clock.run({ try await app.send("back online", to: debian.id, connectionTimeout: .seconds(5)) }, changes: [
+            (.milliseconds(300), {
+                // Still waiting: nothing sent while OFTC connects.
+                #expect(debian.lines.last?.text != "back online")
+                oftc.connectionState = .connected
+                debian.isJoined = true
+            }),
+        ])
+        try sent.result.get()
         #expect(debian.lines.last?.text == "back online")
+        // Sent once connected and joined, not at the timeout.
+        #expect(sent.took >= .milliseconds(300) && sent.took < .seconds(5))
     }
 
     @Test func privateConversationsNeedNoJoin() async throws {
@@ -135,53 +149,51 @@ struct AppActionTests {
     }
 
     @Test func awayNeedsAConnection() async throws {
-        let (app, _, _) = try await demo()
+        let (app, clock, _, _) = try await demoOnAClock()
         for session in app.sessions { session.connectionState = .disconnected }
-        let start = Date()
-        await #expect(throws: AppActionError.noConnectedNetworks) { try await app.setAway(nil) }
-        await #expect(throws: AppActionError.noConnectedNetworks) { try await app.setBack() }
-        // Nothing was connecting, so nothing was waited for. (A wait would
-        // take the 10 s connection timeout, twice; the margin is for a busy
-        // machine running other tests.)
-        #expect(Date().timeIntervalSince(start) < 5)
+        let away = await clock.run { try await app.setAway(nil) }
+        let back = await clock.run { try await app.setBack() }
+        #expect(throws: AppActionError.noConnectedNetworks) { try away.result.get() }
+        #expect(throws: AppActionError.noConnectedNetworks) { try back.result.get() }
+        // Nothing was connecting, so nothing was waited for.
+        #expect(away.took == .zero)
+        #expect(back.took == .zero)
     }
 
     /// Siri may have just launched Vela: networks still connecting get a
     /// few seconds before away is set.
     @Test func awayWaitsForNetworksStillConnecting() async throws {
-        let (app, _, oftc) = try await demo()
+        let (app, clock, _, oftc) = try await demoOnAClock()
         oftc.connectionState = .connecting
-        Task {
-            try? await Task.sleep(for: .milliseconds(300))
-            oftc.connectionState = .registering
-            try? await Task.sleep(for: .milliseconds(200))
-            oftc.connectionState = .connected
-        }
-        let names = try await app.setAway("lunch", connectionTimeout: .seconds(5)).map(\.displayName)
-        #expect(Set(names) == ["Libera.Chat", "Ergo Testnet", "OFTC"])
+        let away = await clock.run({ try await app.setAway("lunch", connectionTimeout: .seconds(5)).map(\.displayName) }, changes: [
+            (.milliseconds(300), { oftc.connectionState = .registering }),
+            (.milliseconds(500), { oftc.connectionState = .connected }),
+        ])
+        #expect(Set(try away.result.get()) == ["Libera.Chat", "Ergo Testnet", "OFTC"])
+        // Through registering until OFTC was connected, not to the timeout.
+        #expect(away.took >= .milliseconds(500) && away.took < .seconds(5))
     }
 
     @Test func awayStopsWaitingForAConnectionThatFails() async throws {
-        let (app, _, oftc) = try await demo()
+        let (app, clock, _, oftc) = try await demoOnAClock()
         oftc.connectionState = .connecting
-        Task {
-            try? await Task.sleep(for: .milliseconds(200))
-            oftc.connectionState = .disconnected
-        }
-        let start = Date()
-        let names = try await app.setBack(connectionTimeout: .seconds(5)).map(\.displayName)
-        #expect(names == ["Libera.Chat", "Ergo Testnet"])
-        #expect(Date().timeIntervalSince(start) < 3)
+        let back = await clock.run({ try await app.setBack(connectionTimeout: .seconds(5)).map(\.displayName) }, changes: [
+            (.milliseconds(200), { oftc.connectionState = .disconnected }),
+        ])
+        #expect(try back.result.get() == ["Libera.Chat", "Ergo Testnet"])
+        // Because the connection failed (after the moment a network that
+        // isn't connecting gets), not at the 5 s timeout.
+        #expect(back.took >= .milliseconds(200) && back.took < .seconds(5))
     }
 
     @Test func awayWaitsNoLongerThanTheTimeout() async throws {
-        let (app, _, oftc) = try await demo()
+        let (app, clock, _, oftc) = try await demoOnAClock()
         oftc.connectionState = .connecting
-        let start = Date()
-        let names = try await app.setAway(nil, connectionTimeout: .milliseconds(400)).map(\.displayName)
-        #expect(names == ["Libera.Chat", "Ergo Testnet"])
-        // Well short of the 10 s default (see notConnectedGivesUpQuickly).
-        #expect(Date().timeIntervalSince(start) < 5)
+        let away = await clock.run { try await app.setAway(nil, connectionTimeout: .milliseconds(400)).map(\.displayName) }
+        #expect(try away.result.get() == ["Libera.Chat", "Ergo Testnet"])
+        #expect(oftc.connectionState == .connecting)
+        // Its own 400 ms, not the 10 s default.
+        #expect(away.took >= .milliseconds(400) && away.took < .seconds(1))
     }
 
     // MARK: Read state and mentions

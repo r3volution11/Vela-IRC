@@ -33,7 +33,7 @@ The phrases are in English, so they work when Siri's language is English. In oth
 
 - **A short stretch** (about 100 messages, which your Mac reads in one quick pass) Siri summarizes and reads out itself.
 - **A longer one opens Vela.** Siri says so ("That's 412 messages in #vela. Opening Vela to catch you up."), and Vela opens to the channel with the [Catch me up card](/guide/apple-intelligence#catch-me-up) summarizing all of it. Siri may ask first whether to open Vela.
-- **With [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) on** (macOS 27 or later), Siri summarizes a long stretch itself, as long as Private Cloud Compute can read it in one pass and is expected to answer in about 15 seconds. Otherwise it opens Vela as above.
+- **With [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) on** (in a later version, on macOS 27 or later), Siri will summarize a long stretch itself, as long as Private Cloud Compute can read it in one pass and is expected to answer in about 15 seconds. Otherwise it will open Vela as above.
 - **A summary already made** in the channel's card is used as it is, however long the stretch.
 - **Siri waits about 15 seconds at most.** If the summary isn't ready by then (another channel's summary is being written first, say), Siri opens Vela, where the card carries on with it rather than starting over.
 
@@ -88,7 +88,7 @@ IRC messages are text, so Siri can't send attachments or locations through Vela,
 
 ## Privacy
 
-- **Everything happens on your Mac.** Siri and Shortcuts run Vela's actions inside Vela, and Catch Me Up summarizes on your Mac, unless you've turned on [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) for long catch-ups. What you say to Siri is handled by Siri itself, under Apple's privacy policy.
+- **Everything happens on your Mac.** Siri and Shortcuts run Vela's actions inside Vela, and Catch Me Up summarizes on your Mac. ([Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) for long catch-ups, which you'll be able to turn on, comes in a later version.) What you say to Siri is handled by Siri itself, under Apple's privacy policy.
 - **Spotlight gets names only:** your channel and conversation names and their networks. Never messages. **Show channels in Spotlight** decides whether they appear in Spotlight's results; on macOS 27, the same names are also kept for Siri, hidden from Spotlight's results, either way.
 - **Siri learns where you send messages.** When you send a message, Vela tells Siri which channel it went to, so Siri can suggest it later. It never shares the text.
 - **Message lookups happen when Siri asks.** On macOS 27, when Siri needs a message (to reply to it, say), Vela searches the recent messages it has in memory at that moment. Nothing is indexed ahead of time.

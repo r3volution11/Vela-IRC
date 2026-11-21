@@ -14,10 +14,18 @@ struct MediaPane: View {
     @Environment(AppModel.self) private var app
     @Environment(\.theme) private var theme
 
+    /// Under the pane's title. GIF search, and its section below, are only
+    /// in development builds for now (GIFAvailability).
+    static var subtitle: String {
+        GIFAvailability.isBuiltIn
+            ? "Inline images, link previews and video players, where they're allowed to load from, and GIF search."
+            : "Inline images, link previews and video players, and where they're allowed to load from."
+    }
+
     var body: some View {
         @Bindable var settings = app.settings
 
-        SettingsPage("Media", subtitle: "Inline images, link previews and video players, where they're allowed to load from, and GIF search.", pane: .media) {
+        SettingsPage("Media", subtitle: Self.subtitle, pane: .media) {
             SettingsSection("Loading") {
                 SettingsToggle(
                     "Load previews automatically",

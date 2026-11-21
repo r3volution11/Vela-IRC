@@ -8,8 +8,8 @@ import VelaIntelligence
 import VelaStore
 
 /// Settings → Apple Intelligence → Catch me up: the button on the New
-/// marker, how many new messages it waits for and, on macOS 27 or later,
-/// Private Cloud Compute for long catch-ups. Dimmed while Apple
+/// marker, how many new messages it waits for and, on macOS 27 or later in
+/// development builds, Private Cloud Compute for long catch-ups. Dimmed while Apple
 /// Intelligence isn't available (the pane's status callout says why).
 struct IntelligenceCatchUpSection: View {
     @Environment(AppModel.self) private var app
@@ -35,23 +35,36 @@ struct IntelligenceCatchUpSection: View {
             .disabled(!settings[.intelligenceCatchUp])
             .opacity(settings[.intelligenceCatchUp] ? 1 : 0.5)
             if Self.offersPrivateCloudCompute {
-                SettingsToggle(
-                    "Use Private Cloud Compute for long catch-ups",
-                    detail: Self.privateCloudComputeDetail,
-                    isOn: $settings[.intelligencePrivateCloudCompute]
-                )
-                .disabled(!settings[.intelligenceCatchUp])
-                .opacity(settings[.intelligenceCatchUp] ? 1 : 0.5)
+                privateCloudComputeToggle
             }
         }
         .disabled(!available)
         .opacity(available ? 1 : 0.55)
     }
 
+    /// The switch for `intelligence.privateCloudCompute`. Release builds
+    /// don't carry it at all (see `PrivateCloudComputeAvailability`), which
+    /// scripts/verify-release.sh checks.
+    @ViewBuilder private var privateCloudComputeToggle: some View {
+        #if DEBUG
+        @Bindable var settings = app.settings
+        SettingsToggle(
+            "Use Private Cloud Compute for long catch-ups",
+            detail: Self.privateCloudComputeDetail,
+            isOn: $settings[.intelligencePrivateCloudCompute]
+        )
+        .disabled(!settings[.intelligenceCatchUp])
+        .opacity(settings[.intelligenceCatchUp] ? 1 : 0.5)
+        #endif
+    }
+
     /// Private Cloud Compute is offered on macOS 27 or later, where
-    /// Foundation Models has it.
+    /// Foundation Models has it, in development builds for now
+    /// (`PrivateCloudComputeAvailability`: Vela doesn't have Apple's
+    /// entitlement for it yet).
     static var offersPrivateCloudCompute: Bool {
-        if #available(macOS 27.0, *) { true } else { false }
+        guard PrivateCloudComputeAvailability.isBuiltIn else { return false }
+        if #available(macOS 27.0, *) { return true } else { return false }
     }
 
     /// What turning on `intelligence.privateCloudCompute` means, plainly.

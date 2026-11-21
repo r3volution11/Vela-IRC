@@ -40,6 +40,24 @@ nonisolated public enum AppActionError: Error, Equatable, LocalizedError {
     }
 }
 
+/// What Siri and Shortcuts actions keep time with while they wait for
+/// networks to connect (``AppModel/waitForConnection(_:timeout:)``,
+/// ``AppModel/waitUntil(timeout:_:)``): the system's clock, or in tests
+/// one that moves only when the test moves it, so a busy machine can't
+/// run a wait out early.
+struct ActionClock {
+    /// Time since the clock started.
+    var now: @MainActor () -> Duration
+    var sleep: @MainActor (Duration) async throws -> Void
+
+    /// The continuous clock, which `Task.sleep` uses.
+    static var continuous: ActionClock {
+        let clock = ContinuousClock()
+        let start = clock.now
+        return ActionClock(now: { start.duration(to: clock.now) }, sleep: { try await clock.sleep(for: $0) })
+    }
+}
+
 /// Channels and conversations that mention you, for "Check Mentions".
 nonisolated public struct MentionSummary: Sendable, Hashable {
     public struct Entry: Sendable, Hashable, Identifiable {
@@ -222,13 +240,13 @@ extension AppModel {
         let (session, buffer) = target
         guard buffer.kind != .server else { throw AppActionError.serverBuffer(network: session.displayName) }
 
-        let clock = ContinuousClock()
-        let deadline = clock.now + connectionTimeout
+        let clock = actionClock
+        let deadline = clock.now() + connectionTimeout
         let wasConnected = session.isConnected
         try await waitForConnection(session, timeout: connectionTimeout)
         if buffer.kind == .channel, !buffer.isJoined, !wasConnected {
             // Channels are rejoined right after connecting.
-            _ = await waitUntil(timeout: max(.zero, deadline - clock.now)) { buffer.isJoined }
+            _ = await waitUntil(timeout: max(.zero, deadline - clock.now())) { buffer.isJoined }
         }
         // The buffer may have been closed meanwhile.
         guard session.buffer(id: bufferID) != nil else { throw AppActionError.unknownBuffer }
@@ -248,25 +266,25 @@ extension AppModel {
     /// just launched and be about to connect), then this gives up.
     public func waitForConnection(_ session: NetworkSession, timeout: Duration = .seconds(10)) async throws {
         guard !session.isConnected else { return }
-        let clock = ContinuousClock()
-        let start = clock.now
+        let clock = actionClock
+        let start = clock.now()
         let deadline = start + timeout
         let grace = start + min(timeout, .milliseconds(1500))
         while !session.isConnected {
-            let now = clock.now
+            let now = clock.now()
             if now >= deadline || (session.connectionState == .disconnected && now >= grace) {
                 throw AppActionError.notConnected(network: session.displayName)
             }
-            try await Task.sleep(for: .milliseconds(100))
+            try await clock.sleep(.milliseconds(100))
         }
     }
 
     /// Polls `condition` until it holds or `timeout` passes. Returns whether it held.
     public func waitUntil(timeout: Duration, _ condition: () -> Bool) async -> Bool {
-        let clock = ContinuousClock()
-        let deadline = clock.now + timeout
+        let clock = actionClock
+        let deadline = clock.now() + timeout
         while !condition() {
-            guard clock.now < deadline, (try? await Task.sleep(for: .milliseconds(100))) != nil else {
+            guard clock.now() < deadline, (try? await clock.sleep(.milliseconds(100))) != nil else {
                 return condition()
             }
         }
@@ -327,10 +345,10 @@ extension AppModel {
             return isDemo ? session.connectionState != .disconnected : session.isAwaitingConnection
         }
         guard !pending.isEmpty else { return }
-        let clock = ContinuousClock()
-        let grace = clock.now + min(timeout, .milliseconds(1500))
+        let clock = actionClock
+        let grace = clock.now() + min(timeout, .milliseconds(1500))
         _ = await waitUntil(timeout: timeout) {
-            let pastGrace = clock.now >= grace
+            let pastGrace = clock.now() >= grace
             return pending.allSatisfy { $0.isConnected || ($0.connectionState == .disconnected && pastGrace) }
         }
     }

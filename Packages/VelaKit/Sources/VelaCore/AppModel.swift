@@ -87,6 +87,9 @@ public final class AppModel: SessionHost {
     /// Facts kept between launches: the version What's New last showed,
     /// one-time migrations and the notices they leave.
     public let launchRecord: LaunchRecord
+    /// What Siri and Shortcuts actions wait with while networks connect.
+    /// Tests swap in a clock they move themselves.
+    @ObservationIgnored var actionClock = ActionClock.continuous
     /// Whether Vela had run on this Mac before this launch (its database
     /// was already there). What's New isn't shown to a new install.
     public internal(set) var isExistingInstall = false
@@ -167,6 +170,9 @@ public final class AppModel: SessionHost {
         let launchRecord = LaunchRecord.userDefaults()
         let savedHistory = database.flatMap { try? $0.savedHistoryNow() }
         HistorySaveMigration.run(settings: settings, savedHistory: savedHistory, record: launchRecord, version: appVersion)
+        // Vela 1.0's Modern Chat spacing (2 and 6) moves to the preset's
+        // new 4 and 12, once, if it's still exactly that.
+        ModernChatSpacingMigration.run(settings: settings, record: launchRecord, version: appVersion)
         // Before any image loads (start() keeps it in step afterwards).
         ImageLoader.setDiskCacheEnabled(settings[.historySave])
         let model = AppModel(
@@ -181,7 +187,13 @@ public final class AppModel: SessionHost {
     }
 
     /// Offline sample content for screenshots, SwiftUI previews and UI work.
-    public static func demo() -> AppModel {
+    ///
+    /// - Parameters:
+    ///   - networks: false starts with no networks, as on first launch (the
+    ///     welcome screen); `--no-networks` in demo mode.
+    ///   - selectsChannel: false leaves nothing selected (the "Pick a
+    ///     conversation" screen); `--no-selection` in demo mode.
+    public static func demo(networks: Bool = true, selectsChannel: Bool = true) -> AppModel {
         DemoScratch.removeStale()
         let root = DemoScratch.makeDirectory(prefix: "VelaDemo-")
         let model = AppModel(
@@ -190,7 +202,7 @@ public final class AppModel: SessionHost {
             database: nil,
             isDemo: true
         )
-        DemoContent.populate(model)
+        if networks { DemoContent.populate(model, selectsChannel: selectsChannel) }
         return model
     }
 
@@ -899,9 +911,10 @@ public final class AppModel: SessionHost {
 
     // MARK: Demo support
 
-    func installDemoSessions(_ demoSessions: [NetworkSession]) {
+    func installDemoSessions(_ demoSessions: [NetworkSession], selectsChannel: Bool = true) {
         for session in demoSessions { wire(session) }
         sessions = demoSessions
+        guard selectsChannel else { return }
         if let buffer = demoSessions.first?.buffer(named: "#vela") ?? demoSessions.first?.channels.first { select(buffer) }
     }
 

@@ -20,6 +20,9 @@
 #     public key in SUPublicEDKey, not the placeholder; Sparkle is the
 #     pinned version, and its framework, XPC services and helpers are
 #     signed (Developer ID, hardened runtime, timestamp);
+#   • no GIF key, and no Private Cloud Compute (its Settings switch, its
+#     mention in Siri's description of Catch Me Up, or the entitlement):
+#     both are in development builds only for now;
 #   • its App Intents metadata has every App Shortcut, Catch Me Up and Open
 #     Channel, and the VelaIntents package (check_app_intents in
 #     scripts/lib/release-checks.zsh);
@@ -193,6 +196,29 @@ else
     "Releases carry no GIF key yet: check Vela/Info.plist and the build settings (docs/RELEASING.md, \"The GIF key\")."
 fi
 unset klipy_key
+
+# Private Cloud Compute is only in development builds for now
+# (PrivateCloudComputeAvailability): Vela doesn't have Apple's
+# com.apple.developer.private-cloud-compute entitlement yet, so a release
+# leaves its switch out of Settings (compiled out, so its title isn't in the
+# app's code) and doesn't promise it to Siri (Catch Me Up's description in
+# the App Intents metadata).
+pcc_entitlement=com.apple.developer.private-cloud-compute
+pcc_switch="Use Private Cloud Compute for long catch-ups"
+pcc_found=()
+grep -rlaqF -- "$pcc_switch" "$app/Contents/MacOS" "$app/Contents/Frameworks" 2>/dev/null && pcc_found+=("the Settings switch")
+grep -qF "Private Cloud Compute" "$app/Contents/Resources/Metadata.appintents/extract.actionsdata" 2>/dev/null \
+  && pcc_found+=("Siri's description of Catch Me Up")
+if /usr/libexec/PlistBuddy -c "Print :$pcc_entitlement" "$entitlements" >/dev/null 2>&1; then
+  check_fail "Private Cloud Compute" "the app has the $pcc_entitlement entitlement, but releases leave Private Cloud Compute out" \
+    "If Apple granted it, make it available in releases (PrivateCloudComputeAvailability, the switch in IntelligenceCatchUpSection, CatchMeUpIntent's description), then update this check and the website (docs/RELEASING.md, \"Private Cloud Compute\")."
+elif (( ${#pcc_found} )); then
+  check_fail "Private Cloud Compute" "the app offers it without the entitlement: ${(j:, :)pcc_found}" \
+    "Keep it to development builds (PrivateCloudComputeAvailability; docs/RELEASING.md, \"Private Cloud Compute\")."
+else
+  check_pass "Private Cloud Compute" "not offered (development builds only until Apple grants the entitlement)"
+fi
+unset pcc_entitlement pcc_switch pcc_found
 
 # Siri, Shortcuts and Spotlight: the App Intents metadata (lib/release-checks.zsh).
 check_app_intents "$app" Vela/VelaShortcuts.swift
