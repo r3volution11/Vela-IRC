@@ -39,17 +39,18 @@ struct GIFGridView: View {
                     alignment: .leading,
                     spacing: Self.spacing
                 ) {
-                    ForEach(Array(model.results.enumerated()), id: \.offset) { index, result in
+                    ForEach(cellIDs, id: \.self) { cell in
+                        let result = model.results[cell.index]
                         GIFResultCell(
                             result: result,
                             size: size,
                             animates: animates,
-                            isSelected: model.selection == index,
+                            isSelected: model.selection == cell.index,
                             services: services,
-                            onVisible: { model.resultAppeared(at: index, columns: columns) },
+                            onVisible: { model.resultAppeared(at: cell.index, columns: columns) },
                             onPick: { onPick(result) }
                         )
-                        .id(index)
+                        .id(cell)
                     }
                 }
                 .padding(.horizontal, Self.horizontalPadding)
@@ -59,13 +60,32 @@ struct GIFGridView: View {
             }
             .frame(width: width, height: height)
             .onChange(of: model.selection) { _, index in
-                guard let index else { return }
-                proxy.scrollTo(index, anchor: nil)
+                guard let index, let cell = cellID(at: index) else { return }
+                proxy.scrollTo(cell, anchor: nil)
             }
             .onChange(of: model.shownQuery) { _, _ in
-                proxy.scrollTo(0, anchor: .top)
+                guard let cell = cellID(at: 0) else { return }
+                proxy.scrollTo(cell, anchor: .top)
             }
         }
+    }
+
+    /// A cell is its place in the grid and the result shown there. With the
+    /// place alone, a new search's results took over the old cells, still
+    /// showing the old GIFs (each loads its preview once) until they were
+    /// scrolled away. The place stays in it because a service can return the
+    /// same GIF twice.
+    struct CellID: Hashable {
+        var index: Int
+        var resultID: String
+    }
+
+    private var cellIDs: [CellID] {
+        model.results.indices.map { CellID(index: $0, resultID: model.results[$0].id) }
+    }
+
+    private func cellID(at index: Int) -> CellID? {
+        model.results.indices.contains(index) ? CellID(index: index, resultID: model.results[index].id) : nil
     }
 
     @ViewBuilder

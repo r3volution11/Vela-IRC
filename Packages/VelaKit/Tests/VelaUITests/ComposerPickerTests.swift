@@ -224,6 +224,27 @@ extension LinkSelectionTests {
             #expect(hosted.gifs.transport.trendingRequests.count == 1)
         }
 
+        /// A new search shows its own GIFs at once in every cell in view,
+        /// not the last search's left in the cells until they scroll away.
+        @Test func aNewSearchShowsItsOwnPreviews() async throws {
+            let hosted = try await host(tab: .gifs)
+            defer { hosted.close() }
+            GIFMediaStandIn.loads.withLock { $0.removeAll() }
+            try await hosted.openPicker()
+            try await waitForResults(hosted, prefix: "Trending 100")
+            func stills(_ prefix: String) -> Set<String> {
+                Set(GIFMediaStandIn.loads.withLock { $0 }.map { $0.path() }.filter { $0.hasPrefix("/still/\(prefix)") })
+            }
+            #expect(try await hosted.wait(5) { !stills("trending-all-1-").isEmpty }, "no trending previews loaded")
+            try await Task.sleep(for: .milliseconds(300))
+            let inView = stills("trending-all-1-").count
+            try await hosted.typeInPicker("owls")
+            try await waitForResults(hosted, prefix: "Owls 100")
+            // Each cell in view loads its owl, with nothing scrolled.
+            #expect(try await hosted.wait(5) { stills("search-owls-1-").count >= inView },
+                    "\(stills("search-owls-1-").count) owl previews loaded for \(inView) cells in view")
+        }
+
         @Test func pickingAGIFAddsAChipAndSendsItsLink() async throws {
             let hosted = try await host(tab: .gifs)
             defer { hosted.close() }
