@@ -357,12 +357,20 @@ struct MessageListView: View {
         position = target
         controller.bottomCheck?.cancel()
         guard !animated else { return }
-        controller.bottomCheck = Task { await settleAtBottom(firstAnchor: anchor) }
+        controller.bottomCheck = Task { await settleAtBottom(firstAnchor: anchor, clipViewToo: anew) }
     }
 
     /// Checks that the list got to the bottom and scrolls there again until
     /// it does, as `BottomSettle` says.
-    private func settleAtBottom(firstAnchor: CGFloat) async {
+    ///
+    /// With `clipViewToo` (after the list got shorter), the scroll view must
+    /// show the bottom as well, not only SwiftUI's report: the move can reach
+    /// the scroll view before its new height and be lost there, while every
+    /// report says the list is at the bottom
+    /// (`ScrollPinning.mustScrollToBottomAnew`). Scrolling right away and on
+    /// the next turn covers that on macOS 27.2; on 27.0 (seen on CI, showing
+    /// the channel title bar again) the new height can come later still.
+    private func settleAtBottom(firstAnchor: CGFloat, clipViewToo: Bool = false) async {
         var settle = BottomSettle(firstAnchor: firstAnchor)
         var lastCheck = Date()
         while true {
@@ -378,7 +386,8 @@ struct MessageListView: View {
             let step = settle.check(
                 waited: now.timeIntervalSince(lastCheck),
                 otherScrollUnderWay: controller.scrollDriver == .programmatic,
-                atBottom: controller.metrics.map(ScrollPinning.isAtBottom) ?? false
+                atBottom: (controller.metrics.map(ScrollPinning.isAtBottom) ?? false)
+                    && (!clipViewToo || controller.clipViewAgrees)
             )
             lastCheck = now
             switch step {

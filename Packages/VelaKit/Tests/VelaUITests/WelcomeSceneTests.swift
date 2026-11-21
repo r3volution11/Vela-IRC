@@ -84,8 +84,17 @@ enum WelcomeSceneRendering {
         return renderer.cgImage
     }
 
+    /// ImageRenderer has come back with every pixel clear on a CI machine's
+    /// virtual GPU (once in two runs, for the day scene; never here). The app
+    /// draws the Canvas in a window, not through ImageRenderer, so a blank
+    /// render is tried again; the colors are still checked as before.
     static func render(_ scene: WelcomeScene, size: CGSize, scale: CGFloat = 1) -> Bitmap? {
-        canvasImage(scene, size: size, scale: scale).map(bitmap)
+        var rendered: Bitmap?
+        for _ in 0..<3 {
+            rendered = canvasImage(scene, size: size, scale: scale).map(bitmap)
+            guard let image = rendered, image.bytes.allSatisfy({ $0 == 0 }) else { return rendered }
+        }
+        return rendered
     }
 
     /// An SVG drawn by macOS's own SVG renderer (NSImage), at a pixel size.

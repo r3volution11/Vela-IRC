@@ -22,9 +22,9 @@ extension LinkSelectionTests {
     @MainActor
     @Suite("Emoji and GIF picker", .serialized)
     struct ComposerPickerTests {
-        private func host(gifs: FakeGIFServices = FakeGIFServices(), tab: ComposerPickerTab = .emoji, configure: (AppModel) -> Void = { _ in }) async throws -> PickerHost {
+        private func host(gifs: FakeGIFServices = FakeGIFServices(), tab: ComposerPickerTab = .emoji, reduceMotion: Bool = false, configure: (AppModel) -> Void = { _ in }) async throws -> PickerHost {
             ComposerPickerTab.remembered = tab
-            let hosted = try PickerHost(gifs: gifs, configure: configure)
+            let hosted = try PickerHost(gifs: gifs, reduceMotion: reduceMotion, configure: configure)
             try await hosted.settle(500)
             return hosted
         }
@@ -297,16 +297,20 @@ extension LinkSelectionTests {
             #expect(hosted.gifs.transport.trendingRequests.last?.query()?.contains("page=2") == true)
         }
 
-        @Test func stillPreviewsWhenAnimationIsOff() async throws {
-            let hosted = try await host(tab: .gifs) { $0.settings[.gifsAnimatePreviews] = false }
+        /// Animation off in Settings, or Reduce Motion on: stills only.
+        @Test(arguments: ["the setting", "Reduce Motion"])
+        func stillPreviewsWhenAnimationIsOff(_ by: String) async throws {
+            let hosted = try await host(tab: .gifs, reduceMotion: by == "Reduce Motion") {
+                if by == "the setting" { $0.settings[.gifsAnimatePreviews] = false }
+            }
             defer { hosted.close() }
             GIFMediaStandIn.loads.withLock { $0.removeAll() }
             try await hosted.openPicker()
             try await waitForResults(hosted, prefix: "Trending 100")
-            try await Task.sleep(for: .milliseconds(500))
-            let loads = GIFMediaStandIn.loads.withLock { $0 }
-            #expect(loads.contains { $0.path().hasPrefix("/still/") })
-            #expect(!loads.contains { $0.path().hasPrefix("/animation/") })
+            #expect(try await hosted.wait(5) { GIFMediaStandIn.loads.withLock { $0 }.contains { $0.path().hasPrefix("/still/") } }, "no stills loaded")
+            // Then a moment for any animation that shouldn't load to show up.
+            try await Task.sleep(for: .milliseconds(600))
+            #expect(!GIFMediaStandIn.loads.withLock { $0 }.contains { $0.path().hasPrefix("/animation/") })
         }
 
         @Test func gifsOffHidesTheTabAndAsksNothing() async throws {

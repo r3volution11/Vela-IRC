@@ -238,7 +238,10 @@ final class PickerHost {
     let opened = OpenedURLs()
     private let windowsBefore: Set<ObjectIdentifier>
 
-    init(gifs: FakeGIFServices = FakeGIFServices(), configure: (AppModel) -> Void = { _ in }) throws {
+    /// `reduceMotion` sets Reduce Motion for this window: off unless asked,
+    /// as on most Macs (CI machines have it on, which stops animated
+    /// previews).
+    init(gifs: FakeGIFServices = FakeGIFServices(), reduceMotion: Bool = false, configure: (AppModel) -> Void = { _ in }) throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("VelaPicker-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let app = AppModel(
@@ -270,6 +273,7 @@ final class PickerHost {
         let view = ChatColumnView()
             .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: SceneServices(intelligence: .demo()), isPrimary: false)
             .environment(\.gifSearchServices, gifs.services)
+            .environment(\._accessibilityReduceMotion, reduceMotion)
             .environment(\.openURL, OpenURLAction { url in
                 opened.urls.append(url)
                 return .handled

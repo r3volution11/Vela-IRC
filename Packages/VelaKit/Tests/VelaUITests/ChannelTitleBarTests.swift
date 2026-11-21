@@ -160,13 +160,13 @@ extension LinkSelectionTests {
         private static let hide = "Hide Channel Title Bar"
         private static let show = "Show Channel Title Bar"
 
-        private func host(_ placement: TabStackPlacement, style: NavigationStyle = .tabs) async throws -> KeyboardHostedWindow {
+        private func host(_ placement: TabStackPlacement, style: NavigationStyle = .tabs, reduceMotion: Bool? = nil, reduceTransparency: Bool? = nil) async throws -> KeyboardHostedWindow {
             // Wide enough for room after the tabs in the title bar.
-            try await KeyboardHostedWindow.show(size: CGSize(width: 1400, height: 700)) { app in
+            try await KeyboardHostedWindow.show(size: CGSize(width: 1400, height: 700), configure: { app in
                 app.settings[.navigationStyle] = style
                 app.settings[.tabsPlacement] = placement
                 app.settings[.memberListVisible] = false
-            }
+            }, reduceMotion: reduceMotion, reduceTransparency: reduceTransparency)
         }
 
         // MARK: Menus
@@ -382,9 +382,9 @@ extension LinkSelectionTests {
             #expect(hosted.uiState.focusedArea == .navigation)
         }
 
-        @Test(arguments: [TabStackPlacement.top, .bottom])
-        func theMessagesStayAtTheNewestLine(placement: TabStackPlacement) async throws {
-            let hosted = try await host(placement)
+        @Test(arguments: [TabStackPlacement.top, .bottom], [false, true])
+        func theMessagesStayAtTheNewestLine(placement: TabStackPlacement, reduceMotion: Bool) async throws {
+            let hosted = try await host(placement, reduceMotion: reduceMotion)
             defer { hosted.close() }
             #expect(try await eventually { try distanceFromBottom(messageList(hosted)) < 2 }, "it didn't open at the newest line")
             let list = try messageList(hosted)
@@ -392,12 +392,12 @@ extension LinkSelectionTests {
 
             try await choose(Self.hide, in: menu(at: onTitleBar(hosted), in: hosted), hosted)
             // The same list, only taller, still at the newest line.
-            #expect(try await eventually { try list.frame.height > height && distanceFromBottom(list) < 2 },
+            #expect(try await eventually(timeout: .seconds(8)) { try list.frame.height > height && distanceFromBottom(list) < 2 },
                     "hidden: height \(height) → \(list.frame.height), \((try? distanceFromBottom(list)) ?? -1) from the bottom")
             #expect(try messageList(hosted) === list)
 
             try await choose(Self.show, in: menu(at: try emptyTitleBarSpace(hosted)[0], in: hosted), hosted)
-            #expect(try await eventually { try abs(list.frame.height - height) < 0.5 && distanceFromBottom(list) < 2 },
+            #expect(try await eventually(timeout: .seconds(8)) { try abs(list.frame.height - height) < 0.5 && distanceFromBottom(list) < 2 },
                     "shown: height \(height) → \(list.frame.height), \((try? distanceFromBottom(list)) ?? -1) from the bottom")
             #expect(try messageList(hosted) === list)
         }

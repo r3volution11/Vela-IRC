@@ -182,6 +182,13 @@ final class MessageListController {
         clipSync.observe(reportedMinY: metrics.visibleMinY, clipMinY: clipMinY)
     }
 
+    /// Whether the clip view shows the list where SwiftUI reports it (true
+    /// when either isn't known yet).
+    var clipViewAgrees: Bool {
+        guard let metrics, let clipMinY = scrollView?.contentView.bounds.minY else { return true }
+        return ClipViewSync.agree(reportedMinY: metrics.visibleMinY, clipMinY: clipMinY)
+    }
+
     /// The list should follow the newest line while the reader scrolls: it
     /// does when the gesture ends, if the reader stayed at the bottom.
     func holdBackFollow() {

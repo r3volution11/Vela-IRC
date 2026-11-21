@@ -37,6 +37,8 @@ final class KeyboardHostedWindow {
     static func show(
         size: CGSize = CGSize(width: 1100, height: 700),
         configure: (AppModel) -> Void = { _ in },
+        reduceMotion: Bool? = nil,
+        reduceTransparency: Bool? = nil,
         content: (() -> AnyView)? = nil
     ) async throws -> KeyboardHostedWindow {
         let defaults = UserDefaults.standard
@@ -52,9 +54,14 @@ final class KeyboardHostedWindow {
             settings: ThemeSettings(settings: app.settings)
         )
         let root = content?() ?? AnyView(MainWindowView())
-        let view = root
+        var view = AnyView(root
             .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: SceneServices(intelligence: .demo()), isPrimary: false)
-            .frame(width: size.width, height: size.height)
+            .frame(width: size.width, height: size.height))
+        // System accessibility settings, for this window only. Unset, the
+        // Mac's own apply: CI machines (GitHub's images) turn on Reduce
+        // Motion and Reduce Transparency.
+        if let reduceMotion { view = AnyView(view.environment(\._accessibilityReduceMotion, reduceMotion)) }
+        if let reduceTransparency { view = AnyView(view.environment(\._accessibilityReduceTransparency, reduceTransparency)) }
         let host = NSHostingView(rootView: view)
         host.sizingOptions = []
         let window = NSWindow(contentRect: CGRect(origin: CGPoint(x: -9000, y: -9000), size: size), styleMask: [.borderless], backing: .buffered, defer: false)
