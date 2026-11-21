@@ -36,3 +36,5 @@ website/_generated/
 
 # Intermediate output of the archived Horizon Sail icon generator
 design/app-icon/archive/horizon-sail/gen/derived.json
+# Welcome scene renders (large PNG and SVG), regenerated from the app's code
+design/welcome-scene/exports/
