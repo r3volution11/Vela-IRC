@@ -174,7 +174,7 @@ if [[ "$sandbox" == true ]]; then
   check_pass "App Sandbox" "on"
 else
   check_fail "App Sandbox" "the com.apple.security.app-sandbox entitlement is missing" \
-    "Check CODE_SIGN_ENTITLEMENTS (Vela/Vela.entitlements) in the Release configuration."
+    "Check that scripts/release.sh passes VELA_ENTITLEMENTS=Vela/Vela.entitlements."
 fi
 
 # Updates: entitlements, Info.plist keys, the public key and Sparkle's

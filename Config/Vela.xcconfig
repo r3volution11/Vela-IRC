@@ -1,5 +1,12 @@
 // Build settings shared by the Vela target's Debug and Release configurations.
 
+// The entitlements the app is signed with (CODE_SIGN_ENTITLEMENTS). Local,
+// ad hoc builds also turn off library validation, which they need to load
+// Sparkle. scripts/release.sh signs releases with Vela/Vela.entitlements by
+// passing VELA_ENTITLEMENTS: a setting only this target uses, since a
+// command-line CODE_SIGN_ENTITLEMENTS would reach every package target too.
+VELA_ENTITLEMENTS = Vela/Vela-Local.entitlements
+
 // The KLIPY API key the GIF picker uses, built into Info.plist as
 // VelaKLIPYAPIKey (Config/Debug-Info.plist, Vela/Info.plist). It's never
 // committed:

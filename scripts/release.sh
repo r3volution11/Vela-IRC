@@ -373,8 +373,11 @@ step "Archiving (Release, universal)"
 sign_settings=(CODE_SIGN_IDENTITY="$identity")
 if (( ! adhoc )); then
   # Vela/Vela.entitlements, not the local builds' Vela-Local.entitlements:
-  # Developer ID signs Sparkle too, so library validation stays on.
-  sign_settings+=(CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$team" OTHER_CODE_SIGN_FLAGS="--timestamp" CODE_SIGN_ENTITLEMENTS=Vela/Vela.entitlements)
+  # Developer ID signs Sparkle too, so library validation stays on. It's
+  # VELA_ENTITLEMENTS (Config/Vela.xcconfig), which only the app target uses:
+  # CODE_SIGN_ENTITLEMENTS on the command line would apply to every package
+  # target too, which have no such file.
+  sign_settings+=(CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$team" OTHER_CODE_SIGN_FLAGS="--timestamp" VELA_ENTITLEMENTS=Vela/Vela.entitlements)
 fi
 # The KLIPY key goes to xcodebuild in an xcconfig only you can read, not on
 # the command line, so it stays out of the logs and the process list; the
