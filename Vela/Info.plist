@@ -25,7 +25,7 @@
 	  prints here (docs/RELEASING.md, "The update signing key").
 	-->
 	<key>SUPublicEDKey</key>
-	<string>SPARKLE_PUBLIC_KEY_PLACEHOLDER</string>
+	<string>1gCGxe1/pzeNONyBlvvUaeXu54GGaPFCtaE9kyB63u0=</string>
 	<!-- Never send a system profile; an update check sends only Sparkle's User-Agent. -->
 	<key>SUEnableSystemProfiling</key>
 	<false/>
