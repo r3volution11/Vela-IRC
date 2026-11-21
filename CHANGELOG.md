@@ -4,6 +4,10 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ## Unreleased
 
+### Themes and appearance
+
+- **A new welcome screen.** The sailboat is gone. Before you add a network, or when no conversation is open, Vela shows a picture of a river winding through a mountain valley. Dark themes get night: a full moon, Vela's stars and a stargazer at a telescope. Light themes get day: the sun, clouds, birds and a kayaker paddling upstream. It's drawn in your theme's colors and accent, so a custom theme, a new accent color or your color customizations change it too. It grows and shrinks with the window, and it's drawn only when the window shows, resizes or changes theme.
+
 ### Layouts and navigation
 
 - **Leave or remove a channel.** The menus have **Leave Channel** (or **Join Channel**) and **Remove Channel…**, and the command palette has **Leave**, **Join** and **Remove** for the selected channel.

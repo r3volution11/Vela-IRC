@@ -236,26 +236,43 @@ struct EmptyStateView: View {
     @Environment(UIState.self) private var uiState
 
     var body: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "sailboat")
-                .font(.system(size: 44, weight: .light))
-                .foregroundStyle(theme[ThemeKey.accent])
-            Text(app.sessions.isEmpty ? "Welcome to Vela" : "Pick a conversation")
-                .font(style.font(size: 22, weight: .semibold))
-                .foregroundStyle(theme[ThemeKey.chatForeground])
-            Text(app.sessions.isEmpty
-                 ? "Add an IRC network or bouncer to get started."
-                 : "Choose a channel or conversation from the sidebar.")
-                .font(style.bodyFont)
-                .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
-            if app.sessions.isEmpty {
-                Button("Add Network…") { uiState.networkEditor = .new }
-                    .buttonStyle(ThemedButtonStyle(prominent: true))
-                    .padding(.top, 6)
+        let welcome = app.sessions.isEmpty
+        let scene = WelcomeScene(theme: theme)
+        GeometryReader { proxy in
+            // The scene scales with the pane, keeping its shape; the title
+            // rises over its faded bottom edge.
+            let sceneSize = WelcomeLayout.sceneSize(in: proxy.size, textHeight: welcome ? 80 : 36)
+            let titleSize = WelcomeLayout.titleSize(sceneWidth: sceneSize?.width)
+            let lift = WelcomeLayout.titleLift(sceneHeight: sceneSize?.height)
+            VStack(spacing: 0) {
+                if let sceneSize {
+                    WelcomeSceneView(scene: scene)
+                        .equatable()
+                        .frame(width: sceneSize.width, height: sceneSize.height)
+                }
+                GlassTitle(
+                    title: welcome ? "Welcome to Vela" : "Pick a conversation",
+                    scene: scene,
+                    font: style.font(size: titleSize, weight: .bold),
+                    size: titleSize
+                )
+                .offset(y: -lift)
+                .padding(.bottom, 6 - lift)
+                Text(welcome
+                     ? "Add an IRC network or bouncer to get started."
+                     : "Choose a channel or conversation from the sidebar.")
+                    .font(style.bodyFont)
+                    .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
+                    .multilineTextAlignment(.center)
+                if welcome {
+                    Button("Add Network…") { uiState.networkEditor = .new }
+                        .buttonStyle(ThemedButtonStyle(prominent: true))
+                        .padding(.top, 20)
+                }
             }
+            .padding(.horizontal, WelcomeLayout.horizontalMargin)
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .padding(40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .windowTitleBarArea()
     }
 }

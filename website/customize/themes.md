@@ -40,7 +40,7 @@ Every theme has an **accent color**, used for buttons, the selected channel, lin
 
 - **The choices come from the theme itself:** its nick colors and its [mIRC](https://www.mirc.com) colors 0–15, keeping up to ten that work as an accent. A color makes the list if it isn't grey or too close to the text color, stands out against the window and sidebar, and looks different from the others. **Default**, the theme's own accent, always comes first.
 - **Hover a swatch** for its name, such as "Cyan" or "Default (Purple)". A ring marks the one in use.
-- **Everything the theme draws in its accent switches over:** buttons, selection, links, mention highlights, the sidebar selection, focus rings and so on. Text in the new accent is lightened or darkened as needed to stay readable (4.5:1).
+- **Everything the theme draws in its accent switches over:** buttons, selection, links, mention highlights, the sidebar selection, focus rings, the welcome screen's picture and so on. Text in the new accent is lightened or darkened as needed to stay readable (4.5:1).
 - **Colors with a meaning never change.** Errors, warnings, success, and joins, parts and quits keep their colors, even if they matched the old accent.
 - **Each theme keeps its own choice.** With **Match System Appearance** on and different themes for Dark and Light Mode, there are two rows, **Dark Mode accent** and **Light Mode accent**.
 

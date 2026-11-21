@@ -7,6 +7,8 @@ description: What you see the first time you open Vela, how to add your first IR
 
 The first time you open Vela, the window says **Welcome to Vela** and offers one button: **Add Network…**. Vela doesn't connect anywhere until you add a network.
 
+Above the welcome is a picture of a river winding through a mountain valley, drawn in your theme's colors. With a dark theme it's night, with a full moon, Vela's stars and a stargazer at a telescope. With a light theme it's day, with a kayaker paddling toward the sun. Later, when no conversation is open, the same picture says **Pick a conversation**.
+
 ## 1. Add a network
 
 Click **Add Network…** (or press <kbd>⇧⌘N</kbd>). Choose a well-known network such as Libera.Chat or OFTC from the **Presets** menu, check the nickname (Vela suggests one from your Mac user name), and click **Add Network**. Vela connects right away.
