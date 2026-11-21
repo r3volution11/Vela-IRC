@@ -42,6 +42,21 @@ struct SettingsMetadataTests {
         #expect(SettingsCategory.categories(forPane: "messages") == [.chat, .typing, .history])
         #expect(SettingsCategory.category(forKey: "translation.language") == .intelligence)
         #expect(SettingsCategory.category(forKey: "nope.key") == nil)
+        #expect(SettingsCategory.category(forKey: "updates.checkAutomatically") == .updates)
+        #expect(SettingsCategory.categories(forPane: "updates") == [.updates])
+    }
+
+    /// Checking is on by default, installing without asking off, and both
+    /// show on the Updates pane with plain titles.
+    @Test func updateSettings() {
+        let check = SettingsCatalog.descriptor(forKey: "updates.checkAutomatically")
+        let install = SettingsCatalog.descriptor(forKey: "updates.installAutomatically")
+        #expect(check?.defaultValue == .bool(true))
+        #expect(install?.defaultValue == .bool(false))
+        #expect(check?.title == "Updates: Check Automatically")
+        #expect(install?.title == "Updates: Install Automatically")
+        #expect(check?.settingsCategory?.paneID == "updates")
+        #expect(install?.summary.contains("updates.checkAutomatically") == true)
     }
 
     @Test func enumsAndFollowSystem() {

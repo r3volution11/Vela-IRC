@@ -28,7 +28,9 @@ Continue with [First launch](/guide/first-launch) to add your first network.
 
 ## Updating
 
-Vela doesn't update itself yet (automatic updates are on the [roadmap](https://github.com/r3volution11/Vela-IRC/blob/main/ROADMAP.md)). To update:
+Vela updates itself. It checks for a new version once a day and offers it when you open Vela, never in the middle of a conversation; **Vela → Check for Updates…** checks right away. See [Updates](/guide/updates) for the settings and what a check sends.
+
+Vela 1.0 doesn't have the updater yet. To update from it, or any time you'd rather do it yourself:
 
 1. Quit Vela (<kbd>⌘Q</kbd>).
 2. Download the latest **Vela.dmg** and drag Vela into Applications again. Choose **Replace** when asked.

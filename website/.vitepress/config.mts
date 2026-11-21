@@ -10,6 +10,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
     text: 'Getting started',
     items: [
       { text: 'Install', link: '/guide/install' },
+      { text: 'Updates', link: '/guide/updates' },
       { text: 'First launch', link: '/guide/first-launch' },
       { text: 'Adding a network', link: '/guide/adding-a-network' },
       { text: 'Connecting through a bouncer', link: '/guide/bouncers' },

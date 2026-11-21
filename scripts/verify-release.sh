@@ -13,6 +13,13 @@
 #   • CFBundleShortVersionString and CFBundleVersion are the version and build;
 #   • it runs on Apple silicon and Intel (arm64 and x86_64);
 #   • the App Sandbox entitlement is on;
+#   • the updater (Sparkle) can work and is safe (check_update_support in
+#     scripts/lib/sparkle.zsh): the mach-lookup exception for its installer
+#     and no local-build exceptions; its Info.plist keys (the velairc.app
+#     feed, daily checks, the installer service, no system profile); a real
+#     public key in SUPublicEDKey, not the placeholder; Sparkle is the
+#     pinned version, and its framework, XPC services and helpers are
+#     signed (Developer ID, hardened runtime, timestamp);
 #   • its App Intents metadata has every App Shortcut, Catch Me Up and Open
 #     Channel, and the VelaIntents package (check_app_intents in
 #     scripts/lib/release-checks.zsh);
@@ -31,7 +38,9 @@
 #                        neither, any Developer ID team passes and is shown).
 #   --skip-notarize      The build was signed but not notarized: skip the
 #                        Gatekeeper and stapled-ticket checks.
-#   --adhoc              An ad hoc build: also skip the Developer ID check.
+#   --adhoc              An ad hoc build: also skip the Developer ID checks,
+#                        allow the local entitlements, and only note a
+#                        missing update key.
 #   --results <file>     Append each result to <file> and leave the summary to
 #                        the caller (scripts/release.sh).
 #
@@ -41,6 +50,7 @@ set -euo pipefail
 script="${0:A}"
 cd "${0:A:h}/.."
 source scripts/lib/release-checks.zsh
+source scripts/lib/sparkle.zsh
 
 usage() { sed -n '2,/^set -euo/p' "$script" | sed -e '$d' -e 's/^# \{0,1\}//'; }
 needs_value() { [[ $# -ge 2 && -n "$2" ]] || { print -u2 -r -- "$1 needs a value"; exit 2; } }
@@ -165,6 +175,13 @@ else
   check_fail "App Sandbox" "the com.apple.security.app-sandbox entitlement is missing" \
     "Check CODE_SIGN_ENTITLEMENTS (Vela/Vela.entitlements) in the Release configuration."
 fi
+
+# Updates: entitlements, Info.plist keys, the public key and Sparkle's
+# signatures (lib/sparkle.zsh). Sparkle's code must be signed by the app's
+# own team.
+app_team=$(codesign -dvv "$app" 2>&1 | sed -n 's/^TeamIdentifier=//p' | head -n 1 || true)
+[[ $app_team == "not set" ]] && app_team=""
+check_update_support "$app" "$entitlements" "$adhoc" "${team:-$app_team}"
 
 # Siri, Shortcuts and Spotlight: the App Intents metadata (lib/release-checks.zsh).
 check_app_intents "$app" Vela/VelaShortcuts.swift

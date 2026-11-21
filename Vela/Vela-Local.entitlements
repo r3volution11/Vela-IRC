@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The entitlements of local builds, signed ad hoc ("Sign to Run Locally"):
+  Vela Dev, scripts/run.sh, the scroll benchmark, the screenshots and
+  scripts/test-update.sh. They're Vela.entitlements plus one exception,
+  disable-library-validation: with the hardened runtime, macOS loads only
+  frameworks signed by the app's own team, and an ad hoc build has none, so
+  it couldn't load Sparkle.framework. Keep the rest identical to
+  Vela.entitlements.
+
+  Releases are signed with Vela.entitlements instead (scripts/release.sh
+  passes CODE_SIGN_ENTITLEMENTS), where Developer ID signs Vela and Sparkle
+  alike, and scripts/verify-release.sh fails a release that has this
+  exception.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)-spks</string>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)-spki</string>
+	</array>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

@@ -66,7 +66,7 @@
 ## Later
 
 - **Uploads:** paste or drag images, via IRCv3 FILEHOST (soju) and a custom uploader config
-- **Distribution:** automatic updates with Sparkle, then a Mac App Store build
+- **Distribution:** a Mac App Store build, and a beta channel for testing releases early
 - **Search:** message search UI on top of the existing FTS5 index
 - **iCloud sync** of networks, settings and themes
 - **Per-network/per-channel themes**

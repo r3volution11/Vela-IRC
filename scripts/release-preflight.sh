@@ -20,6 +20,9 @@
 #                  both, and higher than the previous release's; CHANGELOG.md's
 #                  newest version section is "## <version> - <yyyy-mm-dd>" and
 #                  has entries; "## Unreleased", if there is one, has none.
+#   Updates        Vela/Info.plist has the update signing key's public half
+#                  (SUPublicEDKey), not the placeholder; website/public/appcast.xml
+#                  is a valid feed without an item for this build yet.
 #   CI             The CI workflow passed for HEAD's commit, and so did the
 #                  Media sites workflow if it ran for it (needs gh, signed in).
 #   Adult domains  adult-domains.txt was refreshed since the previous release
@@ -63,6 +66,7 @@ set -euo pipefail
 script="${0:A}"
 cd "${0:A:h}/.."
 source scripts/lib/release-checks.zsh
+source scripts/lib/sparkle.zsh
 
 remote=origin
 branch=main
@@ -336,6 +340,35 @@ check_changelog() {
   else
     check_fail "Changelog Unreleased" "\"## Unreleased\" has $(plural $unreleased_entries line), which this build includes but its version section doesn't" \
       "Move them into \"## ${version:-<version>} - <date>\" and leave \"## Unreleased\" empty."
+  fi
+}
+
+# ---------------------------------------------------------------- updates
+# The in-app updater: the public key releases are checked against, and the
+# feed --publish adds this release to (docs/RELEASING.md, "Updates").
+check_updates() {
+  check_section "Updates"
+  local key appcast=website/public/appcast.xml output
+  key=$(sparkle_public_key)
+  if sparkle_key_is_valid "$key"; then
+    check_pass "Update key" "$sparkle_info_plist has a public key (${key[1,8]}…)"
+  elif (( adhoc )); then
+    check_skip "Update key" "$sparkle_info_plist has no public key yet (ad hoc build)"
+  else
+    check_fail "Update key" "$sparkle_info_plist's SUPublicEDKey is ${key:-missing}, not a public key" \
+      "Create the key once with scripts/sparkle-key.sh --create, paste the public key it prints into $sparkle_info_plist and commit it (docs/RELEASING.md, \"The update signing key\")."
+  fi
+
+  if ! command -v node >/dev/null; then
+    check_fail "Update feed" "node isn't installed" "Install Node.js 20 or later (the website needs it too)."
+  elif ! output=$(node website/scripts/appcast.mjs check "$appcast" 2>&1); then
+    check_fail "Update feed" "$appcast has problems: ${output//$'\n'/; }" \
+      "Fix them (docs/RELEASING.md, \"Updates\"). website/scripts/appcast.mjs writes the items; don't edit them by hand."
+  elif [[ -n "$build_number" ]] && node website/scripts/appcast.mjs has "$appcast" --build "$build_number"; then
+    check_fail "Update feed" "$appcast already has an item for build $build_number" \
+      "Bump CURRENT_PROJECT_VERSION: every release needs a new build number, or Sparkle won't offer it."
+  else
+    check_pass "Update feed" "$appcast is valid, with no item for build ${build_number:-?} yet"
   fi
 }
 
@@ -670,6 +703,7 @@ check_scroll_benchmark() {
 
 check_git
 check_version
+check_updates
 check_ci
 check_adult_domains
 check_generated

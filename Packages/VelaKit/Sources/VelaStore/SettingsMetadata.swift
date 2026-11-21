@@ -22,6 +22,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
     case connection
     case moderation
     case intelligence
+    case updates
 
     public var id: String { rawValue }
 
@@ -37,6 +38,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .connection: "Connection"
         case .moderation: "Moderation"
         case .intelligence: "Apple Intelligence"
+        case .updates: "Updates"
         }
     }
 
@@ -53,6 +55,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .connection: ["connection", "channels"]
         case .moderation: ["moderation"]
         case .intelligence: ["intelligence", "translation"]
+        case .updates: ["updates"]
         }
     }
 
@@ -67,6 +70,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .notifications: "notifications"
         case .connection, .moderation: "networks"
         case .intelligence: "intelligence"
+        case .updates: "updates"
         }
     }
 
@@ -200,6 +204,8 @@ public enum SettingsMetadata {
         "logging.includeEvents": "Include Channel Events",
         "logging.includeServer": "Include Server Messages",
         "logging.excludedBuffers": "Channels Not Logged",
+        "updates.checkAutomatically": "Check Automatically",
+        "updates.installAutomatically": "Install Automatically",
     ]
 
     /// Number ranges, merged into each descriptor's schema as

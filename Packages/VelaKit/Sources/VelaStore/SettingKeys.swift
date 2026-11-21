@@ -702,6 +702,19 @@ extension SettingKey where Value == [String] {
     }
 }
 
+// MARK: Updates
+
+extension SettingKey where Value == Bool {
+    public static var updatesCheckAutomatically: SettingKey<Bool> {
+        .init("updates.checkAutomatically", default: true,
+              summary: "Check velairc.app for a new version of Vela once a day. Vela offers a new version when you open it or come back to your Mac after a while, not while you're chatting; the About window and Settings → Updates show it too. A check sends only Vela's version. Development builds never check.")
+    }
+    public static var updatesInstallAutomatically: SettingKey<Bool> {
+        .init("updates.installAutomatically", default: false,
+              summary: "Download new versions in the background and install them the next time you quit Vela, without asking. Needs updates.checkAutomatically.")
+    }
+}
+
 // MARK: Catalog
 
 extension SettingKey where Value == JSONValue {
@@ -807,6 +820,9 @@ public enum SettingsCatalog {
             SettingKey.intelligenceSpotlightChannels.descriptor,
             SettingKey.translationLanguage.descriptor,
             SettingKey.translationAutoTranslate.descriptor,
+
+            SettingKey.updatesCheckAutomatically.descriptor,
+            SettingKey.updatesInstallAutomatically.descriptor,
         ] + NavigationSettingsCatalog.descriptors
     }
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vela's update feed, read by the app's updater (Sparkle) at
+  https://velairc.app/appcast.xml. Don't edit it by hand: scripts/release.sh
+  adds each release's item with website/scripts/appcast.mjs (newest first),
+  and docs/RELEASING.md, "Updates", explains it.
+-->
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Vela</title>
+    <link>https://velairc.app</link>
+    <description>New versions of Vela, the IRC client for macOS.</description>
+    <language>en</language>
+  </channel>
+</rss>

@@ -24,19 +24,25 @@ public struct VelaScenes: Scene {
     /// as Apple's App Intents pattern does: Siri and Shortcuts can launch
     /// Vela to run an action, and its dependencies must be registered
     /// before the action runs, not whenever SwiftUI first builds the
-    /// scenes. ``init(appShortcuts:)`` reuses what this made.
+    /// scenes. ``init(appShortcuts:updater:)`` reuses what this made.
     ///
-    /// - Parameter appShortcuts: As for ``init(appShortcuts:)``.
-    public static func prepare(appShortcuts: (any AppShortcutsProvider.Type)? = nil) {
-        _ = AppInstances.shared(appShortcuts: appShortcuts)
+    /// - Parameters:
+    ///   - appShortcuts: As for ``init(appShortcuts:updater:)``.
+    ///   - updater: As for ``init(appShortcuts:updater:)``.
+    public static func prepare(appShortcuts: (any AppShortcutsProvider.Type)? = nil, updater: (any AppUpdater)? = nil) {
+        _ = AppInstances.shared(appShortcuts: appShortcuts, updater: updater)
     }
 
-    /// - Parameter appShortcuts: The app's App Shortcuts, refreshed when
-    ///   channels change so phrases like "Open #vela in Vela" stay current.
-    public init(appShortcuts: (any AppShortcutsProvider.Type)? = nil) {
+    /// - Parameters:
+    ///   - appShortcuts: The app's App Shortcuts, refreshed when channels
+    ///     change so phrases like "Open #vela in Vela" stay current.
+    ///   - updater: The app's updater (Sparkle, in the app target). Without
+    ///     one, the About window and Settings say updates aren't set up.
+    ///     Only the first call's counts (see ``prepare(appShortcuts:updater:)``).
+    public init(appShortcuts: (any AppShortcutsProvider.Type)? = nil, updater: (any AppUpdater)? = nil) {
         // SwiftUI can run this more than once; every run gets the same
         // instances (see `AppInstances`).
-        let shared = AppInstances.shared(appShortcuts: appShortcuts)
+        let shared = AppInstances.shared(appShortcuts: appShortcuts, updater: updater)
         _app = State(initialValue: shared.app)
         _themeStore = State(initialValue: shared.themeStore)
         _uiState = State(initialValue: shared.uiState)
@@ -60,6 +66,7 @@ public struct VelaScenes: Scene {
         .restorationBehavior(.disabled)
         .commands {
             VelaCommands(app: app, themeStore: themeStore, uiState: uiState)
+            AboutCommands(updates: services.updates)
             ShowRequestCommands(router: siri.showRequests)
         }
 
@@ -90,6 +97,17 @@ public struct VelaScenes: Scene {
         .defaultSize(width: 560, height: 640)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
+
+        // Vela → About Vela, in place of the standard About panel.
+        Window("About Vela", id: WindowID.about) {
+            AboutView()
+                .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
     }
 }
 
@@ -97,6 +115,7 @@ public enum WindowID {
     public static let main = "main"
     public static let themeEditor = "theme-editor"
     public static let whatsNew = "whats-new"
+    public static let about = "about"
 }
 
 extension View {
@@ -124,14 +143,14 @@ private final class AppInstances {
 
     private static var current: AppInstances?
 
-    static func shared(appShortcuts: (any AppShortcutsProvider.Type)?) -> AppInstances {
+    static func shared(appShortcuts: (any AppShortcutsProvider.Type)?, updater: (any AppUpdater)?) -> AppInstances {
         if let current { return current }
-        let instances = AppInstances(appShortcuts: appShortcuts)
+        let instances = AppInstances(appShortcuts: appShortcuts, updater: updater)
         current = instances
         return instances
     }
 
-    private init(appShortcuts: (any AppShortcutsProvider.Type)?) {
+    private init(appShortcuts: (any AppShortcutsProvider.Type)?, updater: (any AppUpdater)?) {
         // Vela opens no documents. Without this, AppKit treats launch
         // arguments such as the "Lighter" in `--theme Lighter` as files to
         // open, and a launch that opens files skips the main window.
@@ -155,7 +174,11 @@ private final class AppInstances {
         // folder, so they never show or change the real one.
         let themeStore = ThemeStore(userThemesDirectory: demo ? DemoArguments.themesDirectory(for: arguments) : AppPaths.themesDirectory)
         let uiState = UIState()
-        let services = SceneServices(intelligence: demo ? .demo() : .live(settings: app.settings))
+        // Demo runs, the scroll benchmark and snapshots never go online
+        // for updates: they get a stand-in that says Vela is up to date.
+        let automated = demo || SnapshotSupport.isActive || ScrollBenchmark.isActive
+        let updates = AppUpdates(updater: automated ? DemoUpdater() : updater ?? DisabledUpdater(reason: .notConfigured))
+        let services = SceneServices(intelligence: demo ? .demo() : .live(settings: app.settings), updates: updates)
         // Siri, Shortcuts and Spotlight run App Intents in this process;
         // they reach the same model and services through dependencies,
         // registered here once, from the app's init (`VelaScenes.prepare`).
@@ -171,6 +194,11 @@ private final class AppInstances {
         self.uiState = uiState
         self.services = services
         self.siri = SiriSceneSupport(app: app, uiState: uiState, appShortcuts: appShortcuts)
+        // Applies updates.checkAutomatically and updates.installAutomatically,
+        // then starts the updater (nothing for Vela Dev or a stand-in).
+        if !automated {
+            updates.start(settings: app.settings)
+        }
         if SnapshotSupport.isActive {
             dockIcon = nil
         } else {
@@ -186,9 +214,13 @@ private final class AppInstances {
 final class SceneServices {
     let intelligence: IntelligenceServices
     let translations = TranslationStore()
+    /// The updater, for the About window, Settings → Updates, the Vela
+    /// menu and the palette.
+    let updates: AppUpdates
 
-    init(intelligence: IntelligenceServices) {
+    init(intelligence: IntelligenceServices, updates: AppUpdates = AppUpdates(updater: DemoUpdater())) {
         self.intelligence = intelligence
+        self.updates = updates
     }
 }
 
@@ -213,6 +245,7 @@ private struct VelaEnvironmentModifier: ViewModifier {
             .environment(uiState)
             .environment(services.intelligence)
             .environment(services.translations)
+            .environment(services.updates)
             .environment(\.theme, theme)
             .environment(\.chatStyle, ChatStyle(settings: app.settings))
             .onReceive(

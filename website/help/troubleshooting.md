@@ -154,7 +154,11 @@ Yes. Vela is free and open source under the [Mozilla Public License 2.0](/help/l
 
 ### Does Vela update itself?
 
-Not yet. Download the latest version from the [Install](/guide/install#updating) page; automatic updates are planned.
+Yes, from version 1.1. It checks once a day and offers a new version when you open Vela; **Vela → Check for Updates…** checks right away, and **Settings → Updates** turns the checks off or installs updates automatically. To get 1.1 from 1.0, download it from the [Install](/guide/install#updating) page once. See [Updates](/guide/updates).
+
+### An update won't install
+
+Make sure Vela is in your **Applications** folder and you opened it from there. An app running from the disk image or from **Downloads** can't replace itself. See [Updates](/guide/updates#troubleshooting).
 
 ### Can I upload images, search my history or sync between Macs?
 

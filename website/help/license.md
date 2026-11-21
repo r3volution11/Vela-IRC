@@ -51,6 +51,7 @@ Vela also uses [Observation](https://developer.apple.com/documentation/observati
 | [GRDB.swift](https://github.com/groue/GRDB.swift) by Gwendal Roué | The local message database and its full-text search | MIT |
 | [SQLite](https://www.sqlite.org), the copy that comes with macOS | The database engine underneath GRDB | [Public domain](https://www.sqlite.org/copyright.html) |
 | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) by Thomas Zoechling | Importing `.vsix` theme extensions | MIT |
+| [Sparkle](https://sparkle-project.org) by the Sparkle Project | [Updates](/guide/updates): checking for new versions, checking their signatures and installing them | [MIT](https://github.com/sparkle-project/Sparkle/blob/2.x/LICENSE), with the licenses of the code it includes (bsdiff, sais-lite, ed25519 and others) |
 
 ## Data {#data}
 

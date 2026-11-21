@@ -16,6 +16,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
     case networks
     case notifications
     case intelligence
+    case updates
     case advanced
 
     var id: String { rawValue }
@@ -30,6 +31,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
         case .networks: "Networks"
         case .notifications: "Notifications"
         case .intelligence: "Apple Intelligence"
+        case .updates: "Updates"
         case .advanced: "Advanced"
         }
     }
@@ -44,6 +46,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
         case .networks: "network"
         case .notifications: "bell.badge"
         case .intelligence: "apple.intelligence"
+        case .updates: "arrow.down.circle"
         case .advanced: "gearshape.2"
         }
     }
@@ -53,7 +56,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
         [.presets],
         [.appearance, .layout, .messages, .media],
         [.networks, .notifications, .intelligence],
-        [.advanced],
+        [.updates, .advanced],
     ]
 }
 
@@ -110,6 +113,7 @@ struct SettingsRootView: View {
         case .networks: NetworksPane()
         case .notifications: NotificationsPane()
         case .intelligence: IntelligencePane(navigate: navigate)
+        case .updates: UpdatesPane()
         case .advanced: AdvancedPane()
         }
     }

@@ -77,6 +77,7 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ### Updates
 
+- **Vela updates itself.** It checks for a new version once a day and offers it when you open Vela or come back to your Mac, never in the middle of a conversation. **Vela → Check for Updates…** checks right away, and the new **About Vela** window shows your version and whether it's up to date. **Settings → Updates** has **Check for updates automatically** (on by default, `updates.checkAutomatically`) and **Install updates automatically** (off by default, `updates.installAutomatically`). A check sends only Vela's version, and every update is signed and checked before it installs. See [Updates](https://velairc.app/guide/updates).
 - **What's New after an update.** The first time a new version of Vela opens, it shows what changed, with anything you need to know first. **Help → What's New in Vela** shows it again.
 
 ## 1.0.0 - 2026-11-18

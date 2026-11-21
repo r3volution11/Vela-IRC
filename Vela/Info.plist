@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Sparkle's settings for the in-app updater. Only the Release configuration
+  uses this file (INFOPLIST_FILE); Xcode merges it with the Info.plist it
+  generates from the INFOPLIST_KEY_* build settings. Debug builds ("Vela Dev")
+  get none of these keys, so they have no update feed, and their code never
+  starts the updater either.
+
+  Every key is explained at https://sparkle-project.org/documentation/customization/.
+  docs/RELEASING.md, "Updates", says how releases use them, and
+  scripts/verify-release.sh checks them in every release.
+-->
+<plist version="1.0">
+<dict>
+	<!-- The appcast, served by velairc.app (website/public/appcast.xml). -->
+	<key>SUFeedURL</key>
+	<string>https://velairc.app/appcast.xml</string>
+	<!--
+	  The public half of the EdDSA (ed25519) key that signs each release's
+	  Vela.dmg. The private half lives only in 1Password. Until it's set,
+	  Vela doesn't start the updater, and scripts/release.sh and
+	  scripts/verify-release.sh refuse to make a release. To set it, create
+	  the key once with scripts/sparkle-key.sh, then paste the public key it
+	  prints here (docs/RELEASING.md, "The update signing key").
+	-->
+	<key>SUPublicEDKey</key>
+	<string>SPARKLE_PUBLIC_KEY_PLACEHOLDER</string>
+	<!-- Never send a system profile; an update check sends only Sparkle's User-Agent. -->
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<!--
+	  Never ask: Vela's own updates.checkAutomatically setting (on by
+	  default) decides, and Vela applies it at launch and when it changes.
+	-->
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<!-- Check once a day (in seconds). -->
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<!-- Vela is sandboxed: install through Sparkle's Installer XPC service. -->
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<!-- Check an update's EdDSA signature before unpacking it. -->
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
+</dict>
+</plist>

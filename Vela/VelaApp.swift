@@ -7,13 +7,17 @@ import VelaUI
 
 @main
 struct VelaApp: App {
+    /// Sparkle in a release build; Vela Dev's never checks (SparkleUpdater.swift).
+    private let updater: any AppUpdater
+
     init() {
+        updater = VelaUpdater.make()
         // Siri and Shortcuts can launch Vela to run an action: register
         // its App Intents dependencies now, before anything can ask.
-        VelaScenes.prepare(appShortcuts: VelaShortcuts.self)
+        VelaScenes.prepare(appShortcuts: VelaShortcuts.self, updater: updater)
     }
 
     var body: some Scene {
-        VelaScenes(appShortcuts: VelaShortcuts.self)
+        VelaScenes(appShortcuts: VelaShortcuts.self, updater: updater)
     }
 }

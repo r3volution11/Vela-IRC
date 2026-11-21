@@ -27,7 +27,7 @@ Out of the box, Vela follows your Mac's light or dark appearance with the **Pale
 
 ## A quick tour of Settings
 
-Settings (<kbd>⌘,</kbd>) has nine panes:
+Settings (<kbd>⌘,</kbd>) has ten panes:
 
 | Pane | What's there |
 | --- | --- |
@@ -39,6 +39,7 @@ Settings (<kbd>⌘,</kbd>) has nine panes:
 | **Networks** | Add, edit, connect and remove networks and bouncers, whether to reconnect automatically, whether to ask before leaving or removing a channel, and moderation defaults. |
 | **Notifications** | Highlights, private messages and sounds; the Dock icon's badge, offline mark and bouncing; and your highlight words. |
 | **Apple Intelligence** | Catch me up summaries, translation, Writing Tools, and Siri, Shortcuts and Spotlight. |
+| **Updates** | Whether Vela is up to date, **Check for Updates**, and whether to check for and install new versions automatically. See [Updates](/guide/updates). |
 | **Advanced** | The [settings editor](/customize/settings-editor): every setting in one searchable list, and settings.json itself. |
 
 ::: tip Want to look around first?

@@ -20,6 +20,9 @@ struct VelaCommandContext {
     /// Apple Intelligence (Catch me up), where the builder has it: the
     /// palette does, the menu bar doesn't.
     var intelligence: IntelligenceServices? = nil
+    /// The updater, for Check for Updates…, where the builder has it (the
+    /// palette).
+    var updates: AppUpdates? = nil
 }
 
 /// Every command Vela offers, built from the current state. Menus pick the
@@ -990,6 +993,7 @@ struct VelaCommandCatalog {
             commands += networkCommands(for: session)
         }
         commands.append(whatsNew)
+        commands += aboutCommands
         commands.append(commandPalette)
         return commands
     }

@@ -15,10 +15,12 @@ import VelaTheme
 ///     Vela --demo --snapshot /tmp/shot.png --theme Palenight --accent Cyan
 ///     Vela --demo --snapshot /tmp/shot.png --themes-dir /path/in/container --theme "My Theme"
 ///     Vela --demo --snapshot /tmp/editor.png --theme-editor "Palenight"
+///     Vela --demo --snapshot /tmp/about.png --about [--size 440x560]
 ///
 /// The main UI (or, with `--settings-pane <id>`, the Settings window on that
 /// pane; ids are `SettingsPane` raw values; with `--theme-editor <theme>`,
-/// the Theme Editor started from that theme) is hosted in a transparent
+/// the Theme Editor started from that theme; with `--about`, the About
+/// window) is hosted in a transparent
 /// offscreen window (independent of SwiftUI's scene restoration), rendered
 /// to a PNG after the delay, and the app quits. `--settings-scroll <points>`
 /// scrolls the pane down before the capture, and `--accent <name>` picks
@@ -73,6 +75,12 @@ enum SnapshotSupport {
                     .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
             )
             defaultSize = CGSize(width: 760, height: 680)
+        } else if arguments.contains("--about") {
+            content = AnyView(
+                AboutView()
+                    .velaEnvironment(app: app, themeStore: themeStore, uiState: uiState, services: services, isPrimary: false)
+            )
+            defaultSize = CGSize(width: 440, height: 560)
         } else if let id = settingsPaneID {
             guard let pane = SettingsPane(rawValue: id) else {
                 let ids = SettingsPane.allCases.map(\.rawValue).joined(separator: ", ")

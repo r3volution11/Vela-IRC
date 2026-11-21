@@ -1,14 +1,15 @@
 // Checks the built site (.vitepress/dist) before it's deployed: every page
 // has its own canonical URL, social tags and valid schema.org data; the home
 // page offers the download; no page loads Google's tag before its consent
-// check runs; the sitemap lists every page; and the files GitHub Pages needs
-// are present.
+// check runs; the sitemap lists every page; the files GitHub Pages needs
+// are present; and the app's update feed (appcast.xml) is valid.
 //
 //   npm run docs:build && npm run docs:check
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { checkAppcast } from './appcast.mjs'
 
 const SITE = 'https://velairc.app'
 const DOWNLOAD_URL = 'https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg'
@@ -101,6 +102,11 @@ if (!readFileSync(join(dist, 'robots.txt'), 'utf8').includes(`Sitemap: ${SITE}/s
 for (const asset of ['og-image.jpg', 'favicon.ico', 'apple-touch-icon.png', 'logo.png']) {
   if (!existsSync(join(dist, asset))) problems.push(`${asset} is missing`)
 }
+
+// The update feed Vela's updater reads at https://velairc.app/appcast.xml.
+const appcast = join(dist, 'appcast.xml')
+if (!existsSync(appcast)) problems.push("appcast.xml (the app's update feed) is missing")
+else for (const problem of checkAppcast(readFileSync(appcast, 'utf8'))) problems.push(`appcast.xml: ${problem}`)
 
 if (problems.length) {
   console.error(`check-site: ${problems.length} problem(s)\n  ${problems.join('\n  ')}`)

@@ -63,6 +63,8 @@ Requirements:
 - macOS 26 Tahoe or later, on Apple silicon or Intel.
 - Releases are signed with a Developer ID and notarized by Apple, so they open without security warnings.
 
+Vela updates itself from version 1.1: it checks once a day and offers a new version when you open it. **Vela → Check for Updates…** checks right away, and **Settings → Updates** has the switches. See [Updates](https://velairc.app/guide/updates).
+
 The full user guide is at **[velairc.app](https://velairc.app)**.
 
 ## Why Vela?
@@ -195,7 +197,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ## Customizing Vela
 
-- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Apple Intelligence and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
+- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Apple Intelligence, Updates and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
 - **Settings → Advanced** is a VS Code-style settings editor: every setting with the right control for it, search and filters (`@modified`, `@unknown`, `@category:`, `@pane:`), and a JSON view with suggestions, inline problems, hover docs and the defaults alongside.
 - **`settings.json`** holds everything, VS Code style. Edit it in the settings editor's JSON view, or open it in your own editor from **Theme → Open settings.json**. Edits made in any editor apply live, and changes made in Vela keep your comments and formatting. Example:
 
@@ -220,7 +222,8 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ## Privacy
 
-- **No telemetry, analytics or accounts.** Vela talks only to the IRC servers you add.
+- **No telemetry, analytics or accounts.** Vela talks to the IRC servers you add, and to the sites behind link previews you load.
+- **Update checks send only Vela's version.** Once a day, Vela asks velairc.app (hosted by GitHub Pages) whether there's a new version; updates download from GitHub. No system profile, identifier or usage data is sent. Turn the checks off in **Settings → Updates**. See [Privacy](https://velairc.app/help/privacy#updates).
 - **Message history is saved only if you want.** **Save message history** (`history.save`) is off for new installs: messages, reactions and link previews stay in memory while Vela runs, and a bouncer or `chathistory` server fills them in again. Your channels and read positions are saved either way. Turned on, history goes in a local SQLite database, and **Delete Saved History…** removes it any time. Plain-text chat logs are a separate opt-in.
 - **Link previews** fetch the linked page or image, which reveals your IP address to that site. You can control this:
   - Turn previews off entirely, or switch to click-to-load.
@@ -259,12 +262,12 @@ scripts/demo-screenshot.sh build/Vela.app shot.png --themes-dir my-themes --them
 Demo mode uses a temporary Themes folder, so it never shows or changes your
 own themes; `--themes-dir <folder>` copies a folder's theme files into it.
 
-To build a signed and notarized release, see [docs/RELEASING.md](docs/RELEASING.md). Start with `scripts/release.sh --preflight`, which checks that everything is ready (git, version and changelog, CI, tests, website, generated files, media sites) and builds nothing. Then `scripts/release.sh --publish` builds, checks, tags and publishes the release on GitHub.
+To build a signed and notarized release, see [docs/RELEASING.md](docs/RELEASING.md). Start with `scripts/release.sh --preflight`, which checks that everything is ready (git, version and changelog, CI, tests, website, generated files, media sites) and builds nothing. Then `scripts/release.sh --publish` builds, checks, tags and publishes the release on GitHub, and adds it to the update feed.
 
 ## Project layout
 
 ```
-Vela/                    Thin macOS app target (entry point, app icon, entitlements)
+Vela/                    Thin macOS app target (entry point, app icon, entitlements, the Sparkle updater)
 Packages/VelaKit/
   Sources/VelaIRC        IRC protocol, IRCv3 negotiation, SASL, TLS connection
   Sources/VelaStore      SQLite scrollback, settings.json, networks, Keychain, presets
@@ -278,7 +281,7 @@ schemas/                 JSON Schema for theme files
 website/                 velairc.app (VitePress)
 docs/                    Theme authoring guide, credits, release process
 design/app-icon/         App icon generators and geometry (see its README)
-scripts/                 run, release, screenshot, icon export and media site check tools, git hooks
+scripts/                 run, release, update signing and testing, screenshot, icon export and media site check tools, git hooks
 ```
 
 ## Getting help
@@ -287,7 +290,7 @@ Ask in **#vela** on **Libera.Chat**, Vela's own channel: server `irc.libera.chat
 
 ## Contributing
 
-Contributions are welcome, especially themes. See [CONTRIBUTING.md](CONTRIBUTING.md). The [roadmap](ROADMAP.md) lists what's planned next, including image uploads, search, iCloud sync and auto-updates.
+Contributions are welcome, especially themes. See [CONTRIBUTING.md](CONTRIBUTING.md). The [roadmap](ROADMAP.md) lists what's planned next, including image uploads, search and iCloud sync.
 
 ## License and credits
 
@@ -303,7 +306,7 @@ Third-party components and ported themes keep their own licenses. See [THIRD_PAR
 Vela builds on a lot of other people's work. Thank you to:
 
 - **Apple's platform:** Vela is written in [Swift](https://www.swift.org) with [SwiftUI](https://developer.apple.com/swiftui/) and AppKit, and uses Network, WebKit, AVKit, Foundation Models, Translation, Natural Language, App Intents, Core Spotlight and more. It's built in [Xcode](https://developer.apple.com/xcode/) and tested with Swift Testing, and the icon was made in [Icon Composer](https://developer.apple.com/icon-composer/).
-- **Libraries:** [GRDB.swift](https://github.com/groue/GRDB.swift) (MIT) on macOS's [SQLite](https://www.sqlite.org) for the message database, and [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT) for `.vsix` theme import.
+- **Libraries:** [GRDB.swift](https://github.com/groue/GRDB.swift) (MIT) on macOS's [SQLite](https://www.sqlite.org) for the message database, [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT) for `.vsix` theme import, and [Sparkle](https://sparkle-project.org) (MIT) for updates.
 - **Data:** [Sinfonietta/hostfiles](https://github.com/Sinfonietta/hostfiles) (MIT) for the adult-site filter's domain list.
 - **IRC documentation:** the [Modern IRC Client Protocol](https://modern.ircdocs.horse/) and its formatting and CTCP specs, the [IRCv3 specifications](https://ircv3.net/irc/), and RFC 1459 and 2812.
 - **Theme palettes:** Dracula, Nord, Catppuccin, Tokyo Night, One Dark Pro, Gruvbox, Solarized and Rosé Pine, with the Material Theme and [Bear](https://bear.app) as inspiration ([details](docs/THEME-CREDITS.md)).

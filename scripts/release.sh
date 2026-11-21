@@ -17,17 +17,24 @@
 # summary of every check ends the output. See docs/RELEASING.md,
 # "Release checks", for what each check needs.
 #
-# With --publish, once every check has passed, it tags the commit it built as
+# With --publish, once every check has passed, it signs Vela.dmg for the
+# in-app updater (Sparkle's sign_update, with the EdDSA key read from
+# 1Password into a pipe), adds the release to the update feed
+# (website/public/appcast.xml) and commits it, tags the commit it built as
 # v<version>, pushes the tag to origin, creates the GitHub release with
-# Vela.dmg and SHA256SUMS, marked Latest, and checks that
-# the website's download link (releases/latest/download/Vela.dmg) gives this
-# DMG. The tag is signed when git has a signing key (user.signingkey or
+# Vela.dmg and SHA256SUMS, marked Latest, checks that the website's download
+# link (releases/latest/download/Vela.dmg) gives this DMG, then pushes the
+# feed's commit to main and waits for velairc.app to serve it. The feed goes
+# last, so the updater never offers a release whose download isn't there
+# yet. The tag is signed when git has a signing key (user.signingkey or
 # tag.gpgSign), and annotated otherwise. The release notes are CHANGELOG.md's
 # section for the version followed by scripts/release-notes-footer.md, written
-# to build/release/release-notes.md, unless --notes gives a file. Whether gh
-# is signed in and there are notes is checked before anything is built. If a
-# publishing step fails, nothing is deleted: it prints the commands left to
-# finish by hand. See docs/RELEASING.md, "Publishing".
+# to build/release/release-notes.md, unless --notes gives a file; the feed
+# shows the changelog section. Whether gh and the 1Password CLI are ready, the
+# update key in 1Password matches Vela/Info.plist, and there are notes is
+# checked before anything is built. If a publishing step fails, nothing is
+# deleted: it prints the commands left to finish by hand. See
+# docs/RELEASING.md, "Publishing" and "Updates".
 #
 # Options:
 #   --preflight          Run only the preflight checks, and build no release.
@@ -59,17 +66,28 @@
 #       xcrun notarytool store-credentials vela-notary --key AuthKey_….p8 --key-id … --issuer …
 #       xcrun notarytool store-credentials vela-notary --apple-id … --team-id …
 #   • For --publish: the GitHub CLI (gh), signed in (gh auth login)
+#   • For --publish: the 1Password CLI (op) and the update signing key in
+#     1Password (scripts/sparkle-key.sh --create, once), and Node.js
+#   • A real update key in Vela/Info.plist (SUPublicEDKey): a release refuses
+#     the placeholder (only --adhoc builds go without)
 #
 # Environment overrides:
 #   VELA_TEAM_ID         Apple Developer Team ID (auto-detected from the certificate)
 #   VELA_NOTARY_PROFILE  notarytool keychain profile (default: vela-notary)
+#   VELA_OP_ACCOUNT, VELA_SPARKLE_VAULT, VELA_SPARKLE_ITEM
+#                        Where the update signing key is in 1Password
+#                        (default: my.1password.com, Personal,
+#                        "Vela - Sparkle - Mac Update Signing Key")
 #
 # Output: build/release/Vela.dmg (+ SHA256SUMS),
-# and with --publish (without --notes) build/release/release-notes.md
+# and with --publish (without --notes) build/release/release-notes.md, plus
+# build/release/appcast-notes.md (the feed's release notes) and a commit of
+# website/public/appcast.xml
 set -euo pipefail
 invoked_from=$PWD
 cd "${0:A:h}/.."
 source scripts/lib/release-checks.zsh
+source scripts/lib/sparkle.zsh
 
 notarize=1
 adhoc=0
@@ -133,6 +151,10 @@ release_title="Vela $version"
 notes_footer=scripts/release-notes-footer.md
 changelog_notes=""
 built_commit=""
+# The in-app updater's feed, and where Xcode puts Sparkle's tools.
+appcast=website/public/appcast.xml
+appcast_notes=""
+derived_data=build/DerivedData-release
 
 # changelog_section <version>: the body of CHANGELOG.md's "## <version> - …"
 # section, without its heading or the blank lines around it.
@@ -186,6 +208,18 @@ if (( skip_preflight || adhoc || allow_dirty )) && [[ -n "$(git status --porcela
   print -P "%F{yellow}warning:%f the working tree has uncommitted changes"
 fi
 
+# ---------------------------------------------------------------- update key
+# Installed copies of Vela only accept updates signed with the key whose
+# public half is in Vela/Info.plist, so a release can't ship the placeholder.
+public_key=$(sparkle_public_key)
+if ! sparkle_key_is_valid "$public_key"; then
+  if (( adhoc )); then
+    print -P "    %F{yellow}note:%f $sparkle_info_plist has no update key yet, so this build's updater is off."
+  else
+    fail "$sparkle_info_plist has no update key yet (SUPublicEDKey is ${public_key:-missing}). Create it once with scripts/sparkle-key.sh --create and paste the public key it prints (docs/RELEASING.md, \"The update signing key\")."
+  fi
+fi
+
 # ---------------------------------------------------------------- signing setup
 if (( adhoc )); then
   identity="-"
@@ -227,6 +261,27 @@ if (( publish )); then
     notes_file="$out/release-notes.md"
     notes_from="CHANGELOG.md's \"## $version\" section and $notes_footer, written when the build starts"
   fi
+  # The update: the key in 1Password must be the one Vela/Info.plist trusts
+  # (1Password asks now, not after the long build), and the feed must take
+  # this build.
+  command -v op >/dev/null \
+    || fail "--publish needs the 1Password CLI (op) to sign the update: brew install 1password-cli, then turn on 1Password → Settings → Developer → Integrate with 1Password CLI."
+  command -v node >/dev/null \
+    || fail "--publish needs Node.js to add the release to the update feed (the website needs it too)."
+  scripts/sparkle-key.sh --check >/dev/null \
+    || fail "The update signing key in 1Password isn't ready (see above). docs/RELEASING.md, \"The update signing key\"."
+  node website/scripts/appcast.mjs check "$appcast" \
+    || fail "$appcast has problems (above). Fix them first (docs/RELEASING.md, \"Updates\")."
+  if node website/scripts/appcast.mjs has "$appcast" --build "$build_number"; then
+    fail "$appcast already has build $build_number. Bump CURRENT_PROJECT_VERSION."
+  fi
+  # The feed shows the changelog section (or, without one, the --notes file).
+  appcast_notes=$(changelog_section "$version")
+  if [[ -z "$(print -r -- "$appcast_notes" | grep -vE '^[[:space:]]*(#|<!--|$)' || true)" ]]; then
+    [[ -f "$notes_file" ]] || fail "CHANGELOG.md has no \"## $version\" section for the update feed's release notes."
+    appcast_notes=$(<"$notes_file")
+  fi
+  print "    update:   signed with \"$sparkle_item\" ($sparkle_vault, $sparkle_op_account); feed $appcast"
   # A signed tag when git has a signing key (as with 1Password's SSH signing),
   # an annotated one otherwise.
   if [[ -n "$(git config --get user.signingkey || true)" || "$(git config --bool --get tag.gpgSign || true)" == true ]]; then
@@ -303,7 +358,9 @@ fi
 step "Archiving (Release, universal)"
 sign_settings=(CODE_SIGN_IDENTITY="$identity")
 if (( ! adhoc )); then
-  sign_settings+=(CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$team" OTHER_CODE_SIGN_FLAGS="--timestamp")
+  # Vela/Vela.entitlements, not the local builds' Vela-Local.entitlements:
+  # Developer ID signs Sparkle too, so library validation stays on.
+  sign_settings+=(CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$team" OTHER_CODE_SIGN_FLAGS="--timestamp" CODE_SIGN_ENTITLEMENTS=Vela/Vela.entitlements)
 fi
 xcodebuild archive \
   -project Vela.xcodeproj \
@@ -311,7 +368,7 @@ xcodebuild archive \
   -configuration Release \
   -destination 'generic/platform=macOS' \
   -archivePath "$out/Vela.xcarchive" \
-  -derivedDataPath build/DerivedData-release \
+  -derivedDataPath "$derived_data" \
   ONLY_ACTIVE_ARCH=NO \
   "${sign_settings[@]}" \
   -quiet 2>&1 | tee "$out/archive.log" | grep -vE "CoreSimulator|appintentsmetadataprocessor" || true
@@ -440,14 +497,30 @@ latest_url="https://github.com/$github_repo/releases/latest/download/Vela.dmg"
 expected_location="https://github.com/$github_repo/releases/download/$tag/Vela.dmg"
 expected_sha=$(awk '$2 == "Vela.dmg" || $2 == "*Vela.dmg" { print $1 }' "$out/SHA256SUMS")
 assets=("$out/Vela.dmg" "$out/SHA256SUMS")
-publish_steps=(tag push release link checksum)
+publish_steps=(sign appcast tag push release link checksum feed served)
 typeset -A publish_check=(
+  sign "Update signature"
+  appcast "Update feed item"
   tag "Tag $tag"
   push "Push $tag"
   release "GitHub release"
   link "Download link"
   checksum "Download checksum"
+  feed "Push the update feed"
+  served "Update feed online"
 )
+# For the update: Sparkle's tools (as Package.resolved pins them, from the
+# archive's packages), the app's minimum macOS, and the feed's release notes
+# (appcast.mjs points their relative links at the files as of the tag).
+sparkle_tools=$(sparkle_bin "$derived_data" || true)
+minimum_system=$(plutil -extract LSMinimumSystemVersion raw -o - "$app/Contents/Info.plist" 2>/dev/null || true)
+appcast_notes_file="$out/appcast-notes.md"
+print -r -- "$appcast_notes" > "$appcast_notes_file"
+signature=""
+dmg_length=$(stat -f %z "$out/Vela.dmg")
+appcast_commit=""
+feed_url="$sparkle_feed_url"
+
 
 # skip_after <step> <why>: SKIP lines for the publishing steps after <step>.
 skip_after() {
@@ -465,7 +538,16 @@ skip_after() {
 finish_by_hand() {
   local first=$1 what=$2
   local -a commands=("cd ${(q-)PWD}")
+  local signature_argument=${signature:-'"$signature"'}
   case $first in
+    sign)
+      commands+=("signature=\$(op --account ${(q-)sparkle_op_account} read --no-newline ${(q-)$(sparkle_secret_reference)} | ${(q-)${sparkle_tools:-<Sparkle tools>}}/sign_update --ed-key-file - -p $out/Vela.dmg)") ;&
+    appcast)
+      commands+=(
+        "git checkout -- $appcast"
+        "node website/scripts/appcast.mjs add $appcast --version $version --build $build_number --minimum-system ${minimum_system:-26.0} --length $dmg_length --signature $signature_argument --notes-file $appcast_notes_file"
+        "git commit -m ${(q-)"Appcast: Vela $version"} -- $appcast"
+      ) ;&
     tag)
       commands+=("git tag $tag_flag -m ${(q-)release_title} $tag $built_commit") ;&
     push)
@@ -480,10 +562,17 @@ finish_by_hand() {
     link)
       commands+=("gh release edit $tag --repo $github_repo --latest") ;;
   esac
-  commands+=(
-    "curl -sS -o /dev/null -w '%{redirect_url}\n' $latest_url"
-    "curl -sSL $latest_url | shasum -a 256"
-  )
+  local download_checks=0
+  if [[ $first != (feed|served) ]]; then
+    download_checks=1
+    commands+=(
+      "curl -sS -o /dev/null -w '%{redirect_url}\n' $latest_url"
+      "curl -sSL $latest_url | shasum -a 256"
+    )
+  fi
+  # The feed goes last, once the download works.
+  [[ $first == served ]] || commands+=("git push $remote HEAD:refs/heads/main")
+  commands+=("curl -fsSL '$feed_url?release=$build_number' | grep -c '<sparkle:version>$build_number</sparkle:version>'")
   show_summary
   print
   step "Finish by hand"
@@ -491,17 +580,73 @@ finish_by_hand() {
   print
   print -rl -- "      "${^commands}
   print
-  print -r -- "    The first curl should print $expected_location,"
-  print -r -- "    and the second $expected_sha  - (Vela.dmg's line in $out/SHA256SUMS)."
+  if (( download_checks )); then
+    print -r -- "    The first curl should print $expected_location,"
+    print -r -- "    and the second $expected_sha  - (Vela.dmg's line in $out/SHA256SUMS)."
+  fi
   if [[ $first == checksum ]]; then
     print -r -- "    If the second still differs, upload this DMG again:"
     print -r -- "      gh release upload $tag $out/Vela.dmg --repo $github_repo --clobber"
   fi
+  print -r -- "    Push the feed's commit only once the download works. The last curl prints 1 once velairc.app"
+  print -r -- "    serves the feed with this release (the Deploy Website workflow takes a few minutes: gh run watch)."
   exit 1
 }
 
 RELEASE_CHECKS_RESULTS="$results"
 check_section "Publish"
+
+# The update's EdDSA signature: the private key goes from 1Password to
+# sign_update through a pipe, and the signature is checked against the
+# public key in the app that was built, as Sparkle will check it.
+print "    Signing Vela.dmg for the updater (1Password asks to read the key)…"
+if [[ -z "$sparkle_tools" ]]; then
+  check_fail "$publish_check[sign]" "Sparkle's sign_update isn't in $derived_data/SourcePackages/artifacts" \
+    "Resolve the packages (xcodebuild -resolvePackageDependencies -project Vela.xcodeproj -derivedDataPath $derived_data), then finish by hand (below)."
+  skip_after sign "the update isn't signed"
+  finish_by_hand sign "Vela.dmg isn't signed for the updater, so nothing was tagged or published."
+fi
+app_key=$(sparkle_public_key "$app/Contents/Info.plist")
+signature=$(sparkle_read_private_key | "$sparkle_tools/sign_update" --ed-key-file - -p "$out/Vela.dmg" 2>/dev/null || true)
+# Never print what sign_update said when it fails: its errors can quote the key.
+if [[ ! "$signature" =~ '^[A-Za-z0-9+/]{86}==$' ]]; then
+  signature=""
+  check_fail "$publish_check[sign]" "couldn't sign Vela.dmg with the key in 1Password" \
+    "Check that 1Password is unlocked and scripts/sparkle-key.sh --check passes, then finish by hand (below)."
+  skip_after sign "the update isn't signed"
+  finish_by_hand sign "Vela.dmg isn't signed for the updater, so nothing was tagged or published."
+elif ! sparkle_verify_signature "$out/Vela.dmg" "$signature" "$app_key"; then
+  check_fail "$publish_check[sign]" "the signature doesn't match the app's SUPublicEDKey (${app_key[1,8]}…)" \
+    "The key in 1Password isn't the one Vela/Info.plist trusts: compare scripts/sparkle-key.sh --public with SUPublicEDKey, fix it, and build again."
+  skip_after sign "the update's signature is wrong"
+  finish_by_hand sign "Vela.dmg's update signature doesn't match the app, so nothing was tagged or published."
+else
+  check_pass "$publish_check[sign]" "EdDSA, valid for the app's SUPublicEDKey (${app_key[1,8]}…); $dmg_length bytes"
+fi
+
+# The feed's item (newest first, earlier ones kept), committed on top of the
+# commit that was built. It's pushed last, once the download works.
+appcast_ok=0
+if [[ -z "$minimum_system" ]]; then
+  output="couldn't read LSMinimumSystemVersion from the app"
+elif output=$(node website/scripts/appcast.mjs add "$appcast" --version "$version" --build "$build_number" \
+    --minimum-system "$minimum_system" --length "$dmg_length" --signature "$signature" --notes-file "$appcast_notes_file" 2>&1); then
+  if command -v xmllint >/dev/null && ! xmllint --noout "$appcast" 2>/dev/null; then
+    output="xmllint finds $appcast malformed"
+  elif output=$(git commit --quiet -m "Appcast: Vela $version" -- "$appcast" 2>&1); then
+    appcast_ok=1
+  fi
+fi
+if (( appcast_ok )); then
+  appcast_commit=$(git rev-parse HEAD)
+  check_pass "$publish_check[appcast]" "Vela $version ($build_number), minimum macOS $minimum_system, committed as ${appcast_commit[1,7]}"
+else
+  git checkout -q -- "$appcast" 2>/dev/null || true
+  check_fail "$publish_check[appcast]" "${output//$'\n'/ }" \
+    "Fix what it says, then finish by hand (below)."
+  skip_after appcast "the feed has no item for $version"
+  finish_by_hand appcast "The feed has no item for Vela $version, so nothing was tagged or published."
+fi
 
 # The tag, on the commit that was built.
 if [[ $tag_flag == -a ]]; then
@@ -588,6 +733,38 @@ fi
 rm -f "$curl_errors"
 if [[ -n "$download_problem" ]]; then
   finish_by_hand checksum "The release is published, but $download_problem."
+fi
+
+# The feed, now that the download works: pushing to main deploys velairc.app
+# (the Deploy Website workflow), and updaters find the release there.
+if output=$(git push "$remote" "HEAD:refs/heads/main" 2>&1); then
+  check_pass "$publish_check[feed]" "${appcast_commit[1,7]} is on $remote/main"
+else
+  check_fail "$publish_check[feed]" "git push failed: ${output//$'\n'/ }" \
+    "If $remote/main moved on, git pull --rebase $remote main first; then finish by hand (below)."
+  skip_after feed "the feed's commit isn't on $remote"
+  finish_by_hand feed "The release is published and downloadable, but the update feed isn't pushed, so the updater doesn't offer it yet."
+fi
+
+# velairc.app serves the new feed once the Deploy Website workflow is done
+# (a few minutes). Try for about 8 minutes.
+print "    Waiting for velairc.app to serve the feed with $version (the Deploy Website workflow takes a few minutes)…"
+served=0
+for attempt in {1..24}; do
+  if curl -fsSL "$feed_url?release=$build_number&try=$attempt" 2>/dev/null | grep -q "<sparkle:version>$build_number</sparkle:version>"; then
+    served=1
+    break
+  fi
+  if (( attempt < 24 )); then
+    sleep 20
+  fi
+done
+if (( served )); then
+  check_pass "$publish_check[served]" "$feed_url offers $version ($build_number)"
+else
+  check_fail "$publish_check[served]" "$feed_url doesn't have build $build_number yet" \
+    "Check the Deploy Website workflow (gh run list --workflow deploy-site.yml --repo $github_repo), then check the feed again (below)."
+  finish_by_hand served "The release is published and the feed is pushed, but velairc.app doesn't serve it yet."
 fi
 
 show_summary

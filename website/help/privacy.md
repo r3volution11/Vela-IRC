@@ -1,11 +1,11 @@
 ---
 title: Privacy
-description: The Vela app has no telemetry, analytics or accounts. Who Vela talks to, what link previews reveal, how Apple Intelligence and Siri are handled, what's on your Mac, and what this site measures.
+description: The Vela app has no telemetry, analytics or accounts. Who Vela talks to, what update checks and link previews reveal, how Apple Intelligence is handled, what's on your Mac and what this site measures.
 ---
 
 # Privacy
 
-**The Vela app has no telemetry, no analytics, no crash reporting service and no accounts.** There is no Vela server: the app never phones home, and nobody but you knows how you use it. (This website is a separate matter: see [This website](#this-website).)
+**The Vela app has no telemetry, no analytics, no crash reporting service and no accounts.** There is no Vela server, and nobody but you knows how you use it. The one thing Vela does on its own is check velairc.app for a new version once a day, which sends only Vela's version and which you can turn off: see [Updates](#updates). (This website is a separate matter: see [This website](#this-website).)
 
 ## Who Vela talks to
 
@@ -14,6 +14,8 @@ Vela only makes connections for things you've set up or turned on:
 | Connection | When | What the other side learns |
 | --- | --- | --- |
 | **IRC servers and bouncers you add** | While connected, encrypted with TLS by default | What any IRC server sees: your IP address (or your bouncer's), nickname and messages. |
+| **velairc.app** (hosted by GitHub Pages) | Once a day, while **Check for updates automatically** is on (it's on by default), and when you choose **Check for Updates…** | Your IP address and Vela's version, as any download of a web page would. See [Updates](#updates). |
+| **GitHub** | When you install an update | Your IP address and which version you download. |
 | **Sites behind links people post** | When a [link preview](/guide/inline-media) loads, unless you turn previews off or limit them | Your IP address and that Vela fetched the page. No cookies are sent. |
 | **Sites that only show their page to a browser** (IMDb, for example) | When a link preview finds a bot check instead of the page, unless you turn off **Load previews from sites that need a browser** | What a visit in Safari tells them: your IP address, and whatever the page's own check script collects. It runs in a private session that's thrown away afterwards, with images, other sites and your local network blocked. See [Sites that need a browser](/guide/inline-media#sites-that-need-a-browser). |
 | **Video providers** (YouTube, Vimeo, Streamable, Twitch) | A video card fetches its title and thumbnail; the player itself loads only when you press play | Your IP address; once you press play, whatever the provider's player collects. YouTube plays from `youtube-nocookie.com`, and the player keeps nothing after it closes. |
@@ -31,6 +33,17 @@ Vela never fetches previews from your local network (`localhost`, private IP add
 - **Writing Tools is Apple's.** When you use it, Vela hands it the text in the message field, and Apple Intelligence handles it as it does in any app.
 - **Spotlight gets names only:** your channel and conversation names and their networks, never messages. Turn off **Show channels in Spotlight** in **Settings → Apple Intelligence** to remove them from Spotlight's results. On macOS 27, the same names are also kept for Siri, hidden from Spotlight's results, so Siri can find a channel or a nick when you ask it to send a message; the setting doesn't remove those. See [Spotlight](/guide/siri-shortcuts#spotlight).
 - **Siri learns where you send messages.** When you send one, Vela tells Siri which channel it went to, so Siri can suggest it later; it never shares the text. What you say to Siri is handled by Siri, under Apple's privacy policy. See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts#privacy).
+
+## Updates {#updates}
+
+Vela checks for new versions with [Sparkle](https://sparkle-project.org), the open-source updater many Mac apps use. See [Updates](/guide/updates).
+
+- **What a check sends:** a request for velairc.app's update feed (`https://velairc.app/appcast.xml`). Like any web request, it carries your IP address; its User-Agent says which version of Vela and of Sparkle you have (`Vela/1.1.0 Sparkle/2.10.1`). Nothing else: Sparkle's optional system profile (your Mac's model, macOS version, language and so on) is turned off in Vela, and there's no identifier, account or usage data.
+- **Who gets it:** velairc.app is hosted by GitHub Pages, so GitHub receives the request and may log it as described in the [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement). Vela's developers don't see it. This website's analytics (below) is never part of it: the feed is a plain file, and the app never runs the site's pages.
+- **Downloads:** an update downloads `Vela.dmg` from Vela's releases on GitHub, which learns your IP address and the version, as with any download. The release notes come in the feed, so the update window loads nothing else.
+- **Signed updates:** every update is signed, and Vela checks the signature before installing it, so a changed or substituted download is refused.
+- **When:** once a day while **Check for updates automatically** is on (the default), and whenever you choose **Check for Updates…**. Development builds (Vela Dev) never check.
+- **Turning it off:** turn off **Check for updates automatically** in **Settings → Updates** or the **About** window ([`updates.checkAutomatically`](/reference/settings#updates.checkAutomatically)). Vela then connects to velairc.app only when you choose **Check for Updates…**.
 
 ## What other IRC users can see
 
@@ -53,6 +66,7 @@ Everything stays on your Mac, inside Vela's sandbox container:
 - **Drafts** you haven't sent, in memory while Vela is open.
 - **Settings, networks and themes** as plain files you can read.
 - **Passwords, channel keys and client certificates** in your macOS Keychain, never in plain files.
+- **When Vela last checked for updates,** and a version it found while you were busy, so it can offer it when you next open Vela. They're in Vela's preferences.
 
 Outside the container, macOS keeps your channel and conversation names in Spotlight's index (as search results unless you turn off **Show channels in Spotlight**, and on macOS 27 also hidden from results, for Siri), the translation languages you've downloaded, and the notifications you allow until you clear them from Notification Center.
 

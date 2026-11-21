@@ -202,6 +202,7 @@ const categoryNames = {
   tabs: 'Tabs',
   intelligence: 'Apple Intelligence',
   translation: 'Translation',
+  updates: 'Updates',
 }
 
 /** Links other settings mentioned in a summary to their rows. A `*` stays a star (ban masks like `*!*@host`), not emphasis. */

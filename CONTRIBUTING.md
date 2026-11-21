@@ -69,7 +69,7 @@ Thanks for helping build Vela! This guide covers the basics.
 
 ## Website analytics
 
-velairc.app uses Google Analytics. **The app has none, and must never get any:** no analytics, usage tracking or anything else that phones home.
+velairc.app uses Google Analytics. **The app has none, and must never get any:** no analytics, usage tracking or anything else that phones home. The one request Vela makes on its own is the daily update check (Sparkle), which sends only Vela's version, never a system profile, and can be turned off; keep it that way (see [Privacy](https://velairc.app/help/privacy#updates)).
 
 - **Where it lives:** `website/.vitepress/theme/analytics.ts` (loading, consent and events) and `analyticsRules.ts` (the rules, tested by `npm test` in `website/`). It runs only on velairc.app, never on a local preview.
 - **Consent:**

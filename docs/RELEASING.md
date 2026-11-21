@@ -11,6 +11,8 @@ If no published release is marked latest, or the latest has no asset named `Vela
 
 A release has just the one disk image, with no version in its name: the release page already says which version it is. The mounted disk is named "Vela", and from version 2 on it carries the major version ("Vela 2"), so a major release looks like one. `--publish` takes care of both.
 
+From 1.1, Vela updates itself with [Sparkle](https://sparkle-project.org): installed copies read the update feed at `https://velairc.app/appcast.xml` and install the same `Vela.dmg` from the GitHub release. `--publish` signs the DMG for the updater and adds the release to the feed. See [Updates](#updates).
+
 ## Release builds and development builds
 
 Vela has two identities, so a release never collides with your own testing.
@@ -22,6 +24,7 @@ Vela has two identities, so a release never collides with your own testing.
 | App name | Vela | Vela Dev (a **DEV** badge on the Dock icon) |
 | Bundle id | `io.github.r3volution11.Vela` | `io.github.r3volution11.Vela.dev` |
 | Data | `~/Library/Containers/io.github.r3volution11.Vela/` | `~/Library/Containers/io.github.r3volution11.Vela.dev/` |
+| Updates | From velairc.app's feed, once the [update key](#the-update-signing-key) is in `Vela/Info.plist` | Never: no feed, and the updater isn't started |
 
 macOS keys an app's sandbox, preferences, notification settings and Siri & Shortcuts registration to its bundle id. Vela Dev therefore has its own settings, networks, history and Keychain items, and runs side by side with Vela.
 
@@ -61,7 +64,9 @@ The release build you ship uses the same identity as the `build/Vela.app` that `
    - Check it: `xcrun notarytool history --keychain-profile vela-notary`.
 4. **Set up the GitHub CLI:** `brew install gh`, then `gh auth login`. The CI checks and publishing use it.
    - To sign release tags, set up signing in git, such as an SSH key in 1Password. Publishing signs the tag whenever git has a signing key (`user.signingkey`, or `tag.gpgSign`).
-5. **Do a dry run.** `scripts/release.sh --skip-notarize --skip-preflight` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work. `--skip-preflight` leaves out the [release checks](#release-checks), which would otherwise stop the build until everything is ready to ship; the post-build checks still run.
+5. **Set up the 1Password CLI**, which reads the update signing key: `brew install 1password-cli`, then in the 1Password app turn on **Settings → Developer → Integrate with 1Password CLI**. Check it with `op --account my.1password.com vault list`.
+6. **Create the update signing key, once:** `scripts/sparkle-key.sh --create`, then paste the public key it prints into `Vela/Info.plist` (replacing `SPARKLE_PUBLIC_KEY_PLACEHOLDER`) and commit it. See [The update signing key](#the-update-signing-key). Until then, every release build refuses to start.
+7. **Do a dry run.** `scripts/release.sh --skip-notarize --skip-preflight` signs with your Developer ID without contacting Apple. It shows that the certificate, export and disk image steps work. `--skip-preflight` leaves out the [release checks](#release-checks), which would otherwise stop the build until everything is ready to ship; the post-build checks still run.
 
 ## Before each release
 
@@ -102,16 +107,16 @@ That's the whole release. It builds and checks Vela, then tags the commit it bui
 What it does:
 1. Reads the version and build number from the Vela target's Release configuration.
 2. Finds your **Developer ID Application** certificate and Team ID, and checks that the `vela-notary` profile exists.
-3. With `--publish`, checks that `gh` is installed and signed in, and that there are [release notes](#release-notes). If not, it stops before building anything.
+3. Checks that `Vela/Info.plist` has the [update signing key](#the-update-signing-key)'s public half, not the placeholder (`--adhoc` only notes it). With `--publish`, also checks that `gh` is installed and signed in, that the key in 1Password is the one `Vela/Info.plist` has (1Password asks you to approve), that the [update feed](#the-update-feed) takes this build, and that there are [release notes](#release-notes). If not, it stops before building anything.
 4. **Runs the [preflight checks](#preflight-checks)** (`scripts/release-preflight.sh`): git, the version and changelog, CI, the adult-domain list, the generated files, the package tests, the website, the media sites and the scroll benchmark. If one fails, it prints the summary and stops before archiving.
 5. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`. The build's full output is in `build/release/archive.log`.
-6. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp.
+6. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp, signed with `Vela/Vela.entitlements`. The export signs Sparkle's framework, XPC services and helpers with your Developer ID too.
 7. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
 8. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
 9. **Builds the DMG** with `scripts/make-dmg.sh` (`Vela.app` plus an Applications shortcut, in a window drawn like the website; see [The disk image window](#the-disk-image-window)), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
 10. **Checks the DMG** as users get it, with the [post-build checks](#post-build-checks) (`scripts/verify-release.sh`). If one fails, it stops.
 11. Writes `build/release/Vela.dmg` and `build/release/SHA256SUMS`.
-12. With `--publish`, **publishes** the release once every check has passed: the tag, the GitHub release and a check of the download. See [Publishing](#publishing).
+12. With `--publish`, **publishes** the release once every check has passed: signs the DMG for the updater and adds it to the update feed, then the tag, the GitHub release, a check of the download, and the feed on velairc.app. See [Publishing](#publishing).
 13. Prints a summary of every check and its result.
 
 Notarization usually takes a few minutes. If Apple rejects a submission, the script prints Apple's log; the usual causes are an unsigned nested binary or a missing hardened-runtime flag. For testing the pipeline, `--skip-notarize` signs without notarizing, and `--adhoc` doesn't use your Developer ID at all; see [Options](#options).
@@ -143,6 +148,11 @@ Skipped for `--adhoc`.
 - **Build number.** `CURRENT_PROJECT_VERSION` is a whole number above 0, the same in both configurations, and higher than the previous release's (read from the project at its tag). *If it fails:* set it to one more than the previous release's (Xcode: Build).
 - **Changelog section.** The newest version section in `CHANGELOG.md` is `## <version> - <yyyy-mm-dd>`, with a real date, and has entries. Headings, blank lines and HTML comments aren't entries. *If it fails:* rename `## Unreleased` to that heading, or fix the heading's version or date.
 - **Changelog Unreleased.** `## Unreleased`, if there is one, has no entries; empty `### Added`-style headings are fine. Anything listed there is in this build, so it belongs in this release's section. *If it fails:* move the entries into `## <version> - <date>`.
+
+#### Updates
+
+- **Update key.** `Vela/Info.plist`'s `SUPublicEDKey` is a public key (the base64 of 32 bytes), not the placeholder. Skipped for `--adhoc`. *If it fails:* create the key and paste its public half; see [The update signing key](#the-update-signing-key).
+- **Update feed.** `website/public/appcast.xml` passes `node website/scripts/appcast.mjs check`, and has no item for this build number yet. *If it fails:* fix what it lists (don't edit items by hand; see [The update feed](#the-update-feed)), or bump `CURRENT_PROJECT_VERSION` if this build is already in it.
 
 #### CI
 
@@ -192,6 +202,10 @@ Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts 
 | Version | `CFBundleShortVersionString` is the version and `CFBundleVersion` the build number. | The project changed while building, or the build isn't from it; build again. |
 | Architectures | The app has both `arm64` and `x86_64`. | Check that the archive is for `generic/platform=macOS` with `ONLY_ACTIVE_ARCH=NO`, as the script does. |
 | App Sandbox | The `com.apple.security.app-sandbox` entitlement is on. | Check `CODE_SIGN_ENTITLEMENTS` (`Vela/Vela.entitlements`) in the Release configuration. |
+| Updater entitlements | The app can reach the network and has the mach-lookup exception for Sparkle's installer (`io.github.r3volution11.Vela-spks` and `-spki`), and none of the local builds' exceptions (`disable-library-validation`, `get-task-allow`). | Build with `scripts/release.sh`, which signs with `Vela/Vela.entitlements`; keep the exception there. `--adhoc` allows the local entitlements. |
+| Update settings | `Info.plist` has the feed `https://velairc.app/appcast.xml`, the installer service (`SUEnableInstallerLauncherService`), automatic checks on, a daily interval, no system profile, no downloader service, and verification before extraction. | Check `Vela/Info.plist`, and that the Release configuration's `INFOPLIST_FILE` is `Vela/Info.plist`. |
+| Update key | `SUPublicEDKey` is a public key, not the placeholder. | See [The update signing key](#the-update-signing-key). `--adhoc` only notes it. |
+| Sparkle | `Sparkle.framework` is the version `Package.resolved` pins, and it, `Installer.xpc`, `Downloader.xpc`, `Autoupdate` and `Updater.app` each verify, with the hardened runtime, a Developer ID certificate of the app's team and a secure timestamp (`--adhoc`: they verify). | Archive and export with `scripts/release.sh`. Never add `--deep` to the signing flags: Sparkle's services need their own signatures. |
 | App Shortcuts | The app's App Intents metadata (`Contents/Resources/Metadata.appintents/extract.actionsdata`) has as many App Shortcuts as `Vela/VelaShortcuts.swift` declares (7 today). | Xcode's App Intents metadata processor dropped some. Its lines are kept out of the build output but saved in `build/release/archive.log`: fix what they point at and build again. |
 | App Intents actions | The metadata has **Catch Me Up** (`CatchMeUpIntent`) and **Open Channel** (`OpenChannelIntent`) from the VelaIntents module. | As for App Shortcuts. |
 | App Intents package | `extract.packagedata` includes `VelaIntentsPackage`, which brings in the VelaIntents package's intents. | Check that `VelaAppIntentsPackage` in `Vela/VelaShortcuts.swift` lists `VelaIntentsPackage`, then build again. |
@@ -202,7 +216,7 @@ Once the DMG is made, notarized and stapled, `scripts/verify-release.sh` mounts 
 | Applications link | The DMG has its Applications shortcut. | Build again. |
 | Window layout | The DMG has its window background, layout (`.DS_Store`) and volume icon. | Build again with `scripts/release.sh`. |
 
-`--skip-notarize` skips the Gatekeeper and stapled-ticket checks, and `--adhoc` also skips the Developer ID check; the summary lists them as skipped. When a post-build check fails, `build/release/Vela.dmg` stays for you to look at, but `SHA256SUMS` isn't written.
+`--skip-notarize` skips the Gatekeeper and stapled-ticket checks, and `--adhoc` also skips the Developer ID checks (for Sparkle's code too), allows the local entitlements and only notes a missing update key; the summary lists what was skipped. When a post-build check fails, `build/release/Vela.dmg` stays for you to look at, but `SHA256SUMS` isn't written.
 
 To check a DMG again, such as the one you downloaded after publishing:
 
@@ -280,12 +294,16 @@ Finder caches window layouts by volume name, so give each try a new name.
 
 `scripts/release.sh --publish` publishes the release once the build has passed every check, and never when one failed:
 
-1. **Tags** the commit it built as `v<version>`, with the message `Vela <version>`.
+1. **Signs Vela.dmg for the updater.** `op read` pipes the [update signing key](#the-update-signing-key) from 1Password into Sparkle's `sign_update` (from the packages Xcode resolved for the archive, at the version `Package.resolved` pins). The key is never in a file or an argument. The signature is then checked against the `SUPublicEDKey` of the app that was built, as installed copies will check it.
+2. **Adds the release to the update feed** with `website/scripts/appcast.mjs`: version, build, minimum macOS, the DMG's URL on GitHub, its length and signature, and this version's changelog section as release notes. It commits `website/public/appcast.xml` ("Appcast: Vela <version>") on top of the commit it built. See [The update feed](#the-update-feed).
+3. **Tags** the commit it built as `v<version>`, with the message `Vela <version>`.
    - The tag is signed (`git tag -s`) when git has a signing key: `user.signingkey`, or `tag.gpgSign`. With an SSH key in 1Password, 1Password asks you to approve it.
    - Otherwise it's an annotated tag (`git tag -a`), and the script prints a note saying so.
-2. **Pushes** the tag to `origin`.
-3. **Creates the GitHub release** with `gh release create --verify-tag --latest`. It's titled `Vela <version>`, with the [release notes](#release-notes) and two files: `Vela.dmg` and `SHA256SUMS`.
-4. **Checks the download.** `releases/latest/download/Vela.dmg` must redirect to `releases/download/v<version>/Vela.dmg`. It tries for about a minute, while GitHub catches up. Then the DMG downloaded from that link must match `SHA256SUMS`.
+4. **Pushes** the tag to `origin`.
+5. **Creates the GitHub release** with `gh release create --verify-tag --latest`. It's titled `Vela <version>`, with the [release notes](#release-notes) and two files: `Vela.dmg` and `SHA256SUMS`.
+6. **Checks the download.** `releases/latest/download/Vela.dmg` must redirect to `releases/download/v<version>/Vela.dmg`. It tries for about a minute, while GitHub catches up. Then the DMG downloaded from that link must match `SHA256SUMS`.
+7. **Pushes the feed's commit** to `main`, which deploys velairc.app (the **Deploy Website** workflow). The feed goes last, so installed copies are never offered an update whose download isn't there yet.
+8. **Checks the feed online.** It waits up to about 8 minutes for `https://velairc.app/appcast.xml` to list this build.
 
 Each step adds a PASS or FAIL line to the summary, under **Publish**. Only a notarized build that passed every check is published, so `--publish` doesn't go with `--preflight`, `--adhoc`, `--skip-notarize`, `--skip-preflight` or `--allow-dirty`. It also stops before building if the checkout changes while the preflight checks run, so the tag is always on the commit that was built.
 
@@ -306,7 +324,7 @@ The script stops and deletes nothing: not the tag, and not the release. After th
     and the second 5f3a…  - (Vela.dmg's line in build/release/SHA256SUMS).
 ```
 
-Fix what the failed check says, then run the commands. If `gh` made the release but couldn't finish it (say, an upload failed), the commands upload the files again and publish it instead.
+Fix what the failed check says, then run the commands. If `gh` made the release but couldn't finish it (say, an upload failed), the commands upload the files again and publish it instead. When signing or the feed failed, nothing is public yet, and the commands start with signing the DMG and adding it to the feed by hand. The feed's commit is always pushed last, once the download works.
 
 ### Release notes
 
@@ -333,6 +351,18 @@ gh release create "v$v" build/release/Vela.dmg build/release/SHA256SUMS \
 
 - **Release notes:** write `release-notes.md` from the changelog section and `scripts/release-notes-footer.md`, or as you like (see [Release notes](#release-notes)). Don't commit it.
 - **Don't** mark it as a pre-release: pre-releases aren't "latest", so the Download button would skip them.
+- **The update feed**, once the release and its download work. Sparkle's tools are in `build/DerivedData-release/SourcePackages/artifacts/sparkle/Sparkle/bin` after the archive:
+
+  ```sh
+  tools=build/DerivedData-release/SourcePackages/artifacts/sparkle/Sparkle/bin
+  signature=$(op --account my.1password.com read --no-newline "op://Personal/Vela - Sparkle - Mac Update Signing Key/password" \
+    | $tools/sign_update --ed-key-file - -p build/release/Vela.dmg)
+  awk -v v="$v" '/^## /{f=($2==v)} f' CHANGELOG.md | sed 1d > build/release/appcast-notes.md
+  node website/scripts/appcast.mjs add website/public/appcast.xml --version "$v" --build <build> --minimum-system 26.0 \
+    --length $(stat -f %z build/release/Vela.dmg) --signature "$signature" --notes-file build/release/appcast-notes.md
+  git commit -m "Appcast: Vela $v" -- website/public/appcast.xml
+  git push origin main
+  ```
 
 ## After publishing
 
@@ -341,8 +371,9 @@ gh release create "v$v" build/release/Vela.dmg build/release/SHA256SUMS \
    curl -sIL https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg | grep -i location
    ```
    It should end in `/download/v<version>/Vela.dmg`. Either way, download it with a browser, check it with `scripts/verify-release.sh ~/Downloads/Vela.dmg --version <version> --build <build>`, and install it once more (see [Trying the build](#trying-the-build)).
-2. **Check the website:** the **Deploy Website** workflow runs on every push to `main`. Check that the changelog page shows the new version first, and that velairc.app's Download button gets the new DMG.
-3. **Start the next cycle:** make sure `CHANGELOG.md` has an empty `## Unreleased` section.
+2. **Check the website:** the **Deploy Website** workflow runs on every push to `main`. Check that the changelog page shows the new version first, that velairc.app's Download button gets the new DMG, and that `https://velairc.app/appcast.xml` lists the new build (`--publish` checks this one).
+3. **Check an update:** in the previous version, choose **Vela → Check for Updates…**. It should offer the new version with its release notes, and install it.
+4. **Start the next cycle:** make sure `CHANGELOG.md` has an empty `## Unreleased` section.
 
 ## If something goes wrong
 
@@ -352,6 +383,86 @@ gh release create "v$v" build/release/Vela.dmg build/release/SHA256SUMS \
 - **"Notarization profile not found":** run the `store-credentials` step again.
 - **Gatekeeper rejects the DMG on another Mac:** run `scripts/verify-release.sh` on that DMG. It runs `xcrun stapler validate` on both the DMG and the app inside it, and checks that `spctl` says "Notarized Developer ID".
 - **A preflight or post-build check fails:** see [Release checks](#release-checks) for what each one needs.
+- **A release went out with a broken updater:** the feed can't fix a copy that can't update. Ship a fixed version, say so in the release notes, and ask people to download it once from the website.
+- **The feed lists a bad release:** add a fixed version (bump the build number); Sparkle offers the newest. Don't delete items from the feed by hand.
+
+## Updates
+
+Vela updates itself with [Sparkle 2](https://sparkle-project.org). Users' side of it is on the website: [Updates](https://velairc.app/guide/updates). This is how it fits together.
+
+- **Sparkle is in the app target only**, added with Swift Package Manager and pinned to an exact version (2.10.1) in `Vela.xcodeproj`. `Vela/SparkleUpdater.swift` wraps it. VelaKit never imports it: VelaUI has an `AppUpdater` protocol (`Packages/VelaKit/Sources/VelaUI/Updates/`), which the About window, **Settings → Updates**, the Vela menu and the command palette use, and which tests drive with a fake.
+- **Settings:** `updates.checkAutomatically` (on) and `updates.installAutomatically` (off) in settings.json are the source of truth. `UpdateSettingsSync` applies them to Sparkle before it starts, and again whenever they change; the update window's "Automatically download and install updates" box is written back to `updates.installAutomatically`.
+- **Gentle reminders:** a check Sparkle runs on its own shows the update window only right after launch or when the Mac has been idle. Otherwise the update waits, shown in the About window and Settings, and is offered at the next launch. Sparkle's default would show the window when you switch back to Vela, where the next key you type could install it.
+- **Info.plist:** the Release configuration merges `Vela/Info.plist` (`INFOPLIST_FILE`) into the Info.plist Xcode generates: the feed (`SUFeedURL`), the public key (`SUPublicEDKey`), automatic checks on (`SUEnableAutomaticChecks`, so Sparkle never asks), a daily interval, no system profile, the sandbox's installer service (`SUEnableInstallerLauncherService`) and verification before extraction (`SUVerifyUpdateBeforeExtraction`). `Vela/Info.plist` is excluded from the app's resources in the project.
+- **Debug builds (Vela Dev) never update:** they don't get `Vela/Info.plist`, so they have no feed, and `VelaUpdater.make()` never creates a Sparkle updater in Debug. Demo runs, snapshots and the scroll benchmark get a stand-in that never goes online.
+- **Local Release builds** (`scripts/run.sh`, the screenshots) have the release's identity. Once `Vela/Info.plist` has the real public key, a `build/Vela.app` checks the real feed like a release, and can update itself to one.
+- **No system profile, ever.** `SUEnableSystemProfiling` is off, and a check sends only Sparkle's User-Agent (`Vela/<version> Sparkle/<version>`). The privacy page says so: [Privacy](https://velairc.app/help/privacy#updates).
+
+### Entitlements
+
+Vela is sandboxed, so Sparkle installs through its Installer XPC service (`SUEnableInstallerLauncherService`), and the app needs a temporary mach-lookup exception to talk to the installer: `$(PRODUCT_BUNDLE_IDENTIFIER)-spks` and `-spki`. Vela already has `com.apple.security.network.client`, so it downloads updates itself and doesn't need Sparkle's Downloader service. Following [Sparkle's sandboxing guide](https://sparkle-project.org/documentation/sandboxing/):
+
+- **`Vela/Vela.entitlements`** is what releases are signed with. `scripts/release.sh` passes it as `CODE_SIGN_ENTITLEMENTS`.
+- **`Vela/Vela-Local.entitlements`** is the project's setting, for every local build: Xcode, `scripts/run.sh`, the scroll benchmark, the screenshots, `scripts/test-update.sh`. It's `Vela.entitlements` plus `com.apple.security.cs.disable-library-validation`: with the hardened runtime, macOS only loads frameworks signed by the app's own team, and an ad hoc build has none, so without it a local build couldn't load `Sparkle.framework` and would quit at launch. A release is signed with Developer ID, Sparkle included, so it keeps library validation; the post-build checks fail a release with the exception.
+- **Keep the two files the same** apart from that exception.
+- **Signing:** `xcodebuild -exportArchive` with the `developer-id` method signs Sparkle's framework, its XPC services and helpers (`Installer.xpc`, `Downloader.xpc`, `Autoupdate`, `Updater.app`) with your Developer ID and the hardened runtime, and notarization accepts them. Never add `--deep` to the signing flags. The **Sparkle** post-build check verifies each one.
+
+### The update signing key
+
+Sparkle accepts an update only if it's signed with the EdDSA (ed25519) key whose public half the installed app has in `SUPublicEDKey`. The private half lives only in 1Password, like the SSH key that signs tags:
+
+| | Default | Override |
+| --- | --- | --- |
+| 1Password account | `my.1password.com` | `VELA_OP_ACCOUNT`, or `--account` |
+| Vault | `Personal` | `VELA_SPARKLE_VAULT`, or `--vault` |
+| Item | `Vela - Sparkle - Mac Update Signing Key` | `VELA_SPARKLE_ITEM`, or `--item` |
+
+The private key is the item's **password** field: the base64 of the key's 32-byte seed, Sparkle's own format (what `generate_keys -x` exports and `sign_update --ed-key-file` reads). The item also has the public key and a note. The name leaves room for an iOS version later.
+
+```sh
+scripts/sparkle-key.sh --create   # once: makes the key, stores it in 1Password, prints the public key
+scripts/sparkle-key.sh --public   # prints the public key, read back from 1Password
+scripts/sparkle-key.sh --check    # does Vela/Info.plist have that public key?
+```
+
+- **`--create`** makes the key with CryptoKit (`scripts/lib/sparkle-ed25519.swift`), in Sparkle's format, and pipes the new item straight into `op item create`. The key never touches a file, an argument or the Keychain, so unlike Sparkle's `generate_keys`, nothing is left in the Keychain to delete. It refuses if the item already exists. Then paste the public key over `SPARKLE_PUBLIC_KEY_PLACEHOLDER` in `Vela/Info.plist`, commit, and run `--check`.
+- **Until the key is in `Vela/Info.plist`,** the app doesn't start Sparkle ("Updates aren't set up in this build"), and `scripts/release.sh`, the preflight and the post-build checks refuse a release.
+- **`scripts/release.sh --publish`** runs `--check` before it builds, so 1Password asks for your approval then, and once more when it signs. It reads the key with `op read` into `sign_update`'s standard input.
+- **Never commit or export the private key,** and keep 1Password's backup. If it's lost, installed copies can still move to a new key: ship one release signed with the *old* Developer ID certificate and a *new* key, in a Developer ID-signed DMG (Sparkle allows changing the key or the certificate, never both at once; see [rotating keys](https://sparkle-project.org/documentation/#rotating-signing-keys)). With `SUVerifyUpdateBeforeExtraction` on, a key change is only accepted from a Developer ID-signed disk image, which is what releases are.
+
+### The update feed
+
+`website/public/appcast.xml` is the feed, served at `https://velairc.app/appcast.xml` by the **Deploy Website** workflow (it's in `website/public`, which VitePress copies as is). `website/scripts/appcast.mjs` writes and checks it; never edit items by hand.
+
+- **Each release is one `<item>`,** newest first, and earlier items stay: title, date, `sparkle:version` (the build number, which Sparkle compares), `sparkle:shortVersionString`, `sparkle:minimumSystemVersion` (from the app's `LSMinimumSystemVersion`), a link to the full changelog (Sparkle's **Version History** button, which opens the browser), and the enclosure: `https://github.com/r3volution11/Vela-IRC/releases/download/v<version>/Vela.dmg` with its length and EdDSA signature.
+- **Release notes** are the changelog section as HTML in the item's `<description>`, so Sparkle's window shows them without loading anything; relative links point at the files as of the tag.
+- **A beta channel later:** an item with `<sparkle:channel>beta</sparkle:channel>` (`appcast.mjs add --channel beta`) is seen only by apps that ask for that channel (`allowedChannels(for:)` in `SPUUpdaterDelegate`). Items without a channel are for everyone. Build numbers must be unique across channels.
+- **Checks:** the preflight, `npm run docs:check` (on the built site) and `npm test` (`website/scripts/appcast.test.ts`) check the feed; `appcast.mjs check` lists any problem.
+
+```sh
+node website/scripts/appcast.mjs check website/public/appcast.xml
+node website/scripts/appcast.mjs has website/public/appcast.xml --build 2   # exits 0 if build 2 is in it
+```
+
+### Testing an update
+
+`scripts/test-update.sh` tests the whole update on your Mac, with nothing public: a throwaway key, two Release builds as "Vela Update Test" (bundle id `io.github.r3volution11.Vela.updatetest`, its own container, so your Vela and Vela Dev are untouched), 1.0.0 (1) and 99.0.0 (99), and a feed served from `localhost`.
+
+```sh
+scripts/test-update.sh --prepare   # builds, signs, checks and serves; opens nothing (a few minutes)
+scripts/test-update.sh             # the same, then opens the old app and waits for it to update itself
+scripts/test-update.sh --clean     # deletes the test apps, their container and the throwaway key
+```
+
+- **`--prepare`** checks everything short of installing: both builds and their signatures, the DMG (made by `scripts/make-dmg.sh`, as releases are), `sign_update` and `sign_update --verify`, the signature against the old app's public key, that a DMG with one changed byte is refused, the feed, and that the feed and the DMG download intact.
+- **Without it,** the old app opens and takes the focus. It checks at launch (it never has before) and shows Sparkle's window: choose **Install Update** (or **Vela Update Test → Check for Updates…** if nothing shows). It quits, installs 99.0.0 and opens again; the script waits until the app in `build/update-test` is 99.0.0, running and correctly signed.
+- **Run it** after changing anything about updates, and after updating Sparkle. `--port` picks another port than 8723.
+
+### Updating Sparkle
+
+1. Pick a version that has been out for at least two weeks, from [Sparkle's releases](https://github.com/sparkle-project/Sparkle/releases), and read its release notes.
+2. In Xcode → the Vela project → **Package Dependencies**, set Sparkle to that exact version. This updates `Vela.xcodeproj/project.pbxproj` and `Package.resolved`.
+3. Build, run `scripts/test-update.sh`, then commit. The **Sparkle** post-build check compares the framework's version with `Package.resolved`.
 
 ## When the media check fails
 
@@ -430,6 +541,6 @@ The adult-site filter blocks previews (never links) from domains on a list bundl
 ## Notes
 
 - **Releases are universal.** They run on Apple silicon and Intel, and need macOS 26 or later.
-- **The app is sandboxed and uses the hardened runtime.** Entitlements are in `Vela/Vela.entitlements`; the release script refuses a build without the App Sandbox entitlement.
+- **The app is sandboxed and uses the hardened runtime.** Releases are signed with `Vela/Vela.entitlements`; the release script refuses a build without the App Sandbox entitlement. Local builds use `Vela/Vela-Local.entitlements`; see [Entitlements](#entitlements).
 - **Notarization happens twice.** The app is notarized and stapled first, so it stays verifiable offline after it's copied out of the disk image. Then the DMG itself is notarized and stapled.
-- **Updates are manual for now.** Users download new versions from the website. Automatic updates (Sparkle) and the Mac App Store are on the roadmap.
+- **Vela updates itself** from 1.1, with Sparkle; see [Updates](#updates). The Mac App Store is on the roadmap.
