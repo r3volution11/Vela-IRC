@@ -2,22 +2,23 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import Savage
 import SwiftUI
 
 nonisolated extension WelcomeArt {
     // MARK: The moon
 
-    static func drawMoon<Painter: ScenePainter>(_ g: inout Painter, _ c: CGPoint, _ r: CGFloat, _ p: Palette) {
+    static func drawMoon<Surface: Painter>(_ g: inout Surface, _ c: CGPoint, _ r: CGFloat, _ p: Palette) {
         // Glow: two soft halos.
         g.fill(Path(ellipseIn: CGRect(x: c.x - r * 3.2, y: c.y - r * 3.2, width: r * 6.4, height: r * 6.4)),
-               with: .radialGradient(SceneGradient(colors: [p.glow.c(0.16), p.glow.c(0.05), p.glow.c(0)]), center: c, startRadius: r, endRadius: r * 3.2))
+               with: .radialGradient(PaintGradient(colors: [p.glow.opacity(0.16), p.glow.opacity(0.05), p.glow.opacity(0)]), center: c, startRadius: r, endRadius: r * 3.2))
         let disk = Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2))
         // The disk, a touch warmer in the middle.
-        g.fill(disk, with: .radialGradient(SceneGradient(colors: [SceneRGB.white.c(1), p.light.c(1)]), center: CGPoint(x: c.x + r * 0.15, y: c.y - r * 0.1), startRadius: 0, endRadius: r))
+        g.fill(disk, with: .radialGradient(PaintGradient(colors: [PaintColor.white.opacity(1), p.light.opacity(1)]), center: CGPoint(x: c.x + r * 0.15, y: c.y - r * 0.1), startRadius: 0, endRadius: r))
         var inside = g
         inside.clip(to: disk)
         // The seas, softened at the edges.
-        inside.drawLayer(SceneLayer(blur: r * 0.035)) { m in
+        inside.drawLayer(LayerStyle(blur: r * 0.035)) { m in
             func sea(_ pts: [(CGFloat, CGFloat)], _ o: Double) {
                 let poly = SceneShapes.roughen(pts.map { P($0.0, $0.1) } + [P(pts[0].0, pts[0].1)], levels: 3, rough: 0.22, seed: UInt64(pts.count * 31 + Int(o * 100)))
                 var path = Path()
@@ -26,7 +27,7 @@ nonisolated extension WelcomeArt {
                     if i == 0 { path.move(to: s) } else { path.addLine(to: s) }
                 }
                 path.closeSubpath()
-                m.fill(path, with: .color(p.mare.c(o)))
+                m.fill(path, with: .color(p.mare.opacity(o)))
             }
             // Oceanus Procellarum.
             sea([(-0.86, -0.28), (-0.62, -0.38), (-0.48, -0.08), (-0.42, 0.24), (-0.52, 0.48), (-0.74, 0.40), (-0.88, 0.10)], 0.62)
@@ -54,7 +55,7 @@ nonisolated extension WelcomeArt {
             let s = CGFloat(rng.range(0.008, 0.025)) * r
             pits.addEllipse(in: CGRect(x: q.x - s, y: q.y - s, width: s * 2, height: s * 2))
         }
-        inside.fill(pits, with: .color(p.mare.c(0.35)))
+        inside.fill(pits, with: .color(p.mare.opacity(0.35)))
         // Tycho and Copernicus, with faint rays.
         for (x, y, size, rays) in [(-0.12, 0.70, 0.045, 14), (-0.36, -0.06, 0.035, 9)] as [(CGFloat, CGFloat, CGFloat, Int)] {
             let q = CGPoint(x: c.x + x * r, y: c.y + y * r)
@@ -65,22 +66,22 @@ nonisolated extension WelcomeArt {
                 let len = CGFloat(rr.range(0.25, 0.7)) * r
                 rays_.move(to: q); rays_.addLine(to: CGPoint(x: q.x + CGFloat(cos(a)) * len, y: q.y + CGFloat(sin(a)) * len))
             }
-            inside.stroke(rays_, with: .color(SceneRGB.white.c(0.30)), lineWidth: max(0.5, r * 0.012))
-            inside.fill(Path(ellipseIn: CGRect(x: q.x - size * r, y: q.y - size * r, width: size * 2 * r, height: size * 2 * r)), with: .color(SceneRGB.white.color))
-            inside.fill(Path(ellipseIn: CGRect(x: q.x - size * r * 0.45, y: q.y - size * r * 0.45, width: size * r * 0.9, height: size * r * 0.9)), with: .color(p.mare.c(0.5)))
+            inside.stroke(rays_, with: .color(PaintColor.white.opacity(0.30)), lineWidth: max(0.5, r * 0.012))
+            inside.fill(Path(ellipseIn: CGRect(x: q.x - size * r, y: q.y - size * r, width: size * 2 * r, height: size * 2 * r)), with: .color(PaintColor.white))
+            inside.fill(Path(ellipseIn: CGRect(x: q.x - size * r * 0.45, y: q.y - size * r * 0.45, width: size * r * 0.9, height: size * r * 0.9)), with: .color(p.mare.opacity(0.5)))
         }
         // Limb: a touch darker toward the edge.
-        inside.fill(disk, with: .radialGradient(SceneGradient(colors: [p.mare.c(0), p.mare.c(0.30)]), center: c, startRadius: r * 0.7, endRadius: r))
+        inside.fill(disk, with: .radialGradient(PaintGradient(colors: [p.mare.opacity(0), p.mare.opacity(0.30)]), center: c, startRadius: r * 0.7, endRadius: r))
     }
 
-    static func drawSun<Painter: ScenePainter>(_ g: inout Painter, _ c: CGPoint, _ r: CGFloat, _ p: Palette) {
+    static func drawSun<Surface: Painter>(_ g: inout Surface, _ c: CGPoint, _ r: CGFloat, _ p: Palette) {
         g.fill(Path(ellipseIn: CGRect(x: c.x - r * 3.4, y: c.y - r * 3.4, width: r * 6.8, height: r * 6.8)),
-               with: .radialGradient(SceneGradient(colors: [p.glow.c(0.22), p.glow.c(0.06), p.glow.c(0)]), center: c, startRadius: r, endRadius: r * 3.4))
+               with: .radialGradient(PaintGradient(colors: [p.glow.opacity(0.22), p.glow.opacity(0.06), p.glow.opacity(0)]), center: c, startRadius: r, endRadius: r * 3.4))
         for (scale, o) in [(1.75, 0.10), (1.35, 0.14)] as [(CGFloat, Double)] {
-            g.fill(Path(ellipseIn: CGRect(x: c.x - r * scale, y: c.y - r * scale, width: r * scale * 2, height: r * scale * 2)), with: .color(p.glow.c(o)))
+            g.fill(Path(ellipseIn: CGRect(x: c.x - r * scale, y: c.y - r * scale, width: r * scale * 2, height: r * scale * 2)), with: .color(p.glow.opacity(o)))
         }
         g.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)),
-               with: .radialGradient(SceneGradient(colors: [SceneRGB.white.mix(p.light, 0.3).color, p.light.color]), center: c, startRadius: 0, endRadius: r))
+               with: .radialGradient(PaintGradient(colors: [PaintColor.white.mix(with: p.light, by: 0.3), p.light]), center: c, startRadius: 0, endRadius: r))
     }
 
     // MARK: Stars
@@ -94,11 +95,11 @@ nonisolated extension WelcomeArt {
 
     /// A star as it looks: a round bright core, a soft glow around it and, for
     /// the brightest, faint short spikes that fade toward their tips.
-    static func drawStar<Painter: ScenePainter>(_ g: inout Painter, _ c: CGPoint, core r: CGFloat, color: SceneRGB, glow: CGFloat, spikes: CGFloat, angle: Double, opacity: Double = 1) {
+    static func drawStar<Surface: Painter>(_ g: inout Surface, _ c: CGPoint, core r: CGFloat, color: PaintColor, glow: CGFloat, spikes: CGFloat, angle: Double, opacity: Double = 1) {
         if glow > 0 {
             let gr = r * glow
             g.fill(Path(ellipseIn: CGRect(x: c.x - gr, y: c.y - gr, width: gr * 2, height: gr * 2)),
-                   with: .radialGradient(SceneGradient(colors: [color.c(0.40 * opacity), color.c(0.10 * opacity), color.c(0)]), center: c, startRadius: r * 0.5, endRadius: gr))
+                   with: .radialGradient(PaintGradient(colors: [color.opacity(0.40 * opacity), color.opacity(0.10 * opacity), color.opacity(0)]), center: c, startRadius: r * 0.5, endRadius: gr))
         }
         if spikes > 0 {
             let len = r * spikes
@@ -107,13 +108,13 @@ nonisolated extension WelcomeArt {
                 let dx = CGFloat(cos(a)) * len, dy = CGFloat(sin(a)) * len
                 var line = Path()
                 line.move(to: CGPoint(x: c.x - dx, y: c.y - dy)); line.addLine(to: CGPoint(x: c.x + dx, y: c.y + dy))
-                g.stroke(line, with: .linearGradient(SceneGradient(stops: [.init(color: color.c(0), location: 0), .init(color: color.c(0.55 * opacity), location: 0.5),
-                                                                      .init(color: color.c(0), location: 1)]),
+                g.stroke(line, with: .linearGradient(PaintGradient(stops: [.init(color: color.opacity(0), location: 0), .init(color: color.opacity(0.55 * opacity), location: 0.5),
+                                                                      .init(color: color.opacity(0), location: 1)]),
                                                      startPoint: CGPoint(x: c.x - dx, y: c.y - dy), endPoint: CGPoint(x: c.x + dx, y: c.y + dy)),
                          style: StrokeStyle(lineWidth: max(0.4, r * 0.32), lineCap: .round))
             }
         }
         g.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)),
-               with: .radialGradient(SceneGradient(colors: [SceneRGB.white.c(opacity), color.c(opacity)]), center: c, startRadius: 0, endRadius: r))
+               with: .radialGradient(PaintGradient(colors: [PaintColor.white.opacity(opacity), color.opacity(opacity)]), center: c, startRadius: 0, endRadius: r))
     }
 }

@@ -217,7 +217,7 @@ enum AboutInfo {
     /// note about AI.
     static let credits = [
         "Free and open source under the Mozilla Public License 2.0.",
-        "Written in Swift and SwiftUI, with GRDB.swift, ZIPFoundation and Sparkle.",
+        "Written in Swift and SwiftUI, with GRDB.swift, ZIPFoundation, Sparkle and Savage.",
         "With thanks to ircdocs, IRCv3 and the authors of the themes Vela ports.",
         "Vela was made with the help of AI.",
     ]

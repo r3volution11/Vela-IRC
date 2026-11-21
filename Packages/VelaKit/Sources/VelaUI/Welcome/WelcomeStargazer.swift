@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import Savage
 import SwiftUI
 
 // The background is flat; the stargazer and the kayaker, and what they
@@ -13,23 +14,23 @@ nonisolated extension WelcomeArt {
     /// Light on a material: its own color under the key light and an ambient
     /// fill. `k` runs from 0 (turned away from the key) to 1 (facing it).
     struct Lighting {
-        let amb, key: SceneRGB
+        let amb, key: PaintColor
         let desat: Double
         let toward: CGPoint            // toward the key light, on screen
-        func at(_ m: SceneRGB, _ k: Double) -> SceneRGB {
-            let l = m.luma, d = m.mix(SceneRGB(r: l, g: l, b: l), desat)
-            return SceneRGB(r: min(0.96, d.r * (amb.r + key.r * k)), g: min(0.96, d.g * (amb.g + key.g * k)), b: min(0.96, d.b * (amb.b + key.b * k)))
+        func at(_ m: PaintColor, _ k: Double) -> PaintColor {
+            let l = m.luma, d = m.mix(with: PaintColor(red: l, green: l, blue: l), by: desat)
+            return PaintColor(red: min(0.96, d.red * (amb.red + key.red * k)), green: min(0.96, d.green * (amb.green + key.green * k)), blue: min(0.96, d.blue * (amb.blue + key.blue * k)))
         }
         /// Across a rounded form from its shadow edge `a` to its lit edge `b`:
         /// bounce light, the core shadow, the base, a highlight short of the edge.
-        func form(_ m: SceneRGB, _ a: CGPoint, _ b: CGPoint, lo: Double = 0, hi: Double = 1) -> ScenePaint {
+        func form(_ m: PaintColor, _ a: CGPoint, _ b: CGPoint, lo: Double = 0, hi: Double = 1) -> Paint {
             let ks: [(CGFloat, Double)] = [(0, 0.14), (0.2, 0), (0.5, 0.4), (0.78, 0.78), (0.91, 1), (1, 0.8)]
-            return .linearGradient(SceneGradient(stops: ks.map { SceneGradient.Stop(color: at(m, lo + (hi - lo) * $0.1).color, location: $0.0) }), startPoint: a, endPoint: b)
+            return .linearGradient(PaintGradient(stops: ks.map { PaintGradient.Stop(color: at(m, lo + (hi - lo) * $0.1), location: $0.0) }), startPoint: a, endPoint: b)
         }
         /// Shading for a rounded body, or, given its axis and radius, a cylinder
         /// (lit along its side nearer the light, or its top when the light runs
         /// along it).
-        func shade(_ path: Path, _ m: SceneRGB, lo: Double = 0, hi: Double = 1, axis: (CGPoint, CGPoint)? = nil, r: CGFloat = 0) -> ScenePaint {
+        func shade(_ path: Path, _ m: PaintColor, lo: Double = 0, hi: Double = 1, axis: (CGPoint, CGPoint)? = nil, r: CGFloat = 0) -> Paint {
             if let (a, b) = axis {
                 var n = (b - a).unit.turned
                 if n.x * toward.x + n.y * toward.y - 0.35 * n.y < 0 { n = n * -1 }
@@ -41,10 +42,10 @@ nonisolated extension WelcomeArt {
             return form(m, c - toward * e, c + toward * e, lo: lo, hi: hi)
         }
         /// A ball: lit on the side toward the light.
-        func ball(_ path: Path, _ m: SceneRGB, lo: Double = 0, hi: Double = 1) -> ScenePaint {
+        func ball(_ path: Path, _ m: PaintColor, lo: Double = 0, hi: Double = 1) -> Paint {
             let bb = path.boundingRect, rr = max(bb.width, bb.height) / 2
             let c = CGPoint(x: bb.midX, y: bb.midY) + toward * (rr * 0.5)
-            return .radialGradient(SceneGradient(colors: [at(m, hi).color, at(m, lo + (hi - lo) * 0.45).color, at(m, lo).color, at(m, lo + 0.1).color]),
+            return .radialGradient(PaintGradient(colors: [at(m, hi), at(m, lo + (hi - lo) * 0.45), at(m, lo), at(m, lo + 0.1)]),
                                    center: c, startRadius: 0, endRadius: rr * 1.6)
         }
     }
@@ -54,7 +55,7 @@ nonisolated extension WelcomeArt {
     /// A stargazer in winter clothes at a refractor aimed at the moon. `foot` is
     /// the ground between their feet, `u` one unit (they are about 34 units, or
     /// 1.75 m, tall) and `ground(x)` the knoll's outline (screen y at screen x).
-    static func drawStargazer<Painter: ScenePainter>(_ g: inout Painter, theme: WelcomeScene, p: Palette, foot: CGPoint, u: CGFloat, moon: CGPoint, ground: (CGFloat) -> CGFloat) {
+    static func drawStargazer<Surface: Painter>(_ g: inout Surface, theme: WelcomeScene, p: Palette, foot: CGPoint, u: CGFloat, moon: CGPoint, ground: (CGFloat) -> CGFloat) {
         // Units: x right, y up.
         func f(_ q: CGPoint) -> CGPoint { CGPoint(x: foot.x + q.x * u, y: foot.y - q.y * u) }
         func f(_ x: CGFloat, _ y: CGFloat) -> CGPoint { f(CGPoint(x: x, y: y)) }
@@ -68,34 +69,34 @@ nonisolated extension WelcomeArt {
         // Cool moonlight from the upper right over the night sky's fill, in the
         // theme's hue; a little warm red from the lamp at their feet.
         let toMoon = (moon - foot).unit
-        let light = Lighting(amb: theme.bg.mix(theme.accent, 0.25).atLuma(0.2), key: p.light.times(0.66), desat: 0.35, toward: toMoon)
+        let light = Lighting(amb: theme.bg.mix(with: theme.accent, by: 0.25).atLuma(0.2), key: p.light.times(0.66), desat: 0.35, toward: toMoon)
         let lens = CGPoint(x: -3.3, y: -0.45)
-        let red = SceneRGB(r: 1, g: 0.26, b: 0.17)
-        func paint(_ path: Path, _ m: SceneRGB, lo: Double = 0, hi: Double = 1, axis: (CGPoint, CGPoint)? = nil, r: CGFloat = 0, warm: Double = 0) {
+        let red = PaintColor(red: 1, green: 0.26, blue: 0.17)
+        func paint(_ path: Path, _ m: PaintColor, lo: Double = 0, hi: Double = 1, axis: (CGPoint, CGPoint)? = nil, r: CGFloat = 0, warm: Double = 0) {
             let ax: (CGPoint, CGPoint)? = axis.map { (f($0.0), f($0.1)) }
             g.fill(path, with: light.shade(path, m, lo: lo, hi: hi, axis: ax, r: r * u))
             if warm > 0 {
-                g.fill(path, with: .radialGradient(SceneGradient(colors: [red.c(0.5 * warm), red.c(0.16 * warm), red.c(0)]), center: f(lens), startRadius: 0, endRadius: 9 * u))
+                g.fill(path, with: .radialGradient(PaintGradient(colors: [red.opacity(0.5 * warm), red.opacity(0.16 * warm), red.opacity(0)]), center: f(lens), startRadius: 0, endRadius: 9 * u))
             }
         }
-        func ball(_ path: Path, _ m: SceneRGB, lo: Double = 0, hi: Double = 1) { g.fill(path, with: light.ball(path, m, lo: lo, hi: hi)) }
+        func ball(_ path: Path, _ m: PaintColor, lo: Double = 0, hi: Double = 1) { g.fill(path, with: light.ball(path, m, lo: lo, hi: hi)) }
         /// Moonlight catching the edge of a form that faces it: the shape less a
         /// copy of itself moved away from the moon, `w` units wide.
-        func rim(_ path: Path, _ m: SceneRGB, _ w: CGFloat = 0.35, _ k: Double = 1.3, _ o: Double = 0.85) {
+        func rim(_ path: Path, _ m: PaintColor, _ w: CGFloat = 0.35, _ k: Double = 1.3, _ o: Double = 0.85) {
             var edge = g
             edge.clip(to: path)
             var cut = Path(path.boundingRect.insetBy(dx: -4 * u, dy: -4 * u))
             cut.addPath(path.offsetBy(dx: -toMoon.x * w * u, dy: -toMoon.y * w * u))
-            edge.fill(cut, with: .color(light.at(m, k).c(o)), style: FillStyle(eoFill: true))
+            edge.fill(cut, with: .color(light.at(m, k).opacity(o)), style: FillStyle(eoFill: true))
         }
-        func tint(_ path: Path, _ m: SceneRGB, _ k: Double, _ o: Double = 1) { g.fill(path, with: .color(light.at(m, k).c(o))) }
+        func tint(_ path: Path, _ m: PaintColor, _ k: Double, _ o: Double = 1) { g.fill(path, with: .color(light.at(m, k).opacity(o))) }
 
         // Materials.
-        let coat = SceneRGB(r: 0.20, g: 0.38, b: 0.42), knit = SceneRGB(r: 0.86, g: 0.64, b: 0.28), pants = SceneRGB(r: 0.31, g: 0.32, b: 0.38)
-        let leather = SceneRGB(r: 0.50, g: 0.33, b: 0.22), fleece = SceneRGB(r: 0.88, g: 0.82, b: 0.70), glove = SceneRGB(r: 0.22, g: 0.22, b: 0.25)
-        let skin = SceneRGB(r: 0.97, g: 0.68, b: 0.52), scarfRed = SceneRGB(r: 0.72, g: 0.20, b: 0.19), cream = SceneRGB(r: 0.93, g: 0.91, b: 0.85), blackened = SceneRGB(r: 0.15, g: 0.15, b: 0.17)
-        let alu = SceneRGB(r: 0.68, g: 0.70, b: 0.74), mountWhite = SceneRGB(r: 0.88, g: 0.88, b: 0.86), rubber = SceneRGB(r: 0.12, g: 0.12, b: 0.13)
-        let pack = SceneRGB(r: 0.38, g: 0.42, b: 0.30), steel = SceneRGB(r: 0.70, g: 0.72, b: 0.75)
+        let coat = PaintColor(red: 0.20, green: 0.38, blue: 0.42), knit = PaintColor(red: 0.86, green: 0.64, blue: 0.28), pants = PaintColor(red: 0.31, green: 0.32, blue: 0.38)
+        let leather = PaintColor(red: 0.50, green: 0.33, blue: 0.22), fleece = PaintColor(red: 0.88, green: 0.82, blue: 0.70), glove = PaintColor(red: 0.22, green: 0.22, blue: 0.25)
+        let skin = PaintColor(red: 0.97, green: 0.68, blue: 0.52), scarfRed = PaintColor(red: 0.72, green: 0.20, blue: 0.19), cream = PaintColor(red: 0.93, green: 0.91, blue: 0.85), blackened = PaintColor(red: 0.15, green: 0.15, blue: 0.17)
+        let alu = PaintColor(red: 0.68, green: 0.70, blue: 0.74), mountWhite = PaintColor(red: 0.88, green: 0.88, blue: 0.86), rubber = PaintColor(red: 0.12, green: 0.12, blue: 0.13)
+        let pack = PaintColor(red: 0.38, green: 0.42, blue: 0.30), steel = PaintColor(red: 0.70, green: 0.72, blue: 0.75)
 
         // The telescope, laid along its axis toward the moon: `T(s, w)` is `s`
         // along the tube from the star diagonal and `w` across it (upward).
@@ -106,7 +107,7 @@ nonisolated extension WelcomeArt {
         let ea = (n - d * 0.15).unit                              // the eyepiece's axis
         let dg = E - ea * 2.6
         func T(_ s: CGFloat, _ w: CGFloat) -> CGPoint { dg + d * s + n * w }
-        func tube(_ s0: CGFloat, _ s1: CGFloat, _ w: CGFloat, _ m: SceneRGB, lo: Double = 0, hi: Double = 1, at w0: CGFloat = 0) {
+        func tube(_ s0: CGFloat, _ s1: CGFloat, _ w: CGFloat, _ m: PaintColor, lo: Double = 0, hi: Double = 1, at w0: CGFloat = 0) {
             paint(SceneShapes.band(f(T(s0, w0)), f(T(s1, w0)), w * u, w * u), m, lo: lo, hi: hi, axis: (T(s0, w0), T(s1, w0)), r: w)
         }
         // The tripod and the equatorial head.
@@ -120,15 +121,15 @@ nonisolated extension WelcomeArt {
 
         // Shadows: soft contact shadows on the knoll, thrown a little toward us
         // and to the left by the moon behind.
-        let shadowColor = SceneRGB.black.c(0.42)
+        let shadowColor = PaintColor.black.opacity(0.42)
         for (c, rx, ry) in [(CGPoint(x: -0.2, y: -0.2), 4.6, 0.7), (CGPoint(x: -8.1, y: gy(-8) - ground0 - 0.2), 3.0, 0.55)] as [(CGPoint, CGFloat, CGFloat)] {
             let s = f(c)
             g.fill(Path(ellipseIn: CGRect(x: s.x - rx * u, y: s.y - ry * u, width: 2 * rx * u, height: 2 * ry * u)),
-                   with: .radialGradient(SceneGradient(colors: [shadowColor, SceneRGB.black.c(0)]), center: s, startRadius: 0, endRadius: rx * u))
+                   with: .radialGradient(PaintGradient(colors: [shadowColor, PaintColor.black.opacity(0)]), center: s, startRadius: 0, endRadius: rx * u))
         }
         for (_, b) in legs {
             let s = f(b - CGPoint(x: 0.4, y: 0.1))
-            g.fill(Path(ellipseIn: CGRect(x: s.x - 1.2 * u, y: s.y - 0.35 * u, width: 2.4 * u, height: 0.7 * u)), with: .color(SceneRGB.black.c(0.3)))
+            g.fill(Path(ellipseIn: CGRect(x: s.x - 1.2 * u, y: s.y - 0.35 * u, width: 2.4 * u, height: 0.7 * u)), with: .color(PaintColor.black.opacity(0.3)))
         }
         // The red lamp's pool of light on the ground.
         do {
@@ -136,7 +137,7 @@ nonisolated extension WelcomeArt {
             let c = f(lens + CGPoint(x: 1.8, y: 0))
             pool.translateBy(x: c.x, y: c.y); pool.scaleBy(x: 1, y: 0.24)
             pool.fill(Path(ellipseIn: CGRect(x: -8 * u, y: -8 * u, width: 16 * u, height: 16 * u)),
-                      with: .radialGradient(SceneGradient(colors: [red.c(0.26), red.c(0.08), red.c(0)]), center: .zero, startRadius: 0, endRadius: 8 * u))
+                      with: .radialGradient(PaintGradient(colors: [red.opacity(0.26), red.opacity(0.08), red.opacity(0)]), center: .zero, startRadius: 0, endRadius: 8 * u))
         }
 
         // Tripod: the two back legs, the tray, the mount.
@@ -157,11 +158,11 @@ nonisolated extension WelcomeArt {
         let thick = CGPoint(x: 0, y: 0.4)
         paint(shape([tl, tf, tr, tr - thick, tf - thick, tl - thick], smooth: false), alu, lo: 0, hi: 0.45)
         tint(shape([tl, tf, tr, trayBack], smooth: false), alu, 0.62)
-        g.fill(shape([tl, tf, (tl + tr) * 0.5 + CGPoint(x: 0, y: 0.2)], smooth: false), with: .color(light.at(alu, 0.85).c(0.6)))
+        g.fill(shape([tl, tf, (tl + tr) * 0.5 + CGPoint(x: 0, y: 0.2)], smooth: false), with: .color(light.at(alu, 0.85).opacity(0.6)))
         for (x, dy) in [(-1.9, 0.0), (1.4, -0.1)] as [(CGFloat, CGFloat)] {
             let c = tf + CGPoint(x: x * 0.8, y: 0.45 + dy)
             let s = f(c)
-            g.fill(Path(ellipseIn: CGRect(x: s.x - 0.55 * u, y: s.y - 0.2 * u, width: 1.1 * u, height: 0.4 * u)), with: .color(light.at(rubber, 0).color))
+            g.fill(Path(ellipseIn: CGRect(x: s.x - 0.55 * u, y: s.y - 0.2 * u, width: 1.1 * u, height: 0.4 * u)), with: .color(light.at(rubber, 0)))
         }
         let ep = tf + CGPoint(x: 0.1, y: 0.4)
         paint(SceneShapes.band(f(ep), f(ep + CGPoint(x: 0, y: 1.3)), 0.42 * u, 0.42 * u), blackened, lo: 0, hi: 0.9, axis: (ep, ep + CGPoint(x: 0, y: 1.3)), r: 0.42)
@@ -170,13 +171,13 @@ nonisolated extension WelcomeArt {
         // The equatorial head: counterweight on its shaft, Dec and RA housings,
         // the tripod's hub.
         paint(SceneShapes.band(f(T(7.8, -4.4)), f(T(7.8, -8.9)), 0.2 * u, 0.2 * u), steel, lo: 0, hi: 1.1, axis: (T(7.8, -4.4), T(7.8, -8.9)), r: 0.2)
-        paint(SceneShapes.band(f(T(7.8, -6.9)), f(T(7.8, -8.2)), 1.25 * u, 1.25 * u), steel.mix(blackened, 0.45), lo: 0, hi: 1, axis: (T(7.8, -6.9), T(7.8, -8.2)), r: 1.25)
+        paint(SceneShapes.band(f(T(7.8, -6.9)), f(T(7.8, -8.2)), 1.25 * u, 1.25 * u), steel.mix(with: blackened, by: 0.45), lo: 0, hi: 1, axis: (T(7.8, -6.9), T(7.8, -8.2)), r: 1.25)
         paint(SceneShapes.band(f(hub + CGPoint(x: 0, y: 0.5)), f(q), 0.95 * u, 0.95 * u), mountWhite, lo: 0, hi: 0.95, axis: (hub, q), r: 0.95)
         paint(SceneShapes.capsule(f(T(7.8, -2.0)), f(T(7.8, -4.5)), 0.85 * u, 0.85 * u), mountWhite, lo: 0, hi: 1, axis: (T(7.8, -2.0), T(7.8, -4.5)), r: 0.85)
         ball(circle(q, 0.55), blackened, lo: 0, hi: 1.2)
         paint(Path(roundedRect: CGRect(x: f(hub).x - 1.7 * u, y: f(hub).y - 0.6 * u, width: 3.4 * u, height: 1.1 * u), cornerRadius: 0.4 * u), alu, lo: 0, hi: 0.9)
 
-        // The tube: dovetail and saddle, the SceneRGB.white tube in its rings, a dark dew
+        // The tube: dovetail and saddle, the PaintColor.white tube in its rings, a dark dew
         // shield, the finder on its bracket.
         paint(SceneShapes.band(f(T(4.8, -1.5)), f(T(10.8, -1.5)), 0.3 * u, 0.3 * u), blackened, lo: 0, hi: 1)
         paint(SceneShapes.band(f(T(6.6, -1.95)), f(T(9.0, -1.95)), 0.35 * u, 0.35 * u), alu, lo: 0, hi: 1)
@@ -186,7 +187,7 @@ nonisolated extension WelcomeArt {
             tube(s, s + 0.6, 1.44, blackened, lo: 0, hi: 1.2)
             paint(SceneShapes.band(f(T(s + 0.3, 1.4)), f(T(s + 0.3, 1.95)), 0.22 * u, 0.22 * u), blackened, lo: 0.1, hi: 1)
         }
-        tube(13.4, 18.2, 1.55, SceneRGB(r: 0.21, g: 0.21, b: 0.23), lo: 0, hi: 1.15)
+        tube(13.4, 18.2, 1.55, PaintColor(red: 0.21, green: 0.21, blue: 0.23), lo: 0, hi: 1.15)
         tube(17.9, 18.25, 1.62, blackened, lo: 0, hi: 1.3)
         paint(SceneShapes.band(f(T(4.6, 1.25)), f(T(6.8, 1.25)), 0.38 * u, 0.38 * u), blackened, lo: 0, hi: 1)
         for s in [4.9, 6.5] as [CGFloat] { paint(SceneShapes.band(f(T(s, 1.3)), f(T(s, 2.0)), 0.18 * u, 0.18 * u), blackened, lo: 0, hi: 1) }
@@ -207,12 +208,12 @@ nonisolated extension WelcomeArt {
         paint(pocket, pack, lo: 0.05, hi: 0.95, warm: 0.45)
         let lid = shape([pk(-9.0, 4.9), pk(-4.5, 4.9), pk(-4.7, 5.9), pk(-5.7, 6.8), pk(-7.7, 6.9), pk(-8.9, 6.1)])
         tint(lid.offsetBy(dx: 0, dy: 0.35 * u), pack, 0, 0.85)
-        paint(lid, pack.mix(SceneRGB.black, 0.25), lo: 0.05, hi: 1.1, warm: 0.35)
+        paint(lid, pack.mix(with: PaintColor.black, by: 0.25), lo: 0.05, hi: 1.1, warm: 0.35)
         paint(SceneShapes.band(f(pk(-6.6, 5.0)), f(pk(-6.7, 2.9)), 0.28 * u, 0.28 * u), rubber, lo: 0, hi: 0.9)
         paint(Path(CGRect(x: f(pk(-7.0, 3.9)).x, y: f(pk(-7.0, 3.9)).y, width: 0.7 * u, height: 0.55 * u)), steel, lo: 0.1, hi: 1)
         paint(limb(pk(-4.5, 1.2), pk(-4.4, 5.3), 0.62, 0.62), steel, lo: 0, hi: 1.1, axis: (pk(-4.5, 1.2), pk(-4.4, 5.3)), r: 0.62, warm: 0.9)
         paint(limb(pk(-4.4, 5.3), pk(-4.4, 6.2), 0.66, 0.6), blackened, lo: 0, hi: 1.1, axis: (pk(-4.4, 5.3), pk(-4.4, 6.2)), r: 0.66, warm: 0.6)
-        paint(shape([pk(-4.9, 0.6), pk(-4.1, 0.6), pk(-4.0, 2.4), pk(-4.9, 2.6)]), pack.mix(SceneRGB.black, 0.2), lo: 0, hi: 1, warm: 0.9)
+        paint(shape([pk(-4.9, 0.6), pk(-4.1, 0.6), pk(-4.0, 2.4), pk(-4.9, 2.6)]), pack.mix(with: PaintColor.black, by: 0.2), lo: 0, hi: 1, warm: 0.9)
 
         // The person. Feet and legs.
         func boot(_ ax: CGFloat, far: Bool) {
@@ -257,7 +258,7 @@ nonisolated extension WelcomeArt {
         do {
             var folds = g
             folds.clip(to: coatPath)
-            let dark = light.at(coat, 0).c(0.75), lit = light.at(coat, 1.1).c(0.55)
+            let dark = light.at(coat, 0).opacity(0.75), lit = light.at(coat, 1.1).opacity(0.55)
             // Drape down the back of the skirt, the cinch at the waist, the
             // pocket flap, and the arm's shadow across the chest.
             folds.fill(shape([(-1.5, 19.5), (-1.95, 15.0), (-2.15, 11.6), (-1.75, 11.6), (-1.45, 15.0)]), with: .color(dark))
@@ -307,8 +308,8 @@ nonisolated extension WelcomeArt {
         paint(hat, knit, lo: 0, hi: 1.05)
         rim(hat, knit, 0.3)
         let cuff = shape([hl(2.0, 0.7), hl(0, 0.02), hl(-2.08, -0.68), hl(-2.32, 0.4), hl(0, 1.02), hl(2.08, 1.48)])
-        paint(cuff, knit.mix(SceneRGB.black, 0.12), lo: 0, hi: 1.1, axis: (hl(0, -0.1), hl(0, 1.2)), r: 0.6)
-        g.fill(shape([hl(2.06, 1.4), hl(0, 0.95), hl(-2.3, 0.33), hl(-2.3, 0.5), hl(0, 1.12), hl(2.06, 1.55)]), with: .color(light.at(knit, 0).c(0.6)))
+        paint(cuff, knit.mix(with: PaintColor.black, by: 0.12), lo: 0, hi: 1.1, axis: (hl(0, -0.1), hl(0, 1.2)), r: 0.6)
+        g.fill(shape([hl(2.06, 1.4), hl(0, 0.95), hl(-2.3, 0.33), hl(-2.3, 0.5), hl(0, 1.12), hl(2.06, 1.55)]), with: .color(light.at(knit, 0).opacity(0.6)))
         ball(SceneShapes.closed((0..<9).map { i -> CGPoint in
             let a = Double(i) / 9 * 2 * .pi, r: CGFloat = i % 2 == 0 ? 0.95 : 0.82
             return f(hl(-0.15, 3.3) + CGPoint(x: CGFloat(cos(a)) * r, y: CGFloat(sin(a)) * r))
@@ -321,8 +322,8 @@ nonisolated extension WelcomeArt {
         do {
             var folds = g
             folds.clip(to: scarf)
-            folds.fill(shape([(2.0, 27.9), (3.8, 27.0), (5.75, 26.75), (3.8, 27.4)]), with: .color(light.at(scarfRed, 0).c(0.7)))
-            folds.fill(shape([(2.1, 28.4), (3.8, 27.45), (5.7, 27.05), (3.8, 27.75)]), with: .color(light.at(scarfRed, 1.0).c(0.45)))
+            folds.fill(shape([(2.0, 27.9), (3.8, 27.0), (5.75, 26.75), (3.8, 27.4)]), with: .color(light.at(scarfRed, 0).opacity(0.7)))
+            folds.fill(shape([(2.1, 28.4), (3.8, 27.45), (5.7, 27.05), (3.8, 27.75)]), with: .color(light.at(scarfRed, 1.0).opacity(0.45)))
         }
 
         // The near arm at the focus knob: a quilted sleeve, a knit cuff, a glove.
@@ -333,7 +334,7 @@ nonisolated extension WelcomeArt {
         tint(shape([elbow + CGPoint(x: 0.1, y: 1.0), elbow + CGPoint(x: 1.2, y: 1.25), elbow + CGPoint(x: 0.5, y: 0.3)]), coat, 0, 0.85)
         tint(shape([shoulder + CGPoint(x: 1.2, y: -2.1), shoulder + CGPoint(x: 2.3, y: -2.4), shoulder + CGPoint(x: 1.6, y: -2.6)]), coat, 0, 0.6)
         tint(shape([elbow + CGPoint(x: 1.6, y: 1.0), elbow + CGPoint(x: 2.6, y: 2.2), elbow + CGPoint(x: 2.0, y: 1.1)]), coat, 0, 0.6)
-        paint(limb(wrist - (wrist - elbow).unit * 0.7, wrist, 1.02, 0.98), knit.mix(SceneRGB.black, 0.12), lo: 0, hi: 1, axis: (elbow, wrist), r: 1.0)
+        paint(limb(wrist - (wrist - elbow).unit * 0.7, wrist, 1.02, 0.98), knit.mix(with: PaintColor.black, by: 0.12), lo: 0, hi: 1, axis: (elbow, wrist), r: 1.0)
         let hand = knob + CGPoint(x: -0.25, y: -0.35)
         paint(limb(wrist + (hand - wrist).unit * 0.3, hand, 0.82, 0.72), glove, lo: 0, hi: 1.25, axis: (wrist, hand), r: 0.8)
         paint(limb(hand + CGPoint(x: -0.3, y: 0.3), hand + CGPoint(x: 0.2, y: 1.0), 0.3, 0.28), glove, lo: 0, hi: 1.3)
@@ -344,7 +345,7 @@ nonisolated extension WelcomeArt {
         paint(SceneShapes.band(f(lampB), f(lens + CGPoint(x: 0.08, y: 0)), 0.52 * u, 0.52 * u), alu, lo: 0, hi: 1, axis: (lampB, lens), r: 0.52, warm: 1)
         let ls = f(lens + CGPoint(x: 0.1, y: 0))
         g.fill(Path(ellipseIn: CGRect(x: ls.x - 5 * u, y: ls.y - 5 * u, width: 10 * u, height: 10 * u)),
-               with: .radialGradient(SceneGradient(colors: [red.c(0.34), red.c(0.09), red.c(0)]), center: ls, startRadius: 0, endRadius: 5 * u))
-        g.fill(Path(ellipseIn: CGRect(x: ls.x - 0.2 * u, y: ls.y - 0.48 * u, width: 0.4 * u, height: 0.96 * u)), with: .color(SceneRGB(r: 1, g: 0.5, b: 0.42).color))
+               with: .radialGradient(PaintGradient(colors: [red.opacity(0.34), red.opacity(0.09), red.opacity(0)]), center: ls, startRadius: 0, endRadius: 5 * u))
+        g.fill(Path(ellipseIn: CGRect(x: ls.x - 0.2 * u, y: ls.y - 0.48 * u, width: 0.4 * u, height: 0.96 * u)), with: .color(PaintColor(red: 1, green: 0.5, blue: 0.42)))
     }
 }

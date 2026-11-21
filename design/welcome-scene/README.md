@@ -15,10 +15,11 @@ The drawing is code, in [`Packages/VelaKit/Sources/VelaUI/Welcome/`](../../Packa
 - `WelcomeSky.swift`: the moon, the sun and the stars.
 - `WelcomeStargazer.swift` and `WelcomeKayaker.swift`: the figures, and the lighting they share.
 - `WelcomeGeometry.swift`: shapes and small math they share.
+- `WelcomeColor.swift`: theme colors as Savage colors, and the color math the lighting uses.
 - `GlassTitle.swift`: the title, in the theme's text color with a highlight and a shadow.
 - `WelcomeSceneView.swift`: the Canvas in the app, and how big it is. It's 320 to 720 points wide, and left out when even 320 doesn't fit. The welcome screen itself is `EmptyStateView`, in `Window/MainWindowView.swift`.
-- `ScenePainter.swift`: what the drawing draws through. In the app that's a SwiftUI Canvas.
-- `SVGPainter.swift`: the same drawing written as an SVG.
+
+The drawing draws through [Savage](https://github.com/r3volution11/Savage), a Swift package made for it and published on its own (MIT). Savage's `CanvasPainter` draws it in the app, in a SwiftUI Canvas, and its `SVGPainter` writes the same drawing as an SVG.
 
 Its random parts (stars, rocks, ripples) come from a seeded generator, so a theme and a size always give the same picture.
 
@@ -46,5 +47,6 @@ The SVG is all vectors: paths, gradients, clip paths and masks. Nothing in it is
 - **In Safari (WebKit),** it matches the app. Other browsers and design apps follow the same SVG rules.
 - **In Preview, Quick Look and Finder,** the moon's seas have hard edges: macOS's own SVG renderer doesn't draw SVG filters.
 - **Masked groups have an inner group at 99.99% opacity.** Apple's renderers mask each shape of a group on its own unless the group has an opacity, so without it overlapping shapes would show through at the faded edges.
+- **Some gradients have extra stops.** The app blends gradient colors premultiplied by their opacity, and macOS's SVG renderer doesn't. Where a gradient changes both color and opacity (the water, the ripples), the extra stops make the two look the same.
 
-The `Welcome scene SVG fidelity` test renders both and compares them.
+The `Welcome scene SVG fidelity` test renders both and compares them. Savage's own tests cover each drawing feature on its own.

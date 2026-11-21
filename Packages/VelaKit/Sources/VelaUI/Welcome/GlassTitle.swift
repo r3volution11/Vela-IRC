@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import Savage
 import SwiftUI
 
 /// The welcome screen's title, glassy, in the theme's own text color: a
@@ -18,19 +19,19 @@ struct GlassTitle: View {
         let text = Text(title).font(font)
         let dark = scene.dark
         text
-            .foregroundStyle(LinearGradient(colors: [scene.fg.mix(.white, dark ? 0.45 : 0.25).swiftUI, scene.fg.swiftUI, scene.fg.mix(scene.accent, 0.25).swiftUI],
+            .foregroundStyle(LinearGradient(colors: [Color(scene.fg.mix(with: .white, by: dark ? 0.45 : 0.25)), Color(scene.fg), Color(scene.fg.mix(with: scene.accent, by: 0.25))],
                                             startPoint: .top, endPoint: .bottom))
             .overlay {
                 // The highlight: strong on dark text backgrounds, gentle on
                 // light ones, where it would wash the letters out.
-                text.foregroundStyle(LinearGradient(stops: [.init(color: SceneRGB.white.c(dark ? 0.55 : 0.30).swiftUI, location: 0),
-                                                            .init(color: SceneRGB.white.c(0).swiftUI, location: dark ? 0.45 : 0.32)],
+                text.foregroundStyle(LinearGradient(stops: [.init(color: Color(PaintColor.white.opacity(dark ? 0.55 : 0.30)), location: 0),
+                                                            .init(color: Color(PaintColor.white.opacity(0)), location: dark ? 0.45 : 0.32)],
                                                     startPoint: .top, endPoint: .bottom))
                     .blendMode(dark ? .plusLighter : .screen)
                     .accessibilityHidden(true)
             }
-            .shadow(color: (dark ? SceneRGB.black : scene.fg).c(dark ? 0.55 : 0.22).swiftUI, radius: size * 0.22, y: size * 0.10)
-            .shadow(color: scene.accent.c(0.25).swiftUI, radius: size * 0.5, y: 0)
+            .shadow(color: Color((dark ? PaintColor.black : scene.fg).opacity(dark ? 0.55 : 0.22)), radius: size * 0.22, y: size * 0.10)
+            .shadow(color: Color(scene.accent.opacity(0.25)), radius: size * 0.5, y: 0)
             .multilineTextAlignment(.center)
             .accessibilityAddTraits(.isHeader)
     }

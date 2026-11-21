@@ -4,6 +4,7 @@
 
 import AppKit
 import Foundation
+import Savage
 import SwiftUI
 import Testing
 import VelaCore
@@ -113,7 +114,7 @@ enum WelcomeSceneRendering {
 }
 
 /// Records what the scene asks a painter to do, drawing nothing.
-private struct RecordingPainter: ScenePainter {
+private struct RecordingPainter: Painter {
     final class Log {
         var groups: [String] = []
         var fills = 0
@@ -123,22 +124,24 @@ private struct RecordingPainter: ScenePainter {
 
     let log: Log
 
-    func fill(_ path: Path, with paint: ScenePaint, style: FillStyle) { log.fills += 1 }
-    func stroke(_ path: Path, with paint: ScenePaint, style: StrokeStyle) { log.strokes += 1 }
+    func fill(_ path: Path, with paint: Paint, style: FillStyle) { log.fills += 1 }
+    func stroke(_ path: Path, with paint: Paint, style: StrokeStyle) { log.strokes += 1 }
     mutating func clip(to path: Path) {}
     mutating func translateBy(x: CGFloat, y: CGFloat) {}
     mutating func scaleBy(x: CGFloat, y: CGFloat) {}
+    mutating func rotate(by angle: Angle) {}
+    mutating func concatenate(_ matrix: CGAffineTransform) {}
 
-    func drawLayer(_ layer: SceneLayer, _ content: (inout RecordingPainter) -> Void) {
+    func drawLayer(_ style: LayerStyle, _ content: (inout RecordingPainter) throws -> Void) rethrows {
         log.layers += 1
         var inner = self
-        content(&inner)
+        try content(&inner)
     }
 
-    func group(_ name: String, _ content: (inout RecordingPainter) -> Void) {
+    func group(_ name: String, _ content: (inout RecordingPainter) throws -> Void) rethrows {
         log.groups.append(name)
         var inner = self
-        content(&inner)
+        try content(&inner)
     }
 }
 
@@ -158,10 +161,10 @@ struct WelcomeSceneTests {
     @Test func themeKindPicksTheTimeOfDay() {
         #expect(night.dark)
         #expect(!day.dark)
-        #expect(night.bg == SceneRGB(ThemeColor(hex: "#292D3E")!))
-        #expect(night.accent == SceneRGB(ThemeColor(hex: "#C792EA")!))
-        #expect(day.fg == SceneRGB(ThemeColor(hex: "#37474F")!))
-        #expect(day.secondary == SceneRGB(ThemeColor(hex: "#607D8B")!))
+        #expect(night.bg == PaintColor(ThemeColor(hex: "#292D3E")!))
+        #expect(night.accent == PaintColor(ThemeColor(hex: "#C792EA")!))
+        #expect(day.fg == PaintColor(ThemeColor(hex: "#37474F")!))
+        #expect(day.secondary == PaintColor(ThemeColor(hex: "#607D8B")!))
     }
 
     @Test func darkThemeDrawsNight() throws {
@@ -243,9 +246,9 @@ struct WelcomeSceneTests {
 
     @Test func themeColorsChangeThePicture() throws {
         let base = try #require(WelcomeSceneRendering.render(night, size: size))
-        for change in [\WelcomeScene.accent, \.bg, \.fg, \.secondary] as [WritableKeyPath<WelcomeScene, SceneRGB>] {
+        for change in [\WelcomeScene.accent, \.bg, \.fg, \.secondary] as [WritableKeyPath<WelcomeScene, PaintColor>] {
             var scene = night
-            scene[keyPath: change] = SceneRGB(r: 0.9, g: 0.4, b: 0.1)
+            scene[keyPath: change] = PaintColor(red: 0.9, green: 0.4, blue: 0.1)
             let changed = try #require(WelcomeSceneRendering.render(scene, size: size))
             #expect(changed.difference(from: base).mean > 0.01, "\(change)")
         }
@@ -260,8 +263,8 @@ struct WelcomeSceneTests {
         ))
         store.reload()
         let scene = WelcomeScene(theme: store.current)
-        #expect(scene.accent == SceneRGB(ThemeColor(hex: "#FF6A00")!))
-        #expect(scene.bg == SceneRGB(ThemeColor(hex: "#101018")!))
+        #expect(scene.accent == PaintColor(ThemeColor(hex: "#FF6A00")!))
+        #expect(scene.bg == PaintColor(ThemeColor(hex: "#101018")!))
         #expect(scene != night)
     }
 
@@ -271,7 +274,7 @@ struct WelcomeSceneTests {
         let theme = ResolvedTheme(id: "t", name: "T", kind: .light, vibrancy: .none, colors: colors, nickColors: [], ircColors: [])
         let scene = WelcomeScene(theme: theme)
         let bg = ThemeColor(hex: "#FAFAFA")!
-        #expect(abs(scene.secondary.r - bg.red / 2) < 0.002)
+        #expect(abs(scene.secondary.red - bg.red / 2) < 0.002)
     }
 }
 
@@ -325,26 +328,19 @@ struct WelcomeLayoutTests {
                 let top = (size.height - scene.height - 80) / 2
                 let light = CGPoint(x: (size.width - scene.width) / 2 + scene.width * 0.74, y: top + scene.height * 0.24)
                 let p = bitmap.pixel(Int(light.x), Int(light.y))
-                let background = SceneRGB(theme.color(ThemeKey.chatBackground))
-                let distance = abs(p.r - background.r) + abs(p.g - background.g) + abs(p.b - background.b)
+                let background = PaintColor(theme.color(ThemeKey.chatBackground))
+                let distance = abs(p.r - background.red) + abs(p.g - background.green) + abs(p.b - background.blue)
                 #expect(distance > 0.3, "\(size) \(theme.name): \(p)")
             }
         }
     }
 }
 
+/// The scene's SVG. What each drawing call writes is Savage's to test (its
+/// SVG output suite); here, the whole scene.
 @MainActor
 @Suite("Welcome scene SVG")
 struct WelcomeSceneSVGTests {
-    let size = CGSize(width: 200, height: 100)
-
-    private func svg(_ draw: (inout SVGPainter) -> Void) -> String {
-        let document = SVGDocument(size: size)
-        var painter = SVGPainter(document: document)
-        draw(&painter)
-        return document.text(title: "Test")
-    }
-
     private func parse(_ text: String) throws -> XMLElement {
         try #require(try XMLDocument(xmlString: text, options: []).rootElement())
     }
@@ -361,168 +357,8 @@ struct WelcomeSceneSVGTests {
         return found
     }
 
-    private func children(_ name: String, of element: XMLElement) -> [XMLElement] {
-        (element.children ?? []).compactMap { $0 as? XMLElement }.filter { $0.localName == name }
-    }
-
     private func attribute(_ name: String, _ element: XMLElement?) -> String? {
         element?.attribute(forName: name)?.stringValue
-    }
-
-    private func gradient(_ a: SceneRGB, _ b: SceneRGB) -> SceneGradient {
-        SceneGradient(colors: [a.c(1), b.c(0.5)])
-    }
-
-    @Test func pathsAndFlatColors() throws {
-        let text = svg { p in
-            var path = Path()
-            path.move(to: CGPoint(x: 1, y: 2))
-            path.addLine(to: CGPoint(x: 10.256, y: 2))
-            path.addQuadCurve(to: CGPoint(x: 20, y: 20), control: CGPoint(x: 15, y: 0))
-            path.addCurve(to: CGPoint(x: 0, y: 20), control1: CGPoint(x: 10, y: 30), control2: CGPoint(x: 5, y: 30))
-            path.closeSubpath()
-            p.fill(path, with: .color(SceneRGB(r: 1, g: 0.5, b: 0).c(0.25)), style: FillStyle(eoFill: true))
-            p.stroke(path, with: .color(SceneRGB.black.color), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-        }
-        let root = try parse(text)
-        #expect(root.localName == "svg")
-        #expect(attribute("viewBox", root) == "0 0 200 100")
-        #expect(children("title", of: root).first?.stringValue == "Test")
-        let paths = children("path", of: root)
-        #expect(paths.count == 2)
-        #expect(attribute("d", paths.first) == "M1 2L10.26 2Q15 0 20 20C10 30 5 30 0 20Z")
-        #expect(attribute("fill", paths.first) == "#ff8000")
-        #expect(attribute("fill-opacity", paths.first) == "0.25")
-        #expect(attribute("fill-rule", paths.first) == "evenodd")
-        #expect(attribute("fill", paths.last) == "none")
-        #expect(attribute("stroke", paths.last) == "#000000")
-        #expect(attribute("stroke-width", paths.last) == "2")
-        #expect(attribute("stroke-linecap", paths.last) == "round")
-    }
-
-    @Test func gradientsInUserSpace() throws {
-        let root = try parse(svg { p in
-            p.fill(Path(CGRect(x: 0, y: 0, width: 100, height: 100)),
-                   with: .linearGradient(gradient(.white, .black), startPoint: CGPoint(x: 0, y: 0), endPoint: CGPoint(x: 0, y: 100)))
-            p.fill(Path(ellipseIn: CGRect(x: 0, y: 0, width: 40, height: 40)),
-                   with: .radialGradient(gradient(.white, .black), center: CGPoint(x: 20, y: 20), startRadius: 10, endRadius: 20))
-        })
-        let linear = try #require(all("linearGradient", in: root).first)
-        #expect(attribute("gradientUnits", linear) == "userSpaceOnUse")
-        #expect(attribute("y2", linear) == "100")
-        let stops = children("stop", of: linear)
-        #expect(stops.map { attribute("stop-color", $0) } == ["#ffffff", "#000000"])
-        #expect(attribute("stop-opacity", stops.last) == "0.5")
-        // A radial gradient's start radius becomes its first stop's offset.
-        let radial = try #require(all("radialGradient", in: root).first)
-        #expect(attribute("gradientUnits", radial) == "userSpaceOnUse")
-        #expect(attribute("r", radial) == "20")
-        #expect(children("stop", of: radial).map { attribute("offset", $0) } == ["0.5", "1"])
-        let fills = children("path", of: root).map { attribute("fill", $0) }
-        #expect(fills == ["url(#\(attribute("id", linear)!))", "url(#\(attribute("id", radial)!))"])
-    }
-
-    @Test func clipsWrapWhatTheyClip() throws {
-        let root = try parse(svg { p in
-            var clipped = p
-            clipped.clip(to: Path(ellipseIn: CGRect(x: 0, y: 0, width: 50, height: 50)))
-            clipped.fill(Path(CGRect(x: 0, y: 0, width: 80, height: 80)), with: .color(SceneRGB.white.color))
-            clipped.fill(Path(CGRect(x: 0, y: 0, width: 20, height: 20)), with: .color(SceneRGB.black.color))
-            p.fill(Path(CGRect(x: 90, y: 0, width: 10, height: 10)), with: .color(SceneRGB.black.color))
-        })
-        let clip = try #require(all("clipPath", in: root).first)
-        #expect(children("path", of: clip).count == 1)
-        // Both clipped shapes share one group; the third is outside it.
-        let groups = all("g", in: root).filter { attribute("clip-path", $0) != nil }
-        #expect(groups.count == 1)
-        #expect(attribute("clip-path", groups.first) == "url(#\(attribute("id", clip)!))")
-        #expect(groups.first.map { children("path", of: $0).count } == 2)
-        #expect(children("path", of: root).count == 1)
-    }
-
-    @Test func fadesAndCutsAreMasks() throws {
-        var layer = SceneLayer(opacity: 0.5)
-        layer.cuts = (Path(CGRect(x: 10, y: 10, width: 5, height: 5)), 0.9)
-        layer.fades = [SceneLayer.Fade(rect: CGRect(origin: .zero, size: size),
-                                       paint: .linearGradient(SceneGradient(colors: [SceneRGB.black.c(1), SceneRGB.black.c(0)]),
-                                                              startPoint: .zero, endPoint: CGPoint(x: 200, y: 0)))]
-        let root = try parse(svg { p in
-            p.drawLayer(layer) { l in l.fill(Path(CGRect(x: 0, y: 0, width: 200, height: 100)), with: .color(SceneRGB(r: 1, g: 0, b: 0).color)) }
-        })
-        let masks = all("mask", in: root)
-        #expect(masks.count == 2)
-        #expect(masks.allSatisfy { attribute("maskUnits", $0) == "userSpaceOnUse" })
-        // The fade is the gradient's opacity drawn in white (a luminance mask).
-        let fadeStops = all("stop", in: root)
-        #expect(fadeStops.map { attribute("stop-color", $0) } == ["#ffffff", "#ffffff"])
-        #expect(attribute("stop-opacity", fadeStops.last) == "0")
-        // The layer's own mask: its opacity everywhere, cleared by 90% more
-        // under the cut.
-        let cut = try #require(masks.first { children("path", of: $0).count == 2 })
-        #expect(attribute("fill", children("path", of: cut).first) == "#fff")
-        #expect(attribute("fill-opacity", children("path", of: cut).first) == "0.5")
-        #expect(attribute("fill", children("path", of: cut).last) == "#000")
-        #expect(attribute("fill-opacity", children("path", of: cut).last) == "0.9")
-        // That mask on the outer group, the fade inside it, each over a group
-        // that's drawn as one (an opacity a hair under 1).
-        func up(_ element: XMLElement?) -> XMLElement? { element?.parent as? XMLElement }
-        let shape = try #require(all("path", in: root).first { attribute("fill", $0) == "#ff0000" })
-        #expect(attribute("opacity", up(shape)) == "0.9999")
-        #expect(attribute("mask", up(up(shape))) != nil)
-        #expect(attribute("opacity", up(up(up(shape)))) == "0.9999")
-        #expect(attribute("mask", up(up(up(up(shape))))) == "url(#\(attribute("id", cut)!))")
-    }
-
-    @Test func blurIsAFilter() throws {
-        let root = try parse(svg { p in
-            p.drawLayer(SceneLayer(blur: 3)) { l in l.fill(Path(CGRect(x: 0, y: 0, width: 50, height: 50)), with: .color(SceneRGB.white.color)) }
-        })
-        let filter = try #require(all("filter", in: root).first)
-        #expect(attribute("filterUnits", filter) == "userSpaceOnUse")
-        #expect(attribute("stdDeviation", children("feGaussianBlur", of: filter).first) == "3")
-        let group = try #require(all("g", in: root).first { attribute("filter", $0) != nil })
-        #expect(children("path", of: group).count == 1)
-    }
-
-    @Test func aPartialWashAndFadeDrawTwice() throws {
-        // Outside its rect a layer's wash and fade change nothing: the part
-        // of a shape there is drawn plain, the part inside washed.
-        var layer = SceneLayer()
-        let box = CGRect(x: 50, y: 50, width: 100, height: 50)
-        layer.wash = (SceneRGB.white.c(0.5), box)
-        layer.fades = [SceneLayer.Fade(rect: box, paint: .color(SceneRGB.black.c(0.5)))]
-        let root = try parse(svg { p in
-            p.drawLayer(layer) { l in
-                l.fill(Path(CGRect(x: 0, y: 0, width: 100, height: 100)), with: .color(SceneRGB.black.color))   // crosses the box
-                l.fill(Path(CGRect(x: 60, y: 60, width: 10, height: 10)), with: .color(SceneRGB.black.color))  // inside it
-            }
-        })
-        let paths = all("path", in: root)
-        #expect(paths.filter { attribute("fill", $0) == "#000000" }.count == 1)
-        #expect(paths.filter { attribute("fill", $0) == "#808080" }.count == 2)
-        // Plain outside the rect (a frame with a hole a point inside it),
-        // composited inside it.
-        let clips = all("clipPath", in: root).compactMap { children("path", of: $0).first.flatMap { attribute("d", $0) } }
-        #expect(clips == ["M-200 -100L400 -100L400 200L-200 200ZM51 51L51 99L149 99L149 51Z", "M50 50L150 50L150 100L50 100Z"])
-    }
-
-    @Test func transformsTravelWithTheShape() throws {
-        let root = try parse(svg { p in
-            var moved = p
-            moved.translateBy(x: 10, y: 20)
-            moved.scaleBy(x: 1, y: 0.5)
-            moved.fill(Path(ellipseIn: CGRect(x: -5, y: -5, width: 10, height: 10)),
-                       with: .radialGradient(gradient(.white, .black), center: .zero, startRadius: 0, endRadius: 5))
-        })
-        #expect(attribute("transform", children("path", of: root).first) == "matrix(1.0 0.0 0.0 0.5 10.0 20.0)")
-    }
-
-    @Test func groupNamesAreUnique() throws {
-        let root = try parse(svg { p in
-            p.group("moon") { g in g.fill(Path(CGRect(x: 0, y: 0, width: 1, height: 1)), with: .color(SceneRGB.white.color)) }
-            p.group("moon") { g in g.fill(Path(CGRect(x: 0, y: 0, width: 1, height: 1)), with: .color(SceneRGB.white.color)) }
-        })
-        #expect(all("g", in: root).map { attribute("id", $0) } == ["moon", "moon-2"])
     }
 
     @Test(arguments: [true, false])
@@ -532,6 +368,8 @@ struct WelcomeSceneSVGTests {
         let root = try parse(text)
         #expect(attribute("width", root) == "1600")
         #expect(attribute("height", root) == "1013")
+        #expect(attribute("viewBox", root) == "0 0 1600 1013")
+        #expect(all("title", in: root).first?.stringValue == "Welcome to Vela")
         // Vectors only: no embedded pictures.
         #expect(all("image", in: root).isEmpty)
         #expect(!text.contains("data:"))
@@ -550,6 +388,11 @@ struct WelcomeSceneSVGTests {
         let references = text.matches(of: /url\(#([^)]+)\)/).map { String($0.1) }
         #expect(!references.isEmpty)
         #expect(references.allSatisfy(ids.contains))
+        // The scene's layers: the fade into the window, and the moon's soft
+        // seas (night) or the kayaker's reflection (day).
+        #expect(all("mask", in: root).count >= 2)
+        #expect(!all("clipPath", in: root).isEmpty)
+        #expect(!all("radialGradient", in: root).isEmpty)
         #expect(all("feGaussianBlur", in: root).count == (dark ? 1 : 0))
         #expect(ids.contains(dark ? "stargazer" : "kayaker"))
     }

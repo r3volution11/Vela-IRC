@@ -1,5 +1,5 @@
 {
-  "originHash" : "d5b395dabe7a80d043b26f11b6cfb70e47315844bdb63e013faadf5d14c3504b",
+  "originHash" : "9b149470ca7fbdcd8e1e98fb7b9d4a7433438e1e4973482a4d1cc29b5670018a",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "92a554cd0d5e8d67cb18993c6054e73fe42c066c",
         "version" : "7.12.0"
+      }
+    },
+    {
+      "identity" : "savage",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/r3volution11/Savage.git",
+      "state" : {
+        "revision" : "459eff58ea1450e69a1f4f22652d0f5cf48b966c",
+        "version" : "0.1.0"
       }
     },
     {

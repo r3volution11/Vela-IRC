@@ -28,6 +28,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.19"),
+        .package(url: "https://github.com/r3volution11/Savage.git", from: "0.1.0"),
     ],
     targets: [
         // Shared, dependency-free helpers (JSONC, file watching).
@@ -87,10 +88,14 @@ let package = Package(
         // SwiftUI views and scenes. Resources/AppIcons holds the Dock icons
         // (design/app-icon/build.sh writes them). Resources/CHANGELOG.md is
         // a symbolic link to the repository's CHANGELOG.md, for What's New;
-        // SwiftPM and Xcode both copy the file it points to.
+        // SwiftPM and Xcode both copy the file it points to. The welcome
+        // scene draws through Savage (on screen and as SVG).
         .target(
             name: "VelaUI",
-            dependencies: ["VelaCore", "VelaTheme", "VelaMedia", "VelaIRC", "VelaStore", "VelaIntelligence", "VelaIntents"],
+            dependencies: [
+                "VelaCore", "VelaTheme", "VelaMedia", "VelaIRC", "VelaStore", "VelaIntelligence", "VelaIntents",
+                .product(name: "Savage", package: "Savage"),
+            ],
             resources: [.copy("Resources/AppIcons"), .copy("Resources/CHANGELOG.md")],
             swiftSettings: mainActorByDefault
         ),

@@ -10,6 +10,7 @@ Vela is licensed under the [Mozilla Public License 2.0](LICENSE). It incorporate
 | SQLite (the copy that ships with macOS, used through GRDB) | Public domain | https://www.sqlite.org/copyright.html |
 | ZIPFoundation | MIT | https://github.com/weichsel/ZIPFoundation |
 | Sparkle (the updater, shipped as Sparkle.framework in Vela.app) | MIT, with the licenses of the code it includes ([below](#sparkle)) | https://github.com/sparkle-project/Sparkle |
+| Savage (the welcome screen's drawing, on screen and as SVG) | MIT | https://github.com/r3volution11/Savage |
 
 ### Sparkle
 
