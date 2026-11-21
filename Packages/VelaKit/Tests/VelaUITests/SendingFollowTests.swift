@@ -170,6 +170,15 @@ struct SendingFollowTests {
         try #require(Self.findAll(in: hosted.host) { $0 is ComposerNSTextView }.first as? ComposerNSTextView)
     }
 
+    /// Whether the message box is empty within `seconds`.
+    private func composerEmpties(_ hosted: Hosted, within seconds: Double = 3) async throws -> Bool {
+        let deadline = Date().addingTimeInterval(seconds)
+        while try !composer(hosted).string.isEmpty, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        return try composer(hosted).string.isEmpty
+    }
+
     /// Which line is the newest: one of yours, or a mention.
     enum Newest: Sendable {
         case mine
@@ -363,7 +372,10 @@ struct SendingFollowTests {
                 let before = try look(hosted, for: .mention).offset
                 let newest = try await perform(hosted, steps, echoMessage: echoMessage)
                 let after = try await settled(hosted, newest: newest)
-                #expect(try composer(hosted).string.isEmpty, "\(scenario): Return didn't send")
+                // Return sends at once; the box empties on SwiftUI's next
+                // update, which a busy CI machine can hold back for a while.
+                let cleared = try await composerEmpties(hosted)
+                #expect(cleared, "\(scenario): Return didn't send")
                 #expect(after.showsTheNewestLineAtTheBottom, "\(scenario): the newest line isn't at the bottom: \(after)")
                 // Not an earlier line of the same kind, left at the bottom
                 // by a list that didn't move.

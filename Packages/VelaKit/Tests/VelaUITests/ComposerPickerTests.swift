@@ -274,14 +274,19 @@ extension LinkSelectionTests {
             GIFMediaStandIn.loads.withLock { $0.removeAll() }
             try await hosted.openPicker()
             try await waitForResults(hosted, prefix: "Trending 100")
+            func animationLoads() -> Set<URL> {
+                Set(GIFMediaStandIn.loads.withLock { $0 }.filter { $0.path().hasPrefix("/animation/") })
+            }
+            // The previews in view load as the cells appear: within a frame or
+            // two here, later on a busy CI machine.
+            #expect(try await hosted.wait(5) { !animationLoads().isEmpty }, "no previews loaded")
+            // Then a moment for any that shouldn't load to show up.
             try await Task.sleep(for: .milliseconds(600))
             // No prefetching: one page until the grid is scrolled.
             #expect(hosted.gifs.transport.trendingRequests.count == 1)
             // Only the cells in view load their previews (a still and an
             // animation each), not all 24.
-            let loads = GIFMediaStandIn.loads.withLock { $0 }
-            let animations = Set(loads.filter { $0.path().hasPrefix("/animation/") })
-            #expect(!animations.isEmpty, "no previews loaded")
+            let animations = animationLoads()
             #expect(animations.count < 24, "\(animations.count) animated previews loaded for 24 results")
             let picker = try #require(hosted.pickerWindow?.contentView)
             let scrollView = try #require(PickerHost.findAll(in: picker) { $0 is NSScrollView }.compactMap { $0 as? NSScrollView }.max { $0.frame.height < $1.frame.height })

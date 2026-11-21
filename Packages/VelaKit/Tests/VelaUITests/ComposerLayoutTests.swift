@@ -314,9 +314,23 @@ struct ComposerLayoutTests {
         defer { hosted.close() }
         _ = try await openedGap(hosted)
         hosted.buffer.typingNicks = ["zed"]
-        try await Task.sleep(for: .milliseconds(600))
-        let withTypingLine = try #require(try layout(hosted).gapBelowNewestLine)
-        #expect(withTypingLine > ListEndSpacing.resting + 5, "no room was made for the typing line")
+        // The room for the typing line opens with an animation. Wait until
+        // it's open and holding still, not a fixed time: a CI machine running
+        // other suites at once can take far longer.
+        var previous: CGFloat?
+        var still = 0
+        let opened = try await settled(hosted, within: 6) { layout in
+            guard let gap = layout.gapBelowNewestLine, gap > ListEndSpacing.resting + 5 else {
+                previous = nil
+                still = 0
+                return false
+            }
+            still = previous.map { abs($0 - gap) < 0.5 } == true ? still + 1 : 0
+            previous = gap
+            return still >= 3
+        }
+        let withTypingLine = try #require(opened.gapBelowNewestLine)
+        #expect(withTypingLine > ListEndSpacing.resting + 5, "no room was made for the typing line: \(opened)")
         let composer = try composerTextView(hosted)
         composer.insertText("one\ntwo\nthree", replacementRange: composer.selectedRange())
         try await expectNewestLineInView(hosted, gap: withTypingLine, "composer grown under the typing line")

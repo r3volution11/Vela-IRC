@@ -386,23 +386,32 @@ extension LinkSelectionTests {
         func theMessagesStayAtTheNewestLine(placement: TabStackPlacement) async throws {
             let hosted = try await host(placement)
             defer { hosted.close() }
-            try await Task.sleep(for: .milliseconds(300))
+            #expect(try await eventually { try distanceFromBottom(messageList(hosted)) < 2 }, "it didn't open at the newest line")
             let list = try messageList(hosted)
             let height = list.frame.height
-            #expect(try distanceFromBottom(list) < 2)
 
             try await choose(Self.hide, in: menu(at: onTitleBar(hosted), in: hosted), hosted)
-            try await Task.sleep(for: .milliseconds(200))
             // The same list, only taller, still at the newest line.
+            #expect(try await eventually { try list.frame.height > height && distanceFromBottom(list) < 2 },
+                    "hidden: height \(height) → \(list.frame.height), \((try? distanceFromBottom(list)) ?? -1) from the bottom")
             #expect(try messageList(hosted) === list)
-            #expect(list.frame.height > height)
-            #expect(try distanceFromBottom(list) < 2)
 
             try await choose(Self.show, in: menu(at: try emptyTitleBarSpace(hosted)[0], in: hosted), hosted)
-            try await Task.sleep(for: .milliseconds(200))
+            #expect(try await eventually { try abs(list.frame.height - height) < 0.5 && distanceFromBottom(list) < 2 },
+                    "shown: height \(height) → \(list.frame.height), \((try? distanceFromBottom(list)) ?? -1) from the bottom")
             #expect(try messageList(hosted) === list)
-            #expect(abs(list.frame.height - height) < 0.5)
-            #expect(try distanceFromBottom(list) < 2)
+        }
+
+        /// Waits up to `timeout` for `condition`. A fast Mac gets there in a
+        /// frame or two; a CI machine running other suites at the same time
+        /// can take far longer than a fixed wait allows.
+        private func eventually(timeout: Duration = .seconds(5), _ condition: () throws -> Bool) async throws -> Bool {
+            let deadline = ContinuousClock.now + timeout
+            while ContinuousClock.now < deadline {
+                if try condition() { return true }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            return try condition()
         }
     }
 }
