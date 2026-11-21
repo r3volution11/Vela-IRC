@@ -353,10 +353,10 @@ extension SettingKey where Value == Double {
         .init("chat.fontSize", default: 13, summary: "Chat font size in points.")
     }
     public static var chatLineSpacing: SettingKey<Double> {
-        .init("chat.lineSpacing", default: 2, summary: "Extra spacing between lines of a message, in points.")
+        .init("chat.lineSpacing", default: 4, summary: "Extra spacing between lines of a message, in points.")
     }
     public static var chatMessageSpacing: SettingKey<Double> {
-        .init("chat.messageSpacing", default: 6, summary: "Spacing between message groups, in points.")
+        .init("chat.messageSpacing", default: 12, summary: "Spacing between message groups, in points.")
     }
     public static var chatGroupingInterval: SettingKey<Double> {
         .init("chat.groupingInterval", default: 300,

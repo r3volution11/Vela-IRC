@@ -319,7 +319,11 @@ extension LinkSelectionTests {
             #expect(moved > 3 && moved < 40, "moved \(moved) rows")
             #expect(controller.selectedRowView != nil)
             #expect(try await comesIntoViewWhole(controller), "\(String(describing: controller.selectedRowScrollDistance()))")
+            // The first page goes to the row at the top of the view, which
+            // may already be whole on screen; the next one turns the page.
             // Off the bottom, the list no longer follows new lines.
+            try await press(.pageUp, in: hosted, settling: 300)
+            #expect(try await comesIntoViewWhole(controller), "\(String(describing: controller.selectedRowScrollDistance()))")
             #expect(!controller.isPinnedToBottom)
             try await press(.home, in: hosted, settling: 500)
             let oldest = try #require(MessageSelection.oldest(in: items))
