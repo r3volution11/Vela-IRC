@@ -308,8 +308,12 @@ struct SessionTransportTests {
     }
 }
 
+/// Waits for `condition`, returning as soon as it holds. The limit is long
+/// because the full test run shares the main actor among many suites at
+/// once; 3 s timed out now and then under load. No test waits for it to
+/// run out.
 @MainActor
-func waitUntil(timeout: Duration = .seconds(3), _ condition: @MainActor () -> Bool) async throws {
+func waitUntil(timeout: Duration = .seconds(10), _ condition: @MainActor () -> Bool) async throws {
     let deadline = ContinuousClock.now + timeout
     while !condition() {
         if ContinuousClock.now > deadline { throw WaitTimeout() }

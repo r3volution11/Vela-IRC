@@ -118,9 +118,23 @@ With the member list focused (<kbd>⌥⌘4</kbd>). The highlighted person has a 
 | Scroll to the oldest message loaded / the newest | <kbd>Home</kbd> / <kbd>End</kbd> or <kbd>fn←</kbd> / <kbd>fn→</kbd> |
 | Move to the start / end of what you've typed | <kbd>⌘↑</kbd> / <kbd>⌘↓</kbd> |
 | Undo typing (and, after it, leaving or closing a channel) | <kbd>⌘Z</kbd> |
+| Emoji & GIFs (open or close the picker) | <kbd>⇧⌘E</kbd> |
 | Emoji & Symbols (macOS) | <kbd>⌃⌘Space</kbd> |
+| Remove the GIF you picked (at the start of the message) | <kbd>Delete</kbd> |
 | Show Spelling and Grammar | <kbd>⌘:</kbd> |
 | Check Document Now (check the message's spelling) | <kbd>⌘;</kbd> |
+
+## The emoji and GIF picker {#emoji-and-gifs}
+
+Press <kbd>⇧⌘E</kbd>, or click the smiley in the message field, to open the [emoji and GIF picker](/guide/emoji-and-gifs). Its search field has the keyboard.
+
+| Action | Shortcut |
+| --- | --- |
+| Move through the emoji or GIFs | <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> |
+| Pick the selected one (with nothing selected, the first emoji found) | <kbd>Return</kbd> |
+| Send a GIF search now, without waiting | <kbd>Return</kbd> |
+| Switch between Emoji and GIFs | <kbd>Tab</kbd> or <kbd>⌃Tab</kbd> |
+| Close, back to the message field | <kbd>Esc</kbd> |
 
 ## The messages
 
@@ -132,7 +146,7 @@ Press <kbd>⌥⌘2</kbd> (**Go → Focus Messages**), or <kbd>F6</kbd> until you
 | A page of messages up / down | <kbd>Page Up</kbd> / <kbd>Page Down</kbd> |
 | The first / last message loaded | <kbd>Home</kbd> / <kbd>End</kbd> |
 | Reply (on servers without IRCv3 replies, start a message with `nick: `) | <kbd>R</kbd> |
-| React (opens the emoji picker) | <kbd>E</kbd> |
+| React (opens the emoji picker; the arrows and <kbd>Return</kbd> pick) | <kbd>E</kbd> |
 | Copy the text | <kbd>C</kbd> or <kbd>⌘C</kbd> |
 | Open the link (a menu of them when there are several) | <kbd>Return</kbd> |
 | Show or hide the joins and parts in a collapsed run | <kbd>Return</kbd> |

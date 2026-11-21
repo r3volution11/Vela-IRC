@@ -80,6 +80,10 @@ public final class AppModel: SessionHost {
     public internal(set) var savedHistory: SavedHistory
     /// Whether the link preview cache in the database is used (`history.save`).
     @ObservationIgnored let previewDiskCache: PreviewDiskCacheSwitch
+    /// Turns the image cache on disk on or off with `history.save`. That
+    /// cache is shared by the whole process, so tests, which make many
+    /// models side by side, swap this to watch their own.
+    @ObservationIgnored var setImageDiskCache: (Bool) -> Void = { ImageLoader.setDiskCacheEnabled($0) }
     /// Facts kept between launches: the version What's New last showed,
     /// one-time migrations and the notices they leave.
     public let launchRecord: LaunchRecord

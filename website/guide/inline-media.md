@@ -19,7 +19,7 @@ When someone posts a link, Vela can show what's behind it right in the conversat
 
 Hover a message's previews and click the chevron to hide them, or right-click a preview and choose **Hide Previews**.
 
-The settings below are in **Settings → Media**, and most are in the [command palette](/guide/command-palette) too (type "media"). [Presets](/guide/presets) choose link, video and image sizes for you.
+The settings below are in **Settings → Media**, and most are in the [command palette](/guide/command-palette) too (type "media"). [Presets](/guide/presets) choose link, video and image sizes for you. GIF search, also in **Settings → Media**, has its own page: [Emoji & GIFs](/guide/emoji-and-gifs).
 
 ## Link previews
 

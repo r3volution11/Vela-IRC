@@ -28,6 +28,10 @@ final class AnimatedImagePlayer {
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var lastIndex = -1
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// Bytes of decoded frames to keep while playing, so later loops show
+    /// them without decoding again (0: decode every frame every time). The
+    /// GIF picker's cells keep theirs: a dozen play at once.
+    @ObservationIgnored var keptFrameBudget = 0
     /// The frame on screen, for a layer attached after it was decoded.
     @ObservationIgnored private var frame: CGImage?
     @ObservationIgnored private weak var layer: CALayer?
@@ -66,12 +70,13 @@ final class AnimatedImagePlayer {
         let start = (lastIndex + 1) % frameCount
         let count = frameCount
         let maxPixelSize = maxPixelSize
+        let budget = keptFrameBudget
         let show: @MainActor @Sendable (CGImage, Int) -> Bool = { [weak self] image, index in
             self?.show(image, index: index, generation: current) ?? false
         }
         // Below the UI's priority: a late frame matters less than a smooth scroll.
         task = Task(priority: .utility) {
-            await AnimatedFrames.play(data, from: start, frameCount: count, maxPixelSize: maxPixelSize, show: show)
+            await AnimatedFrames.play(data, from: start, frameCount: count, maxPixelSize: maxPixelSize, keepingFrames: budget, show: show)
         }
     }
 
@@ -85,6 +90,17 @@ final class AnimatedImagePlayer {
 
     func toggle() {
         isPlaying ? pause() : play()
+    }
+
+    /// Stops and lets go of the image and the frame on screen.
+    func unload() {
+        pause()
+        data = nil
+        frameCount = 0
+        lastIndex = -1
+        frame = nil
+        setContents(nil)
+        if hasFrame { hasFrame = false }
     }
 
     /// Where frames go; the latest one is drawn straight away.
@@ -118,12 +134,17 @@ nonisolated enum AnimatedFrames {
     /// Decodes frames from `start` onward, each at most `maxPixelSize` on its
     /// longest side, and hands each to `show` when its time comes. Stops when
     /// cancelled or when `show` returns false.
+    ///
+    /// With `keepingFrames`, frames are kept as they're decoded while they
+    /// fit in that many bytes, and shown again from memory on later loops;
+    /// an animation that doesn't fit is decoded every time, as without.
     @concurrent
     static func play(
         _ data: Data,
         from start: Int,
         frameCount: Int,
         maxPixelSize: Int,
+        keepingFrames budget: Int = 0,
         show: @escaping @MainActor @Sendable (CGImage, Int) -> Bool
     ) async {
         guard frameCount > 1,
@@ -133,10 +154,22 @@ nonisolated enum AnimatedFrames {
         var due = clock.now
         var index = start % frameCount
         var failures = 0
+        var kept: [(image: CGImage, delay: Double)?] = budget > 0 ? Array(repeating: nil, count: frameCount) : []
+        var keptBytes = 0
         while !Task.isCancelled {
             // The next frame decodes while the current one is on screen.
-            let image = frame(at: index, in: source, maxPixelSize: maxPixelSize)
-            let delay = frameDelay(in: source, at: index)
+            let image: CGImage?
+            let delay: Double
+            if !kept.isEmpty, let keptFrame = kept[index] {
+                (image, delay) = keptFrame
+            } else {
+                image = frame(at: index, in: source, maxPixelSize: maxPixelSize)
+                delay = frameDelay(in: source, at: index)
+                if !kept.isEmpty, let image {
+                    keptBytes += image.bytesPerRow * image.height
+                    if keptBytes <= budget { kept[index] = (image, delay) } else { kept = [] }
+                }
+            }
             do { try await clock.sleep(until: due) } catch { return }
             if let image {
                 failures = 0
@@ -203,6 +236,9 @@ nonisolated enum AnimatedFrames {
 struct AnimatedFrameView: NSViewRepresentable {
     let player: AnimatedImagePlayer
     var cornerRadius: CGFloat = 0
+    /// How frames fit the view: stretched (they're drawn at the image's
+    /// own shape) or, for the GIF picker's cells, filling and cropped.
+    var gravity: CALayerContentsGravity = .resize
 
     func makeNSView(context: Context) -> AnimatedFrameNSView {
         let view = AnimatedFrameNSView()
@@ -212,6 +248,7 @@ struct AnimatedFrameView: NSViewRepresentable {
 
     func updateNSView(_ view: AnimatedFrameNSView, context: Context) {
         view.frameLayer.cornerRadius = cornerRadius
+        if view.frameLayer.contentsGravity != gravity { view.frameLayer.contentsGravity = gravity }
         player.attach(view.frameLayer)
     }
 }

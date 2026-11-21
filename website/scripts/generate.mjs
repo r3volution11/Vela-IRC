@@ -189,6 +189,7 @@ const categoryNames = {
   sidebar: 'Sidebar',
   memberList: 'Member list',
   media: 'Media',
+  gifs: 'GIFs',
   notifications: 'Notifications',
   dock: 'Dock',
   highlight: 'Highlights',

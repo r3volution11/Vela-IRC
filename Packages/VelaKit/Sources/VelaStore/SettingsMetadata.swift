@@ -18,6 +18,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
     case typing
     case history
     case media
+    case gifs
     case notifications
     case connection
     case moderation
@@ -34,6 +35,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .typing: "Typing"
         case .history: "History"
         case .media: "Media"
+        case .gifs: "GIFs"
         case .notifications: "Notifications"
         case .connection: "Connection"
         case .moderation: "Moderation"
@@ -51,6 +53,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .typing: ["input"]
         case .history: ["history", "logging"]
         case .media: ["media"]
+        case .gifs: ["gifs"]
         case .notifications: ["notifications", "dock", "highlight"]
         case .connection: ["connection", "channels"]
         case .moderation: ["moderation"]
@@ -66,7 +69,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .appearance: "appearance"
         case .layout: "layout"
         case .chat, .typing, .history: "messages"
-        case .media: "media"
+        case .media, .gifs: "media"
         case .notifications: "notifications"
         case .connection, .moderation: "networks"
         case .intelligence: "intelligence"
@@ -172,6 +175,7 @@ public enum SettingsMetadata {
         "intelligence": "Apple Intelligence",
         "highlight": "Highlights",
         "logging": "Chat Logs",
+        "gifs": "GIFs",
     ]
 
     /// Names for keys that don't humanize well.
@@ -206,6 +210,9 @@ public enum SettingsMetadata {
         "logging.excludedBuffers": "Channels Not Logged",
         "updates.checkAutomatically": "Check Automatically",
         "updates.installAutomatically": "Install Automatically",
+        "gifs.enabled": "GIF Search",
+        "gifs.provider": "Service",
+        "gifs.rating": "Content Rating",
     ]
 
     /// Number ranges, merged into each descriptor's schema as
@@ -281,6 +288,14 @@ public enum SettingsMetadata {
         "*!*@host": "Their host (*!*@host)",
         "*!user@host": "Their user and host (*!user@host)",
         "nick!*@*": "Their nick (nick!*@*)",
+        // gifs.provider
+        "klipy": "KLIPY",
+        "giphy": "GIPHY",
+        // gifs.rating
+        "g": "G",
+        "pg": "PG",
+        "pg-13": "PG-13",
+        "r": "R",
     ]
 
     /// A readable label for a settings.json enum value, in sentence case:

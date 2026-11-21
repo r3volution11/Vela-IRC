@@ -64,7 +64,7 @@ extension AppModel {
     private func applyHistorySetting() {
         let saves = settings[.historySave]
         previewDiskCache.isOn = saves
-        ImageLoader.setDiskCacheEnabled(saves)
+        setImageDiskCache(saves)
     }
 
     private func historySettingChanged() {

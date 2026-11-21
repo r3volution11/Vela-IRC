@@ -80,6 +80,9 @@ struct VelaCommandCatalog {
         static let previousUnread = KeyboardShortcut(.upArrow, modifiers: [.shift, .option, .command])
         static let nextUnread = KeyboardShortcut(.downArrow, modifiers: [.shift, .option, .command])
         static let focusInput = KeyboardShortcut("l", modifiers: .command)
+        /// The message box's emoji and GIF picker. ⌃⌘Space stays the
+        /// system's Emoji & Symbols.
+        static let emojiAndGIFs = KeyboardShortcut("e", modifiers: [.shift, .command])
         /// ⌥⌘1–⌥⌘4: the window's areas in screen order (`FocusArea`), with
         /// ⌥⌘3, the message box, forwarded to ⌘L (`AlternateShortcuts`).
         /// F6 / ⇧F6 go round them, as in Slack.
@@ -562,6 +565,22 @@ struct VelaCommandCatalog {
         ) { [context] in context.uiState.focusInput() }
     }
 
+    /// ⇧⌘E: the message box's emoji and GIF picker, opened or closed.
+    var emojiAndGIFs: VelaCommand {
+        Self.emojiAndGIFs(settings: settings, uiState: uiState, hasBuffer: app.selectedBuffer != nil)
+    }
+
+    /// Static so tests can build it from a bare settings store.
+    static func emojiAndGIFs(settings: SettingsStore, uiState: UIState, hasBuffer: Bool) -> VelaCommand {
+        VelaCommand(
+            id: "messageBox.emojiAndGIFs", category: .messageBox,
+            title: settings[.gifsEnabled] ? "Emoji & GIFs…" : "Emoji…",
+            shortcut: Shortcuts.emojiAndGIFs,
+            keywords: ["emoji", "gif", "gifs", "smiley", "picker", "klipy", "giphy", "composer", "insert", "reaction"],
+            isEnabled: hasBuffer
+        ) { uiState.toggleComposerPicker() }
+    }
+
     /// ⌥⌘4: the member list, shown first if it's hidden.
     var focusMembers: VelaCommand {
         let uiState = uiState
@@ -973,6 +992,7 @@ struct VelaCommandCatalog {
         commands += [openSettings, searchSettings, openSettingsJSON]
         commands += [previousBuffer, nextBuffer, previousTab, nextTab, previousNetwork, nextNetwork, previousUnread, nextUnread]
         commands += [focusNavigation, focusMessages, focusInput, focusMembers, nextArea, previousArea]
+        commands.append(emojiAndGIFs)
         commands.append(markAllAsRead)
         commands += selectedBufferCommands
         commands.append(reopenClosed)

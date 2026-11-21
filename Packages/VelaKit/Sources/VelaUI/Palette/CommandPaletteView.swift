@@ -306,6 +306,12 @@ struct CommandPaletteView: View {
             guard list == .commands, mode != .themes else { return false }
             list = .buffers
             reload()
+        case .left, .right:
+            // The caret moves.
+            return false
+        case .tab:
+            // Focus stays in the palette.
+            break
         }
         return true
     }

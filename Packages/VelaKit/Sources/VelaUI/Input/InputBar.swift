@@ -18,6 +18,10 @@ import VelaTheme
 /// cancels a pending reply (with nothing to cancel, it jumps to the newest
 /// message), Page Up/Down, Home and End scroll the messages. Drafts are
 /// kept per buffer in `UIState`.
+///
+/// At its end: the emoji and GIF picker's smiley (⇧⌘E), and a send button
+/// (`input.showSendButton`) that does what Return does. A GIF picked there
+/// shows as a chip above the text and is sent as its link after it.
 struct InputBar: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var uiState
@@ -25,6 +29,8 @@ struct InputBar: View {
     @Environment(\.chatStyle) private var style
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.messageListLink) private var messageListLink
+    @Environment(\.openSettings) private var openSettings
+    @Environment(\.gifSearchServices) private var injectedGIFServices
     let buffer: BufferModel
     let session: NetworkSession
 
@@ -39,6 +45,12 @@ struct InputBar: View {
     @State private var insertion: ComposerInsertion?
     @State private var rejectCount = 0
     @State private var didRestoreDraft = false
+    /// The emoji and GIF picker's popover.
+    @State private var isPickerShown = false
+    /// The picker's views outlive the popover only through its closing
+    /// animation, then go (with their previews): SwiftUI keeps a closed
+    /// popover's content otherwise.
+    @State private var keepsPickerContent = false
 
     // MARK: State
 
@@ -78,6 +90,27 @@ struct InputBar: View {
     private var replyTarget: ChatLine? {
         uiState.replyTargets[buffer.id]
     }
+
+    /// The GIF picked for this message, if any.
+    private var composerGIF: ComposerGIF? {
+        uiState.composerGIFs[buffer.id]
+    }
+
+    /// Something to send: text, a GIF, or a paste waiting for confirmation.
+    private var hasSomethingToSend: Bool {
+        pendingPaste != nil || composerGIF != nil || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// One line of the editor, insets included: the trailing buttons sit
+    /// centered on it however tall the text grows.
+    static func singleLineHeight(for font: NSFont) -> CGFloat {
+        if let cached = lineHeights[font] { return cached }
+        let height = (NSLayoutManager().defaultLineHeight(for: font) + ComposerTextView.verticalInset * 2).rounded(.up)
+        lineHeights[font] = height
+        return height
+    }
+
+    private static var lineHeights: [NSFont: CGFloat] = [:]
 
     private var appearance: ComposerAppearance {
         ComposerAppearance(
@@ -149,6 +182,23 @@ struct InputBar: View {
             insertion = ComposerInsertion(text: request.nick, isMention: true)
             uiState.focusInput()
         }
+        // ⇧⌘E.
+        .onChange(of: uiState.composerPickerToken) { _, _ in
+            isPickerShown.toggle()
+        }
+        // Closed, however it closed: GIF previews and searches stop (if
+        // GIFs were ever used).
+        .onChange(of: isPickerShown) { _, shown in
+            guard !shown else {
+                keepsPickerContent = true
+                return
+            }
+            (injectedGIFServices ?? GIFSearchServices.made)?.pickerClosed()
+            Task {
+                try? await Task.sleep(for: .milliseconds(400))
+                if !isPickerShown { keepsPickerContent = false }
+            }
+        }
     }
 
     private var barTransition: AnyTransition {
@@ -162,6 +212,16 @@ struct InputBar: View {
             if let replyTarget {
                 ReplyBar(line: replyTarget, supportsReplies: session.supportsReplies) {
                     uiState.replyTargets[buffer.id] = nil
+                }
+                .transition(barTransition)
+                Rectangle()
+                    .fill(theme[ThemeKey.inputBorder])
+                    .frame(height: 1)
+            }
+            if let composerGIF {
+                ComposerGIFChip(gif: composerGIF) {
+                    uiState.composerGIFs[buffer.id] = nil
+                    uiState.focusInput()
                 }
                 .transition(barTransition)
                 Rectangle()
@@ -182,8 +242,10 @@ struct InputBar: View {
                 )
                 .frame(height: editorHeight)
                 .frame(maxWidth: .infinity)
+                // Centered on the first line, however tall the text grows.
                 trailingAccessory
-                    .frame(minHeight: editorHeight, alignment: .center)
+                    .frame(height: Self.singleLineHeight(for: style.bodyNSFont))
+                    .frame(minHeight: editorHeight, alignment: .top)
             }
             .padding(.leading, 12)
             .padding(.trailing, 8)
@@ -201,24 +263,70 @@ struct InputBar: View {
         .animation(reduceMotion || !border.changesWithFocus ? nil : .easeOut(duration: 0.12), value: isFocused)
     }
 
-    @ViewBuilder
+    /// Left to right: the split hint ("2 messages"), the emoji and GIF
+    /// picker's smiley (always: emoji go in offline too), then the send
+    /// button, or Reconnect, Join or a spinner while chatting isn't possible.
     private var trailingAccessory: some View {
-        switch availability {
-        case .offline:
-            StatusActionButton(title: "Reconnect", systemImage: "bolt.horizontal.circle", help: "Connect to \(session.displayName)") {
-                session.connect()
+        HStack(spacing: 4) {
+            if availability == .ready {
+                MessageSplitHint(text: text, target: buffer.name)
+                    .padding(.trailing, 2)
             }
-        case .notJoined, .detached:
-            StatusActionButton(title: "Join", systemImage: "arrow.right.circle", help: "Join \(buffer.name)") {
-                app.rejoin(buffer)
+            ComposerPickerButton(isPresented: $isPickerShown)
+                .popover(isPresented: $isPickerShown, arrowEdge: .top) {
+                    if isPickerShown || keepsPickerContent {
+                        picker
+                    }
+                }
+            switch availability {
+            case .offline:
+                StatusActionButton(title: "Reconnect", systemImage: "bolt.horizontal.circle", help: "Connect to \(session.displayName)") {
+                    session.connect()
+                }
+            case .notJoined, .detached:
+                StatusActionButton(title: "Join", systemImage: "arrow.right.circle", help: "Join \(buffer.name)") {
+                    app.rejoin(buffer)
+                }
+            case .connecting:
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("Connecting")
+            case .ready:
+                if app.settings[.inputShowSendButton] {
+                    ComposerSendButton(canSend: hasSomethingToSend) {
+                        submit()
+                        uiState.focusInput()
+                    }
+                }
             }
-        case .connecting:
-            ProgressView()
-                .controlSize(.small)
-                .accessibilityLabel("Connecting")
-        case .ready:
-            MessageSplitHint(text: text, target: buffer.name)
         }
+    }
+
+    /// The popover's content.
+    private var picker: some View {
+        ComposerPickerView(
+            onEmoji: { emoji in
+                insertion = ComposerInsertion(text: emoji)
+                closePicker()
+            },
+            onGIF: { result, provider in
+                uiState.composerGIFs[buffer.id] = ComposerGIF(result: result, provider: provider)
+                closePicker()
+            },
+            onClose: closePicker,
+            onOpenSettings: {
+                isPickerShown = false
+                uiState.settingsSectionReveal = .gifs
+                uiState.settingsEditor.requestedPane = .media
+                openSettings()
+            }
+        )
+    }
+
+    /// Closes the picker and gives the message box the focus back.
+    private func closePicker() {
+        isPickerShown = false
+        uiState.focusInput()
     }
 
     // MARK: Actions
@@ -269,6 +377,12 @@ struct InputBar: View {
             },
             textContext: { [buffer, session] in
                 Self.textContext(buffer: buffer, session: session)
+            },
+            deleteBackwardAtStart: { [uiState, buffer] in
+                // Delete before the text takes out the GIF, like a token.
+                guard uiState.composerGIFs[buffer.id] != nil else { return false }
+                uiState.composerGIFs[buffer.id] = nil
+                return true
             }
         )
     }
@@ -278,15 +392,19 @@ struct InputBar: View {
             confirmPaste()
             return
         }
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        guard canSend(text) else {
+        let gif = composerGIF
+        guard gif != nil || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // A GIF goes out as its link, after the text.
+        let message = ComposerGIF.message(text: text, gif: gif)
+        guard canSend(message) else {
             reject()
             return
         }
-        send(text)
-        InputHistoryStore.shared.push(text, for: buffer.id)
+        send(message)
+        InputHistoryStore.shared.push(message, for: buffer.id)
         history.reset()
         text = ""
+        if gif != nil { uiState.composerGIFs[buffer.id] = nil }
     }
 
     private func send(_ message: String) {

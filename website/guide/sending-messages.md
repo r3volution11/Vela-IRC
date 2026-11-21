@@ -1,11 +1,16 @@
 ---
 title: Sending messages
-description: Vela's message field, with Tab completion, history and drafts, replies, paste confirmation, slash commands, and IRC-safe spelling, autocorrect and Writing Tools.
+description: Vela's message field, with the send button, emoji and GIFs, Tab completion, history and drafts, replies, paste confirmation, slash commands, and IRC-safe spelling, autocorrect and Writing Tools.
 ---
 
 # Sending messages
 
 Type in the message field at the bottom of the window and press **Return** to send. Press <kbd>⌘L</kbd> to jump to the field from anywhere.
+
+At the right end of the field are two buttons:
+
+- **Emoji & GIFs**, the smiley, opens a picker for emoji and GIFs. So does <kbd>⇧⌘E</kbd>. See [Emoji & GIFs](/guide/emoji-and-gifs).
+- **Send**, the arrow, sends, just like <kbd>Return</kbd>. It turns the accent color when there's something to send. If you only use <kbd>Return</kbd>, turn off **Show the send button** in **Settings → Messages → Typing**.
 
 | Key | Does |
 | --- | --- |
@@ -30,7 +35,7 @@ Press <kbd>Tab</kbd> after typing the start of a word:
 - **Nicknames.** People who spoke most recently come first. At the start of a line Vela adds `: ` (`wren: `), the IRC way of addressing someone. A leading `@`, a habit from [Slack](https://slack.com) and [Discord](https://discord.com), is dropped.
 - **Channels.** Words starting with `#` complete channels on this network, joined ones first.
 - **Commands.** `/jo` at the start of a line completes to `/join `.
-- **Emoji.** `:thu` completes to 👍. Typing a whole shortcode such as `:tada:` turns it into 🎉 as you type. Vela knows the common Slack, GitHub and Discord names.
+- **Emoji.** `:thu` completes to 👍. Typing a whole shortcode such as `:tada:` turns it into 🎉 as you type. Vela knows the common Slack, GitHub and Discord names. To browse them all, press <kbd>⇧⌘E</kbd> (see [Emoji & GIFs](/guide/emoji-and-gifs)).
 
 Press <kbd>Tab</kbd> again to cycle through the other matches.
 
@@ -64,7 +69,7 @@ Commands Vela doesn't know are sent to the server as typed, so commands like `/l
 
 ## When you can't send
 
-If you're offline, or you've left the channel, the field says so (**Offline — reconnect to send** or **Not in channel — /join to rejoin**) and shows a **Reconnect** or **Join** button. Commands still work.
+If you're offline, or you've left the channel, the field says so (**Offline — reconnect to send** or **Not in channel — /join to rejoin**) and shows a **Reconnect** or **Join** button in place of the send button. Commands still work, and so does the smiley: you can add emoji to a message before you're back.
 
 ## Typing options {#typing}
 
@@ -80,6 +85,7 @@ macOS can check and correct what you type in the message field, as it does in Ma
 | **Use text replacements** | Expands the text replacements you set up in macOS. **Edit Text Replacements…** opens them in System Settings → Keyboard. | Same as macOS |
 | **Smart quotes and dashes** | Uses curly quotes, and turns double hyphens into dashes. | Same as macOS |
 | **Writing Tools** | Lets Apple Intelligence proofread and rewrite your message. See [below](#writing-tools). | On |
+| **Show the send button** | Shows the send button at the end of the field. <kbd>Return</kbd> sends either way. | On |
 | **Send typing indicators** | Lets others see when you're typing, on servers that [support it](/guide/reactions-replies-typing#typing-indicators). | On |
 
 ### Following macOS {#following-macos}
@@ -127,4 +133,4 @@ Its changes are a single undo step, so <kbd>⌘Z</kbd> puts your message back th
 - **Grammar checking only underlines.** Right-click an underlined word for suggestions.
 - **Return sends exactly what you typed.** It doesn't autocorrect the last word first.
 - **Perform on connect** commands in the [network editor](/guide/adding-a-network#perform-on-connect) are never checked or corrected.
-- All of these are keys in [settings.json](/reference/settings#input): [`input.spellCheck`](/reference/settings#input.spellCheck), [`input.grammarCheck`](/reference/settings#input.grammarCheck), [`input.autocorrect`](/reference/settings#input.autocorrect), [`input.textReplacements`](/reference/settings#input.textReplacements), [`input.smartPunctuation`](/reference/settings#input.smartPunctuation), [`input.writingTools`](/reference/settings#input.writingTools) and [`input.sendTypingIndicators`](/reference/settings#input.sendTypingIndicators). The three that can follow macOS take `true`, `false`, or `"system"` to follow it (the same as leaving them out).
+- All of these are keys in [settings.json](/reference/settings#input): [`input.spellCheck`](/reference/settings#input.spellCheck), [`input.grammarCheck`](/reference/settings#input.grammarCheck), [`input.autocorrect`](/reference/settings#input.autocorrect), [`input.textReplacements`](/reference/settings#input.textReplacements), [`input.smartPunctuation`](/reference/settings#input.smartPunctuation), [`input.writingTools`](/reference/settings#input.writingTools), [`input.showSendButton`](/reference/settings#input.showSendButton) and [`input.sendTypingIndicators`](/reference/settings#input.sendTypingIndicators). The three that can follow macOS take `true`, `false`, or `"system"` to follow it (the same as leaving them out).

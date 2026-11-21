@@ -1,6 +1,6 @@
 ---
 title: Privacy
-description: The Vela app has no telemetry, analytics or accounts. Who Vela talks to, what update checks and link previews reveal, how Apple Intelligence is handled, what's on your Mac and what this site measures.
+description: The Vela app has no telemetry, analytics or accounts. Who Vela talks to, what update checks, previews and GIFs reveal, Apple Intelligence and Siri, what's on your Mac, and this site.
 ---
 
 # Privacy
@@ -18,12 +18,15 @@ Vela only makes connections for things you've set up or turned on:
 | **GitHub** | When you install an update | Your IP address and which version you download. |
 | **Sites behind links people post** | When a [link preview](/guide/inline-media) loads, unless you turn previews off or limit them | Your IP address and that Vela fetched the page. No cookies are sent. |
 | **Sites that only show their page to a browser** (IMDb, for example) | When a link preview finds a bot check instead of the page, unless you turn off **Load previews from sites that need a browser** | What a visit in Safari tells them: your IP address, and whatever the page's own check script collects. It runs in a private session that's thrown away afterwards, with images, other sites and your local network blocked. See [Sites that need a browser](/guide/inline-media#sites-that-need-a-browser). |
+| **KLIPY, for GIF search** (or GIPHY, if you choose it) | Only while the **GIFs** tab of the [emoji and GIF picker](/guide/emoji-and-gifs) is open, unless you turn GIFs off | What you search for and your IP address. The previews load from them too. Nothing about you or your conversations goes with it, and Vela turns off their optional tracking. |
 | **Video providers** (YouTube, Vimeo, Streamable, Twitch) | A video card fetches its title and thumbnail; the player itself loads only when you press play | Your IP address; once you press play, whatever the provider's player collects. YouTube plays from `youtube-nocookie.com`, and the player keeps nothing after it closes. |
 | **Apple's Private Cloud Compute** | Only if you turn on **Use Private Cloud Compute for long catch-ups** (macOS 27 or later; it's off by default), for a catch-up too long for one pass on your Mac | Nothing it keeps: the request is encrypted, used only to write the summary, and not stored or readable by Apple. See [Apple Intelligence, translation and Siri](#apple-intelligence). |
 
 Vela never fetches previews from your local network (`localhost`, private IP addresses, `.local` names), so a link in a channel can't make your Mac probe your router or other devices.
 
 **You're in control of previews.** Turn them off, make them click-to-load, disable them per channel, hide adult sites, blur images until clicked, or set rules for individual sites. See [Inline media & privacy](/guide/inline-media#controlling-media).
+
+**GIFs are a link.** A GIF you send goes out as its address, and the clients of the people in the channel that show images load it from KLIPY or GIPHY, as with any link. GIPHY's links include a tracking token that its terms don't let Vela remove, so it goes to everyone who loads the GIF; KLIPY's don't. To stop GIF search contacting anyone, turn off **Search GIFs** in **Settings → Media → GIFs**: the **GIFs** tab goes away and Vela never contacts a GIF service. See [Emoji & GIFs](/guide/emoji-and-gifs#privacy).
 
 ## Apple Intelligence, translation and Siri {#apple-intelligence}
 
@@ -65,7 +68,8 @@ Everything stays on your Mac, inside Vela's sandbox container:
 - **Link previews and images** you've loaded, while message history is saved: page previews in the database, refreshed after a week (cached previews older than 30 days are deleted when Vela starts), and images in Vela's cache folder. With history off, they're kept in memory and loaded again after a restart.
 - **Drafts** you haven't sent, in memory while Vela is open.
 - **Settings, networks and themes** as plain files you can read.
-- **Passwords, channel keys and client certificates** in your macOS Keychain, never in plain files.
+- **Passwords, channel keys, client certificates and GIF service keys** in your macOS Keychain, never in plain files.
+- **GIF previews**, in memory only, never on disk.
 - **When Vela last checked for updates,** and a version it found while you were busy, so it can offer it when you next open Vela. They're in Vela's preferences.
 
 Outside the container, macOS keeps your channel and conversation names in Spotlight's index (as search results unless you turn off **Show channels in Spotlight**, and on macOS 27 also hidden from results, for Siri), the translation languages you've downloaded, and the notifications you allow until you clear them from Notification Center.

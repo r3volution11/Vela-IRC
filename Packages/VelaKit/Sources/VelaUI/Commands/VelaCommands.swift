@@ -57,9 +57,12 @@ struct VelaCommands: Commands {
         // (Print… and Page Setup…) for the palette.
         CommandGroup(replacing: .printItem) {}
 
-        // Edit → Spelling and Grammar, Substitutions (typing settings).
+        // Edit → Emoji & GIFs… (⇧⌘E), then Spelling and Grammar and
+        // Substitutions (typing settings).
         CommandGroup(replacing: .textEditing) {
             CommandItems(app: app, themeStore: themeStore, uiState: uiState) { commands in
+                CommandMenuButton(commands.emojiAndGIFs)
+                Divider()
                 TypingMenuItems(commands: commands)
             }
         }

@@ -1,0 +1,196 @@
+{
+  "result": true,
+  "data": {
+    "data": [
+      {
+        "id": 8041071659142944,
+        "slug": "hello-hi-662",
+        "title": "Hello",
+        "file": {
+          "hd": {
+            "gif": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-hd.gif",
+              "width": 498,
+              "height": 374,
+              "size": 4001918
+            },
+            "webp": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-hd.webp",
+              "width": 498,
+              "height": 374,
+              "size": 285228
+            },
+            "jpg": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-hd.jpg",
+              "width": 498,
+              "height": 374,
+              "size": 19255
+            }
+          },
+          "md": {
+            "gif": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-md.gif",
+              "width": 498,
+              "height": 374,
+              "size": 1721260
+            },
+            "webp": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-md.webp",
+              "width": 498,
+              "height": 374,
+              "size": 643490
+            },
+            "jpg": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-md.jpg",
+              "width": 498,
+              "height": 374,
+              "size": 20086
+            }
+          },
+          "sm": {
+            "gif": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-sm.gif",
+              "width": 220,
+              "height": 165,
+              "size": 314884
+            },
+            "webp": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-sm.webp",
+              "width": 220,
+              "height": 165,
+              "size": 117000
+            },
+            "jpg": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-sm.jpg",
+              "width": 220,
+              "height": 165,
+              "size": 6000
+            }
+          },
+          "xs": {
+            "gif": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-xs.gif",
+              "width": 90,
+              "height": 68,
+              "size": 71468
+            },
+            "webp": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-xs.webp",
+              "width": 90,
+              "height": 68,
+              "size": 25340
+            },
+            "jpg": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/hello-hi-662-xs.jpg",
+              "width": 90,
+              "height": 68,
+              "size": 2949
+            }
+          }
+        },
+        "tags": [],
+        "type": "gif",
+        "blur_preview": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=="
+      },
+      {
+        "type": "ad",
+        "content": "<html><body>ad</body></html>",
+        "width": 300,
+        "height": 250
+      },
+      {
+        "id": 8041071659142945,
+        "slug": "wave-goodbye-31",
+        "title": "Wave Goodbye",
+        "file": {
+          "hd": {
+            "gif": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-hd.gif",
+              "width": 480,
+              "height": 270,
+              "size": 4001918
+            },
+            "webp": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-hd.webp",
+              "width": 480,
+              "height": 270,
+              "size": 285228
+            },
+            "jpg": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-hd.jpg",
+              "width": 480,
+              "height": 270,
+              "size": 19255
+            }
+          },
+          "md": {
+            "gif": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-md.gif",
+              "width": 480,
+              "height": 270,
+              "size": 1721260
+            },
+            "webp": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-md.webp",
+              "width": 480,
+              "height": 270,
+              "size": 643490
+            },
+            "jpg": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-md.jpg",
+              "width": 480,
+              "height": 270,
+              "size": 20086
+            }
+          },
+          "sm": {
+            "gif": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-sm.gif",
+              "width": 220,
+              "height": 124,
+              "size": 314884
+            },
+            "webp": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-sm.webp",
+              "width": 220,
+              "height": 124,
+              "size": 117000
+            },
+            "jpg": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-sm.jpg",
+              "width": 220,
+              "height": 124,
+              "size": 6000
+            }
+          },
+          "xs": {
+            "gif": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-xs.gif",
+              "width": 90,
+              "height": 51,
+              "size": 71468
+            },
+            "webp": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-xs.webp",
+              "width": 90,
+              "height": 51,
+              "size": 25340
+            },
+            "jpg": {
+              "url": "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/14/af/wave-goodbye-31-xs.jpg",
+              "width": 90,
+              "height": 51,
+              "size": 2949
+            }
+          }
+        },
+        "tags": [],
+        "type": "gif",
+        "blur_preview": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=="
+      }
+    ],
+    "current_page": 1,
+    "per_page": 24,
+    "has_next": true
+  }
+}

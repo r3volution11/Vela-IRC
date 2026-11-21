@@ -53,10 +53,20 @@ public final class UIState {
     /// A question about saved message history, asked in the main window
     /// (from the command palette). Settings asks in its own window.
     var historyDialog: HistoryDialog?
+    /// A GIF picked for the message box, per buffer: sent with the text.
+    var composerGIFs: [BufferID: ComposerGIF] = [:]
+    /// Opens or closes the message box's emoji and GIF picker (⇧⌘E);
+    /// incremented to trigger.
+    var composerPickerToken = 0
+    /// A Settings section to scroll to when its pane shows (Media's GIFs).
+    var settingsSectionReveal: SettingsReveal?
 
     public init() {}
 
     public func focusInput() { focusInputToken &+= 1 }
+
+    /// ⇧⌘E: the selected buffer's message box opens its picker, or closes it.
+    func toggleComposerPicker() { composerPickerToken &+= 1 }
 
     /// Moves the keyboard focus to `area`.
     public func focus(_ area: FocusArea) {
@@ -88,6 +98,14 @@ public final class UIState {
 }
 
 /// Mention someone in a buffer's message box, once per request.
+/// A section of a Settings pane to show: the section's view has `.id(section)`.
+struct SettingsReveal: Equatable {
+    var pane: SettingsPane
+    var section: String
+
+    static let gifs = SettingsReveal(pane: .media, section: "gifs")
+}
+
 public struct MentionRequest: Equatable {
     public let id = UUID()
     public let bufferID: BufferID

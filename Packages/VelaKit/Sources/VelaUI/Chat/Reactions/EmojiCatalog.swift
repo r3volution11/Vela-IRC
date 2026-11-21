@@ -118,13 +118,26 @@ nonisolated enum EmojiCatalog {
                 let name = displayName(for: emoji)
                 let aliasWords = (aliases[emoji] ?? "").split(separator: " ").map(String.init)
                 let words = (name.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init) + aliasWords)
+                    + (shortcodeWords[emoji] ?? [])
                 result[emoji] = Entry(emoji: emoji, name: name, words: words)
             }
         }
         return result
     }()
 
-    /// Emoji whose name or aliases start with every word of `query`, in catalog order.
+    /// The message box's `:shortcode:` names (`EmojiShortcodes`), by emoji,
+    /// so the pickers find 😍 by "heart_eyes" (or "heart eyes") as Tab
+    /// completion does.
+    static let shortcodeWords: [String: [String]] = {
+        var words: [String: [String]] = [:]
+        for (code, emoji) in EmojiShortcodes.all {
+            words[emoji, default: []] += [code] + code.split(separator: "_").map(String.init)
+        }
+        return words
+    }()
+
+    /// Emoji whose name, aliases or shortcodes start with every word of
+    /// `query`, in catalog order.
     static func search(_ query: String) -> [String] {
         let terms = query.lowercased().split(whereSeparator: \.isWhitespace).map(String.init)
         guard !terms.isEmpty else { return [] }

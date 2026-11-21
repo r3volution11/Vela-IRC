@@ -156,7 +156,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 - **Command palette** (⇧⌘P) runs any command: layouts, presets, themes, network actions, settings and more.
 - **Settings editor:** every setting in one searchable list, VS Code style, with filters such as `@modified`, plus a JSON view of `settings.json` that suggests settings and values, flags mistakes as you type and shows docs on hover.
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
-- **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. Pasting multiple lines asks for confirmation before sending.
+- **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. An emoji and GIF picker (⇧⌘E), with GIFs from KLIPY or GIPHY sent as links, and a send button. Pasting multiple lines asks for confirmation before sending.
 - **Typing options:** spelling, grammar, autocorrect, text replacements and smart quotes, following your Mac's settings until you change them. Commands, nicks, channel names, links and code are never corrected.
 - **User menu:** right-click a nick in the member list or in a message for Message, Mention, Whois, Ping, CTCP, Invite and Ignore, plus the ops, voices, kicks, bans and quiets your rank in the channel allows. Select several people in the member list to act on them all.
 - **Slash commands:**
@@ -222,7 +222,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ## Privacy
 
-- **No telemetry, analytics or accounts.** Vela talks to the IRC servers you add, and to the sites behind link previews you load.
+- **No telemetry, analytics or accounts.** Vela talks to the IRC servers you add, and otherwise only for things you use: link previews, and GIF search.
 - **Update checks send only Vela's version.** Once a day, Vela asks velairc.app (hosted by GitHub Pages) whether there's a new version; updates download from GitHub. No system profile, identifier or usage data is sent. Turn the checks off in **Settings → Updates**. See [Privacy](https://velairc.app/help/privacy#updates).
 - **Message history is saved only if you want.** **Save message history** (`history.save`) is off for new installs: messages, reactions and link previews stay in memory while Vela runs, and a bouncer or `chathistory` server fills them in again. Your channels and read positions are saved either way. Turned on, history goes in a local SQLite database, and **Delete Saved History…** removes it any time. Plain-text chat logs are a separate opt-in.
 - **Link previews** fetch the linked page or image, which reveals your IP address to that site. You can control this:
@@ -230,7 +230,8 @@ One click sets navigation, layout, density and media together. Presets never tou
   - Disable media for a network or channel.
   - Set per-site rules: everything, text only or nothing.
 - **No previews from your local network.** Vela never fetches previews from private, local or LAN addresses.
-- **Passwords and certificates** are stored in the macOS Keychain. Vela is sandboxed.
+- **GIF search** sends what you search for, and your IP address, to KLIPY (or GIPHY, with your own key), only while the GIFs tab is open. A GIF is sent as its link, which others' clients load from the service. Turn off **Search GIFs** (`gifs.enabled`) and Vela never contacts a GIF service.
+- **Passwords, certificates and GIF service keys** are stored in the macOS Keychain. Vela is sandboxed.
 - **On-device intelligence.** Catch me up summaries and translations are made on your Mac, unless you let long catch-ups use Apple's Private Cloud Compute (off by default; encrypted, not stored, not readable by Apple). Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
 - **The website is separate.** velairc.app uses Google Analytics, asks visitors in the EU, EEA, UK and Switzerland first, and honors Global Privacy Control. The app never does any of this. See [Privacy](https://velairc.app/help/privacy#this-website).
 

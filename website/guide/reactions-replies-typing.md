@@ -11,7 +11,7 @@ Modern IRC servers support a few things chat apps have made familiar. Vela suppo
 
 Hover a message: the toolbar at its top-right offers your three most-used emoji and a **smiley** button that opens the emoji picker, with search, your frequently used emoji and every category. **Right-click → Add Reaction** works too.
 
-From the keyboard, press <kbd>⌥⌘2</kbd> to pick a message (<kbd>↑</kbd> and <kbd>↓</kbd> move to another), then <kbd>E</kbd> to open the emoji picker. Type to search, and <kbd>Return</kbd> adds the first match. See [The messages](/reference/keyboard-shortcuts#the-messages) for everything else you can do from there.
+From the keyboard, press <kbd>⌥⌘2</kbd> to pick a message (<kbd>↑</kbd> and <kbd>↓</kbd> move to another), then <kbd>E</kbd> to open the emoji picker. Type to search, move with the arrow keys, and press <kbd>Return</kbd> to add the selected emoji (or the first match). The same emoji are in the message field's [emoji picker](/guide/emoji-and-gifs) (<kbd>⇧⌘E</kbd>). See [The messages](/reference/keyboard-shortcuts#the-messages) for everything else you can do from there.
 
 Reactions appear as chips under the message, each with a count; yours are highlighted. Click a chip to add or remove your reaction, or the **+** chip to pick another emoji.
 

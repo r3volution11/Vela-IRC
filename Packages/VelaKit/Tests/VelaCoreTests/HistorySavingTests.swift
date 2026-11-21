@@ -390,8 +390,10 @@ struct HistorySavingTests {
         let database = try VelaDatabase.inMemory()
         let (app, directory) = try makeApp(save: nil, database: database)
         defer { try? FileManager.default.removeItem(at: directory) }
-        // The image cache is shared by every test in this process.
-        defer { ImageLoader.setDiskCacheEnabled(true) }
+        // The image cache itself is shared by every test in this process,
+        // and other tests' models switch it too: watch what this one asks for.
+        var imageDiskCache: [Bool] = []
+        app.setImageDiskCache = { imageDiskCache.append($0) }
 
         // Off by default.
         #expect(app.historyStorage == .memoryOnly)
@@ -401,14 +403,14 @@ struct HistorySavingTests {
         app.settings[.historySave] = true
         try await waitUntil { app.previewDiskCache.isOn }
         #expect(app.historyStorage == .saveAndLoad)
-        #expect(ImageLoader.httpCache.diskCapacity == ImageLoader.diskCacheCapacity)
+        #expect(imageDiskCache.last == true)
 
         // Turned off with history kept, it still loads.
         try await database.append([MessageRecord(networkID: UUID(), bufferName: "#vela", time: Date(), kind: "message", text: "kept")])
         app.settings[.historySave] = false
         try await waitUntil { !app.previewDiskCache.isOn && app.savedHistory.hasMessages }
         #expect(app.historyStorage == .loadOnly)
-        #expect(ImageLoader.httpCache.diskCapacity == 0)
+        #expect(imageDiskCache.last == false)
     }
 
     @Test func deletingSavedHistory() async throws {

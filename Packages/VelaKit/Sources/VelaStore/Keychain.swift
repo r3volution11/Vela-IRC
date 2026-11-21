@@ -88,6 +88,13 @@ public final class Keychain: Sendable {
         account(networkID: networkID, purpose: .channelKey, qualifier: channel)
     }
 
+    /// The Keychain account for a GIF service key you entered in
+    /// Settings → Media: `gifs/<service>` (`gifs/klipy`, `gifs/giphy`).
+    /// Never settings.json.
+    public static func gifServiceKeyAccount(_ service: GIFService) -> String {
+        "gifs/\(service.rawValue)"
+    }
+
     // MARK: Generic passwords
 
     /// Stores (or replaces) a secret for `account`.

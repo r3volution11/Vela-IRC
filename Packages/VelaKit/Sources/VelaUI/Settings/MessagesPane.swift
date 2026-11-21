@@ -237,6 +237,11 @@ struct MessagesPane: View {
             )
             SettingsToggle("Writing Tools", detail: writingToolsDetail, isOn: $settings[.inputWritingTools])
             SettingsToggle(
+                "Show the send button",
+                detail: "A button at the end of the message box that sends, like Return.",
+                isOn: $settings[.inputShowSendButton]
+            )
+            SettingsToggle(
                 "Send typing indicators",
                 detail: "Let others see when you're typing, on servers that support it.",
                 isOn: $settings[.inputSendTypingIndicators]

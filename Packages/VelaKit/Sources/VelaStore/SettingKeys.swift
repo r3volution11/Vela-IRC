@@ -154,6 +154,23 @@ public enum DockBounceTrigger: String, Codable, Sendable, CaseIterable, SettingV
     case privateMessages
 }
 
+/// The service the message box's GIF picker searches (`gifs.provider`).
+public enum GIFService: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    /// KLIPY, with the key built into Vela or your own.
+    case klipy
+    /// GIPHY, with your own key.
+    case giphy
+}
+
+/// The most explicit GIFs the picker shows (`gifs.rating`), as film
+/// ratings: G for everyone up to R for adults.
+public enum GIFRating: String, Codable, Sendable, CaseIterable, SettingValueConvertible {
+    case g
+    case pg
+    case pg13 = "pg-13"
+    case r
+}
+
 /// The mask Ban, Kick + Ban, Quiet and `/ban` use for someone, built from
 /// their `nick!user@host` (`moderation.banMask`). Written in settings.json
 /// as the mask's shape.
@@ -492,6 +509,33 @@ extension SettingKey where Value == Double {
     }
 }
 
+// MARK: GIFs
+
+extension SettingKey where Value == Bool {
+    public static var gifsEnabled: SettingKey<Bool> {
+        .init("gifs.enabled", default: true,
+              summary: "Show the GIFs tab in the message box's emoji picker (⇧⌘E) and search GIFs there. Off hides the tab, and Vela never contacts a GIF service.")
+    }
+    public static var gifsAnimatePreviews: SettingKey<Bool> {
+        .init("gifs.animatePreviews", default: true,
+              summary: "Play the GIFs in the picker while they're in view. Off shows still images (so does Reduce Motion).")
+    }
+}
+
+extension SettingKey where Value == GIFService {
+    public static var gifsProvider: SettingKey<GIFService> {
+        .init("gifs.provider", default: .klipy,
+              summary: "Where GIF search looks: klipy (with the key built into Vela, or your own) or giphy (needs your own key). Keys you enter in Settings → Media are kept in your Keychain, never in this file.")
+    }
+}
+
+extension SettingKey where Value == GIFRating {
+    public static var gifsRating: SettingKey<GIFRating> {
+        .init("gifs.rating", default: .r,
+              summary: "The most explicit GIFs search shows, as film ratings: g, pg, pg-13 or r (the loosest).")
+    }
+}
+
 // MARK: Notifications & behavior
 
 extension SettingKey where Value == Bool {
@@ -503,6 +547,10 @@ extension SettingKey where Value == Bool {
     }
     public static var notifySound: SettingKey<Bool> {
         .init("notifications.sound", default: true, summary: "Play a sound with notifications.")
+    }
+    public static var inputShowSendButton: SettingKey<Bool> {
+        .init("input.showSendButton", default: true,
+              summary: "Show a send button at the end of the message box. Return sends either way.")
     }
     public static var inputSendTypingIndicators: SettingKey<Bool> {
         .init("input.sendTypingIndicators", default: true, summary: "Let others see when you are typing (+typing).")
@@ -782,6 +830,11 @@ public enum SettingsCatalog {
             SettingKey.mediaDisabledBuffers.descriptor,
             SettingKey.mediaBlurredBuffers.descriptor,
 
+            SettingKey.gifsEnabled.descriptor,
+            SettingKey.gifsProvider.descriptor,
+            SettingKey.gifsRating.descriptor,
+            SettingKey.gifsAnimatePreviews.descriptor,
+
             SettingKey.notifyHighlights.descriptor,
             SettingKey.notifyPrivateMessages.descriptor,
             SettingKey.notifySound.descriptor,
@@ -792,6 +845,7 @@ public enum SettingsCatalog {
             SettingKey.dockBounce.descriptor,
             SettingKey.dockBounceFor.descriptor,
             SettingKey.highlightWords.descriptor,
+            SettingKey.inputShowSendButton.descriptor,
             SettingKey.inputSendTypingIndicators.descriptor,
             SettingKey.inputSpellCheck.descriptor,
             SettingKey.inputGrammarCheck.descriptor,

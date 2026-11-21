@@ -25,6 +25,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Presets', link: '/guide/presets' },
       { text: 'Tab stacks', link: '/guide/tab-stacks' },
       { text: 'Sending messages', link: '/guide/sending-messages' },
+      { text: 'Emoji & GIFs', link: '/guide/emoji-and-gifs' },
       { text: 'Command palette', link: '/guide/command-palette' },
       { text: 'Inline media & privacy', link: '/guide/inline-media' },
       { text: 'Reactions, replies & typing', link: '/guide/reactions-replies-typing' },

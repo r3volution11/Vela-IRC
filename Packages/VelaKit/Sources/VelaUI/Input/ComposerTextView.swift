@@ -53,6 +53,9 @@ struct ComposerActions {
     var textCheckingToggled: (TextCheckingToggle, Bool) -> Void = { _, _ in }
     /// Nicks and channel types, read when text is checked.
     var textContext: () -> ComposerTextContext = { ComposerTextContext(nicks: [], channelTypes: ["#", "&"]) }
+    /// Delete with the caret at the very start and nothing selected.
+    /// Return true if something before the text (a GIF) was removed.
+    var deleteBackwardAtStart: () -> Bool = { false }
 }
 
 /// Text to insert at the caret, delivered once per `id`.
@@ -547,6 +550,9 @@ struct ComposerTextView: NSViewRepresentable {
                 return isCaretOnFirstLine() && parent.actions.historyPrevious()
             case #selector(NSResponder.moveDown(_:)):
                 return isCaretOnLastLine() && parent.actions.historyNext()
+            case #selector(NSResponder.deleteBackward(_:)):
+                let selection = textView.selectedRange()
+                return selection.location == 0 && selection.length == 0 && parent.actions.deleteBackwardAtStart()
             case #selector(NSResponder.cancelOperation(_:)):
                 // A pending paste or a reply first, as before; then a Tab
                 // completion being cycled through, which ends, leaving the

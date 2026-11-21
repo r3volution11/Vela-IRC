@@ -17,7 +17,7 @@ struct MediaPane: View {
     var body: some View {
         @Bindable var settings = app.settings
 
-        SettingsPage("Media", subtitle: "Inline images, link previews and video players, and where they're allowed to load from.", pane: .media) {
+        SettingsPage("Media", subtitle: "Inline images, link previews and video players, where they're allowed to load from, and GIF search.", pane: .media) {
             SettingsSection("Loading") {
                 SettingsToggle(
                     "Load previews automatically",
@@ -115,6 +115,8 @@ struct MediaPane: View {
                     }
                 }
             }
+
+            GIFSettingsSection()
 
             SettingsSection(
                 "Restrictions",

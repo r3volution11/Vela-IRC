@@ -20,6 +20,7 @@ import VelaTheme
 /// settings.json).
 struct SettingsPage<Content: View>: View {
     @Environment(\.theme) private var theme
+    @Environment(UIState.self) private var uiState: UIState?
     let title: String
     var subtitle: String?
     var pane: SettingsPane?
@@ -33,19 +34,31 @@ struct SettingsPage<Content: View>: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                SettingsPageHeader(title: title, subtitle: subtitle, pane: pane)
-                content
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 26) {
+                    SettingsPageHeader(title: title, subtitle: subtitle, pane: pane)
+                    content
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, 14)
+                .padding(.bottom, 32)
+                .frame(maxWidth: 720, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 28)
-            .padding(.top, 14)
-            .padding(.bottom, 32)
-            .frame(maxWidth: 720, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            .scrollIndicators(.automatic)
+            .background(theme[ThemeKey.settingsBackground])
+            // A section asked for from elsewhere ("Use Your Own Key in
+            // Settings" in the GIF picker): scrolled to once it's laid out.
+            .onChange(of: uiState?.settingsSectionReveal, initial: true) { _, reveal in
+                guard let reveal, let uiState, reveal.pane == pane else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(80))
+                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(reveal.section, anchor: .top) }
+                    if uiState.settingsSectionReveal == reveal { uiState.settingsSectionReveal = nil }
+                }
+            }
         }
-        .scrollIndicators(.automatic)
-        .background(theme[ThemeKey.settingsBackground])
     }
 }
 

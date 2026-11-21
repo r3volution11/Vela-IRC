@@ -1,0 +1,198 @@
+{
+  "data": [
+    {
+      "type": "gif",
+      "id": "l0HlyLQsbvhciAuKA",
+      "url": "https://giphy.com/gifs/surf-summer-l0HlyLQsbvhciAuKA",
+      "slug": "surf-summer-l0HlyLQsbvhciAuKA",
+      "bitly_gif_url": "https://gph.is/29LtIoR",
+      "bitly_url": "https://gph.is/29LtIoR",
+      "embed_url": "https://giphy.com/embed/l0HlyLQsbvhciAuKA",
+      "username": "haydiroket",
+      "source": "https://haydiroket.tumblr.com/",
+      "title": "summer surf GIF",
+      "rating": "g",
+      "content_url": "",
+      "source_tld": "haydiroket.tumblr.com",
+      "source_post_url": "",
+      "is_sticker": 0,
+      "import_datetime": "2016-07-14 13:16:13",
+      "trending_datetime": "2017-07-04 08:45:01",
+      "images": {
+        "original": {
+          "height": "270",
+          "width": "480",
+          "size": "2849790",
+          "url": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/giphy.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=giphy.gif&ct=g",
+          "webp": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/giphy.webp?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=giphy.webp&ct=g",
+          "webp_size": "1424895",
+          "mp4": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/giphy.mp4?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=giphy.mp4&ct=g",
+          "mp4_size": "712447",
+          "frames": "16",
+          "hash": "114244826c80f74ee47fe5dc137660b8"
+        },
+        "downsized": {
+          "height": "270",
+          "width": "480",
+          "size": "1849790",
+          "url": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/giphy-downsized.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=giphy-downsized.gif&ct=g"
+        },
+        "fixed_width": {
+          "height": "113",
+          "width": "200",
+          "size": "160767",
+          "url": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/200w.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=200w.gif&ct=g",
+          "webp": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/200w.webp?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=200w.webp&ct=g",
+          "webp_size": "80383",
+          "mp4": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/200w.mp4?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=200w.mp4&ct=g",
+          "mp4_size": "40191"
+        },
+        "fixed_width_still": {
+          "height": "113",
+          "width": "200",
+          "size": "8624",
+          "url": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/200w_s.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=200w_s.gif&ct=g"
+        },
+        "fixed_width_small": {
+          "height": "56",
+          "width": "100",
+          "size": "43570",
+          "url": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/100w.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=100w.gif&ct=g",
+          "webp": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/100w.webp?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=100w.webp&ct=g",
+          "webp_size": "21785",
+          "mp4": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/100w.mp4?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=100w.mp4&ct=g",
+          "mp4_size": "10892"
+        },
+        "fixed_width_small_still": {
+          "height": "56",
+          "width": "100",
+          "size": "4079",
+          "url": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/100w_s.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=100w_s.gif&ct=g"
+        },
+        "looping": {
+          "mp4": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/giphy-loop.mp4",
+          "mp4_size": "1902227"
+        },
+        "480w_still": {
+          "url": "https://media3.giphy.com/media/l0HlyLQsbvhciAuKA/480w_s.jpg",
+          "width": "480",
+          "height": "270"
+        }
+      },
+      "analytics_response_payload": "e=Z2lmX2lkPWwwSGx5TFFzYnZoY2lBdUtB",
+      "analytics": {
+        "onload": {
+          "url": "https://giphy-analytics.giphy.com/v2/pingback_simple?analytics_response_payload=x&action_type=SEEN"
+        },
+        "onclick": {
+          "url": "https://giphy-analytics.giphy.com/v2/pingback_simple?analytics_response_payload=x&action_type=CLICK"
+        },
+        "onsent": {
+          "url": "https://giphy-analytics.giphy.com/v2/pingback_simple?analytics_response_payload=x&action_type=SENT"
+        }
+      }
+    },
+    {
+      "type": "gif",
+      "id": "3o7buiO0t8uLXHBDXO",
+      "url": "https://giphy.com/gifs/cat-typing-3o7buiO0t8uLXHBDXO",
+      "slug": "cat-typing-3o7buiO0t8uLXHBDXO",
+      "bitly_gif_url": "https://gph.is/29LtIoR",
+      "bitly_url": "https://gph.is/29LtIoR",
+      "embed_url": "https://giphy.com/embed/3o7buiO0t8uLXHBDXO",
+      "username": "",
+      "source": "https://reddit.com/",
+      "title": "Cat Typing GIF",
+      "rating": "g",
+      "content_url": "",
+      "source_tld": "reddit.com",
+      "source_post_url": "",
+      "is_sticker": 0,
+      "import_datetime": "2016-07-14 13:16:13",
+      "trending_datetime": "2017-07-04 08:45:01",
+      "images": {
+        "original": {
+          "height": "270",
+          "width": "480",
+          "size": "2849790",
+          "url": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/giphy.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=giphy.gif&ct=g",
+          "webp": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/giphy.webp?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=giphy.webp&ct=g",
+          "webp_size": "1424895",
+          "mp4": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/giphy.mp4?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=giphy.mp4&ct=g",
+          "mp4_size": "712447",
+          "frames": "16",
+          "hash": "114244826c80f74ee47fe5dc137660b8"
+        },
+        "downsized": {
+          "height": "270",
+          "width": "480",
+          "size": "1849790",
+          "url": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/giphy-downsized.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=giphy-downsized.gif&ct=g"
+        },
+        "fixed_width": {
+          "height": "113",
+          "width": "200",
+          "size": "160767",
+          "url": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/200w.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=200w.gif&ct=g",
+          "webp": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/200w.webp?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=200w.webp&ct=g",
+          "webp_size": "80383",
+          "mp4": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/200w.mp4?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=200w.mp4&ct=g",
+          "mp4_size": "40191"
+        },
+        "fixed_width_still": {
+          "height": "113",
+          "width": "200",
+          "size": "8624",
+          "url": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/200w_s.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=200w_s.gif&ct=g"
+        },
+        "fixed_width_small": {
+          "height": "56",
+          "width": "100",
+          "size": "43570",
+          "url": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/100w.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=100w.gif&ct=g",
+          "webp": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/100w.webp?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=100w.webp&ct=g",
+          "webp_size": "21785",
+          "mp4": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/100w.mp4?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=100w.mp4&ct=g",
+          "mp4_size": "10892"
+        },
+        "fixed_width_small_still": {
+          "height": "56",
+          "width": "100",
+          "size": "4079",
+          "url": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/100w_s.gif?cid=9f0f64258d093c222a5c058e0ba384203b07211f39c5ec49&rid=100w_s.gif&ct=g"
+        },
+        "looping": {
+          "mp4": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/giphy-loop.mp4",
+          "mp4_size": "1902227"
+        },
+        "480w_still": {
+          "url": "https://media3.giphy.com/media/3o7buiO0t8uLXHBDXO/480w_s.jpg",
+          "width": "480",
+          "height": "270"
+        }
+      },
+      "analytics_response_payload": "e=Z2lmX2lkPWwwSGx5TFFzYnZoY2lBdUtB",
+      "analytics": {
+        "onload": {
+          "url": "https://giphy-analytics.giphy.com/v2/pingback_simple?analytics_response_payload=x&action_type=SEEN"
+        },
+        "onclick": {
+          "url": "https://giphy-analytics.giphy.com/v2/pingback_simple?analytics_response_payload=x&action_type=CLICK"
+        },
+        "onsent": {
+          "url": "https://giphy-analytics.giphy.com/v2/pingback_simple?analytics_response_payload=x&action_type=SENT"
+        }
+      }
+    }
+  ],
+  "pagination": {
+    "total_count": 60,
+    "count": 2,
+    "offset": 0
+  },
+  "meta": {
+    "status": 200,
+    "msg": "OK",
+    "response_id": "l52iuyir6ncyoi9mngrova7c3r7fb9l72cyay35x"
+  }
+}
