@@ -24,7 +24,15 @@ enum PaletteKey: Equatable {
 /// Up/Down, Return, Esc, Tab) through its field editor's commands, so they
 /// work whatever the key bindings and never reach the text. The emoji and
 /// GIF pickers use it too.
-struct PaletteSearchField: NSViewRepresentable {
+///
+/// The placeholder is drawn here, by SwiftUI, not by the text field. A text
+/// field draws its own placeholder until it's focused, and its field editor
+/// draws it after; with no background behind them, the first drawing could
+/// stay on screen under the second. When the placeholder changed (the
+/// pickers' "Search emoji" and "Search KLIPY", or "Search GIFs" for the
+/// moment before the GIF service is ready), the two showed on top of each
+/// other, unreadable. VoiceOver still reads it from the field.
+struct PaletteSearchField: View {
     @Binding var text: String
     var placeholder: String
     var accessibilityLabel: String
@@ -35,6 +43,41 @@ struct PaletteSearchField: NSViewRepresentable {
     var selectionColor: NSColor
     /// Called synchronously for every edit, so results are current before
     /// the next key (e.g. a quick Return) is handled.
+    let onTextChange: (String) -> Void
+    let onKey: (PaletteKey) -> Bool
+
+    var body: some View {
+        PaletteTextFieldView(
+            text: $text, placeholder: placeholder, accessibilityLabel: accessibilityLabel, font: font,
+            textColor: textColor, caretColor: caretColor, selectionColor: selectionColor,
+            onTextChange: onTextChange, onKey: onKey
+        )
+        .overlay(alignment: .leading) {
+            if text.isEmpty {
+                Text(placeholder)
+                    .font(Font(font))
+                    .foregroundStyle(Color(nsColor: placeholderColor))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    // Measured: a borderless field's text starts at its
+                    // leading edge, and so does this.
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+}
+
+/// The text field itself, without a placeholder of its own
+/// (`PaletteSearchField` draws it).
+private struct PaletteTextFieldView: NSViewRepresentable {
+    @Binding var text: String
+    var placeholder: String
+    var accessibilityLabel: String
+    var font: NSFont
+    var textColor: NSColor
+    var caretColor: NSColor
+    var selectionColor: NSColor
     let onTextChange: (String) -> Void
     let onKey: (PaletteKey) -> Bool
 
@@ -79,19 +122,15 @@ struct PaletteSearchField: NSViewRepresentable {
         field.textColor = textColor
         field.caretColor = caretColor
         field.selectionColor = selectionColor
-        field.placeholderAttributedString = NSAttributedString(
-            string: placeholder,
-            attributes: [.font: font, .foregroundColor: placeholderColor]
-        )
         field.setAccessibilityLabel(accessibilityLabel)
         field.setAccessibilityPlaceholderValue(placeholder)
         field.applyEditorColors()
     }
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
-        var parent: PaletteSearchField
+        var parent: PaletteTextFieldView
 
-        init(parent: PaletteSearchField) {
+        init(parent: PaletteTextFieldView) {
             self.parent = parent
         }
 

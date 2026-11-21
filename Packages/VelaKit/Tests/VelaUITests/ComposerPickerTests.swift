@@ -40,7 +40,7 @@ extension LinkSelectionTests {
             #expect(try await hosted.wait { hosted.searchField?.currentEditor() != nil }, "clicking the smiley didn't open the picker")
             let window = try #require(hosted.pickerWindow)
             // The search field has the focus, on the Emoji tab.
-            #expect(hosted.searchField?.placeholderAttributedString?.string == "Search emoji")
+            #expect(hosted.searchField?.accessibilityPlaceholderValue() == "Search emoji")
             #expect(hosted.element("Emoji tab", inPicker: true) != nil)
             // Opening on the Emoji tab asks no GIF service anything.
             #expect(hosted.gifs.transport.requests.isEmpty)
@@ -167,16 +167,16 @@ extension LinkSelectionTests {
             try await hosted.openPicker()
             let picker = try #require(hosted.pickerWindow)
             try await hosted.press(.tab, in: picker)
-            #expect(hosted.searchField?.placeholderAttributedString?.string == "Search Fakey")
+            #expect(hosted.searchField?.accessibilityPlaceholderValue() == "Search Fakey")
             try await waitForResults(hosted, prefix: "Trending 100, by @maker")
             #expect(hosted.gifs.transport.trendingRequests.count == 1)
             // The attribution, always in view under the grid.
             #expect(hosted.element("Powered by Fakey", inPicker: true) != nil)
             // ⌃Tab goes back to Emoji and on to GIFs again.
             try await hosted.press(.controlTab, in: picker)
-            #expect(hosted.searchField?.placeholderAttributedString?.string == "Search emoji")
+            #expect(hosted.searchField?.accessibilityPlaceholderValue() == "Search emoji")
             try await hosted.press(.controlTab, in: picker)
-            #expect(hosted.searchField?.placeholderAttributedString?.string == "Search Fakey")
+            #expect(hosted.searchField?.accessibilityPlaceholderValue() == "Search Fakey")
             try await waitForResults(hosted, prefix: "Trending 100")
             // View on Fakey: what's trending, on the service's site.
             try await hosted.press("View on Fakey", inPicker: true)
@@ -318,11 +318,11 @@ extension LinkSelectionTests {
             defer { hosted.close() }
             try await hosted.openPicker()
             let picker = try #require(hosted.pickerWindow)
-            #expect(hosted.searchField?.placeholderAttributedString?.string == "Search emoji")
+            #expect(hosted.searchField?.accessibilityPlaceholderValue() == "Search emoji")
             #expect(hosted.element("GIFs tab", inPicker: true) == nil)
             try await hosted.press(.tab, in: picker)
             try await hosted.press(.controlTab, in: picker)
-            #expect(hosted.searchField?.placeholderAttributedString?.string == "Search emoji")
+            #expect(hosted.searchField?.accessibilityPlaceholderValue() == "Search emoji")
             try await hosted.typeInPicker("cats")
             try await Task.sleep(for: .milliseconds(600))
             #expect(hosted.gifs.transport.requests.isEmpty)
