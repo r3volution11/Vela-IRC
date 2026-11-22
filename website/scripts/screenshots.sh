@@ -66,7 +66,10 @@ shot home-lighter   1400x900 1600 --theme Lighter   --preset modern
 shot welcome-palenight 1280x800 1400 --theme Palenight --preset modern --no-networks
 shot welcome-lighter   1280x800 1400 --theme Lighter   --preset modern --no-networks
 
-# Presets, all in Palenight so they compare at a glance.
+# Whole setups, all in Palenight so they compare at a glance: Vela 1.0–1.4's
+# presets (--preset), still used across the guide for a sidebar with Modern
+# messages, Classic IRC, tabs on top and tabs in the title bar with Columns.
+# Settings → Presets itself is the settings-presets pane shot below.
 for preset in classic modern tabbed focus; do
   shot "preset-$preset" 1280x800 1400 --theme Palenight --preset "$preset"
 done
@@ -128,6 +131,9 @@ pane() {
   shift 3
   shot "$name" "$size" 1200 --theme Palenight --preset modern --settings-pane "$pane" "$@"
 }
+# Settings → Presets: the window layouts, message styles and densities, down
+# to the preview.
+pane settings-presets      820x960 presets
 pane settings-intelligence 820x534 intelligence
 pane settings-siri         820x640 intelligence --settings-scroll 9999
 # Timestamps, with Position for the current layout (Modern) and Other layouts.

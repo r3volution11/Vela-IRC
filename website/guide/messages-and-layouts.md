@@ -5,7 +5,7 @@ description: Vela's three message layouts (Classic, Modern grouped and Compact c
 
 # Messages & layouts
 
-Vela can lay out a conversation three ways. Switch in **Settings → Messages**, from **View → Message Layout**, or by typing "layout" in the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>). The change applies instantly.
+Vela can lay out a conversation three ways. Switch in **Settings → Messages**, or pick a message style in **Settings → Presets**, **View → Message Style** or the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>, type "message style"). The change applies instantly.
 
 ## Classic
 
@@ -13,7 +13,7 @@ Vela can lay out a conversation three ways. Switch in **Settings → Messages**,
 
 One line per message, `[12:01] <nick> text`, like [Textual](https://www.textualapp.com) or [irssi](https://irssi.org). Long messages wrap and hang under the text, clear of the timestamp column. Actions read `* nick waves`.
 
-Pair it with **Use a monospace font** (below) for a terminal feel; the **Classic IRC** [preset](/guide/presets) does exactly that.
+Pair it with **Use a monospace font** (below) for a terminal feel; the **Classic IRC** [message style](/guide/presets#message-style) does exactly that.
 
 ## Modern grouped
 
@@ -36,7 +36,7 @@ In **Settings → Messages**:
 - **Font** is the system font by default; choose any font installed on your Mac.
 - **Use a monospace font** renders all chat text in the monospace font, like irssi or WeeChat. **Monospace font** (SF Mono by default) is also used for code and for the columns layout's fixed-width parts.
 - **Size** sets the font size, from 9 to 28 points (13 by default). **View → Bigger** (<kbd>⌘+</kbd>), **Smaller** (<kbd>⌘−</kbd>) and **Actual Size** (<kbd>⌘0</kbd>) change it from anywhere.
-- **Line spacing** adds space between the lines of one message (4 points by default); **Message spacing** adds space between messages and groups (12 points by default), the same in every layout. A mention's highlight, the hover color and a selection cover the message itself, evenly above and below it, and not the space around it. In settings.json they're [`chat.lineSpacing`](/reference/settings#chat.lineSpacing) and [`chat.messageSpacing`](/reference/settings#chat.messageSpacing).
+- **Line spacing** adds space between the lines of one message (4 points by default); **Message spacing** adds space between messages and groups (12 points by default), the same in every layout. A mention's highlight, the hover color and a selection cover the message itself, evenly above and below it, and not the space around it. In settings.json they're [`chat.lineSpacing`](/reference/settings#chat.lineSpacing) and [`chat.messageSpacing`](/reference/settings#chat.messageSpacing). The [density](/guide/presets#density) in **Settings → Presets** (or **View → Density**) sets both at once: **Compact** (1 and 2 points), **Standard** (4 and 12) or **Comfortable** (6 and 18). It never changes the font size.
 
 ## Timestamps
 
@@ -82,7 +82,7 @@ In settings.json these are [`chat.timestampPosition.classic`](/reference/setting
 - **Collapse** a run of them into one summary, such as "alice, bob and 3 others joined · carol left", which you can expand. This is the default.
 - **Hide** them completely.
 
-The same choices are in **View → Message Layout**.
+The same choices are in **View → Message Style**.
 
 ## Colors and formatting
 
@@ -118,7 +118,7 @@ Messages a [bouncer](/guide/bouncers) or a server with chat history replays when
 
 Either way, unread counts in the sidebar, the rail and on tabs work as usual. Without the New line, the **Catch me up** button isn't offered, because it sits on the line; right-click the channel and choose **Catch Me Up**, or use the [command palette](/guide/command-palette), instead. See [Catch me up](/guide/apple-intelligence#catch-me-up).
 
-For a classic IRC feel, where everything is simply there as it came in, choose **Show newest** and turn off the New line. The **Classic IRC** [preset](/guide/presets) does both.
+For a classic IRC feel, where everything is simply there as it came in, choose **Show newest** and turn off the New line.
 
 In settings.json these are [`chat.openAt`](/reference/settings#chat.openAt) (`"firstUnread"` or `"newest"`) and [`chat.showUnreadMarker`](/reference/settings#chat.showUnreadMarker). In the command palette, they're **Chat: Open Channels at Newest Messages** and **Chat: Show New Line**.
 

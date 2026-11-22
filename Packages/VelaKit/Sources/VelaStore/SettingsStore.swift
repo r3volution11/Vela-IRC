@@ -115,6 +115,26 @@ public final class SettingsStore {
         scheduleSave()
     }
 
+    /// Sets (or, with `nil`, removes) several raw values as one change:
+    /// ``values`` is replaced once, so views watching settings update once,
+    /// and one save is scheduled. Keys whose value doesn't change are left
+    /// alone.
+    public func setValues(_ changes: [String: JSONValue?]) {
+        var updated = values
+        for (key, value) in changes where updated[key] != value {
+            if let value {
+                updated[key] = value
+                pending[key] = .set(value)
+            } else {
+                updated.removeValue(forKey: key)
+                pending[key] = .remove
+            }
+        }
+        guard updated != values else { return }
+        values = updated
+        scheduleSave()
+    }
+
     // MARK: Migration
 
     /// Upgrades keys written by older versions of Vela (see

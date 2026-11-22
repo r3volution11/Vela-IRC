@@ -24,17 +24,17 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/modern-palenight.png" alt="Vela with the Modern Chat preset in Palenight: grouped messages, an inline GIF, reactions and a link card" width="100%">
+  <img src="docs/screenshots/modern-palenight.png" alt="Vela in Palenight with the sidebar and Modern messages: grouped messages, an inline GIF, reactions and a link card" width="100%">
 </p>
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/focus-tabs-palenight.png" alt="Focus preset: pill tabs in the title bar and compact columns"></td>
-    <td><img src="docs/screenshots/classic-graphite.png" alt="Classic IRC preset in Vela Graphite: monospace one-line messages"></td>
+    <td><img src="docs/screenshots/focus-tabs-palenight.png" alt="Tabs in the title bar as pills, with Columns messages"></td>
+    <td><img src="docs/screenshots/classic-graphite.png" alt="Classic IRC messages in Vela Graphite: monospace one-line messages"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Focus preset · pill tab stacks in the title bar</sub></td>
-    <td align="center"><sub>Classic IRC preset · Vela Graphite</sub></td>
+    <td align="center"><sub>Tabs in the title bar · Columns</sub></td>
+    <td align="center"><sub>Classic IRC · Vela Graphite</sub></td>
   </tr>
 </table>
 
@@ -72,9 +72,9 @@ The full user guide is at **[velairc.app](https://velairc.app)**.
 IRC is simple, open and everywhere, but IRC clients on the Mac have stood still. Vela pairs IRC's simplicity with what people now expect from chat: inline media, reactions, replies and a polished native interface. It is built around one idea: **make Vela work the way you want.**
 
 - **Every pixel is themable.** You can import [VS Code](https://code.visualstudio.com) themes, edit themes live and override any color from `settings.json`.
-- **Navigation is your choice.** Use a sidebar (or a thin rail) if you're on many networks, or [Vivaldi](https://vivaldi.com)-style tab stacks if you're on a few.
+- **Navigation is your choice.** Use a sidebar (or a thin rail) if you're on many networks, [Vivaldi](https://vivaldi.com)-style tab stacks if you're on a few, or Focus for nothing but the conversation.
 - **Three message layouts.** Pick Classic one-line, Modern grouped, or Compact columns.
-- **Presets get you started.** Each preset sets up a whole style in one click, so you don't have to get into the weeds.
+- **Presets get you started.** Pick a window layout, a message style and a density, in any combination, without getting into the weeds.
 
 ## Features
 
@@ -110,14 +110,13 @@ IRC is simple, open and everywhere, but IRC clients on the Mac have stood still.
 
 ### Presets
 
-One click sets navigation, layout, density and media together. Presets never touch your theme, and you can keep tweaking afterwards.
+Three choices that combine freely, each changing only its own settings. Presets never touch your theme, and you can keep tweaking afterwards.
 
-| Preset | What you get |
+| Choice | Options |
 |---|---|
-| **Classic IRC** | Sidebar, one-line monospace messages, dense spacing, minimal link previews |
-| **Modern Chat** | Sidebar, grouped messages, roomy spacing, full inline media |
-| **Tabbed** | Tab stacks at the top, grouped messages, rounded tabs |
-| **Focus** | Pill tabs in the title bar, compact columns, no join/part noise, member list hidden |
+| **Window layout** | **Sidebar**, **Tabs on Top**, **Tabs in Title Bar**, or **Focus** (no navigation at all: switch with ⌘P or ⌘1–⌘9) |
+| **Message style** | **Modern** (grouped under each name), **Classic IRC** (`[time] <nick> message`, monospaced) or **Columns** |
+| **Density** | **Compact**, **Standard** or **Comfortable** line and message spacing (never your font size) |
 
 ### Messages and media
 
@@ -156,7 +155,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 ### Fast to drive
 
 - **The whole window from the keyboard:** ⌥⌘1 to ⌥⌘4 (or F6) move the keyboard between the sidebar or tabs, the messages, the message box and the member list. Pick a message with the arrow keys, then reply, react, copy or translate it with one key. ⌘W closes the tab and ⇧⌘W the window, as in a browser.
-- **Command palette** (⇧⌘P) runs any command: layouts, presets, themes, network actions, settings and more.
+- **Command palette** (⇧⌘P) runs any command: layouts, message styles, densities, themes, network actions, settings and more.
 - **Settings editor:** every setting in one searchable list, VS Code style, with filters such as `@modified`, plus a JSON view of `settings.json` that suggests settings and values, flags mistakes as you type and shows docs on hover.
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
 - **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. An emoji picker (⇧⌘E) and a send button. GIF search (KLIPY or GIPHY, sent as links) comes in a later version; for now it's only in development builds. Pasting multiple lines asks for confirmation before sending.

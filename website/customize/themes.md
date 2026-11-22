@@ -102,5 +102,5 @@ The theme's colors tint the material, so it still looks like the theme. **Settin
 
 ## What themes don't change
 
-- **Layout, fonts, sizes and spacing** aren't part of themes. Set them in **Settings → Layout** and **Settings → Messages**, or all at once with a [preset](/guide/presets).
+- **Layout, fonts, sizes and spacing** aren't part of themes. Set them in **Settings → Layout** and **Settings → Messages**, or pick a layout, message style and density in [Settings → Presets](/guide/presets).
 - **Menus, context menus, alerts and file pickers** are drawn by macOS. They follow the theme's light or dark type, not its colors.

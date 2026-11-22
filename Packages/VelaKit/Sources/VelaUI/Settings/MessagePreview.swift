@@ -12,6 +12,7 @@ import VelaTheme
 struct MessageSamplePreview: View {
     @Environment(\.theme) private var theme
     @Environment(\.chatStyle) private var style
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private enum Kind {
         case message, mention, link, join, quit, formatted, emoji
@@ -54,21 +55,29 @@ struct MessageSamplePreview: View {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .strokeBorder(theme[ThemeKey.settingsBorder])
             )
-            .animation(.snappy(duration: 0.18), value: style)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.18), value: style)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Preview of chat messages with the current settings")
     }
 
     @ViewBuilder
     private var content: some View {
+        // As in the message list: `chat.messageSpacing` above each message,
+        // in every layout, and none between the lines of one sender's run.
         switch style.layout {
         case .classic:
-            VStack(alignment: .leading, spacing: max(1, style.messageSpacing / 2)) {
-                ForEach(rows) { row in classicRow(row) }
+            let rows = rows
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    classicRow(row).padding(.top, gapAbove(index, in: rows))
+                }
             }
         case .columns:
-            VStack(alignment: .leading, spacing: max(1, style.messageSpacing / 2)) {
-                ForEach(rows) { row in columnsRow(row) }
+            let rows = rows
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    columnsRow(row).padding(.top, gapAbove(index, in: rows))
+                }
             }
         case .grouped:
             VStack(alignment: .leading, spacing: style.messageSpacing) {
@@ -101,14 +110,26 @@ struct MessageSamplePreview: View {
     private var groups: [[Line]] {
         var groups: [[Line]] = []
         for line in rows {
-            if !line.isEvent, let last = groups.last?.last, !last.isEvent, last.nick == line.nick,
-               Double(line.minute - last.minute) * 60 <= style.groupingInterval {
+            if let last = groups.last?.last, continues(line, after: last) {
                 groups[groups.count - 1].append(line)
             } else {
                 groups.append([line])
             }
         }
         return groups
+    }
+
+    /// Whether `line` continues `previous`'s run: the same sender, soon
+    /// enough, and neither an event (nor the folded joins and parts).
+    private func continues(_ line: Line, after previous: Line) -> Bool {
+        !line.isEvent && !previous.isEvent && previous.nick == line.nick
+            && Double(line.minute - previous.minute) * 60 <= style.groupingInterval
+    }
+
+    /// The space above row `index` of `rows` in the one-line layouts.
+    private func gapAbove(_ index: Int, in rows: [Line]) -> CGFloat {
+        guard index > 0, !continues(rows[index], after: rows[index - 1]) else { return 0 }
+        return style.messageSpacing
     }
 
     private func classicRow(_ line: Line) -> some View {

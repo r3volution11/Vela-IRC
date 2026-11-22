@@ -75,7 +75,7 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 - **Using a bouncer?** Messages ZNC, soju or a server with chat history replays when Vela connects count as new once they're newer than where you stopped reading. A channel Vela has never had open starts counting when it first joins, so its older history stays read. See [Bouncers](/guide/bouncers).
 - **Did you go to another channel?** A summary keeps going while you're elsewhere, and its card is there when you come back. After you've read the channel, choose **Catch Me Up** again to see it.
 - **Does the card say "Waiting…"?** Summaries are written one at a time, in the order you asked for them, so a card waits while another channel's summary is written. It starts on its own when its turn comes; dismiss it to take it out of line.
-- **Is the New line turned off?** With **Show the New line** off (Settings → Messages → Unread messages, or the Classic IRC preset) there's no button. Right-click the channel and choose **Catch Me Up**, or use the command palette.
+- **Is the New line turned off?** With **Show the New line** off (Settings → Messages → Unread messages) there's no button. Right-click the channel and choose **Catch Me Up**, or use the command palette.
 
 If a summary looks wrong, click a topic to read the messages behind it, or click **Regenerate**. Summaries can contain mistakes.
 

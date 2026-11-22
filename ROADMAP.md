@@ -31,7 +31,7 @@
   - [x] Compact sidebar that collapses to a rail
   - [x] [Vivaldi](https://vivaldi.com)-style two-level tab stacks (top / title bar / bottom, square-to-pill corners)
   - [x] Member list
-- [x] **Presets:** Classic IRC, Modern Chat, Tabbed, Focus
+- [x] **Presets:** a window layout (Sidebar, Tabs on Top, Tabs in Title Bar, Focus), a message style (Modern, Classic IRC, Columns) and a density (Compact, Standard, Comfortable), combined freely
 - [x] **Message layouts:** Classic, Modern grouped, Compact columns
 - [x] **Chat rendering**
   - [x] [mIRC](https://www.mirc.com) formatting and colors

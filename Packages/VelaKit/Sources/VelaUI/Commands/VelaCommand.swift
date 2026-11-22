@@ -42,13 +42,16 @@ struct VelaCommand: Identifiable {
         case chat = "Chat"
         case go = "Go"
         case help = "Help"
+        /// Window layouts (Settings → Presets).
         case layout = "Layout"
         case media = "Media"
         case messageBox = "Message Box"
-        case navigation = "Navigation"
+        /// Message styles (Settings → Presets).
+        case messageStyle = "Message Style"
+        /// Densities (Settings → Presets).
+        case density = "Density"
         case network = "Network"
         case notifications = "Notifications"
-        case preset = "Preset"
         case settings = "Settings"
         case tabs = "Tabs"
         case text = "Text"

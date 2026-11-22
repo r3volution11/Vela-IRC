@@ -23,9 +23,9 @@ How Vela looks is split between the theme and your settings:
 | Whether it's a dark or a light theme, which macOS follows for menus and alerts | Avatars, timestamps and their format, and whether nicks are colored at all |
 | Translucency (`vibrancy`) | The member list, link previews, images and videos |
 
-So a theme you design with the Modern Chat preset also looks right in Classic IRC, Tabbed or Focus, and trying a new theme never resets your fonts or layout. Think of a Vela theme as a palette: your settings decide the shape of the window, the theme decides its colors.
+So a theme you design with the sidebar and Modern messages also looks right with tabs, Focus, Classic IRC or Columns, and trying a new theme never resets your fonts or layout. Think of a Vela theme as a palette: your settings decide the shape of the window, the theme decides its colors.
 
-Theme files have no keys for anything else. If a file has one anyway (say, `"font": "Menlo"`), Vela loads the theme, ignores that key and says so in **Settings → Appearance**: "“font” isn't a theme key, so it's ignored. Themes only contain colors: fonts, sizes and layout are settings." (See [Typos and skipped values](#problems).) To change layout or type, use **Settings** (<kbd>⌘,</kbd>), the [settings reference](/reference/settings) or a [preset](/guide/presets).
+Theme files have no keys for anything else. If a file has one anyway (say, `"font": "Menlo"`), Vela loads the theme, ignores that key and says so in **Settings → Appearance**: "“font” isn't a theme key, so it's ignored. Themes only contain colors: fonts, sizes and layout are settings." (See [Typos and skipped values](#problems).) To change layout or type, use **Settings** (<kbd>⌘,</kbd>), the [settings reference](/reference/settings) or [Settings → Presets](/guide/presets).
 
 ## Quick start {#quick-start}
 
@@ -486,8 +486,8 @@ A card is a summary. It doesn't show selections, hover colors, link previews, th
 
 A theme has to work with every layout, so try yours in more than one. With your theme in use and the file open in your editor:
 
-1. **All three message layouts.** Switch between **Classic**, **Modern grouped** and **Compact columns** in **View → Message Layout**. Also try **Use a monospace font** in **Settings → Messages**, which many people pair with Classic.
-2. **The presets.** Apply **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** from **View → Presets**. Tabbed is the easiest way to check the `tab.*` colors. A preset changes your layout settings (never your theme), so if you've arranged yours by hand, keep a copy of your [settings.json](/customize/settings-json) to go back to.
+1. **All three message styles.** Switch between **Modern**, **Classic IRC** and **Columns** in **View → Message Style**, and try each **Density** too. Also try **Use a monospace font** in **Settings → Messages** with Modern or Columns.
+2. **The window layouts.** Try **Sidebar**, **Tabs on Top**, **Tabs in Title Bar** and **Focus** from **View → Layout**. Tabs on Top is the easiest way to check the `tab.*` colors. A layout changes only where things live (never your theme), and picking yours again puts it back.
 3. **The sidebar's other forms.** Collapse the sidebar to the rail with <kbd>⌃⌘S</kbd>, and try tab stacks at the top, in the title bar and at the bottom (**Settings → Layout**).
 4. **Light and dark.** If you made a pair, switch macOS between Dark Mode and Light Mode, and check that menus and alerts match each theme.
 5. **States.** Look at the selected channel, unread and mention badges, a disconnected network, a message that mentions you, your own messages, the New line, day dividers, notices, `/me` actions and errors.
@@ -583,4 +583,4 @@ Colors are stricter: a malformed color stops the theme from loading, as in the t
 
 ### The fonts, sizes or layout didn't change
 
-That's by design: a theme only sets colors. Change fonts and text size in **Settings → Messages**, the layout in **Settings → Layout**, or everything at once with a [preset](/guide/presets). See [Colors only, by design](#colors-only).
+That's by design: a theme only sets colors. Change fonts and text size in **Settings → Messages**, the layout in **Settings → Layout**, or a layout, message style and density in [Settings → Presets](/guide/presets). See [Colors only, by design](#colors-only).

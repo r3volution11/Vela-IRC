@@ -26,7 +26,7 @@ features:
     link: /customize/themes
     linkText: Choosing a theme
   - title: Your layout, your rules
-    details: A compact sidebar or Vivaldi-style tab stacks. Classic, Modern grouped or Compact columns. One-click presets that never touch your theme.
+    details: A sidebar, tab stacks or nothing but the conversation. Modern, Classic IRC or Columns messages, at the density you like. Mix them freely; your theme never changes.
     link: /guide/presets
     linkText: Presets
   - title: Modern IRC
@@ -56,15 +56,15 @@ The title bar, sidebar, tabs, chat, input, member list, link previews and even n
   eyebrow="Layouts & presets"
   title="Classic, modern or somewhere in between"
   src="/screenshots/preset-classic.webp"
-  alt="The Classic IRC preset: one-line monospace messages with timestamps and angle-bracketed nicks"
+  alt="The Classic IRC message style: one-line monospace messages with timestamps and angle-bracketed nicks"
   link="/guide/presets"
-  linkText="Compare the presets"
+  linkText="Mix your own"
   reverse
 >
 
-Pick a message layout: Classic `[12:01] <nick> text`, Modern grouped like [Slack](https://slack.com) or [Discord](https://discord.com), or Compact columns like [irssi](https://irssi.org) and [WeeChat](https://weechat.org).
+Pick a message style: Classic IRC `[12:01] <nick> text`, Modern like [Slack](https://slack.com) or [Discord](https://discord.com), or Columns like [irssi](https://irssi.org) and [WeeChat](https://weechat.org).
 
-Or start from a preset. **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** each set up navigation, layout, density and media in one click, and your theme is never changed. Fine-tune anything afterwards, down to every setting in a searchable, VS Code-style [settings editor](/customize/settings-editor).
+**Settings → Presets** puts it together in three picks that combine freely: a window layout (**Sidebar**, **Tabs on Top**, **Tabs in Title Bar** or **Focus**), a message style (**Modern**, **Classic IRC** or **Columns**) and a density (**Compact**, **Standard** or **Comfortable**). Your theme is never changed. Fine-tune anything afterwards, down to every setting in a searchable, VS Code-style [settings editor](/customize/settings-editor).
 
 </ShowcaseRow>
 
@@ -104,7 +104,7 @@ Prefer less? Switch to **compact** previews, turn media off for a channel, or al
   eyebrow="IRCv3 & bouncers"
   title="IRC, done properly"
   src="/screenshots/preset-focus.webp"
-  alt="The Focus preset: pill tabs in the title bar and compact columns of time, nick and message"
+  alt="Pill tabs in the title bar and compact columns of time, nick and message"
   link="/guide/bouncers"
   linkText="Connecting through a bouncer"
 >

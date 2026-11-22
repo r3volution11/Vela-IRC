@@ -11,7 +11,12 @@ import VelaTheme
 /// Launch arguments for demo mode, handy for screenshots and UI work:
 ///
 ///     Vela --demo --theme "Lighter" --preset tabbed --set chat.layout=classic --set tabs.roundness=1
+///     Vela --demo --layout focus --message-style columns --density compact
 ///     Vela --demo --themes-dir ~/Desktop/MyThemes --theme "Harbor"
+///
+/// `--layout`, `--message-style` and `--density` pick a choice of Settings →
+/// Presets by id (`PresetChoice`); `--preset` applies one of Vela 1.0–1.4's
+/// whole setups (`SettingsPreset`).
 ///
 /// `--set` values are parsed as JSON when possible (numbers, booleans,
 /// arrays), otherwise used as strings.
@@ -51,8 +56,18 @@ enum DemoArguments {
                 settings[.appearanceFollowSystem] = false
                 settings[.appearanceTheme] = name
             case "--preset":
+                // Vela 1.0–1.4's whole setups (classic, modern, tabbed, focus).
                 guard let id = iterator.next(), let preset = SettingsPreset.all.first(where: { $0.id == id }) else { continue }
                 settings.apply(preset)
+            case "--layout", "--message-style", "--density":
+                // Settings → Presets' rows: `--layout tabsOnTop`, `--message-style columns`, `--density compact`.
+                let axis: PresetAxis = switch argument {
+                case "--layout": .windowLayout
+                case "--message-style": .messageStyle
+                default: .density
+                }
+                guard let id = iterator.next(), let choice = PresetChoice.named(id, on: axis) else { continue }
+                settings.choose(choice)
             case "--select", "--themes-dir":
                 // Handled by `selectBuffer(from:in:)` once sessions exist,
                 // and by `themesDirectory(for:)`.

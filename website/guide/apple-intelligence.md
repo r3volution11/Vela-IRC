@@ -63,7 +63,7 @@ The **Catch me up** button shows when all of these are true:
 - **Offer Catch me up in busy channels** is on in **Settings → Apple Intelligence**. It's on by default.
 - Apple Intelligence is ready.
 - At least **25** messages are new. Change the number with **Show the button after**: 10, 25, 50 or 100 new messages.
-- The **New** line is showing. The button sits on it, so with **Show the New line** turned off in **Settings → Messages → Unread messages** (as the Classic IRC preset does), there's no button. See [Unread messages](/guide/messages-and-layouts#unread-messages).
+- The **New** line is showing. The button sits on it, so with **Show the New line** turned off in **Settings → Messages → Unread messages**, there's no button. See [Unread messages](/guide/messages-and-layouts#unread-messages).
 
 You can also catch up whenever you like, however little is new, even with the button or the New line turned off:
 

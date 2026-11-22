@@ -7,17 +7,17 @@ description: Use Vivaldi-style two-level tab stacks in Vela instead of the sideb
 
 Instead of a sidebar, Vela can show your networks and channels as **two rows of tabs**, like [Vivaldi](https://vivaldi.com)'s tab stacks: one row for your networks, and below it the selected network's console, channels and private conversations.
 
-<Screenshot src="/screenshots/preset-tabbed.webp" alt="Tab stacks at the top of the window: a row of networks above a row of channels, with the selected tab merging into the conversation" caption="Tabs at the top, with the Tabbed preset." eager />
+<Screenshot src="/screenshots/preset-tabbed.webp" alt="Tab stacks at the top of the window: a row of networks above a row of channels, with the selected tab merging into the conversation" caption="Tabs at the top." eager />
 
-Turn them on in **Settings → Layout** (choose **Tabs**), from **View → Navigation**, or with the **Tabbed** or **Focus** [preset](/guide/presets).
+Turn them on by choosing **Tabs on Top** or **Tabs in Title Bar** in **Settings → Presets** or **View → Layout** (see [Window layout](/guide/presets#window-layout)), or **Tabs** in **Settings → Layout**.
 
 ## Placement
 
-Put the tab stacks where they suit you, in **Settings → Layout → Placement** or **View → Navigation**:
+Put the tab stacks where they suit you, in **Settings → Layout → Placement** or **View → Layout**:
 
 - **Top** (`top`), just below the channel header. The selected tab merges into the conversation, like a browser tab.
 - **Title bar** (`titleBar`), next to the window buttons. Your networks become a compact segmented group with the channel tabs beside them, and the topic moves into a popover behind the **ⓘ** button. This saves the most room.
-- **Bottom** (`bottom`), just above the message field, with tabs hanging from the conversation.
+- **Bottom** (`bottom`), just above the message field, with tabs hanging from the conversation. It isn't one of the window layouts in **Settings → Presets**, which says **Customized** while the tabs are at the bottom.
 
 <Screenshot src="/screenshots/tabs-title-bar.webp" alt="Tab stacks in the title bar: networks in a segmented group beside the window buttons, followed by channel tabs" caption="In the title bar." />
 

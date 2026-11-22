@@ -4,6 +4,18 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ## Unreleased
 
+### Presets
+
+- **Presets are now three choices that combine freely.** **Settings → Presets** has a row of picture cards for the **window layout** (**Sidebar**, **Tabs on Top**, **Tabs in Title Bar** or **Focus**), a row for the **message style** (**Modern**, **Classic IRC** or **Columns**) and a **density** control (**Compact**, **Standard** or **Comfortable**), with a live preview of your messages under them. Pick any layout with any style and any density. Each row changes only its own settings, in one change, so choosing a layout never touches your message style, font, media or anything else, and presets still never change your theme. The cards are drawn in your theme with your own settings, so each shows what you'd get. See [Presets](https://velairc.app/guide/presets).
+  - **Window layout** sets `navigation.style` and `tabs.placement`; **message style** sets `chat.layout` and `chat.monospace` (Classic IRC is monospaced); **density** sets `chat.lineSpacing` and `chat.messageSpacing`: 1 and 2 points, 4 and 12 (Vela's defaults) or 6 and 18. Density never changes the font size, so a size you chose yourself stays.
+  - **Customized.** A row whose settings you've changed by hand (tabs at the bottom, say, or spacing of your own) has no card selected and says **Customized**, with what's different and a link to where to fine-tune it. Picking a card resets just that row.
+  - A choice that matches Vela's default is removed from settings.json rather than written, so it keeps following the default.
+  - The cards work from the keyboard: Tab goes from row to row, ← and → move between the cards in a row, and Space or Return picks one. VoiceOver reads each card as a button, says which is selected and what you picked, and says when a row is customized. Increase Contrast draws stronger borders, and Reduce Motion turns off the cards' animations.
+- **Focus: no sidebar and no tabs.** The new **Focus** layout (`navigation.style: "focus"`) gives the conversation the whole window, with the channel's name and topic above it. Switch channels with **Go to Conversation…** (⌘P), ⌘1–⌘9 or the **Go** menu. **Settings → Layout** offers it too. Vela 1.4 and earlier read it as the sidebar.
+- **The View menu and the command palette follow.** **View → Layout**, **View → Message Style** and **View → Density** replace **View → Navigation**, **View → Message Layout** and **View → Presets**, and the palette has **Layout: Tabs on Top**, **Message Style: Columns**, **Density: Compact** and the rest, checked while your settings match. **Tabs: Move to Bottom** and **Always Show Server Row** stay, under **View → Layout**. The top of **Settings → Appearance** has the three choices as menus.
+- **Nothing changes when you update.** Your settings stay exactly as they were, and each row shows the choice they match: the old **Classic IRC** preset is Sidebar, Classic IRC and Compact; **Modern Chat** is Sidebar, Modern and Standard; **Tabbed** is Tabs on Top and Modern; and the old **Focus** is Tabs in Title Bar and Columns. The old Tabbed and Focus spacing shows as a customized density. What else the old presets set (font size, media sizes, unread settings) stays as it was.
+- The message preview in **Settings → Messages** now spaces messages as the conversation does: the message spacing between messages in every layout, and none between the lines of one person's run.
+
 ## 1.1.0 - 2026-11-21
 
 Vela 1.1 brings an updater, the whole window from the keyboard, and a choice about saving your chat history. The highlights:

@@ -9,12 +9,13 @@ description: A tour of Vela's main window, the sidebar and its collapsible rail,
 
 Vela's window has up to three panes: **navigation** on the left (or tabs along the top), the **conversation** in the middle and the **member list** on the right. Every part of it, down to the title bar, is drawn with your [theme](/customize/themes).
 
-## Sidebar or tabs
+## Sidebar, tabs or Focus
 
-Choose how you move between networks and channels in **Settings → Layout**, or with **View → Navigation**:
+Choose how you move between networks and channels with a [window layout](/guide/presets#window-layout) in **Settings → Presets** or **View → Layout**, or in **Settings → Layout**:
 
 - **Sidebar** (the default) suits many networks and channels.
-- **Tabs** gives you [Vivaldi](https://vivaldi.com)-style [tab stacks](/guide/tab-stacks), great for one network and a few channels.
+- **Tabs on Top** and **Tabs in Title Bar** give you [Vivaldi](https://vivaldi.com)-style [tab stacks](/guide/tab-stacks), great for one network and a few channels.
+- **Focus** shows neither, just the conversation. Switch channels with **Go to Conversation…** (<kbd>⌘P</kbd>) or <kbd>⌘1</kbd>–<kbd>⌘9</kbd>. See [Focus](/guide/presets#focus).
 
 ## The sidebar
 

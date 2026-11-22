@@ -181,22 +181,22 @@ private struct ViewMenuItems: View {
 
         Divider()
 
-        Menu("Navigation") {
-            ForEach(commands.navigationStyles) { CommandMenuToggle($0) }
+        // Settings → Presets' three rows.
+        Menu("Layout") {
+            ForEach(commands.presetCommands(for: .windowLayout)) { CommandMenuToggle($0) }
             Divider()
-            ForEach(commands.tabPlacements) { CommandMenuToggle($0) }
-            Divider()
+            CommandMenuToggle(commands.tabsAtBottom)
             CommandMenuToggle(commands.toggleServerTabRow)
         }
 
-        Menu("Message Layout") {
-            ForEach(commands.chatLayouts) { CommandMenuToggle($0) }
+        Menu("Message Style") {
+            ForEach(commands.presetCommands(for: .messageStyle)) { CommandMenuToggle($0) }
             Divider()
             ForEach(commands.joinPartModes) { CommandMenuToggle($0) }
         }
 
-        Menu("Presets") {
-            ForEach(commands.presets) { CommandMenuToggle($0) }
+        Menu("Density") {
+            ForEach(commands.presetCommands(for: .density)) { CommandMenuToggle($0) }
         }
 
         Divider()

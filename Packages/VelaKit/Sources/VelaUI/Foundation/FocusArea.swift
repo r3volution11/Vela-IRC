@@ -32,13 +32,14 @@ public struct FocusRequest: Equatable, Sendable {
 }
 
 enum FocusAreas {
-    /// The areas there are to go to: the messages and the message box only
+    /// The areas there are to go to: the sidebar or the tabs unless the
+    /// window has neither (Focus), the messages and the message box only
     /// with a channel or conversation selected, the member list only while
     /// it's showing.
-    static func available(hasBuffer: Bool, showsMembers: Bool) -> [FocusArea] {
+    static func available(hasBuffer: Bool, showsMembers: Bool, hasNavigation: Bool = true) -> [FocusArea] {
         FocusArea.allCases.filter { area in
             switch area {
-            case .navigation: true
+            case .navigation: hasNavigation
             case .messages, .messageBox: hasBuffer
             case .members: hasBuffer && showsMembers
             }

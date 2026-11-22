@@ -189,4 +189,4 @@ Unsaved changes survive switching panes and closing Settings, but not quitting V
 
 ## How settings.json is kept tidy {#comments}
 
-Whichever way you change a setting, in the editor, on another pane, with a preset or the accent color picker, Vela changes only that setting's text in settings.json, so your **comments and formatting stay as they are**. See [Comments and formatting](/customize/settings-json#comments) for the details.
+Whichever way you change a setting, in the editor, on another pane, in Settings → Presets or with the accent color picker, Vela changes only that setting's text in settings.json, so your **comments and formatting stay as they are**. See [Comments and formatting](/customize/settings-json#comments) for the details.

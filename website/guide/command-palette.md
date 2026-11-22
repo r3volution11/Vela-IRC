@@ -23,15 +23,15 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 
 ## Run a command
 
-<kbd>⇧⌘P</kbd> lists everything you can do, named by category, such as **View: Toggle Member List** or **Preset: Focus**. Recently used commands come first, the current choice of a setting is checked, and shortcuts are shown on the right. Commands that don't apply right now are hidden.
+<kbd>⇧⌘P</kbd> lists everything you can do, named by category, such as **View: Toggle Member List** or **Layout: Focus**. Recently used commands come first, the current choice of a setting is checked, and shortcuts are shown on the right. Commands that don't apply right now are hidden.
 
 | Category | Commands |
 | --- | --- |
 | **View** | Toggle Sidebar, Toggle Member List, Show Channel Title Bar (with tabs), Toggle Full Screen |
-| **Navigation** | Use Sidebar, Use Tabs |
-| **Tabs** | Move to Top, Move to Title Bar, Move to Bottom, Always Show Server Row, Move Channel Left / Right (Up / Down with the sidebar, and Move Conversation for a conversation) |
-| **Layout** | Classic, Modern Grouped, Compact Columns |
-| **Preset** | Classic IRC, Modern Chat, Tabbed, Focus |
+| **Tabs** | Move to Bottom, Always Show Server Row, Move Channel Left / Right (Up / Down with the sidebar, and Move Conversation for a conversation) |
+| **Layout** | Sidebar, Tabs on Top, Tabs in Title Bar, Focus (the [window layouts](/guide/presets#window-layout)) |
+| **Message Style** | Modern, Classic IRC, Columns |
+| **Density** | Compact, Standard, Comfortable |
 | **Chat** | Toggle Timestamps, Timestamps on the Left / on the Right / at the Top / at the Bottom (for the layout you're using), Toggle Monospace Font, Toggle Nick Colors, Toggle Nick Colors in Messages, Toggle Avatars, Toggle mIRC Formatting, Show / Collapse / Hide Join/Part Messages, Open Channels at Newest Messages, Show New Line, Save Message History, Delete Saved History…, Save Chat Logs, Show Chat Logs |
 | **Media** | Load Previews Automatically, Toggle Link Previews, Minimal / Standard / Large Link Previews, Play Videos Inline, Compact Videos, Videos as Links, Full-Size Images, Image Thumbnails, Hide Adult Site Previews, Blur Images Until Clicked |
 | **Text** | Bigger, Smaller, Actual Size |

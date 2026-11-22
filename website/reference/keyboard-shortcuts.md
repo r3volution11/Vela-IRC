@@ -30,11 +30,11 @@ Every command, with or without a shortcut, is also in the [command palette](/gui
 | Previous conversation with unread messages | <kbd>⌥⇧⌘↑</kbd> |
 | Next conversation with unread messages | <kbd>⌥⇧⌘↓</kbd> |
 | Channel or conversation 1–9 of the current network, in tab order (the console has no number) | <kbd>⌘1</kbd> … <kbd>⌘9</kbd> |
-| Focus the sidebar, or the tabs (**Go → Focus Sidebar** or **Focus Tabs**) | <kbd>⌥⌘1</kbd> |
+| Focus the sidebar, or the tabs (**Go → Focus Sidebar** or **Focus Tabs**; the [Focus layout](/guide/presets#focus) has neither) | <kbd>⌥⌘1</kbd> |
 | Focus the messages | <kbd>⌥⌘2</kbd> |
 | Focus the message box | <kbd>⌥⌘3</kbd> or <kbd>⌘L</kbd> |
 | Focus the member list, showing it first if it's hidden | <kbd>⌥⌘4</kbd> |
-| Next / previous area: the sidebar or tabs, the messages, the message box and the member list, in turn | <kbd>F6</kbd> / <kbd>⇧F6</kbd> |
+| Next / previous area: the sidebar or tabs (unless the layout is Focus), the messages, the message box and the member list, in turn | <kbd>F6</kbd> / <kbd>⇧F6</kbd> |
 
 ## The sidebar
 
