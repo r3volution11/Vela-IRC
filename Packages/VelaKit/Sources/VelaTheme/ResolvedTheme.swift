@@ -19,7 +19,8 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
     /// Palette for nickname colors, as the theme defines it (never empty).
     public let nickColors: [ThemeColor]
     /// The nick colors handed out: `nickColors` minus any that would read
-    /// as plain text (see `isDistinctNickColor`). Never empty.
+    /// as plain text (see `isDistinctNickColor`), with look-alikes moved a
+    /// little apart (`NickPaletteSpread`). Never empty.
     public let nickPalette: [ThemeColor]
     /// How different each pair of `nickPalette` colors looks, for keeping
     /// people in one conversation apart (`NickColorAssigner`).
@@ -42,7 +43,7 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
         self.vibrancy = vibrancy
         self.colors = colors
         self.nickColors = nickColors.isEmpty ? NickPalette.defaultPalette(for: kind) : nickColors
-        let palette = Self.usableNickPalette(self.nickColors, colors: colors)
+        let palette = NickPaletteSpread.spread(Self.usableNickPalette(self.nickColors, colors: colors), colors: colors)
         self.nickPalette = palette
         self.nickPaletteGeometry = NickPaletteGeometry(
             distances: palette.map { a in palette.map { a.distance(to: $0) } },
@@ -104,12 +105,15 @@ public struct ResolvedTheme: Sendable, Identifiable, Hashable {
     /// readable on the chat background (the audit's 3:1).
     static func isDistinctNickColor(_ color: ThemeColor, text: ThemeColor?, background: ThemeColor?) -> Bool {
         if let background, color.contrastRatio(against: background) < ThemeAudit.nickMinimum { return false }
-        if let text {
-            let distance = color.distance(to: text)
-            // Nearly the text color, or a greyish color close to it.
-            if distance < 0.04 || (color.chroma < 0.045 && distance < 0.12) { return false }
-        }
-        return true
+        guard let text else { return true }
+        return readsApartFromText(distance: color.distance(to: text), chroma: color.chroma)
+    }
+
+    /// The text half of `isDistinctNickColor`, from a color's OKLab
+    /// distance to the text and its chroma.
+    static func readsApartFromText(distance: Double, chroma: Double) -> Bool {
+        // Not nearly the text color, nor a greyish color close to it.
+        !(distance < 0.04 || (chroma < 0.045 && distance < 0.12))
     }
 
     /// `palette` minus the colors that aren't distinct. Keeps the theme's

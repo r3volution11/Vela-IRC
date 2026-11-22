@@ -411,7 +411,7 @@ private struct RecapTopicView: View {
     }
 
     private var participants: AttributedString {
-        let buffer = topic.start.flatMap { app.lookup($0.conversation)?.buffer }
+        let conversation = topic.start.flatMap { app.lookup($0.conversation) }
         var line = AttributedString()
         for (index, nick) in topic.participants.enumerated() {
             if index > 0 {
@@ -420,7 +420,7 @@ private struct RecapTopicView: View {
                 line += comma
             }
             var part = AttributedString(nick)
-            part.foregroundColor = theme.nickDisplayColor(nick, isSelf: false, colorNicks: style.colorNicks, in: buffer)
+            part.foregroundColor = theme.recapNickColor(nick, colorNicks: style.colorNicks, in: conversation)
             line += part
         }
         return line
@@ -481,9 +481,8 @@ private struct RecapForYouRow: View {
 
     /// **wren** asked you to review the PR. — or their own words, quoted.
     private var text: AttributedString {
-        let buffer = app.lookup(item.reference.conversation)?.buffer
         var nick = AttributedString(item.nick)
-        nick.foregroundColor = theme.nickDisplayColor(item.nick, isSelf: false, colorNicks: style.colorNicks, in: buffer)
+        nick.foregroundColor = theme.recapNickColor(item.nick, colorNicks: style.colorNicks, in: app.lookup(item.reference.conversation))
         nick.font = type.body.weight(.semibold)
         let rest: String
         if let note {
@@ -542,9 +541,8 @@ private struct RecapNoteRow: View {
         var text = AttributedString(note.text)
         text.foregroundColor = theme[ThemeKey.chatForeground]
         guard let owner = note.owner else { return text }
-        let buffer = note.reference.flatMap { app.lookup($0.conversation)?.buffer }
         var name = AttributedString(owner + ": ")
-        name.foregroundColor = theme.nickDisplayColor(owner, isSelf: false, colorNicks: style.colorNicks, in: buffer)
+        name.foregroundColor = theme.recapNickColor(owner, colorNicks: style.colorNicks, in: note.reference.flatMap { app.lookup($0.conversation) })
         name.font = type.body.weight(.semibold)
         return name + text
     }
@@ -614,5 +612,14 @@ private struct RecapLinkRow: View {
                 }
             }
         }
+    }
+}
+
+extension ResolvedTheme {
+    /// A nick a recap names, as on its messages in `conversation`: yours
+    /// in `chat.selfNick`, anyone else's in their color there.
+    func recapNickColor(_ nick: String, colorNicks: Bool, in conversation: (session: NetworkSession, buffer: BufferModel)?) -> Color {
+        let isSelf = conversation?.session.isSelf(nick) ?? false
+        return nickDisplayColor(nick, isSelf: isSelf, colorNicks: colorNicks, in: conversation?.buffer)
     }
 }

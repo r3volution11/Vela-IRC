@@ -373,20 +373,30 @@ struct NickColorTests {
         var definition = palenight
         definition.nickColors = ["#BFC7D5", "#B8C2D2", "#C4CAD6", "#F07178", "#82AAFF"]
         let theme = try resolve(definition)
-        #expect(theme.nickPalette == theme.nickColors)
+        // Every color, the three near-twin greys a little apart.
+        #expect(theme.nickPalette.count == theme.nickColors.count)
+        for (handedOut, written) in zip(theme.nickPalette, theme.nickColors) {
+            #expect(handedOut.distance(to: written) <= NickPaletteSpread.maximumChange)
+        }
     }
 
     // MARK: Your own nick's color
 
     /// Palenight's palette holds its self color, #C792EA, exactly, and two
-    /// blues beside it: someone given one looked like you.
+    /// blues beside it: someone given one looked like you. The lavender is
+    /// kept for you as it is; the blue, a hair too close, moves just off
+    /// your color (`NickPaletteSpread`) and is handed out.
     @Test func colorsLikeYourOwnNickAreKeptForYou() throws {
         var definition = palenight
         definition.colors["chat.selfNick"] = "#C792EA"
         let theme = try resolve(definition)
         let me = theme.color(ThemeKey.chatSelfNick)
         let reserved = theme.nickPaletteGeometry.reserved.map { theme.nickPalette[$0].hex }
-        #expect(Set(reserved) == ["#C792EA", "#A9B4FF", "#82AAFF"])
+        #expect(Set(reserved) == ["#C792EA", "#A9B4FF"])
+        let blue = try #require(ThemeColor(hex: "#82AAFF"))
+        let handedOutBlue = theme.nickPalette[6]
+        #expect(handedOutBlue.distance(to: me) >= NickPaletteGeometry.oklabSimilar)
+        #expect(handedOutBlue.distance(to: blue) < 0.01)
         // Nobody else lands on them, however their nick hashes.
         for nick in (0..<500).map({ "user\($0)" }) + ["r3volution11", "Templarian", "jeebz", "tomf"] {
             #expect(theme.nickColor(for: nick).distance(to: me) >= NickPaletteGeometry.oklabSimilar, "\(nick)")

@@ -310,7 +310,10 @@ public final class BufferModel: Identifiable, Hashable {
         } else {
             lines.append(line)
         }
-        if let nick = Self.speaker(of: line), nickColors?.noteSpeaker(nick) == true { noteNickChange(nick) }
+        if let nick = Self.speaker(of: line), let changes = nickColors?.noteSpeaker(nick) {
+            if let given = changes.given { noteNickChange(given) }
+            if let moved = changes.moved { noteNickRecolor(moved) }
+        }
         if lines.count > limit + 200 {
             lines.removeFirst(lines.count - limit)
             hasMoreHistory = true
@@ -409,11 +412,19 @@ public final class BufferModel: Identifiable, Hashable {
 
     /// Counts changes to how nicks look in this buffer's messages: someone
     /// joining, leaving or changing nick (whose nick is then colored in
-    /// message text, or no longer), and a speaker given a color other than
-    /// their usual one. Observed: the message list reads it and re-renders
-    /// only the lines mentioning those nicks (`nickChanges(since:)`).
-    /// Modes, away and account changes don't count.
+    /// message text, or no longer), a speaker given a color other than
+    /// their usual one, and someone moved off a look-alike color
+    /// (`nickRecolorCount`). Observed: the message list reads it and
+    /// re-renders only the lines mentioning those nicks
+    /// (`nickChanges(since:)`), and the member list reads it to show the
+    /// new colors. Modes, away and account changes don't count.
     public private(set) var nickChangeCount = 0
+    /// Counts the times someone who had a color here was given another
+    /// (`NickColorAssigner.Changes.moved`): the lines they sent change too,
+    /// not just those mentioning them. Each also counts as a nick change,
+    /// which is what's observed. Rare: at most once per person per
+    /// conversation.
+    @ObservationIgnored public private(set) var nickRecolorCount = 0
     /// The nicks behind the latest changes, as sent, oldest first.
     @ObservationIgnored private var nickChangeLog: [String] = []
     /// Changes up to here can't be told apart: everyone left, or came at
@@ -428,6 +439,12 @@ public final class BufferModel: Identifiable, Hashable {
             nickChangeLog.removeFirst(nickChangeLog.count - Self.nickChangeLogLimit)
         }
         nickChangeCount += 1
+    }
+
+    /// `nick`, who had a color here, has another.
+    func noteNickRecolor(_ nick: String) {
+        nickRecolorCount += 1
+        noteNickChange(nick)
     }
 
     private func resetNickChanges() {

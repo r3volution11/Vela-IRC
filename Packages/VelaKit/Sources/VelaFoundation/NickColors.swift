@@ -74,14 +74,31 @@ public struct NickPaletteGeometry: Sendable, Hashable {
 /// of someone who spoke earlier but isn't in the exchange, rather than
 /// look like someone who is. When even that fails, a look-alike keeps its
 /// usual color, and only a duplicate moves, to the free color most unlike
-/// the ones in use. A color, once given, stays: nobody changes color
-/// mid-conversation.
+/// the ones in use.
+///
+/// A color, once given, stays, with one exception. Colors are given as
+/// people first speak, so two people given theirs apart (one spoke an hour
+/// ago, the other just now, in a busy channel) can end up talking side by
+/// side in one color, or in look-alikes. When someone speaks in a color
+/// that looks like the color of someone in the exchange, one of the two
+/// moves to the color closest to their usual one that's clearly different
+/// from everyone in the exchange, chosen as for a newcomer: whoever had
+/// spoken less recently before this message (usually the one coming back,
+/// whose lines are further up, out of view), or the other when they've
+/// moved this way before. Each nick moves like this at most once per
+/// conversation, so nobody changes color back and forth; and when there's
+/// no clearly different color to go to, nobody moves.
 public struct NickColorAssigner: Sendable {
     public let palette: NickPaletteGeometry
     /// Case-folded nick → palette index.
     private var slots: [String: Int] = [:]
     /// Case-folded nicks that spoke, least recent first.
     private var recent: [String] = []
+    /// Case-folded recent speaker → their nick as last sent, to say who
+    /// moved.
+    private var names: [String: String] = [:]
+    /// Case-folded nicks moved off a look-alike, which don't move again.
+    private var movedApart: Set<String> = []
 
     /// How many recent speakers to remember; only the last
     /// `palette.count - 1` matter when choosing a color.
@@ -89,6 +106,25 @@ public struct NickColorAssigner: Sendable {
     /// The current exchange: the speakers whose colors a newcomer shouldn't
     /// resemble.
     private static let exchangeSize = 5
+
+    /// Whose color a message changed (`noteSpeaker(_:)`), as their nicks
+    /// were last sent.
+    public struct Changes: Sendable, Hashable {
+        /// The speaker, given a color other than their usual one as they
+        /// first spoke. They have no earlier lines here.
+        public var given: String?
+        /// Someone who had a color and now has another, moved off a
+        /// look-alike: the speaker, or the person they looked like. Lines
+        /// they sent before change color too.
+        public var moved: String?
+
+        public init(given: String? = nil, moved: String? = nil) {
+            self.given = given
+            self.moved = moved
+        }
+
+        public var isEmpty: Bool { given == nil && moved == nil }
+    }
 
     public init(palette: NickPaletteGeometry) {
         self.palette = palette
@@ -101,17 +137,28 @@ public struct NickColorAssigner: Sendable {
         return slots[key] ?? usualIndex(folded: key)
     }
 
-    /// Records that `nick` just spoke: gives it a color if it has none and
-    /// makes it the most recent speaker. Returns true when that changed
-    /// the nick's color (from its usual one to another).
+    /// Records that `nick` just spoke: gives it a color if it has none, or
+    /// moves it or the person it looks like apart (see the type), and makes
+    /// it the most recent speaker. Returns whose color that changed.
     @discardableResult
-    public mutating func noteSpeaker(_ nick: String) -> Bool {
+    public mutating func noteSpeaker(_ nick: String) -> Changes {
         let key = Self.fold(nick)
-        let moved = assign(key)
+        var changes = Changes()
+        names[key] = nick
+        if slots[key] == nil {
+            if assign(key) { changes.given = nick }
+        } else if let moved = moveApart(key) {
+            changes.moved = names[moved] ?? moved
+        }
         if let index = recent.lastIndex(of: key) { recent.remove(at: index) }
         recent.append(key)
-        if recent.count > Self.recentLimit { recent.removeFirst(recent.count - Self.recentLimit) }
-        return moved
+        if recent.count > Self.recentLimit {
+            let gone = recent.count - Self.recentLimit
+            // Names are only needed for the speakers who can move.
+            for key in recent.prefix(gone) { names.removeValue(forKey: key) }
+            recent.removeFirst(gone)
+        }
+        return changes
     }
 
     /// Gives `nick` a color if it has none, without making it a recent
@@ -132,6 +179,18 @@ public struct NickColorAssigner: Sendable {
         palette.usualIndex(Self.preferredIndex(folded: key, paletteSize: palette.count))
     }
 
+    /// The colors of the last `count` speakers and `also`, leaving out
+    /// `except`'s.
+    private func colors(ofLast count: Int, also: String? = nil, except: String? = nil) -> Set<Int> {
+        var keys = recent.suffix(count).filter { $0 != except }
+        if let also, also != except { keys.append(also) }
+        return Set(keys.compactMap { slots[$0] })
+    }
+
+    private func nearest(_ index: Int, among colors: Set<Int>) -> Double {
+        colors.map { palette.distances[index][$0] }.min() ?? .infinity
+    }
+
     /// Gives `key` a color if it has none. True when it isn't its usual one.
     private mutating func assign(_ key: String) -> Bool {
         guard slots[key] == nil else { return false }
@@ -144,11 +203,8 @@ public struct NickColorAssigner: Sendable {
             return false
         }
         let distances = palette.distances
-        let taken = Set(recent.suffix(available.count - 1).compactMap { slots[$0] })
-        let exchange = Set(recent.suffix(min(Self.exchangeSize, available.count - 1)).compactMap { slots[$0] })
-        func nearest(_ index: Int, among colors: Set<Int>) -> Double {
-            colors.map { distances[index][$0] }.min() ?? .infinity
-        }
+        let taken = colors(ofLast: available.count - 1)
+        let exchange = colors(ofLast: min(Self.exchangeSize, available.count - 1))
         func isClear(_ index: Int) -> Bool { nearest(index, among: exchange) >= palette.similar }
         func closerToUsual(_ a: Int, _ b: Int) -> Bool { distances[usual][a] < distances[usual][b] }
 
@@ -177,6 +233,49 @@ public struct NickColorAssigner: Sendable {
         }
         slots[key] = choice
         return choice != usual
+    }
+
+    /// `key`, who has a color, is speaking. When that color looks like the
+    /// color of someone in the exchange, moves one of the two apart (see
+    /// the type) and returns who moved. With no look-alike in the exchange,
+    /// the usual case, it's a look at the few colors there.
+    private mutating func moveApart(_ key: String) -> String? {
+        guard let color = slots[key], palette.available.count > 1 else { return nil }
+        let exchange = min(Self.exchangeSize, palette.available.count - 1)
+        let alike = recent.suffix(exchange).filter { other in
+            other != key && slots[other].map { palette.distances[color][$0] < palette.similar } == true
+        }
+        guard !alike.isEmpty else { return nil }
+        // Whoever had spoken least recently first: their lines are further
+        // up. `key` hasn't been made the most recent speaker yet.
+        func lastSpoke(_ nick: String) -> Int { recent.lastIndex(of: nick) ?? -1 }
+        let movers = ([key] + alike)
+            .filter { !movedApart.contains($0) }
+            .sorted { lastSpoke($0) < lastSpoke($1) }
+        for mover in movers {
+            guard let choice = clearColor(for: mover, speaker: key, exchange: exchange) else { continue }
+            slots[mover] = choice
+            movedApart.insert(mover)
+            return mover
+        }
+        return nil
+    }
+
+    /// The color for `mover` closest to their usual one that's clearly
+    /// different from everyone else in the exchange (`speaker` included),
+    /// chosen as for a newcomer; nil when there's none.
+    private func clearColor(for mover: String, speaker: String, exchange count: Int) -> Int? {
+        let size = palette.count
+        let usual = usualIndex(folded: mover)
+        let distances = palette.distances
+        let taken = colors(ofLast: palette.available.count - 1, also: speaker, except: mover)
+        let exchange = colors(ofLast: count, also: speaker, except: mover)
+        func isClear(_ index: Int) -> Bool { nearest(index, among: exchange) >= palette.similar }
+        func closerToUsual(_ a: Int, _ b: Int) -> Bool { distances[usual][a] < distances[usual][b] }
+        // Free colors, in a stable order starting with the usual one.
+        let free = (0..<size).map { (usual + $0) % size }.filter { !taken.contains($0) && !palette.reserved.contains($0) }
+        return free.filter(isClear).min(by: closerToUsual)
+            ?? palette.available.filter(isClear).min(by: closerToUsual)
     }
 
     // MARK: Hashing

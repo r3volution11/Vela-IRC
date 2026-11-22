@@ -251,10 +251,25 @@ across channels and launches. Within a conversation, people who talk get
 different entries while the palette has room, so two nicks that hash alike
 don't look alike, and someone whose color would look like (say, orange beside
 red) a person they're talking with gets the nearest palette color that's
-clearly different. Aim for 8–12 clearly different hues with at least 3:1
+clearly different. Two people given look-alike colors at different times who
+then talk side by side are parted: one of them, usually the one who spoke
+less recently, moves to the nearest clearly different color, at most once per
+conversation. Aim for 8–12 clearly different hues with at least 3:1
 contrast — ideally 4.5:1 — against `chat.background`. Entries that would read
 as plain text (a grey close to `chat.foreground`) or fall under 3:1 aren't
 used.
+
+When the theme loads, palette colors that look alike (an OKLab distance under
+0.11, about the gap between a blue and a lavender) are moved a little apart:
+the hue turns slightly first, then the color gets a touch lighter or darker,
+then a touch less vivid. No color moves more than an OKLab distance of 0.06
+or 25° of hue from what you wrote, loses more than a third of its chroma,
+drops under 3:1 or comes near the text color; colors that look like no other
+are used exactly as written. Colors
+that look like `chat.selfNick` are kept for your own nick, as before, unless
+a small change makes one clearly different from yours and from the rest. So
+a palette with near twins still works, but the clearer your colors are as
+written, the less Vela changes them.
 
 **`ircColors`** are the colors behind mIRC formatting codes. 0–15 are the
 classic colors (white, black, blue, green, red, brown, magenta, orange, yellow,
@@ -668,7 +683,7 @@ The Settings window.
 
 ### Nick colors
 
-`nickColors` is an array of colors. Each nickname starts from the entry its name hashes to (case-insensitively, RFC 1459 case mapping), so a nick usually keeps its color across channels and launches. In a conversation, people who talk get different entries while the palette has room. Someone whose usual entry is taken by, or looks like the color of, a person in the current exchange gets the entry closest to their usual one that is clearly different; when none is, a look-alike keeps its usual color. Entries that would read as plain text (close to `chat.foreground`) or fall under 3:1 against `chat.background` aren't used.
+`nickColors` is an array of colors. Each nickname starts from the entry its name hashes to (case-insensitively, RFC 1459 case mapping), so a nick usually keeps its color across channels and launches. In a conversation, people who talk get different entries while the palette has room. Someone whose usual entry is taken by, or looks like the color of, a person in the current exchange gets the entry closest to their usual one that is clearly different; when none is, a look-alike keeps its usual color. Two people given look-alike entries at different times who then talk side by side are parted: one of them, usually the one who spoke less recently, moves to the nearest clearly different entry, at most once per conversation. Entries that would read as plain text (close to `chat.foreground`) or fall under 3:1 against `chat.background` aren't used. When the theme loads, entries that look alike (an OKLab distance under 0.11) are moved a little apart, by an OKLab distance of at most 0.06 and at most 25° of hue, losing at most a third of their chroma, staying at 3:1 and clear of the text; entries that look like no other are used as written. Entries that look like `chat.selfNick` are kept for your own nick, unless a small change makes one clearly different from it and from the rest.
 
 - Dark default: `#F07178` `#F78C6C` `#FFCB6B` `#C3E88D` `#7FDBCA` `#89DDFF` `#82AAFF` `#B4A5FF` `#C792EA` `#FF9CAC` `#E6B07E` `#A8D8A0`
 - Light default: `#C62828` `#BF4A12` `#8C6200` `#4E7A12` `#1B7D4F` `#00727C` `#1565C0` `#3949AB` `#6A3FB5` `#9C27B0` `#AD1457` `#7D5A3C`

@@ -545,7 +545,8 @@ final class MessageListController {
     // MARK: Text
 
     /// Bumped whenever all message text renders differently (our nick, the
-    /// theme, fonts, formatting). Rows skip updates while their item is
+    /// theme, fonts, formatting), or someone who has spoken here got
+    /// another nick color. Rows skip updates while their item is
     /// unchanged, so it's part of what they compare (`DisplayItemRow`).
     @ObservationIgnored private(set) var textGeneration = 0
     @ObservationIgnored private var textInputs: (palette: MessageTextPalette, options: MessageTextOptions)?
@@ -569,6 +570,7 @@ final class MessageListController {
         textInputs = (palette, options)
         // Everything renders anew, so earlier nick changes are covered.
         nickChangesSeen = nickChangeCount
+        recolorsSeen = buffer.nickRecolorCount
         textStamps.removeAll()
         return textGeneration
     }
@@ -596,9 +598,16 @@ final class MessageListController {
     //   a join of someone nobody mentioned costs a scan of the cache's keys.
     // - A burst too big to sort out (a netsplit, a fresh NAMES, a
     //   reconnect) drops everything once, like a theme switch.
+    // - Someone who has spoken here moved off a look-alike color
+    //   (`BufferModel.nickRecolorCount`) changes their own lines' nicks,
+    //   avatars and the replies quoting them too: every row runs again
+    //   once (a new text generation), keeping the renderings that don't
+    //   mention them. At most once per person per conversation.
 
     /// `buffer.nickChangeCount` when the cache last caught up.
     @ObservationIgnored private var nickChangesSeen = 0
+    /// `buffer.nickRecolorCount` when the rows last caught up.
+    @ObservationIgnored private var recolorsSeen = 0
     /// Lines whose rendering was dropped for a nick change, by when.
     @ObservationIgnored private var textStamps: [UUID: Int] = [:]
     @ObservationIgnored private var textStampCount = 0
@@ -616,6 +625,10 @@ final class MessageListController {
         guard count != nickChangesSeen else { return }
         let seen = nickChangesSeen
         nickChangesSeen = count
+        if buffer.nickRecolorCount != recolorsSeen {
+            recolorsSeen = buffer.nickRecolorCount
+            textGeneration &+= 1
+        }
         guard colorsNicks else { return }
         let caseMapping = session.isupport.caseMapping
         guard let nicks = buffer.nickChanges(since: seen), nicks.count <= Self.nickChangesSortedOut else {

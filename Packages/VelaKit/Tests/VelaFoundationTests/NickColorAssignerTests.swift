@@ -160,11 +160,11 @@ struct NickColorAssignerTests {
 
     @Test func aMoveIsReported() {
         var assigner = NickColorAssigner(palette: wheel(12, similar: 2))
-        #expect(assigner.noteSpeaker("jeebz") == false)
+        #expect(assigner.noteSpeaker("jeebz").isEmpty)
         // tomf hashes onto jeebz's color, so gets another one.
-        #expect(assigner.noteSpeaker("tomf") == true)
+        #expect(assigner.noteSpeaker("tomf") == .init(given: "tomf"))
         // Already given: nothing changes.
-        #expect(assigner.noteSpeaker("tomf") == false)
+        #expect(assigner.noteSpeaker("tomf").isEmpty)
         #expect(assigner.noteEarlierSpeaker("jeebz") == false)
     }
 
@@ -193,9 +193,106 @@ struct NickColorAssignerTests {
         // A newcomer whose usual color is the quiet one's shares it, rather
         // than take 7 and look like the people talking.
         let newcomer = speaker(0)
-        #expect(assigner.noteSpeaker(newcomer) == false)
+        #expect(assigner.noteSpeaker(newcomer).isEmpty)
         #expect(assigner.index(for: newcomer) == 0)
         #expect(assigner.index(for: quiet) == 0)
+    }
+
+    // MARK: Look-alikes who end up talking together
+
+    /// On a 16-color wheel, a speaks, then five others; b, whose usual
+    /// color looks like a's, is given it, since a isn't in the exchange
+    /// any more. Returns the assigner, a, b and the others (4, 6, … 12).
+    private func lookAlikesGivenApart() -> (NickColorAssigner, String, String, [String]) {
+        let a = nick(usually: 0, of: 16)
+        let b = nick(usually: 1, of: 16, not: [a])
+        let others = [4, 6, 8, 10, 12].map { nick(usually: $0, of: 16, not: [a, b]) }
+        var assigner = NickColorAssigner(palette: wheel(16, similar: 2))
+        assigner.noteSpeaker(a)
+        for other in others { assigner.noteSpeaker(other) }
+        assigner.noteSpeaker(b)
+        return (assigner, a, b, others)
+    }
+
+    @Test func lookAlikesTalkingTogetherAreMovedApart() {
+        var (assigner, a, b, _) = lookAlikesGivenApart()
+        #expect(assigner.index(for: a) == 0)
+        #expect(assigner.index(for: b) == 1)
+        // a comes back, beside b. a, who had spoken less recently, moves:
+        // to the clearly different color nearest its usual one (6–12 and
+        // b's 1 are in the exchange, leaving 3, 14 and 15).
+        #expect(assigner.noteSpeaker(a) == .init(moved: a))
+        #expect(assigner.index(for: a) == 15)
+        #expect(assigner.index(for: b) == 1)
+        // Then nothing changes as they talk.
+        for _ in 0..<3 {
+            #expect(assigner.noteSpeaker(b).isEmpty)
+            #expect(assigner.noteSpeaker(a).isEmpty)
+        }
+        #expect(assigner.index(for: a) == 15)
+    }
+
+    @Test func nobodyMovesTwice() {
+        var (assigner, a, b, others) = lookAlikesGivenApart()
+        assigner.noteSpeaker(a)
+        #expect(assigner.index(for: a) == 15)
+        // d, whose usual 14 looks like a's new 15, is given it while a is
+        // out of the exchange.
+        let d = nick(usually: 14, of: 16, not: Set([a, b] + others))
+        for nick in [b] + others.prefix(4) { assigner.noteSpeaker(nick) }
+        assigner.noteSpeaker(d)
+        #expect(assigner.index(for: d) == 14)
+        // a comes back beside d. a has moved once, so d moves instead.
+        #expect(assigner.noteSpeaker(a) == .init(moved: d))
+        #expect(assigner.index(for: a) == 15)
+        #expect(assigner.index(for: d) == 13)
+    }
+
+    @Test func withNothingClearlyDifferentNobodyMoves() {
+        // Four colors; only opposite ones are clearly different. z keeps
+        // its look-alike color beside x (see crowdedLookAlikesKeepTheirColor).
+        let x = nick(usually: 0, of: 4)
+        let y = nick(usually: 2, of: 4)
+        let z = nick(usually: 1, of: 4)
+        var assigner = NickColorAssigner(palette: wheel(4, similar: 2))
+        for nick in [x, y, z] { assigner.noteSpeaker(nick) }
+        #expect(assigner.noteSpeaker(x).isEmpty)
+        #expect([x, y, z].map(assigner.index(for:)) == [0, 2, 1])
+    }
+
+    /// The crowded channel above: the newcomer shares the quiet person's
+    /// color. When the quiet person speaks again, the two are side by side
+    /// in one color, and the one who had spoken less recently moves, to a
+    /// color clear of the exchange (shared with someone who isn't in it).
+    @Test func twoPeopleSharingAColorAreParted() {
+        let palette = NickPaletteGeometry(distances: (0..<8).map { i in
+            (0..<8).map { j -> Double in
+                if i == j { return 0 }
+                return [i, j].contains(7) && [i, j].contains(where: (3...6).contains) ? 1 : 10
+            }
+        }, similar: 2)
+        var used: Set<String> = []
+        func speaker(_ color: Int) -> String {
+            let found = nick(usually: color, of: 8, not: used)
+            used.insert(found)
+            return found
+        }
+        var assigner = NickColorAssigner(palette: palette)
+        let quiet = speaker(0)
+        let talking = (1...6).map(speaker)
+        let newcomer = speaker(0)
+        for nick in [quiet] + talking + [newcomer] { assigner.noteSpeaker(nick) }
+        #expect(assigner.index(for: quiet) == 0 && assigner.index(for: newcomer) == 0)
+
+        #expect(assigner.noteSpeaker(quiet) == .init(moved: quiet))
+        #expect(assigner.index(for: newcomer) == 0)
+        // 1 and 2 are clear of the exchange (3–6 and the newcomer's 0).
+        #expect(assigner.index(for: quiet) == 1)
+    }
+
+    @Test func whoMovedIsSaidAsTheyLastSpoke() {
+        var (assigner, a, _, _) = lookAlikesGivenApart()
+        #expect(assigner.noteSpeaker(a.uppercased()) == .init(moved: a.uppercased()))
     }
 
     @Test func nicksThatHaveNotSpokenUseTheirUsualColor() {

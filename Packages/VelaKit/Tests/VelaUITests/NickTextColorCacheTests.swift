@@ -197,6 +197,50 @@ struct NickTextColorCacheTests {
         #expect(controller.textStamp(for: item(early)) != 0)
         #expect(color(of: "tomf", in: controller.textCache.rendered(early)) == theme.nickColor(for: "tomf", in: channel).color)
     }
+
+    /// Someone who has spoken moves off a look-alike (two people given one
+    /// color apart, then talking side by side): every row runs again once,
+    /// since their own lines change too, and their nick looks the same in
+    /// their lines, the member list and where they're mentioned.
+    @Test func aMoveReachesTheirLinesTheMemberListAndMentions() {
+        let theme = ResolvedTheme.fallbackDark
+        let geometry = theme.nickPaletteGeometry
+        var used: Set<String> = []
+        func nick(usually index: Int) -> String {
+            let found = (0...).lazy.map { "user\($0)" }.first {
+                NickColorAssigner.usualIndex(for: $0, palette: geometry) == index && !used.contains($0)
+            }!
+            used.insert(found)
+            return found
+        }
+        let shared = geometry.available[0]
+        let a = nick(usually: shared), b = nick(usually: shared)
+        // Everyone else, one each of the other colors: enough that a isn't
+        // holding a color any more when b first speaks.
+        let others = geometry.available.dropFirst().map(nick(usually:))
+        let (session, channel) = makeChannel(names: (["@doug", a, b] + others).joined(separator: " "))
+        let controller = MessageListController(buffer: channel, session: session)
+        let generation = prepare(controller)
+        let mention = ChatLine(kind: .message, nick: "doug", text: "\(a), you there?")
+        _ = controller.textCache.rendered(mention)
+        for speaker in [a] + others + [b] { feed(session, ":\(speaker)!u@host PRIVMSG #vela :hi") }
+        #expect(channel.nickColorIndex(for: a, palette: geometry) == shared)
+        #expect(channel.nickColorIndex(for: b, palette: geometry) == shared)
+        #expect(prepare(controller) == generation)
+
+        // a comes back: side by side in one color, a moves.
+        feed(session, ":\(a)!u@host PRIVMSG #vela :back")
+        let moved = channel.nickColorIndex(for: a, palette: geometry)
+        #expect(moved != shared)
+        #expect(channel.nickColorIndex(for: b, palette: geometry) == shared)
+        // Every row runs again, once.
+        #expect(prepare(controller) == generation + 1)
+        #expect(prepare(controller) == generation + 1)
+        let movedColor = theme.nickColor(at: moved).color
+        #expect(theme.nickDisplayColor(a, isSelf: false, colorNicks: true, in: channel) == movedColor)
+        #expect(theme.memberListNickColor(Member(nick: a), isSelf: false, colorNicks: true, in: channel) == movedColor)
+        #expect(color(of: a, in: controller.textCache.rendered(mention)) == movedColor)
+    }
 }
 
 /// Your own nick has one color everywhere, and nobody else gets one like it.
@@ -260,6 +304,39 @@ struct SelfNickColorTests {
             #expect(theme.memberListNickColor(Member(nick: "r3volution11"), isSelf: true, colorNicks: true, in: channel)
                 == theme.nickDisplayColor("r3volution11", isSelf: true, colorNicks: true, in: channel))
         }
+    }
+
+    /// A mention of you in someone's message is in your nick color, as on
+    /// your own messages and in the member list, in every built-in theme.
+    @Test func mentionsOfYouAreInYourNickColor() throws {
+        for (id, definition) in ThemeLoader.builtInDefinitions {
+            let theme = try ThemeResolver.resolve(definition, id: id, includeLoader: { try ThemeLoader.builtInDefinition(named: $0) }, overrides: .none)
+            let me = theme[ThemeKey.chatSelfNick]
+            let palette = MessageTextPalette(theme: theme, style: ChatStyle())
+            #expect(palette.mention == me, "\(id)")
+            let rendered = MessageTextRenderer.render(
+                "Doug: lunch?", palette: palette,
+                options: MessageTextOptions(renderFormatting: true, selfNick: "doug", channelTypes: ["#"], colorsNicks: true, caseMapping: .rfc1459),
+                highlightMentions: true, nicks: { _, _ in 0 }
+            )
+            let range = try #require(rendered.attributed.range(of: "Doug"))
+            #expect(rendered.attributed[range].runs.first?.foregroundColor == me, "\(id)")
+            #expect(theme.nickDisplayColor("doug", isSelf: true, colorNicks: true, in: nil) == me)
+            #expect(theme.memberListNickColor(Member(nick: "doug"), isSelf: true, colorNicks: true, in: nil) == me)
+        }
+    }
+
+    /// A recap naming you (a topic's people, who'll do what) uses your nick
+    /// color; anyone else is in their color in that conversation.
+    @Test func aRecapNamesYouInYourColor() {
+        let theme = ResolvedTheme.fallbackDark
+        let session = NetworkSession(config: NetworkConfig(name: "Test", host: "irc.test", nick: "doug"), database: nil)
+        session.nick = "doug"
+        let channel = BufferModel(id: BufferID(networkID: UUID(), foldedName: "#vela"), name: "#vela", kind: .channel)
+        #expect(theme.recapNickColor("Doug", colorNicks: true, in: (session, channel)) == theme[ThemeKey.chatSelfNick])
+        #expect(theme.recapNickColor("doug", colorNicks: false, in: (session, channel)) == theme[ThemeKey.chatSelfNick])
+        #expect(theme.recapNickColor("alice", colorNicks: true, in: (session, channel))
+            == theme.nickDisplayColor("alice", isSelf: false, colorNicks: true, in: channel))
     }
 
     @Test func nickColorsInTextNeverLookLikeYou() {

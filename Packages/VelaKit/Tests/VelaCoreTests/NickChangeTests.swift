@@ -122,6 +122,40 @@ struct NickChangeTests {
         #expect(channel.nickChangeCount == after)
     }
 
+    /// Someone given a color while their look-alike was away, then talking
+    /// beside them: the one coming back moves, and since they've spoken
+    /// here before, it's noted as a recolor (their own lines change too).
+    @Test func aSpeakerMovedOffALookAlikeIsNotedAsARecolor() {
+        let wheel = NickPaletteGeometry(distances: (0..<16).map { i in
+            (0..<16).map { j in Double(min(abs(i - j), 16 - abs(i - j))) }
+        }, similar: 2)
+        func nick(usually index: Int) -> String {
+            (0...).lazy.map { "nick\($0)" }.first { NickColorAssigner.preferredIndex(for: $0, paletteSize: 16) == index }!
+        }
+        let a = nick(usually: 0), b = nick(usually: 1)
+        let others = [4, 6, 8, 10, 12].map(nick(usually:))
+        let (session, channel) = makeChannel(names: (["@doug", a, b] + others).joined(separator: " "))
+        _ = channel.nickColorIndex(for: a, palette: wheel)
+        for speaker in [a] + others + [b] { feed(session, ":\(speaker)!u@host PRIVMSG #vela :hi") }
+        #expect(channel.nickColorIndex(for: b, palette: wheel) == 1)
+        let seen = channel.nickChangeCount, recolors = channel.nickRecolorCount
+        feed(session, ":\(a)!u@host PRIVMSG #vela :back")
+        #expect(channel.nickColorIndex(for: a, palette: wheel) == 15)
+        #expect(channel.nickChanges(since: seen) == [a])
+        #expect(channel.nickRecolorCount == recolors + 1)
+        // Talking on changes nothing.
+        let after = channel.nickChangeCount
+        feed(session, ":\(b)!u@host PRIVMSG #vela :yes", ":\(a)!u@host PRIVMSG #vela :ok")
+        #expect(channel.nickChangeCount == after)
+        #expect(channel.nickRecolorCount == recolors + 1)
+
+        // Replaying the conversation from its lines (a new theme) gives the
+        // same colors.
+        let replayed = NickPaletteGeometry(distances: wheel.distances, similar: 1.9999)
+        #expect(channel.nickColorIndex(for: a, palette: replayed) == 15)
+        #expect(channel.nickColorIndex(for: b, palette: replayed) == 1)
+    }
+
     /// The message list reads the count in its body and must update when it
     /// changes; rows look members up without watching them.
     @Test func theCountIsObservedAndMemberLookupsAreNot() {

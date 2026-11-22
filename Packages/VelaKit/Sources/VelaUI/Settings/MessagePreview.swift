@@ -210,7 +210,7 @@ struct MessageSamplePreview: View {
             HStack(alignment: slot == .gutter && !style.showAvatars ? .firstTextBaseline : .top, spacing: 10) {
                 if style.showAvatars {
                     VStack(spacing: 3) {
-                        AvatarView(nick: first.nick, size: avatarSize)
+                        AvatarView(nick: first.nick, size: avatarSize, isSelf: first.isSelf)
                         if slot == .gutter {
                             // As in the list: centered when it fits, else
                             // flush right with the avatar.

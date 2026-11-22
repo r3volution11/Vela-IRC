@@ -51,6 +51,10 @@ struct MemberListView: View {
             : []
         // For the keys, as shown now; flattened only when a key needs it.
         let order = MemberListOrder(groups: groups)
+        // Observed: someone given another nick color as they speak shows it
+        // here too, as in their messages. Rows look colors up without
+        // watching anything; this runs them again.
+        let nickColorStamp = buffer.nickChangeCount
 
         VStack(spacing: 0) {
             header(shown: groups.reduce(0) { $0 + $1.members.count })
@@ -80,6 +84,7 @@ struct MemberListView: View {
                                             ),
                                             buffer: buffer,
                                             session: session,
+                                            nickColorStamp: nickColorStamp,
                                             isSelected: isSelected,
                                             menuMembers: isSelected && selected.count > 1 ? selected : [member],
                                             keyboard: keyboard,
@@ -417,6 +422,9 @@ private struct MemberRow: View {
     let rankName: String?
     let buffer: BufferModel
     let session: NetworkSession
+    /// `buffer.nickChangeCount`. Not read: a new one makes the row run
+    /// again and look its nick color up anew.
+    let nickColorStamp: Int
     let isSelected: Bool
     /// Who the right-click menu is for: this member, or everyone selected
     /// when the row is part of a selection of several.

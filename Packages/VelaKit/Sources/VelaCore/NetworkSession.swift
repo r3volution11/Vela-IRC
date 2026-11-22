@@ -1995,7 +1995,8 @@ public final class NetworkSession: Identifiable {
 
     func fold(_ name: String) -> String { isupport.caseMapping.fold(name) }
 
-    func isSelf(_ nick: String) -> Bool { fold(nick) == fold(self.nick) }
+    /// Whether `nick` is ours, by the network's case mapping.
+    public func isSelf(_ nick: String) -> Bool { fold(nick) == fold(self.nick) }
 
     private func rebuildMatchers() {
         let words = config.highlightWords + (host?.behavior.highlightWords ?? [])
