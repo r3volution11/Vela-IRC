@@ -147,6 +147,7 @@ struct MessageListView: View {
             updatePill()
         }
         .onScrollTargetVisibilityChange(idType: DisplayItemID.self, threshold: 0.5) { visible in
+            controller.showsNoRows = visible.allSatisfy { $0 == .end }
             // Transient layouts can report nothing visible; keep the last rows.
             if let first = visible.first(where: { $0 != .end }) {
                 controller.topVisibleID = first
@@ -347,6 +348,11 @@ struct MessageListView: View {
     /// its current one does that: `.bottom`, or when that's the current one,
     /// a hair above it, then back.
     private func scrollToBottom(animated: Bool = false, anew: Bool = false) {
+        if scrollBackFromPastTheEnd() {
+            controller.bottomCheck?.cancel()
+            controller.bottomCheck = Task { await settleAtBottom(firstAnchor: 1) }
+            return
+        }
         var target = position
         target.scrollTo(id: DisplayItemID.end, anchor: .bottom)
         var anchor: CGFloat = 1
@@ -358,6 +364,37 @@ struct MessageListView: View {
         controller.bottomCheck?.cancel()
         guard !animated else { return }
         controller.bottomCheck = Task { await settleAtBottom(firstAnchor: anchor) }
+    }
+
+    /// Brings the list back when it's scrolled past its last row (wholly, or
+    /// partly with empty space under it): puts the bottom of the space after
+    /// the last row (where it was last laid out) at the bottom of the view,
+    /// by offset. Returns whether it scrolled.
+    ///
+    /// The content's height past the rows in view is an estimate, and it can
+    /// run past where the rows really end (`ScrollMetrics`). On macOS 26,
+    /// when the list gets shorter (the composer growing a line), SwiftUI
+    /// re-estimates it hundreds of points too tall and scrolls to that
+    /// bottom: the view shows nothing but empty space, the last row above
+    /// it. Scrolling to the end marker by its id lands there again (SwiftUI
+    /// places it by the same estimate), so this goes by where it really was.
+    /// Once it's in view again, its frame is current and the usual checks
+    /// take over.
+    ///
+    /// Only with no rows in view: while the end is out of view its frame is
+    /// where it was last laid out, and rows measured above it since (a
+    /// channel opening) can have moved it down. Rows in view mean the list
+    /// isn't past its end.
+    private func scrollBackFromPastTheEnd() -> Bool {
+        guard let end = controller.endFrame, let metrics = controller.metrics, !metrics.fitsWithoutScrolling else { return false }
+        // Partly past it: the end is in view (so where it is is current),
+        // with empty space under it.
+        let partly = metrics.contentEnd != nil && metrics.distancePastEnd > 1
+        // Wholly past it, with no rows in view.
+        let wholly = controller.showsNoRows && end.maxY < metrics.visibleMinY - 0.5
+        guard partly || wholly else { return false }
+        position.scrollTo(y: max(0, end.maxY - metrics.containerHeight))
+        return true
     }
 
     /// Checks that the list got to the bottom and scrolls there again until
@@ -385,7 +422,9 @@ struct MessageListView: View {
             case .wait:
                 continue
             case .scroll(let anchor):
-                position.scrollTo(id: DisplayItemID.end, anchor: UnitPoint(x: 0.5, y: anchor))
+                if !scrollBackFromPastTheEnd() {
+                    position.scrollTo(id: DisplayItemID.end, anchor: UnitPoint(x: 0.5, y: anchor))
+                }
             case .done(let settleBack):
                 if settleBack { position.scrollTo(id: DisplayItemID.end, anchor: .bottom) }
                 return
@@ -533,6 +572,10 @@ struct MessageListView: View {
             withAnimation(.smooth(duration: 0.35)) {
                 position.scrollTo(id: id, anchor: .center)
             }
+            Task {
+                try? await Task.sleep(for: .milliseconds(450))
+                releaseJumpTarget(id)
+            }
         } else {
             // Far away rows have estimated heights: jump, then correct once
             // the rows around the target have been laid out.
@@ -543,9 +586,22 @@ struct MessageListView: View {
                     try? await Task.sleep(for: .milliseconds(50))
                     position.scrollTo(id: id, anchor: UnitPoint(x: 0.5, y: nudge))
                 }
+                try? await Task.sleep(for: .milliseconds(100))
+                releaseJumpTarget(id)
             }
         }
         controller.flash(lineID, reduceMotion: reduceMotion)
+    }
+
+    /// Once a jump to a line has landed, the scroll position holds where the
+    /// list is rather than the line: SwiftUI keeps placing a line it holds
+    /// as the list changes size, and on macOS 26 it misplaces it (the
+    /// composer growing three lines moved a reader who'd jumped back by four
+    /// messages). Only if nothing else has taken over the position since.
+    private func releaseJumpTarget(_ id: DisplayItemID) {
+        guard position.viewID(type: DisplayItemID.self) == id, !controller.isPinnedToBottom,
+              !controller.isUserScrolling, let metrics = controller.metrics else { return }
+        position.scrollTo(y: metrics.visibleMinY)
     }
 
     // MARK: Keyboard

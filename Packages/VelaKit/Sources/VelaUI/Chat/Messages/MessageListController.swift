@@ -434,6 +434,9 @@ final class MessageListController {
     /// Rows at least half in view, top to bottom, with `.end` while the
     /// space after the last row is (`onScrollTargetVisibilityChange`).
     @ObservationIgnored var visibleIDs: [DisplayItemID] = []
+    /// SwiftUI's latest report shows no rows in view (`visibleIDs` keeps the
+    /// last rows seen instead).
+    @ObservationIgnored var showsNoRows = false
     /// The view that has the focus while the messages do.
     @ObservationIgnored weak var keyView: MessageKeyView?
     /// The messages were asked for the focus before their view was in a

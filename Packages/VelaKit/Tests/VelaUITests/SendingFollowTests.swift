@@ -203,6 +203,17 @@ struct SendingFollowTests {
         }
     }
 
+    /// What the list shows, as drawn (the typing line and the composer
+    /// aren't in it), to tell whether it moved.
+    private func listPicture(_ hosted: Hosted) throws -> Data {
+        hosted.host.layoutSubtreeIfNeeded()
+        let scrollViews = Self.findAll(in: hosted.host) { $0 is NSScrollView }.compactMap { $0 as? NSScrollView }
+        let list = try #require(scrollViews.max { $0.frame.height < $1.frame.height })
+        let rep = try #require(list.bitmapImageRepForCachingDisplay(in: list.bounds))
+        list.cacheDisplay(in: list.bounds, to: rep)
+        return try #require(rep.tiffRepresentation)
+    }
+
     /// Finds the lowest row marked like `newest` at the rows' leading edge,
     /// in the list's own render (the typing line drawn over it isn't in it).
     private func look(_ hosted: Hosted, for newest: Newest) throws -> Look {
@@ -370,6 +381,7 @@ struct SendingFollowTests {
             for (name, steps) in Self.scenarios(echo: echo) {
                 let scenario = "\(setup), echo-message \(echoMessage ? "on" : "off"), \(name)"
                 let before = try look(hosted, for: .mention).offset
+                let shownBefore = try listPicture(hosted)
                 let newest = try await perform(hosted, steps, echoMessage: echoMessage)
                 let after = try await settled(hosted, newest: newest)
                 // Return sends at once; the box empties on SwiftUI's next
@@ -378,8 +390,11 @@ struct SendingFollowTests {
                 #expect(cleared, "\(scenario): Return didn't send")
                 #expect(after.showsTheNewestLineAtTheBottom, "\(scenario): the newest line isn't at the bottom: \(after)")
                 // Not an earlier line of the same kind, left at the bottom
-                // by a list that didn't move.
-                #expect(after.offset > before + 10, "\(scenario): the list didn't move: \(before) → \(after.offset)")
+                // by a list that didn't move: what it shows changed. (Not
+                // by its offset: on macOS 26 that can shrink by thousands of
+                // points as rows above are measured, with the list showing
+                // the newest lines all along.)
+                #expect(try listPicture(hosted) != shownBefore, "\(scenario): the list didn't move: offset \(before) → \(after.offset)")
 
                 // Still following: the next line is brought into view.
                 hosted.buffer.updateTyping(nick: "gus", state: .done)
