@@ -12,7 +12,8 @@ public struct OpenChannelIntent: OpenIntent {
     public static let title: LocalizedStringResource = "Open Channel"
     public static let description = IntentDescription(
         "Opens a channel or private conversation in Vela.",
-        categoryName: "Channels"
+        categoryName: "Channels",
+        searchKeywords: ["open", "show", "go to", "switch to", "channel", "conversation", "private message", "DM", "query"]
     )
     public static let supportedModes: IntentModes = .foreground
 
@@ -45,7 +46,8 @@ public struct SendMessageIntent: AppIntent {
     public static let title: LocalizedStringResource = "Send Message"
     public static let description = IntentDescription(
         "Sends a message to a channel or private conversation. Text starting with “/” is sent as is, not run as a command.",
-        categoryName: "Messages"
+        categoryName: "Messages",
+        searchKeywords: ["send", "message", "say", "post", "write", "chat", "DM", "reply"]
     )
     public static let supportedModes: IntentModes = .background
 
@@ -95,7 +97,8 @@ public struct JoinChannelIntent: AppIntent {
     public static let title: LocalizedStringResource = "Join Channel"
     public static let description = IntentDescription(
         "Joins a channel on one of your networks.",
-        categoryName: "Channels"
+        categoryName: "Channels",
+        searchKeywords: ["join", "enter", "channel", "room", "/join"]
     )
     public static let supportedModes: IntentModes = .background
 
@@ -156,7 +159,8 @@ public struct MarkAllAsReadIntent: AppIntent {
     public static let title: LocalizedStringResource = "Mark All as Read"
     public static let description = IntentDescription(
         "Marks every channel and conversation as read.",
-        categoryName: "Channels"
+        categoryName: "Channels",
+        searchKeywords: ["mark read", "read all", "clear unread", "clear badges", "catch up later"]
     )
     public static let supportedModes: IntentModes = .background
 

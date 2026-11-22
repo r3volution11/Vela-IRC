@@ -320,7 +320,7 @@ struct PresetsPaneLogicTests {
     }
 
     @Test func aCommandWritesOnlyItsAxis() throws {
-        let settings = makeSettings(["chat.fontSize": 16, "chat.lineSpacing": 1, "chat.messageSpacing": 2, "memberList.visible": false])
+        let settings = makeSettings(["chat.fontSize": 16, "chat.lineSpacing": 2, "chat.messageSpacing": 4, "memberList.visible": false])
         let before = settings.values
         let focus = try #require(VelaCommandCatalog.presetCommands(settings).first { $0.id == "layout.focus" })
         focus.perform()

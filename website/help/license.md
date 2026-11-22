@@ -40,7 +40,7 @@ Vela was made with the help of AI. Its source code is open, so anyone can read e
 | [Translation](https://developer.apple.com/documentation/translation) | Translating messages on your Mac |
 | [Natural Language](https://developer.apple.com/documentation/naturallanguage) | Working out which language a message is in |
 | [App Intents](https://developer.apple.com/documentation/appintents) | Siri and Shortcuts actions |
-| [Core Spotlight](https://developer.apple.com/documentation/corespotlight) | Your channels in Spotlight |
+| [Core Spotlight](https://developer.apple.com/documentation/corespotlight) | Your channels, people and (if you turn it on) messages in Spotlight |
 
 Vela also uses [Observation](https://developer.apple.com/documentation/observation), [Uniform Type Identifiers](https://developer.apple.com/documentation/uniformtypeidentifiers), [Core Services](https://developer.apple.com/documentation/coreservices) (to watch theme and settings files for changes), and [Link Presentation](https://developer.apple.com/documentation/linkpresentation) and [GeoToolbox](https://developer.apple.com/documentation/geotoolbox) for Siri's message actions.
 

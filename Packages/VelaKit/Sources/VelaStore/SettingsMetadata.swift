@@ -200,6 +200,7 @@ public enum SettingsMetadata {
         "intelligence.catchUpModel": "Catch Me Up Model",
         "intelligence.recapModel": "Recap Model",
         "intelligence.providers": "AI Providers",
+        "intelligence.spotlightMessages": "Messages in Spotlight",
         "translation.autoTranslate": "Auto-Translated Channels",
         "translation.language": "Translate Into",
         "input.spellCheck": "Check Spelling",

@@ -5,6 +5,7 @@
 import Foundation
 import SwiftUI
 import VelaCore
+import VelaIntents
 import VelaFoundation
 import VelaIRC
 import VelaMedia
@@ -417,7 +418,9 @@ extension IRCTextStyle {
     }
 }
 
-/// `vela://join/<channel>` links for channel names in messages.
+/// `vela://join/<channel>` links for channel names in messages. Read back
+/// through the same parser as every other `vela://` link (``VelaLink``);
+/// clicked in a message, one joins on that message's network.
 nonisolated enum ChannelLink {
     static let scheme = "vela"
     static let host = "join"
@@ -431,10 +434,8 @@ nonisolated enum ChannelLink {
     }
 
     static func channel(from url: URL) -> String? {
-        guard url.scheme == scheme, url.host() == host,
-              let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
-        let name = String(components.path.drop { $0 == "/" })
-        return name.isEmpty ? nil : name
+        guard case .join(let channel, nil) = VelaLink.parse(url) else { return nil }
+        return channel
     }
 }
 

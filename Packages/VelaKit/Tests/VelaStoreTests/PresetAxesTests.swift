@@ -44,7 +44,7 @@ struct PresetAxesTests {
             "messageStyle.modern": ["chat.layout": "grouped", "chat.monospace": false],
             "messageStyle.classic": ["chat.layout": "classic", "chat.monospace": true],
             "messageStyle.columns": ["chat.layout": "columns", "chat.monospace": false],
-            "density.compact": ["chat.lineSpacing": 1, "chat.messageSpacing": 2],
+            "density.compact": ["chat.lineSpacing": 2, "chat.messageSpacing": 4],
             "density.standard": ["chat.lineSpacing": 4, "chat.messageSpacing": 12],
             "density.comfortable": ["chat.lineSpacing": 6, "chat.messageSpacing": 18],
         ]
@@ -293,7 +293,7 @@ struct PresetAxesTests {
     /// Each of Vela 1.0–1.4's presets lands on the axes it matches; the
     /// rest of it (font size, media, unread settings) stays as it was.
     @Test(arguments: [
-        ("classic", "sidebar", "classic", "compact"),
+        ("classic", "sidebar", "classic", "customized"),
         ("modern", "sidebar", "modern", "standard"),
         ("tabbed", "tabsOnTop", "modern", "customized"),
         ("focus", "tabsInTitleBar", "columns", "customized"),
@@ -312,7 +312,9 @@ struct PresetAxesTests {
     }
 
     /// 1.0's Classic IRC, as written before the media keys were split:
-    /// after the existing migration, Sidebar, Classic IRC and Compact.
+    /// after the existing migration, Sidebar and Classic IRC, with its own
+    /// tighter spacing (1 and 2) shown as a customized density: Compact is
+    /// 2 and 4, so Modern's groups stay apart. Nothing is rewritten.
     @Test func classicFromVela1MapsOntoTheAxes() throws {
         let directory = try TemporaryDirectory()
         defer { directory.cleanup() }
@@ -335,7 +337,8 @@ struct PresetAxesTests {
         }
         """#, in: directory)
         store.applyMigrations()
-        #expect(axes(store) == axes("sidebar", "classic", "compact"))
+        #expect(axes(store) == axes("sidebar", "classic", "customized"))
+        #expect(store[.chatLineSpacing] == 1 && store[.chatMessageSpacing] == 2, "the spacing stays")
         #expect(store[.chatFontSize] == 12, "the font size stays")
     }
 

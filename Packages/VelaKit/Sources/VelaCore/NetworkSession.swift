@@ -35,6 +35,12 @@ public protocol SessionHost: AnyObject {
     /// (`history.save`). Read for every line, so keep it cheap. Optional:
     /// hosts that don't say save and load, as Vela always used to.
     var historyStorage: HistoryStorage { get }
+    /// Where messages just written to the database go (Spotlight's index
+    /// of messages), read once per batch written. Optional: nil.
+    var savedMessagesSink: (any SavedMessagesSink)? { get }
+    /// A channel was removed or a conversation closed (``NetworkSession/close(_:)``).
+    /// Optional.
+    func session(_ session: NetworkSession, didClose buffer: BufferModel)
 }
 
 /// User preferences that influence protocol behavior.
@@ -1499,6 +1505,7 @@ public final class NetworkSession: Identifiable {
         let key = buffer.id.storeKey
         writeBuffer { try await $0.deleteBuffer(key, keepMessages: true) }
         host?.sessionDidChangeUnreadCounts(self)
+        host?.session(self, didClose: buffer)
     }
 
     /// Leaves a channel but keeps it in the list, not joined, with its
@@ -1980,7 +1987,17 @@ public final class NetworkSession: Identifiable {
         pendingRecords = []
         // Saving may have been turned off while these waited.
         guard historyStorage.saves, !records.isEmpty else { return }
-        writeBuffer { _ = try await $0.append(records) }
+        // Spotlight's index of messages, when it's on, hears about the ones
+        // that were new once they're written (off the main actor).
+        guard let sink = host?.savedMessagesSink else {
+            writeBuffer { _ = try await $0.append(records) }
+            return
+        }
+        let context = savedMessagesContext(for: records)
+        writeBuffer { database in
+            let inserted = try await database.append(records)
+            if !inserted.isEmpty { sink.didSave(inserted, context: context) }
+        }
     }
 
     /// Writes lines still waiting for the next batch, and waits until every

@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<!--
+  Vela's AppleScript dictionary: what Alfred, Raycast, Shortcuts' "Run
+  AppleScript" and your own scripts can ask of Vela. Info.plist names it
+  (OSAScriptingDefinition); website/guide/automation.md documents it.
+
+  It's an interface others build on: never rename a term, a code or a cocoa
+  key, and only add. A command whose direct parameter is a network or a
+  conversation must be in that class's responds-to list too, or Cocoa
+  scripting answers "doesn't understand". Every cocoa class, key and method
+  here is in
+  Packages/VelaKit/Sources/VelaIntents/Automation/Scripting/, and
+  ScriptingDictionaryTests checks that they match.
+
+  macOS asks you once for each app before it can send Vela these
+  ("“Raycast” wants access to control “Vela”"). That's why scripts may
+  send messages, which vela:// links never can.
+-->
+<dictionary title="Vela Terminology">
+
+	<suite name="Standard Suite" code="????" description="Common terms for all applications.">
+		<command name="count" code="corecnte" description="Return the number of elements of a particular class within an object.">
+			<cocoa class="NSCountCommand"/>
+			<direct-parameter type="specifier" requires-access="r" description="The objects to be counted."/>
+			<parameter name="each" code="kocl" type="type" optional="yes" description="The class of objects to be counted." hidden="yes">
+				<cocoa key="ObjectClass"/>
+			</parameter>
+			<result type="integer" description="The count."/>
+		</command>
+
+		<command name="exists" code="coredoex" description="Verify that an object exists.">
+			<cocoa class="NSExistsCommand"/>
+			<direct-parameter type="any" requires-access="r" description="The object(s) to check."/>
+			<result type="boolean" description="Did the object(s) exist?"/>
+		</command>
+
+		<command name="quit" code="aevtquit" description="Quit Vela.">
+			<cocoa class="NSQuitCommand"/>
+		</command>
+
+		<class name="application" code="capp" description="Vela.">
+			<cocoa class="NSApplication"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the application."/>
+			<property name="frontmost" code="pisf" type="boolean" access="r" description="Is this the active application?">
+				<cocoa key="isActive"/>
+			</property>
+			<property name="version" code="vers" type="text" access="r" description="The version number of the application."/>
+			<responds-to command="quit">
+				<cocoa method="handleQuitScriptCommand:"/>
+			</responds-to>
+		</class>
+	</suite>
+
+	<suite name="Vela Suite" code="Vela" description="Your networks and conversations, and what Vela can do with them.">
+
+		<class-extension extends="application" description="Vela's networks and conversations.">
+			<element type="network" access="r">
+				<cocoa key="velaNetworks"/>
+			</element>
+			<element type="conversation" access="r">
+				<cocoa key="velaConversations"/>
+			</element>
+			<property name="unread conversations" code="VUcv" access="r" description="Channels and private conversations with something unread, in sidebar order. Muted ones only with mentions.">
+				<cocoa key="velaUnreadConversations"/>
+				<type type="conversation" list="yes"/>
+			</property>
+			<property name="current conversation" code="VCur" type="conversation" access="r" description="The channel or private conversation you're looking at (missing value if it's a network console or nothing).">
+				<cocoa key="velaCurrentConversation"/>
+			</property>
+		</class-extension>
+
+		<class name="network" code="VNet" plural="networks" description="One of your IRC networks or bouncers.">
+			<cocoa class="VelaScriptNetwork"/>
+			<property name="id" code="ID  " type="text" access="r" description="The network's unique id (a UUID). It never changes.">
+				<cocoa key="uniqueID"/>
+			</property>
+			<property name="name" code="pnam" type="text" access="r" description="The network's name, as Vela shows it.">
+				<cocoa key="name"/>
+			</property>
+			<property name="connected" code="VCon" type="boolean" access="r" description="Whether Vela is connected to it.">
+				<cocoa key="connected"/>
+			</property>
+			<property name="nickname" code="VNck" type="text" access="r" description="Your nick on it.">
+				<cocoa key="nickname"/>
+			</property>
+			<element type="conversation" access="r">
+				<cocoa key="velaConversations"/>
+			</element>
+			<responds-to command="open recap">
+				<cocoa method="handleVelaScriptCommand:"/>
+			</responds-to>
+		</class>
+
+		<class name="conversation" code="VCnv" plural="conversations" description="A channel or private conversation.">
+			<cocoa class="VelaScriptConversation"/>
+			<property name="id" code="ID  " type="text" access="r" description="The conversation's unique id: its network's id, a slash, and its name in lowercase (“…/#vela”). It never changes, and vela://open?id= takes it.">
+				<cocoa key="uniqueID"/>
+			</property>
+			<property name="name" code="pnam" type="text" access="r" description="“#vela”, or the other person's nick.">
+				<cocoa key="name"/>
+			</property>
+			<property name="network name" code="VNtN" type="text" access="r" description="Its network's name.">
+				<cocoa key="networkName"/>
+			</property>
+			<property name="network" code="VNtw" type="network" access="r" description="Its network.">
+				<cocoa key="network"/>
+			</property>
+			<property name="kind" code="VKnd" type="conversation kind" access="r" description="Channel or private conversation.">
+				<cocoa key="scriptingKind"/>
+			</property>
+			<property name="unread count" code="VUnr" type="integer" access="r" description="Messages you haven't read.">
+				<cocoa key="unreadCount"/>
+			</property>
+			<property name="mention count" code="VMen" type="integer" access="r" description="Mentions of you you haven't read (every new message, in a private conversation).">
+				<cocoa key="mentionCount"/>
+			</property>
+			<property name="joined" code="VJnd" type="boolean" access="r" description="Whether you're in the channel. Private conversations always are.">
+				<cocoa key="joined"/>
+			</property>
+			<property name="muted" code="VMut" type="boolean" access="r" description="Whether it's muted.">
+				<cocoa key="muted"/>
+			</property>
+			<property name="topic" code="VTop" type="text" access="r" description="The channel's topic (empty for a private conversation).">
+				<cocoa key="topic"/>
+			</property>
+			<responds-to command="show">
+				<cocoa method="handleVelaScriptCommand:"/>
+			</responds-to>
+			<responds-to command="catch up">
+				<cocoa method="handleVelaScriptCommand:"/>
+			</responds-to>
+			<responds-to command="open recap">
+				<cocoa method="handleVelaScriptCommand:"/>
+			</responds-to>
+			<responds-to command="mark read">
+				<cocoa method="handleVelaScriptCommand:"/>
+			</responds-to>
+		</class>
+
+		<enumeration name="conversation kind" code="VCkd">
+			<enumerator name="channel" code="VKch" description="A channel."/>
+			<enumerator name="private conversation" code="VKpv" description="A private conversation with one person."/>
+		</enumeration>
+
+		<enumeration name="recap span" code="VRsp">
+			<enumerator name="since unread" code="VSun" description="Since your first unread message."/>
+			<enumerator name="last half hour" code="VS30" description="The last 30 minutes."/>
+			<enumerator name="last hour" code="VS1h" description="The last hour."/>
+			<enumerator name="last four hours" code="VS4h" description="The last 4 hours."/>
+			<enumerator name="today" code="VStd" description="Since midnight."/>
+			<enumerator name="last day" code="VS1d" description="The last 24 hours."/>
+			<enumerator name="last three days" code="VS3d" description="The last 3 days."/>
+			<enumerator name="last week" code="VS1w" description="The last week."/>
+		</enumeration>
+
+		<command name="show" code="Velashow" description="Bring Vela to the front, showing a conversation.">
+			<cocoa class="VelaShowCommand"/>
+			<direct-parameter type="conversation" description="The conversation to show."/>
+		</command>
+
+		<command name="send message" code="VelaSend" description="Send a message to a channel you're in or an open private conversation, as plain text: text starting with “/” is sent as it is, never run as a command. Long text is split as the message box splits it and goes out at the network's pace. Waits a few seconds for a network that's still connecting.">
+			<cocoa class="VelaSendMessageCommand"/>
+			<direct-parameter type="text" description="The message."/>
+			<parameter name="to" code="VsTo" type="conversation" description="Where to send it.">
+				<cocoa key="Target"/>
+			</parameter>
+			<parameter name="allowing multiple lines" code="VsMl" type="boolean" optional="yes" description="Send more than 3 lines (the message box asks before sending more). Off by default.">
+				<cocoa key="AllowMultipleLines"/>
+			</parameter>
+		</command>
+
+		<command name="draft message" code="VelaDrft" description="Show a conversation with text added to its message box, after anything already there. Nothing is sent: you press Return.">
+			<cocoa class="VelaDraftMessageCommand"/>
+			<direct-parameter type="text" description="The text."/>
+			<parameter name="to" code="VdTo" type="conversation" description="The conversation.">
+				<cocoa key="Target"/>
+			</parameter>
+		</command>
+
+		<command name="join" code="VelaJoin" description="Join a channel without switching to it, and return it.">
+			<cocoa class="VelaJoinCommand"/>
+			<direct-parameter type="text" description="The channel's name (“#” is added if it has no prefix)."/>
+			<parameter name="on" code="VjOn" type="network" optional="yes" description="The network. Without one: the network you're looking at, or the only one you're connected to.">
+				<cocoa key="Network"/>
+			</parameter>
+			<parameter name="key" code="VjKy" type="text" optional="yes" description="The channel's password, if it has one.">
+				<cocoa key="Key"/>
+			</parameter>
+			<result type="conversation" description="The channel."/>
+		</command>
+
+		<command name="catch up" code="VelaCtUp" description="Bring Vela to the front with a conversation's Catch me up card summarizing what you missed (Apple Intelligence, on this Mac).">
+			<cocoa class="VelaCatchUpCommand"/>
+			<direct-parameter type="conversation" optional="yes" description="The conversation. Without one: the unmuted one with the most unread messages."/>
+		</command>
+
+		<command name="open recap" code="VelaRcap" description="Open a Recap: a report of what was said in a conversation, on a network or everywhere.">
+			<cocoa class="VelaOpenRecapCommand"/>
+			<direct-parameter optional="yes" description="A conversation or a network. Without one: every network.">
+				<type type="conversation"/>
+				<type type="network"/>
+			</direct-parameter>
+			<parameter name="person" code="VrPs" type="text" optional="yes" description="One person's nick: their messages, messages that name them, and your private conversation with them.">
+				<cocoa key="Person"/>
+			</parameter>
+			<parameter name="span" code="VrSp" type="recap span" optional="yes" description="How far back. Since your first unread message by default.">
+				<cocoa key="Span"/>
+			</parameter>
+		</command>
+
+		<command name="mark read" code="VelaMkRd" description="Mark everything in a conversation as read.">
+			<cocoa class="VelaMarkReadCommand"/>
+			<direct-parameter type="conversation" description="The conversation."/>
+		</command>
+
+		<command name="mark all read" code="VelaMkAl" description="Mark every channel and conversation as read.">
+			<cocoa class="VelaMarkAllReadCommand"/>
+			<result type="integer" description="How many had something unread."/>
+		</command>
+
+		<command name="search" code="VelaSrch" description="Bring Vela to the front with message search open on some words.">
+			<cocoa class="VelaSearchCommand"/>
+			<direct-parameter type="text" description="What to search for."/>
+			<parameter name="on" code="VsOn" optional="yes" description="Search only one conversation or network.">
+				<cocoa key="Scope"/>
+				<type type="conversation"/>
+				<type type="network"/>
+			</parameter>
+		</command>
+
+		<command name="set away" code="VelaAway" description="Mark you away on every network you're connected to, like /away.">
+			<cocoa class="VelaSetAwayCommand"/>
+			<direct-parameter type="text" optional="yes" description="What people see when they message you. “Away” if you leave it out."/>
+			<result description="The networks you're now away on.">
+				<type type="text" list="yes"/>
+			</result>
+		</command>
+
+		<command name="set back" code="VelaBack" description="Mark you back on every network you're connected to, like /back.">
+			<cocoa class="VelaSetBackCommand"/>
+			<result description="The networks you're now back on.">
+				<type type="text" list="yes"/>
+			</result>
+		</command>
+	</suite>
+</dictionary>

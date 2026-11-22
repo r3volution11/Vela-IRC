@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import AppKit
+import CoreSpotlight
 import SwiftUI
 import VelaCore
 import VelaIntelligence
@@ -69,7 +70,13 @@ struct MainWindowView: View {
             if let mode = uiState.commandPalette {
                 CommandPaletteView(mode: mode)
                     .id(mode)
+            } else if let search = uiState.messageSearch {
+                MessageSearchPanel(request: search)
+                    .id(search.id)
             }
+        }
+        .overlay(alignment: .top) {
+            AutomationNoticeOverlay()
         }
         .themedWindowBorder()
         .background(WindowBackdrop())
@@ -107,6 +114,19 @@ struct MainWindowView: View {
         }
         .onDisappear {
             EmbedPlayerStore.shared.stopAll()
+        }
+        // vela:// links normally arrive through LinkEventHandler; one that
+        // launched Vela may come this way first (the router ignores the
+        // same link twice).
+        .onOpenURL { url in
+            LinkEventHandler.shared?.router.open(url)
+        }
+        // A message chosen in Spotlight, or "Search in Vela".
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            SpotlightActivity.open(activity, app: app, uiState: uiState)
+        }
+        .onContinueUserActivity(CSQueryContinuationActionType) { activity in
+            SpotlightActivity.open(activity, app: app, uiState: uiState)
         }
         .sheet(item: $uiState.networkEditor) { target in
             NetworkEditorView(target: target)

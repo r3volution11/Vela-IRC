@@ -110,19 +110,10 @@ public struct RecapIntent: AppIntent {
         app: AppModel,
         services: IntelligenceServices
     ) throws -> RecapScope {
-        let person = person?.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: "@"))
-        let place: RecapScope.Place
-        if let channel {
-            let (session, buffer) = try app.target(for: channel)
-            place = person?.isEmpty == false ? .network(session.id) : .buffer(buffer.id)
-        } else if let network {
-            place = .network(try app.session(for: network).id)
-        } else {
-            place = .everywhere
-        }
-        services.availability.refresh()
-        let output: RecapScope.Output = services.status(for: .recap).isAvailable ? .summary : .log
-        return RecapScope(place: place, person: person, span: span.span, output: output)
+        // The same Recap as a vela://recap link or AppleScript's open recap.
+        let conversation = try channel.map { try app.target(for: $0).buffer.id }
+        let networkID = try network.map { try app.session(for: $0).id }
+        return VelaAutomation.recapScope(conversation: conversation, network: networkID, person: person, span: span, services: services)
     }
 
     /// "Opening a Recap of #vela in Vela."

@@ -15,6 +15,7 @@ struct VelaAppIntentsPackage: AppIntentsPackage {
 
 /// Phrases Siri and Spotlight know without any setup. Each one names the
 /// app; channel phrases list your channels (refreshed as they change).
+/// An app has at most 10.
 struct VelaShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -68,6 +69,25 @@ struct VelaShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Open Channel",
             systemImageName: "number"
+        )
+        AppShortcut(
+            intent: SearchMessagesIntent(),
+            phrases: [
+                "Search \(.applicationName)",
+                "Search messages in \(.applicationName)",
+                "Find a message in \(.applicationName)",
+            ],
+            shortTitle: "Search Messages",
+            systemImageName: "text.magnifyingglass"
+        )
+        AppShortcut(
+            intent: JoinChannelIntent(),
+            phrases: [
+                "Join a channel in \(.applicationName)",
+                "Join a channel with \(.applicationName)",
+            ],
+            shortTitle: "Join Channel",
+            systemImageName: "plus.bubble"
         )
         AppShortcut(
             intent: SetAwayIntent(),

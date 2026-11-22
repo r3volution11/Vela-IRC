@@ -731,6 +731,10 @@ extension SettingKey where Value == Bool {
         .init("intelligence.spotlightChannels", default: true,
               summary: "List your channels and conversations in Spotlight's results. Names only, never messages. Siri finds them by name either way.")
     }
+    public static var intelligenceSpotlightMessages: SettingKey<Bool> {
+        .init("intelligence.spotlightMessages", default: false,
+              summary: "Let Spotlight search your saved messages: the newest 5,000 of each network when you turn it on, then each new one as it's saved. Needs history.save. Turning it off, turning off history.save, deleting saved history, or removing a channel, conversation or network takes those messages out of Spotlight.")
+    }
 }
 
 extension SettingKey where Value == Int {
@@ -910,6 +914,7 @@ public enum SettingsCatalog {
             SettingKey.intelligenceRecapModel.descriptor,
             SettingKey.intelligenceProviders.descriptor,
             SettingKey.intelligenceSpotlightChannels.descriptor,
+            SettingKey.intelligenceSpotlightMessages.descriptor,
             SettingKey.translationLanguage.descriptor,
             SettingKey.translationAutoTranslate.descriptor,
 

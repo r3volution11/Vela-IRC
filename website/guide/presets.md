@@ -58,11 +58,11 @@ A style sets the [message layout](/guide/messages-and-layouts) and whether chat 
 
 | Density | Between lines | Between messages |
 | --- | --- | --- |
-| **Compact** | 1 point | 2 points |
+| **Compact** | 2 points | 4 points |
 | **Standard** | 4 points | 12 points |
 | **Comfortable** | 6 points | 18 points |
 
-Standard is Vela's default. Compact suits Classic IRC and Columns, for the most messages on screen; Comfortable suits Modern, for easy reading.
+Standard is Vela's default. Compact fits the most messages on screen while keeping Modern's groups apart; Comfortable is for easy reading. For tighter spacing still, set it in **Settings → Messages** (the row then shows **Customized**).
 
 **Density never changes your font size**, so it never undoes a size you chose yourself. Change that with **View → Bigger** (<kbd>⌘+</kbd>) and **Smaller** (<kbd>⌘−</kbd>), or in **Settings → Messages**.
 
@@ -86,7 +86,7 @@ Vela 1.5 replaced the four one-click presets (Classic IRC, Modern Chat, Tabbed a
 
 | If you used | Window layout | Message style | Density |
 | --- | --- | --- | --- |
-| **Classic IRC** | Sidebar | Classic IRC | Compact |
+| **Classic IRC** | Sidebar | Classic IRC | Customized (1 and 2 points) |
 | **Modern Chat** | Sidebar | Modern | Standard |
 | **Tabbed** | Tabs on Top | Modern | Customized (2 and 8 points) |
 | **Focus** | Tabs in Title Bar | Columns | Customized (2 and 3 points) |

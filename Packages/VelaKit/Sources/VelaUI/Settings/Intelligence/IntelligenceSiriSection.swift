@@ -20,9 +20,18 @@ struct IntelligenceSiriSection: View {
         ) {
             SettingsToggle(
                 "Show channels in Spotlight",
-                detail: "Channel and conversation names in Spotlight's results, never messages. Siri still finds them by name when this is off.",
+                detail: "Channel names, and the people you talk to in private, in Spotlight's results. Siri still finds them by name when this is off.",
                 isOn: $settings[.intelligenceSpotlightChannels]
             )
+            SettingsToggle(
+                "Search messages in Spotlight",
+                detail: Self.messagesDetail(saves: settings[.historySave]),
+                isOn: Binding(
+                    get: { settings[.historySave] && settings[.intelligenceSpotlightMessages] },
+                    set: { settings[.intelligenceSpotlightMessages] = $0 }
+                )
+            )
+            .themedDisabled(!settings[.historySave])
             SiriPhrasesRow(phrases: Self.phrases)
             SettingsRow("Shortcuts", detail: "Use Vela's actions in your own shortcuts and automations.") {
                 Button("Open Shortcuts", action: Self.openShortcuts)
@@ -41,6 +50,14 @@ struct IntelligenceSiriSection: View {
         "Open #vela on Libera.Chat in Vela",
         "Set me away in Vela",
     ]
+
+    /// Messages in Spotlight need saved history: Spotlight indexes what's
+    /// saved, and forgets it with the history.
+    static func messagesDetail(saves: Bool) -> String {
+        saves
+            ? "Your saved messages in Spotlight's results: the newest 5,000 of each network, then each new one. Turning it off, deleting saved history or removing a channel takes them out."
+            : "Needs Save message history, in Settings → Messages → History."
+    }
 
     static let shortcutsBundleID = "com.apple.shortcuts"
 

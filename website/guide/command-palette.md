@@ -41,7 +41,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Appearance** | Next App Icon, and App Icon: _name_ for each [Dock icon](/customize/app-icon) |
 | **Notifications** | Show Dock Badge |
 | **Settings** | Open Settings, Search…, Open settings.json |
-| **Go** | Go to Conversation…, Previous / Next Conversation, Previous / Next Tab, Previous / Next Network, Previous / Next Unread, Focus Sidebar (or Focus Tabs), Focus Messages, Focus Message Box, Focus Member List, Focus Next / Previous Area |
+| **Go** | Go to Conversation…, Search Messages…, Previous / Next Conversation, Previous / Next Tab, Previous / Next Network, Previous / Next Unread, Focus Sidebar (or Focus Tabs), Focus Messages, Focus Message Box, Focus Member List, Focus Next / Previous Area |
 | **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Translate Messages Automatically, Catch Me Up, Catch Me Up With… and Recap With… (once you've [added a model](/guide/ai-models)), Recap…, Recap Conversations with…, Don't Log This Channel (while chat logs are on), Close (a conversation), Reopen Closed Channel, and Reopen _#channel_ (_network_) for each one in File → Recently Closed |
 | **Channel** | Join…, Leave _#channel_ or Join _#channel_, Hide _#channel_ (a channel detached on a bouncer), Remove _#channel_, and Show _#channel_ (_network_) for each [hidden channel](/guide/joining-channels#hidden-channels) |
 | **Network** | Add Network…, Recap _network_… and Recap All Networks… (see [Recap](/guide/recap)), Sort Channels A–Z (for the network you're in), Move Network Left / Right (Up / Down with the sidebar), and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |

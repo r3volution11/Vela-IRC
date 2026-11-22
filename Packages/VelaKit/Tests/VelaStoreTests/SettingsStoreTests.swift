@@ -210,7 +210,7 @@ import VelaFoundation
 @Suite struct SettingsCatalogTests {
     @Test func catalogIsCompleteAndUnique() {
         let keys = SettingKey.allKnownKeys.map(\.key)
-        #expect(keys.count == 109)
+        #expect(keys.count == 110)
         #expect(Set(keys).count == keys.count)
         #expect(keys.allSatisfy { $0.contains(".") })
         #expect(SettingKey.allKnownKeys.allSatisfy { !$0.summary.isEmpty })

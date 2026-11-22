@@ -139,4 +139,6 @@ Either way, Vela saves your channels and conversations, where you stopped readin
 
 To limit how much saved history is kept, set **Keep messages** (from a week to two years). Older messages are removed when Vela starts. By default saved history is kept forever. In settings.json it's [`history.retentionDays`](/reference/settings#history.retentionDays), which takes any number of days. It applies while history is saved, and to history you kept when you turned saving off.
 
+While history is saved, **Search Messages…** in the command palette finds messages in it, and you can let Spotlight search it too: see [Messages in Spotlight](/guide/siri-shortcuts#messages-in-spotlight).
+
 For a copy you can keep, search or open in other apps, turn on [chat logs](/guide/chat-logs): plain-text files, one folder per network. They're separate from message history: a log is a copy for you, which Vela never loads back, and it's written whether or not history is saved.

@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntents
 import VelaIntelligence
 import VelaStore
 import VelaTheme
@@ -141,6 +142,19 @@ struct VelaCommandCatalog {
             keywords: ["quick open", "switch", "channel", "buffer", "jump"]
         ) { [context] in
             Self.togglePalette(.buffers, uiState: context.uiState, openWindow: context.openWindow)
+        }
+    }
+
+    /// Message search, also opened by vela://search, AppleScript's
+    /// `search` and Spotlight's "Search in Vela".
+    var searchMessages: VelaCommand {
+        VelaCommand(
+            id: "go.searchMessages", category: .go, title: "Search Messages…",
+            keywords: ["find", "search", "history", "grep", "look up"]
+        ) { [context] in
+            context.uiState.commandPalette = nil
+            context.uiState.messageSearch = MessageSearchRequest(query: "")
+            context.openWindow(id: WindowID.main)
         }
     }
 
@@ -1018,7 +1032,7 @@ struct VelaCommandCatalog {
     /// Every command, for the palette (which hides disabled ones).
     var all: [VelaCommand] {
         var commands: [VelaCommand] = [
-            goToConversation,
+            goToConversation, searchMessages,
             toggleSidebar, toggleMemberList, toggleChannelTitleBar, toggleFullScreen,
         ]
         commands += presetCommands

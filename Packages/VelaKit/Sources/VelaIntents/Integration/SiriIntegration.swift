@@ -8,13 +8,15 @@ import UserNotifications
 import VelaCore
 
 /// Connects a running Vela to Siri, Shortcuts and Spotlight: keeps the
-/// Spotlight index of channel names current, tells Siri where you send
-/// messages, and labels notifications with their channel and message.
-/// Demo mode does none of this, so sample channels never reach Spotlight.
+/// Spotlight index of channel names current (and of saved messages, if you
+/// turn that on), tells Siri where you send messages, and labels
+/// notifications with their channel and message. Demo mode does none of
+/// this, so sample channels never reach Spotlight.
 @MainActor
 public final class SiriIntegration {
     private let app: AppModel
     private let indexer: SpotlightChannelIndexer
+    private let messageIndexer: SpotlightMessageIndexer
     private var lastDonation: [BufferID: Date] = [:]
 
     /// - Parameter refreshAppShortcuts: Called when the channel list
@@ -23,11 +25,13 @@ public final class SiriIntegration {
     public init(app: AppModel, refreshAppShortcuts: (@MainActor () -> Void)? = nil) {
         self.app = app
         self.indexer = SpotlightChannelIndexer(app: app, refreshAppShortcuts: refreshAppShortcuts)
+        self.messageIndexer = SpotlightMessageIndexer(app: app)
     }
 
     public func start() {
         guard !app.isDemo else { return }
         indexer.start()
+        messageIndexer.start()
         app.onComposerMessage = { [weak self] buffer, session in
             self?.donateSend(buffer: buffer, session: session)
         }

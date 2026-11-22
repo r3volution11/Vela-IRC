@@ -173,7 +173,7 @@ extension PresetChoice {
         name: "Compact",
         summary: "Tight lines, little space between messages.",
         systemImage: "text.justify",
-        values: ["chat.lineSpacing": 1, "chat.messageSpacing": 2]
+        values: ["chat.lineSpacing": 2, "chat.messageSpacing": 4]
     )
 
     /// Vela's defaults.

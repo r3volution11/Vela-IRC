@@ -37,6 +37,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Your own AI models', link: '/guide/ai-models' },
       { text: 'Recap', link: '/guide/recap' },
       { text: 'Siri, Shortcuts & Spotlight', link: '/guide/siri-shortcuts' },
+      { text: 'Links & AppleScript', link: '/guide/automation' },
     ],
   },
   {

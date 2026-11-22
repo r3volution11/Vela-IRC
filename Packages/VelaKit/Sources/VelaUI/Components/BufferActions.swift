@@ -101,6 +101,7 @@ struct ServerContextMenuItems: View {
 /// Small sheet asking for a channel name (and optional key) to join.
 struct JoinChannelSheet: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var uiState
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     let networkID: UUID
@@ -133,6 +134,13 @@ struct JoinChannelSheet: View {
         .padding(20)
         .frame(width: 380)
         .background(theme[ThemeKey.popoverBackground])
+        // Filled in by a vela://join link: you still press Join.
+        .onAppear {
+            if let prefill = uiState.joinChannelPrefill {
+                channel = prefill
+                uiState.joinChannelPrefill = nil
+            }
+        }
     }
 
     private var normalized: String {

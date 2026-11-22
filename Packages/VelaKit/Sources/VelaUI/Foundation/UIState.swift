@@ -6,6 +6,7 @@ import Observation
 import SwiftUI
 import VelaCore
 import VelaIntelligence
+import VelaIntents
 import VelaStore
 
 /// Window-level UI state that isn't persisted in settings.json.
@@ -19,6 +20,13 @@ public final class UIState {
     public var networkEditor: NetworkEditorTarget?
     /// Network whose "Join Channel…" sheet is showing.
     public var joinChannelNetwork: UUID?
+    /// The channel name the next Join Channel sheet starts with (a
+    /// `vela://join` link), taken when the sheet appears.
+    var joinChannelPrefill: String?
+    /// Message search, while it's open, and what it opened with.
+    var messageSearch: MessageSearchRequest?
+    /// A short notice at the top of the main window (a link Vela couldn't follow).
+    var automationNotice: AutomationNotice?
     /// Network awaiting removal confirmation.
     public var networkPendingRemoval: UUID?
     /// The settings editor in Settings → Advanced: UI or JSON view, search

@@ -140,22 +140,7 @@ enum RecapActions {
         guard let (session, buffer) = app.lookup(reference.conversation) else { return }
         app.select(buffer)
         openWindow(id: WindowID.main)
-        if buffer.lines.contains(where: { $0.id == reference.lineID }) {
-            uiState.scrollTarget = reference.lineID
-            return
-        }
-        Task {
-            for _ in 0..<30 {
-                if buffer.lines.contains(where: { $0.id == reference.lineID }) { break }
-                guard buffer.hasMoreHistory, (buffer.lines.first?.time ?? .distantFuture) >= reference.time else { break }
-                if buffer.isLoadingHistory {
-                    try? await Task.sleep(for: .milliseconds(100))
-                    continue
-                }
-                await session.loadOlderHistory(for: buffer)
-            }
-            uiState.scrollTarget = reference.lineID
-        }
+        MessageJump.jump(to: LineReference(id: reference.lineID, time: reference.time), in: buffer, session: session, uiState: uiState)
     }
 
     // MARK: Copy and Save
@@ -244,7 +229,7 @@ final class RecapWindowRouter {
     private func handle() {
         guard let request = intelligence.recaps.latest, request.id != handled, let openWindow else { return }
         handled = request.id
-        NSApp.activate()
+        AppActivation.activate()
         openWindow(value: RecapWindowValue(scope: request.scope))
     }
 }

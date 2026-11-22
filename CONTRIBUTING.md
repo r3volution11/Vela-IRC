@@ -57,6 +57,17 @@ The menu's **State Simulator** section puts the window into states that are hard
 
 All of it happens on a network of its own, **Simulator**, which the first of these adds. Your real networks are never touched, and nothing is saved: the network isn't in `networks.json` and has no message history, chat logs or Keychain items; it's never the channel Vela reopens at launch; Spotlight, Siri and Shortcuts never see it; and its connection is a stand-in that never opens a socket (**Connect** fails at once). Quitting forgets it. The states go through `NetworkSession`'s own event handling, the same code a server's lines go through. A mention posts a real notification, as one from a real network would. The code is `DevSimulator` in VelaCore.
 
+### Checking links and the AppleScript dictionary
+
+`Vela/Vela.sdef` is an interface Alfred and Raycast integrations build on: only ever add to it (never rename a term, code or cocoa key). `ScriptingDictionaryTests` check it against the code, but not Cocoa scripting itself, and `osascript` needs your terminal to be allowed to control Vela Dev (a permission prompt). Instead, Vela Dev in demo mode can drive its own dictionary, and a `vela-dev://` link, from inside the app, where macOS asks nothing, and write a report:
+
+```sh
+open -g -n build/DerivedData/Build/Products/Debug/Vela.app --args --demo --no-activate --automation-self-test
+cat ~/Library/Containers/io.github.r3volution11.Vela.dev/Data/tmp/AutomationSelfTest.txt
+```
+
+`--no-activate` keeps it from taking the focus. The code is `AutomationSelfTest` in `Packages/VelaKit/Sources/VelaUI/DevTools/`, Debug builds only.
+
 ### Tagging views
 
 Inspect Element and Layout Outlines see the views tagged with `devTag`:

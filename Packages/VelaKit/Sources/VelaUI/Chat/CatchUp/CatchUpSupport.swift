@@ -13,15 +13,7 @@ nonisolated enum CatchUpEligibility {
     /// Messages, actions and notices newer than `marker` (the buffer's New
     /// marker): what a summary would cover. Lines are in time order.
     static func unreadLineCount(_ lines: [ChatLine], after marker: Date?) -> Int {
-        guard let marker else { return 0 }
-        // Binary search for the first line after the marker.
-        var low = 0
-        var high = lines.count
-        while low < high {
-            let middle = (low + high) / 2
-            if lines[middle].time > marker { high = middle } else { low = middle + 1 }
-        }
-        return lines[low...].reduce(0) { $0 + ($1.kind.isConversation ? 1 : 0) }
+        CatchUpStore.unreadLineCount(lines, after: marker)
     }
 
     /// The button on the New marker: the feature is on, Apple Intelligence
@@ -75,10 +67,7 @@ enum CatchUpActions {
     /// that isn't on screen, or lines under the open buffer's New marker
     /// (opening it marked them read).
     static func hasUnread(_ buffer: BufferModel, app: AppModel) -> Bool {
-        if app.selectedBufferID == buffer.id {
-            return CatchUpEligibility.unreadLineCount(buffer.lines, after: buffer.unreadMarkerAfter) > 0
-        }
-        return buffer.unreadCount > 0
+        CatchUpStore.hasUnread(buffer, app: app)
     }
 
     /// Shows `buffer`'s card under its New marker (where the unread lines
@@ -92,23 +81,7 @@ enum CatchUpActions {
     /// - Parameter model: A model chosen for this summary ("Catch Me Up
     ///   With…"); nil uses Catch me up's setting.
     static func open(_ buffer: BufferModel, session: NetworkSession, app: AppModel, store: CatchUpStore, model: AIModelChoice? = nil) {
-        // Build the request before selecting: selecting marks the buffer
-        // read, but the New marker it places covers the same lines.
-        let marker = buffer.unreadMarkerAfter ?? buffer.lastReadAt
-        var request = CatchUpRequest(buffer: buffer, session: session, since: marker)
-        request.model = model
-        let isNew = hasUnread(buffer, app: app) && !request.lines.isEmpty
-        if app.selectedBufferID != buffer.id { app.select(buffer) }
-        if isNew {
-            store.open(request, marker: buffer.unreadMarkerAfter ?? marker)
-        } else if let model, store.reopen(buffer.id) {
-            // Nothing new: the latest stretch again, with the model chosen.
-            store.rerun(buffer.id, with: model)
-        } else if !store.reopen(buffer.id) {
-            var nothing = request
-            nothing.lines = []
-            store.open(nothing, marker: buffer.lines.last?.time ?? marker)
-        }
+        store.openCard(for: buffer, session: session, app: app, model: model)
     }
 
     /// Summarizes the card's stretch again, including anything that has

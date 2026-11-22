@@ -60,5 +60,32 @@
 	<!-- Shown when such a server is on another Mac on your network. -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Vela connects to an AI server on your network only when you add one in Settings → Intelligence.</string>
+
+	<!--
+	  Automation (website/guide/automation.md). Config/Debug-Info.plist has
+	  the same keys for Vela Dev, with its own link scheme.
+	  - vela:// links: they only ever show things (VelaLink in VelaIntents).
+	  - The AppleScript dictionary, Vela.sdef, for Alfred, Raycast and scripts.
+	  - "Search in Vela" from Spotlight, for the messages Vela indexes.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.github.r3volution11.Vela.link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>vela</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+		</dict>
+	</array>
+	<key>NSAppleScriptEnabled</key>
+	<true/>
+	<key>OSAScriptingDefinition</key>
+	<string>Vela.sdef</string>
+	<key>CoreSpotlightContinuation</key>
+	<true/>
 </dict>
 </plist>
