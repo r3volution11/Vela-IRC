@@ -28,6 +28,10 @@ final class AnimatedImagePlayer {
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var lastIndex = -1
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// The decoding task's priority: below the UI's, since a late frame
+    /// matters less than a smooth scroll. Tests raise it, so a CI machine
+    /// busy with the whole UI suite can't starve the decoder.
+    @ObservationIgnored var decodePriority: TaskPriority = .utility
     /// Bytes of decoded frames to keep while playing, so later loops show
     /// them without decoding again (0: decode every frame every time). The
     /// GIF picker's cells keep theirs: a dozen play at once.
@@ -74,8 +78,7 @@ final class AnimatedImagePlayer {
         let show: @MainActor @Sendable (CGImage, Int) -> Bool = { [weak self] image, index in
             self?.show(image, index: index, generation: current) ?? false
         }
-        // Below the UI's priority: a late frame matters less than a smooth scroll.
-        task = Task(priority: .utility) {
+        task = Task(priority: decodePriority) {
             await AnimatedFrames.play(data, from: start, frameCount: count, maxPixelSize: maxPixelSize, keepingFrames: budget, show: show)
         }
     }

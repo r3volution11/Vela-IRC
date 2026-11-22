@@ -182,6 +182,9 @@ struct AnimatedFramesTests {
 
     @Test func playerShowsDownsampledFramesInItsLayer() async throws {
         let player = AnimatedImagePlayer()
+        // The app decodes at utility priority; on a 3-core CI runner busy
+        // with every other UI test, that once got no time for 15 s.
+        player.decodePriority = .userInitiated
         player.load(gif(), frameCount: 3, maxPixelSize: 50)
         #expect(player.canPlay)
         let layer = CALayer()
