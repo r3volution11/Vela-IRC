@@ -18,7 +18,7 @@ name: Media sites
 
 on:
   push:
-    branches: [main]
+    branches: [main, next]
     # Keep in step with media_paths in scripts/git-hooks/pre-push.
     paths:
       - 'Packages/VelaKit/Sources/VelaMedia/**'
