@@ -244,9 +244,14 @@ struct SendingFollowTests {
     }
 
     /// Where the list is once it shows the newest line at the bottom, or
-    /// after `seconds`: longer than the list keeps checking for, for a busy
-    /// machine.
-    private func settled(_ hosted: Hosted, newest: Newest, within seconds: Double = 3) async throws -> Look {
+    /// after `seconds`: longer than the list keeps checking for (about 5 s
+    /// with its late retries, `BottomSettle`), so a list that's only slow on
+    /// a busy machine gets there, and one still not there is stuck. With the
+    /// whole UI suite sharing the main actor on a 3-core CI runner, 3 s
+    /// wasn't always enough (macOS 27.0, now and then).
+    static let settleSeconds: Double = 8
+
+    private func settled(_ hosted: Hosted, newest: Newest, within seconds: Double = settleSeconds) async throws -> Look {
         let deadline = Date().addingTimeInterval(seconds)
         try await Task.sleep(for: .milliseconds(150))
         var look = try look(hosted, for: newest)
@@ -372,8 +377,8 @@ struct SendingFollowTests {
         let hosted = try host(setup)
         defer { hosted.close() }
         try await Task.sleep(for: .milliseconds(800))
-        let opened = try await settled(hosted, newest: .mention, within: 6)
-        try #require(opened.showsTheNewestLineAtTheBottom, "the list didn't open at the newest line: \(opened)")
+        let opened = try await settled(hosted, newest: .mention, within: 10)
+        try #require(opened.showsTheNewestLineAtTheBottom, "the list didn't open at the newest line within 10 s: \(opened)")
 
         // With echo-message your line comes back from the server a moment
         // later; without, the client adds it once it's gone out.
@@ -388,7 +393,7 @@ struct SendingFollowTests {
                 // update, which a busy CI machine can hold back for a while.
                 let cleared = try await composerEmpties(hosted)
                 #expect(cleared, "\(scenario): Return didn't send")
-                #expect(after.showsTheNewestLineAtTheBottom, "\(scenario): the newest line isn't at the bottom: \(after)")
+                #expect(after.showsTheNewestLineAtTheBottom, "\(scenario): the newest line isn't at the bottom after \(Int(Self.settleSeconds)) s, so the list is stuck: \(after)")
                 // Not an earlier line of the same kind, left at the bottom
                 // by a list that didn't move: what it shows changed. (Not
                 // by its offset: on macOS 26 that can shrink by thousands of
