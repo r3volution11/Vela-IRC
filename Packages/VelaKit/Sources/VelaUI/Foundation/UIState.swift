@@ -5,6 +5,7 @@
 import Observation
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaStore
 
 /// Window-level UI state that isn't persisted in settings.json.
@@ -60,6 +61,9 @@ public final class UIState {
     var composerPickerToken = 0
     /// A Settings section to scroll to when its pane shows (Media's GIFs).
     var settingsSectionReveal: SettingsReveal?
+    /// One of your AI providers waiting for your OK before Vela sends it
+    /// messages: the main window's consent sheet.
+    var aiConsent: AIConsentRequest?
     /// Where the tabs were last shown outside the title bar, top or bottom,
     /// this session: **Show Channel Title Bar** puts them back there
     /// (`ChannelTitleBar`). Not saved, and read only by that command, so
@@ -114,6 +118,8 @@ struct SettingsReveal: Equatable {
     var section: String
 
     static let gifs = SettingsReveal(pane: .media, section: "gifs")
+    /// Intelligence's Models: your providers and the default model.
+    static let aiModels = SettingsReveal(pane: .intelligence, section: "models")
 }
 
 public struct MentionRequest: Equatable {
@@ -174,6 +180,19 @@ public enum CommandPaletteMode: Hashable {
     case buffers
     /// "Select Theme…": arrowing previews each theme live; Esc reverts.
     case themes
+    /// Pick a model: "AI: Set Default Model…", "Catch Me Up With…",
+    /// "Recap With…".
+    case models(AIModelPickerPurpose)
+}
+
+/// What a model picked in the palette is for.
+public enum AIModelPickerPurpose: Hashable {
+    /// `intelligence.model`.
+    case defaultModel
+    /// Catch me up in this buffer, with the model picked.
+    case catchUp(BufferID)
+    /// A Recap of this scope, with the model picked.
+    case recap(RecapScope)
 }
 
 public enum NetworkEditorTarget: Identifiable, Hashable {

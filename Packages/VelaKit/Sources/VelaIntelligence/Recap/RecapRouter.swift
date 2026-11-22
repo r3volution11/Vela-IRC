@@ -15,12 +15,15 @@ nonisolated struct RecapRouter: Sendable {
     let onDevice: any CatchUpLanguageModel
     let cloud: (any CatchUpCloud)?
     var timings = RecapTimings()
+    /// Private Cloud Compute was chosen as the model: every Recap goes
+    /// there (see ``CatchUpRouter/alwaysCloud``).
+    var alwaysCloud = false
 
     func plan(_ input: RecapInput) async -> RecapPlan {
         let transcript = RecapTranscript(input)
         let device = RecapEngine(model: onDevice, timings: timings)
         let local = await device.measure(transcript)
-        guard let cloud, !transcript.isEmpty, !local.fitsOnePass,
+        guard let cloud, !transcript.isEmpty, alwaysCloud || !local.fitsOnePass,
               case .ready(let model) = await cloud.prepare()
         else { return await device.plan(input, measured: local) }
         let engine = RecapEngine(model: model, venue: .privateCloudCompute, timings: timings)
@@ -32,7 +35,7 @@ nonisolated struct RecapRouter: Sendable {
         guard !transcript.isEmpty else { throw CatchUpError.nothingToSummarize }
         var device = RecapEngine(model: onDevice, timings: timings)
         let local = await device.measure(transcript)
-        guard let cloud, !local.fitsOnePass else {
+        guard let cloud, alwaysCloud || !local.fitsOnePass else {
             return try await device.run(input, measured: local, progress: progress)
         }
         let fallback: CatchUpCloudFallback

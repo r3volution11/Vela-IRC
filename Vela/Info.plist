@@ -45,5 +45,20 @@
 	<!-- Check an update's EdDSA signature before unpacking it. -->
 	<key>SUVerifyUpdateBeforeExtraction</key>
 	<true/>
+	<!--
+	  Your own AI models (Settings → Intelligence → Models) can be a server
+	  such as Ollama or LM Studio, which usually listens on plain http:
+	  allow http to localhost, .local names and IP addresses only. Every
+	  other address keeps App Transport Security's https requirement.
+	  Keep in step with Config/Debug-Info.plist.
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- Shown when such a server is on another Mac on your network. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Vela connects to an AI server on your network only when you add one in Settings → Intelligence.</string>
 </dict>
 </plist>

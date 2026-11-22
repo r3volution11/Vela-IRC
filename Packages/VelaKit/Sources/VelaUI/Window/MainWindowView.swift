@@ -117,6 +117,9 @@ struct MainWindowView: View {
         .sheet(item: $uiState.kickRequest) { request in
             KickReasonSheet(request: request)
         }
+        .sheet(item: $uiState.aiConsent) { request in
+            AIConsentSheet(request: request)
+        }
         .confirmationDialog(
             "Remove \(uiState.networkPendingRemoval.flatMap { app.session(for: $0)?.displayName } ?? "network")?",
             isPresented: Binding(

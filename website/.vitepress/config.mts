@@ -34,6 +34,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'User menu & moderation', link: '/guide/user-menu' },
       { text: 'Chat logs', link: '/guide/chat-logs' },
       { text: 'Apple Intelligence & translation', link: '/guide/apple-intelligence' },
+      { text: 'Your own AI models', link: '/guide/ai-models' },
       { text: 'Recap', link: '/guide/recap' },
       { text: 'Siri, Shortcuts & Spotlight', link: '/guide/siri-shortcuts' },
     ],

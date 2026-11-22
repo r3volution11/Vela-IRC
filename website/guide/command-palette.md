@@ -5,7 +5,7 @@ description: Run any Vela command from the keyboard with the command palette (�
 
 # Command palette & quick switcher
 
-Vela has a [VS Code](https://code.visualstudio.com)-style palette that floats at the top of the window. It opens in three ways:
+Vela has a [VS Code](https://code.visualstudio.com)-style palette that floats at the top of the window. It opens in three ways (and AI commands open its list of [models](#choose-a-model)):
 
 | Press | To |
 | --- | --- |
@@ -42,12 +42,17 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Notifications** | Show Dock Badge |
 | **Settings** | Open Settings, Search…, Open settings.json |
 | **Go** | Go to Conversation…, Previous / Next Conversation, Previous / Next Tab, Previous / Next Network, Previous / Next Unread, Focus Sidebar (or Focus Tabs), Focus Messages, Focus Message Box, Focus Member List, Focus Next / Previous Area |
-| **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Translate Messages Automatically, Catch Me Up, Recap…, Recap Conversations with…, Don't Log This Channel (while chat logs are on), Close (a conversation), Reopen Closed Channel, and Reopen _#channel_ (_network_) for each one in File → Recently Closed |
+| **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Translate Messages Automatically, Catch Me Up, Catch Me Up With… and Recap With… (once you've [added a model](/guide/ai-models)), Recap…, Recap Conversations with…, Don't Log This Channel (while chat logs are on), Close (a conversation), Reopen Closed Channel, and Reopen _#channel_ (_network_) for each one in File → Recently Closed |
 | **Channel** | Join…, Leave _#channel_ or Join _#channel_, Hide _#channel_ (a channel detached on a bouncer), Remove _#channel_, and Show _#channel_ (_network_) for each [hidden channel](/guide/joining-channels#hidden-channels) |
 | **Network** | Add Network…, Recap _network_… and Recap All Networks… (see [Recap](/guide/recap)), Sort Channels A–Z (for the network you're in), Move Network Left / Right (Up / Down with the sidebar), and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |
+| **AI** | Set Default Model…, Manage Providers… (see [Your own AI models](/guide/ai-models)) |
 | **Help** | What's New in Vela, About Vela, Check for Updates… |
 
-Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, "nsfw" finds Hide Adult Site Previews, "alphabetical" finds Sort Channels A–Z, "summary" finds Catch Me Up, "report" finds Recap, and "autocorrect" finds Correct Spelling Automatically.
+Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, "nsfw" finds Hide Adult Site Previews, "alphabetical" finds Sort Channels A–Z, "summary" finds Catch Me Up, "report" finds Recap, "api key" or "ollama" finds Manage Providers, and "autocorrect" finds Correct Spelling Automatically.
+
+## Choose a model
+
+**AI: Set Default Model…**, **Buffer: Catch Me Up With…** and **Buffer: Recap With…** open the palette's list of models: Apple's first (**Automatic (Apple)**, then **Apple Intelligence on this Mac**), then each provider you've added, under its name, with its recommended model marked **recommended**. The model in use is checked, and the highlight starts on it. **Return** makes it the default, or catches up or writes the Recap with it; **Esc** leaves things as they were. Apple's models aren't listed while Apple Intelligence can't run. **AI: Manage Providers…** opens **Settings → Intelligence**, where you add them. See [Your own AI models](/guide/ai-models).
 
 ## Select a theme
 

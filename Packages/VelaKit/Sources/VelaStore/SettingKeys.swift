@@ -741,6 +741,28 @@ extension SettingKey where Value == Int {
 }
 
 extension SettingKey where Value == String {
+    public static var intelligenceModel: SettingKey<String> {
+        .init("intelligence.model", default: "apple",
+              summary: "The model Catch me up and Recap use unless their own setting picks another. \"apple\" is Automatic (Apple): Apple Intelligence on your Mac, with Private Cloud Compute for long ones where it's on. \"apple/on-device\" always uses your Mac. Or one of your providers' models, as \"<provider id>/<model id>\", such as \"anthropic/claude-opus-5-5\" (see intelligence.providers).")
+    }
+    public static var intelligenceCatchUpModel: SettingKey<String> {
+        .init("intelligence.catchUpModel", default: "",
+              summary: "The model Catch me up uses, written like intelligence.model. Empty uses intelligence.model.")
+    }
+    public static var intelligenceRecapModel: SettingKey<String> {
+        .init("intelligence.recapModel", default: "",
+              summary: "The model Recap uses, written like intelligence.model. Empty uses intelligence.model.")
+    }
+}
+
+extension SettingKey where Value == [AIProviderEntry] {
+    public static var intelligenceProviders: SettingKey<[AIProviderEntry]> {
+        .init("intelligence.providers", default: [],
+              summary: "Your own AI providers for Catch me up and Recap, set up in Settings → Intelligence → Models. Each is an object: \"id\" (used in model choices, such as \"anthropic\"), \"kind\" (\"openai\", \"anthropic\", \"gemini\" or \"openaiCompatible\" for a server such as Ollama or LM Studio), \"name\", \"baseURL\" (custom servers, such as \"http://localhost:11434/v1\"), \"enabled\", \"consent\" (you agreed to send it messages) and \"contextTokens\" (how much a custom server reads at once). API keys are never stored here: they're in your Keychain.")
+    }
+}
+
+extension SettingKey where Value == String {
     public static var translationLanguage: SettingKey<String> {
         .init("translation.language", default: "",
               summary: "Language to translate messages into, as a language code such as \"en\" or \"pt-BR\". Empty uses your Mac's language.")
@@ -883,6 +905,10 @@ public enum SettingsCatalog {
             SettingKey.intelligenceCatchUpThreshold.descriptor,
             SettingKey.intelligenceRecap.descriptor,
             SettingKey.intelligencePrivateCloudCompute.descriptor,
+            SettingKey.intelligenceModel.descriptor,
+            SettingKey.intelligenceCatchUpModel.descriptor,
+            SettingKey.intelligenceRecapModel.descriptor,
+            SettingKey.intelligenceProviders.descriptor,
             SettingKey.intelligenceSpotlightChannels.descriptor,
             SettingKey.translationLanguage.descriptor,
             SettingKey.translationAutoTranslate.descriptor,

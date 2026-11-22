@@ -1042,6 +1042,7 @@ struct VelaCommandCatalog {
         commands += hiddenChannelCommands
         commands += typingCommands + messageBoxBorderCommands
         commands += catchUpCommands
+        commands += aiModelCommands
         commands.append(recap)
         commands += recapCommands
         commands += translationCommands

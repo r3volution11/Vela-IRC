@@ -20,7 +20,7 @@ struct CatchUpBufferMenuItems: View {
     var body: some View {
         if CatchUpEligibility.canOffer(
             isEnabled: app.settings[.intelligenceCatchUp],
-            status: intelligence.availability.status,
+            status: intelligence.status(for: .catchUp),
             kind: buffer.kind
         ) {
             Button("Catch Me Up") {

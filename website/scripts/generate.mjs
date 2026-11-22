@@ -156,6 +156,7 @@ function settingType({ type }) {
     Int: 'Integer',
     '[String]': 'Array of strings',
     '[String: JSONValue]': 'Object',
+    '[AIProviderEntry]': 'Array of provider objects',
   }[type] ?? fail(`unknown setting type ${type}`)
 }
 
@@ -201,7 +202,7 @@ const categoryNames = {
   logging: 'Chat logs',
   navigation: 'Navigation',
   tabs: 'Tabs',
-  intelligence: 'Apple Intelligence',
+  intelligence: 'Intelligence',
   translation: 'Translation',
   updates: 'Updates',
 }

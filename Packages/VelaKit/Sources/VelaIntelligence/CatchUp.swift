@@ -5,6 +5,7 @@
 import Foundation
 import VelaCore
 import VelaIRC
+import VelaStore
 
 // Shared "Catch me up" types. The in-channel card (VelaUI) and the Siri /
 // Shortcuts intent (VelaIntents) both go through `ConversationSummarizer`.
@@ -40,13 +41,25 @@ nonisolated public struct CatchUpRequest: Sendable, Hashable {
     public var ownNick: String
     /// Oldest first.
     public var lines: [CatchUpLine]
+    /// The model to summarize with, when it isn't the one Catch me up's
+    /// setting picks: chosen on the card ("Change") or in the palette
+    /// ("Catch Me Up With…"). Nil follows the settings.
+    public var model: AIModelChoice?
 
-    public init(bufferID: BufferID, bufferName: String, networkName: String, ownNick: String, lines: [CatchUpLine]) {
+    public init(
+        bufferID: BufferID,
+        bufferName: String,
+        networkName: String,
+        ownNick: String,
+        lines: [CatchUpLine],
+        model: AIModelChoice? = nil
+    ) {
         self.bufferID = bufferID
         self.bufferName = bufferName
         self.networkName = networkName
         self.ownNick = ownNick
         self.lines = lines
+        self.model = model
     }
 }
 
@@ -129,6 +142,43 @@ nonisolated public enum CatchUpVenue: Sendable, Hashable {
     /// By Apple Intelligence on Apple's Private Cloud Compute: a long
     /// stretch, with `intelligence.privateCloudCompute` on (macOS 27+).
     case privateCloudCompute
+    /// By one of your own providers' models (`intelligence.providers`).
+    case provider(AIModelLabel)
+
+    /// Who writes it, for "…that Apple Intelligence wouldn't summarize".
+    public var writerName: String {
+        switch self {
+        case .onDevice, .privateCloudCompute: "Apple Intelligence"
+        case .provider(let label): label.providerName
+        }
+    }
+
+    /// The provider's model, when it's one.
+    public var providerModel: AIModelLabel? {
+        if case .provider(let label) = self { label } else { nil }
+    }
+}
+
+/// A provider's model as a summary names it.
+nonisolated public struct AIModelLabel: Sendable, Hashable {
+    public var providerID: String
+    /// "Anthropic", or a custom server's name.
+    public var providerName: String
+    public var modelID: String
+    /// "Claude Opus 5.5", or the id when there's no nicer name.
+    public var modelName: String
+
+    public init(providerID: String, providerName: String, modelID: String, modelName: String) {
+        self.providerID = providerID
+        self.providerName = providerName
+        self.modelID = modelID
+        self.modelName = modelName
+    }
+
+    public var choice: AIModelChoice { .provider(providerID: providerID, modelID: modelID) }
+
+    /// "Claude Opus 5.5 (Anthropic)".
+    public var title: String { "\(modelName) (\(providerName))" }
 }
 
 /// Why a summary meant for Private Cloud Compute was written on this Mac.
@@ -198,6 +248,8 @@ nonisolated public struct CatchUpSummary: Sendable, Hashable {
     /// Compute, or on this Mac because Private Cloud Compute wasn't there.
     public var provenance: String {
         switch (venue, cloudFallback) {
+        case (.provider(let label), _):
+            "Summarized by \(label.title)."
         case (.privateCloudCompute, _):
             "Summarized by Apple Intelligence with Private Cloud Compute."
         case (.onDevice, .limitReached?):
@@ -259,11 +311,15 @@ nonisolated public enum CatchUpError: Error, Equatable, LocalizedError {
     /// ``IntelligenceStatus/unsupportedLanguage``, which is about the
     /// Mac's own language and has a fix in System Settings; this has none.
     case conversationLanguageUnsupported
+    /// One of your providers couldn't do it, or isn't ready to (no key,
+    /// turned off, or waiting for your OK to send it messages).
+    case provider(AIProviderFailure)
     case failed(String)
 
     public var errorDescription: String? {
         switch self {
         case .unavailable(let status): status.detail
+        case .provider(let failure): failure.message
         case .nothingToSummarize: "There's nothing new to summarize."
         case .declined: "Apple Intelligence couldn't summarize this conversation."
         case .rateLimited: "Apple Intelligence is busy. Try again in a moment."

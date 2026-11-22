@@ -4,6 +4,7 @@
 
 import SwiftUI
 import VelaCore
+import VelaIntelligence
 import VelaTheme
 
 enum PaletteMetrics {
@@ -34,6 +35,8 @@ struct PaletteRowView: View {
                 PaletteCommandRowContent(row: row, command: command)
             case .theme(let info):
                 PaletteThemeRowContent(row: row, info: info)
+            case .model(let model):
+                PaletteModelRowContent(row: row, model: model)
             }
             if let label = row.sectionLabel {
                 Text(label)
@@ -179,6 +182,42 @@ private struct PaletteThemeRowContent: View {
         Spacer(minLength: 8)
         if info.source == .user {
             Text("custom")
+                .font(.system(size: 11))
+                .foregroundStyle(primary.opacity(0.55))
+        }
+        if row.item.isCurrent {
+            Image(systemName: "checkmark")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(theme[ThemeKey.accentText])
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+private struct PaletteModelRowContent: View {
+    @Environment(\.theme) private var theme
+    let row: PaletteRow
+    let model: AIModelMenuItem
+
+    var body: some View {
+        let primary = theme[ThemeKey.popoverForeground]
+        Image(systemName: model.isApple ? "apple.intelligence" : "sparkles")
+            .font(.system(size: 12, weight: .semibold))
+            .frame(width: 16)
+            .foregroundStyle(primary.opacity(0.65))
+        PaletteHighlightedText(
+            text: row.item.label.text,
+            matches: row.labelMatches,
+            font: .system(size: 13),
+            color: primary
+        )
+        if let detail = row.item.detail {
+            PaletteHighlightedText(text: detail, matches: row.detailMatches, font: .system(size: 12), color: primary.opacity(0.55))
+                .layoutPriority(-1)
+        }
+        Spacer(minLength: 8)
+        if model.isRecommended {
+            Text("recommended")
                 .font(.system(size: 11))
                 .foregroundStyle(primary.opacity(0.55))
         }

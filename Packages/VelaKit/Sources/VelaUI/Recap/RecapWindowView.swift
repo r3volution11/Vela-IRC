@@ -41,20 +41,21 @@ struct RecapWindowView: View {
     private func begin() {
         guard session == nil, let value else { return }
         choosesPerson = value.choosesPerson
-        let session = Self.makeSession(value.scope, app: app, intelligence: intelligence)
+        let session = Self.makeSession(value.scope, app: app, intelligence: intelligence, model: value.model)
         self.session = session
         session.start()
     }
 
-    /// A session reading `app`'s messages and writing with `intelligence`.
-    static func makeSession(_ scope: RecapScope, app: AppModel, intelligence: IntelligenceServices) -> RecapSession {
+    /// A session reading `app`'s messages and writing with `intelligence`,
+    /// with `model` or the one Recap's setting picks.
+    static func makeSession(_ scope: RecapScope, app: AppModel, intelligence: IntelligenceServices, model: AIModelChoice? = nil) -> RecapSession {
         let gatherer = RecapGatherer(app: app)
         let previews = app.previewService
         return RecapSession(
             scope: scope,
             gather: { await gatherer.gather($0) },
             summarizer: intelligence.recapSummarizer,
-            status: { intelligence.availability.status },
+            status: { intelligence.status(for: .recap) },
             linkTitles: { urls in
                 var titles: [URL: String] = [:]
                 for url in urls {
@@ -64,7 +65,8 @@ struct RecapWindowView: View {
                     }
                 }
                 return titles
-            }
+            },
+            model: model
         )
     }
 }
@@ -108,6 +110,11 @@ struct RecapWindowContent: View {
     @Environment(\.theme) private var theme
     @Bindable var session: RecapSession
     @Binding var choosesPerson: Bool
+    /// One of your providers waiting for your OK: this window's sheet.
+    @State private var consent: AIConsentRequest?
+    /// The sheet was shown for the summary that's waiting, so it isn't
+    /// shown again until another one is.
+    @State private var hasAskedForConsent = false
 
     var body: some View {
         let title = RecapActions.title(for: session.scope, app: app)
@@ -123,7 +130,37 @@ struct RecapWindowContent: View {
         .background(theme[ThemeKey.chatBackground])
         .background(ThemedWindowConfigurator(theme: theme, backgroundKey: ThemeKey.chatBackground, title: title, tallTitleBar: true))
         .frame(minWidth: 600, idealWidth: 780, minHeight: 440, idealHeight: 820)
+        .environment(\.askForAIConsent, askForConsent)
+        .sheet(item: $consent) { request in
+            AIConsentSheet(request: request)
+        }
+        // The first time a provider would be sent messages, ask.
+        .onChange(of: session.summaryPhase, initial: true) { _, phase in
+            if case .failed(let error) = phase, error.needsConsent {
+                if !hasAskedForConsent {
+                    hasAskedForConsent = true
+                    askForConsent()
+                }
+            } else if phase == .running {
+                hasAskedForConsent = false
+            }
+        }
     }
+
+    /// The consent sheet for the provider the summary is waiting on;
+    /// allowing it writes the summary again with the same model.
+    private func askForConsent() {
+        guard case .failed(let error) = session.summaryPhase, let failure = error.providerFailure else { return }
+        let session = session
+        consent = AIConsentRequest(providerID: failure.providerID) {
+            session.rerun(with: session.model)
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// Shows the consent sheet for the provider a Recap is waiting on.
+    @Entry var askForAIConsent: (@MainActor () -> Void)? = nil
 }
 
 // MARK: - Top bar
@@ -245,8 +282,11 @@ private struct RecapScopeBar: View {
         }
     }
 
+    /// Why Summary is off: Recap's model can't run (Apple Intelligence,
+    /// with no provider's model chosen here or in Settings).
     private var summaryUnavailableReason: String? {
-        let status = intelligence.availability.status
+        if let model = session.model, !model.isApple { return nil }
+        let status = intelligence.status(for: .recap)
         return status.isAvailable ? nil : status.detail
     }
 

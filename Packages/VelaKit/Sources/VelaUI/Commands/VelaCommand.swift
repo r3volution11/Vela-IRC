@@ -36,6 +36,8 @@ struct VelaCommand: Identifiable {
     let perform: () -> Void
 
     enum Category: String, CaseIterable {
+        /// Your own AI models: the default, and providers.
+        case ai = "AI"
         case appearance = "Appearance"
         case buffer = "Buffer"
         case channel = "Channel"

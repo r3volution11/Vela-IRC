@@ -29,13 +29,13 @@ public struct CatchMeUpIntent: AppIntent {
     // scripts/verify-release.sh checks a release's.
     #if DEBUG
     public static let description = IntentDescription(
-        "Summarizes what you missed in a channel or conversation with Apple Intelligence, on this Mac. Long stretches use Private Cloud Compute if you turn it on in Vela's settings, or open in Vela.",
+        "Summarizes what you missed in a channel or conversation with Apple Intelligence on this Mac, or the model you chose in Vela's settings. Long stretches use Private Cloud Compute if you turn it on in Vela's settings, or open in Vela.",
         categoryName: "Messages",
         searchKeywords: ["summary", "summarize", "unread", "apple intelligence"]
     )
     #else
     public static let description = IntentDescription(
-        "Summarizes what you missed in a channel or conversation with Apple Intelligence, on this Mac. Long stretches open in Vela.",
+        "Summarizes what you missed in a channel or conversation with Apple Intelligence on this Mac, or the model you chose in Vela's settings. Long stretches open in Vela.",
         categoryName: "Messages",
         searchKeywords: ["summary", "summarize", "unread", "apple intelligence"]
     )
@@ -78,8 +78,9 @@ public struct CatchMeUpIntent: AppIntent {
         let (session, buffer) = target
         let header = CatchUpSnippetView.Header(channel: buffer.name, network: session.displayName)
 
+        // Apple Intelligence, or the provider's model Catch me up uses.
         services.availability.refresh()
-        let status = services.availability.status
+        let status = services.status(for: .catchUp)
         guard status.isAvailable else { throw IntentFailure(status.detail) }
 
         let store = services.catchUp
@@ -119,6 +120,10 @@ public struct CatchMeUpIntent: AppIntent {
         } catch let error as CatchUpError {
             // Including "Apple Intelligence is busy…" when a long catch-up
             // hits the background rate limit.
+            // A provider waiting for your OK can't ask for it from Siri.
+            if error.needsConsent, let failure = error.providerFailure {
+                throw IntentFailure("\(failure.message) Open Vela and catch up there once to allow it.")
+            }
             throw IntentFailure(error.errorDescription ?? "Apple Intelligence couldn't summarize this conversation.")
         }
     }

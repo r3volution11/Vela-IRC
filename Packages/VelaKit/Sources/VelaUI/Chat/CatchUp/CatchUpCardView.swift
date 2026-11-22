@@ -49,6 +49,7 @@ struct CatchUpCardView: View {
     @Environment(MessageListController.self) private var controller
     @Environment(UIState.self) private var uiState
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     let card: CatchUpCard
 
     static let maxWidth: CGFloat = 560
@@ -70,6 +71,8 @@ struct CatchUpCardView: View {
                 content(summary)
             case .failed(.nothingToSummarize):
                 nothingNew
+            case .failed(let error) where error.needsConsent:
+                consentPrompt(error)
             case .failed(let error):
                 failure(error)
             }
@@ -83,6 +86,14 @@ struct CatchUpCardView: View {
         .onChange(of: isDone) { _, done in
             if done { AccessibilityNotification.Announcement("Summary ready").post() }
         }
+        // The first time a provider would be sent messages, ask: the sheet
+        // says exactly what's sent. Once per card.
+        .onChange(of: needsConsent, initial: true) { _, needs in
+            if needs, !card.hasAskedForConsent {
+                card.hasAskedForConsent = true
+                askForConsent()
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Catch me up")
     }
@@ -91,7 +102,7 @@ struct CatchUpCardView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: "apple.intelligence")
+            Image(systemName: card.summary?.venue.providerModel == nil ? "apple.intelligence" : "sparkles")
                 .font(.system(size: max(10, style.fontSize - 2), weight: .semibold))
                 .foregroundStyle(theme[ThemeKey.accentText])
                 .accessibilityHidden(true)
@@ -123,13 +134,34 @@ struct CatchUpCardView: View {
                 .font(style.font(size: max(9, style.fontSize - 3)))
                 .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
                 .fixedSize(horizontal: false, vertical: true)
-            if !card.isNothingNew, RecapActions.isOffered(app.settings) {
-                Button("Open Full Recap") { openFullRecap() }
-                    .buttonStyle(CatchUpCapsuleButtonStyle())
-                    .help(Self.fullRecapHelp(messageCount: card.messageCount))
-                    .accessibilityHint("Opens a fuller report of these messages in a window of its own")
+            if !card.isNothingNew, RecapActions.isOffered(app.settings) || showsChangeMenu {
+                HStack(spacing: 10) {
+                    if RecapActions.isOffered(app.settings) {
+                        Button("Open Full Recap") { openFullRecap() }
+                            .buttonStyle(CatchUpCapsuleButtonStyle())
+                            .help(Self.fullRecapHelp(messageCount: card.messageCount))
+                            .accessibilityHint("Opens a fuller report of these messages in a window of its own")
+                    }
+                    if showsChangeMenu {
+                        AIModelChangeMenu(current: currentModel, font: .system(size: max(10, style.fontSize - 2), weight: .semibold)) { choice in
+                            intelligence.catchUp.rerun(card.bufferID, with: choice)
+                        }
+                        .foregroundStyle(theme[ThemeKey.accentText])
+                    }
+                }
             }
         }
+    }
+
+    /// The model asked for on this card, or the one Catch me up uses.
+    private var currentModel: AIModelChoice {
+        card.request.model ?? intelligence.models.modelSettings.choice(for: .catchUp)
+    }
+
+    /// "Change" once the summary is written, where there's another model
+    /// to choose: a provider that's on, or Private Cloud Compute.
+    private var showsChangeMenu: Bool {
+        isDone && (intelligence.models.hasChoices || currentModel != .automatic)
     }
 
     /// The card covers the latest 600 messages, six topics and three
@@ -160,8 +192,8 @@ struct CatchUpCardView: View {
         if let summary, summary.messageCount < messageCount, summary.messageCount >= CatchUpRequest.maximumLines {
             parts.append("Covers the latest \(CatchUpActions.messagesLabel(summary.messageCount)).")
         }
-        if let skipped = summary?.skippedMessages, skipped > 0 {
-            parts.append("Skipped \(CatchUpActions.messagesLabel(skipped)) that Apple Intelligence wouldn't summarize.")
+        if let summary, summary.skippedMessages > 0 {
+            parts.append("Skipped \(CatchUpActions.messagesLabel(summary.skippedMessages)) that \(summary.venue.writerName) wouldn't summarize.")
         }
         parts.append(summary?.provenance ?? CatchUpSummary.onDeviceProvenance)
         parts.append("May contain mistakes.")
@@ -281,11 +313,66 @@ struct CatchUpCardView: View {
             HStack(spacing: 8) {
                 Button("Try Again") { regenerate() }
                     .buttonStyle(CatchUpCapsuleButtonStyle())
+                if offersApple(after: error) {
+                    Button("Try with Apple Intelligence") { intelligence.catchUp.rerun(card.bufferID, with: .automatic) }
+                        .buttonStyle(CatchUpCapsuleButtonStyle())
+                        .accessibilityHint("Summarizes these messages on this Mac instead")
+                }
+                if error.providerFailure?.isFixedInSettings == true {
+                    Button("Open Settings") { AIModelActions.openSettings(uiState: uiState, openSettings: openSettings) }
+                        .buttonStyle(CatchUpCapsuleButtonStyle())
+                }
                 if case .unavailable(let status) = error, let url = status.settingsURL {
                     Button("Open System Settings") { NSWorkspace.shared.open(url) }
                         .buttonStyle(CatchUpCapsuleButtonStyle())
                 }
             }
+        }
+    }
+
+    /// One of your providers failed (or isn't ready) and Apple's model can
+    /// run: offer it, rather than ever trying another provider.
+    private func offersApple(after error: CatchUpError) -> Bool {
+        error.providerFailure != nil && intelligence.models.isAppleAvailable
+    }
+
+    /// Waiting for your OK to send messages to a provider: nothing was sent.
+    private func consentPrompt(_ error: CatchUpError) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "hand.raised")
+                    .font(.system(size: max(10, style.fontSize - 1), weight: .semibold))
+                    .foregroundStyle(theme[ThemeKey.embedSiteName])
+                    .accessibilityHidden(true)
+                Text(error.errorDescription ?? "")
+                    .font(style.font(size: max(10, style.fontSize - 1)))
+                    .foregroundStyle(theme[ThemeKey.chatForeground])
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 8) {
+                Button("Review…") { askForConsent() }
+                    .buttonStyle(CatchUpCapsuleButtonStyle())
+                    .accessibilityHint("Shows what would be sent, and asks to allow it")
+                if intelligence.models.isAppleAvailable {
+                    Button("Use Apple Intelligence") { intelligence.catchUp.rerun(card.bufferID, with: .automatic) }
+                        .buttonStyle(CatchUpCapsuleButtonStyle())
+                }
+            }
+        }
+    }
+
+    private var needsConsent: Bool {
+        if case .failed(let error) = card.phase { error.needsConsent } else { false }
+    }
+
+    /// The consent sheet for the card's provider; allowing it summarizes
+    /// the stretch again with the same model.
+    private func askForConsent() {
+        guard case .failed(let error) = card.phase, let failure = error.providerFailure else { return }
+        let card = card
+        let store = intelligence.catchUp
+        uiState.aiConsent = AIConsentRequest(providerID: failure.providerID) {
+            store.rerun(card.bufferID, with: card.request.model)
         }
     }
 

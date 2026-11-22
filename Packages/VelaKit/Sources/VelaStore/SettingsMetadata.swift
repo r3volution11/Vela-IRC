@@ -39,7 +39,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .notifications: "Notifications"
         case .connection: "Connection"
         case .moderation: "Moderation"
-        case .intelligence: "Apple Intelligence"
+        case .intelligence: "Intelligence"
         case .updates: "Updates"
         }
     }
@@ -172,7 +172,7 @@ public enum SettingsMetadata {
     static let prefixTitles: [String: String] = [
         "memberList": "Member List",
         "input": "Typing",
-        "intelligence": "Apple Intelligence",
+        "intelligence": "Intelligence",
         "highlight": "Highlights",
         "logging": "Chat Logs",
         "gifs": "GIFs",
@@ -196,6 +196,10 @@ public enum SettingsMetadata {
         "intelligence.recap": "Recap",
         "intelligence.privateCloudCompute": "Private Cloud Compute",
         "intelligence.spotlightChannels": "Channels in Spotlight",
+        "intelligence.model": "Default Model",
+        "intelligence.catchUpModel": "Catch Me Up Model",
+        "intelligence.recapModel": "Recap Model",
+        "intelligence.providers": "AI Providers",
         "translation.autoTranslate": "Auto-Translated Channels",
         "translation.language": "Translate Into",
         "input.spellCheck": "Check Spelling",

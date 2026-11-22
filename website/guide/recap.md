@@ -5,7 +5,7 @@ description: A report of what was said in an IRC channel, on a network or everyw
 
 # Recap
 
-A **Recap** is a report of what was said while you were away, in a window of its own. It covers a channel, a whole network or every network, for anyone or one person, since your first unread message or over a span you pick. Apple Intelligence writes it on your Mac, as short as it can be: an overview, the topics, what was for you, what was decided and who said they'd do what, and the links people shared. Each item links to its message, and **More detail** looks closer at any of them.
+A **Recap** is a report of what was said while you were away, in a window of its own. It covers a channel, a whole network or every network, for anyone or one person, since your first unread message or over a span you pick. Apple Intelligence writes it on your Mac (or [a model of your own](/guide/ai-models)), as short as it can be: an overview, the topics, what was for you, what was decided and who said they'd do what, and the links people shared. Each item links to its message, and **More detail** looks closer at any of them.
 
 [Catch me up](/guide/apple-intelligence#catch-me-up) is the quick version: a small card for one channel's unread messages. A Recap is for when there's more to catch up on, or you want to look back on purpose.
 
@@ -97,6 +97,8 @@ See [Privacy](/help/privacy) for everything else.
 
 ## Turn it off {#settings}
 
-**Offer Recap** in **Settings → Apple Intelligence → Recap** turns Recap off everywhere: the Go menu item, the right-click items, the palette commands, the card's **Open Full Recap** and Siri. In settings.json it's [`intelligence.recap`](/reference/settings#intelligence.recap).
+**A model of your own.** Recap uses the **Default model** in **Settings → Intelligence → Models**, or the **Model** in its own section. The footer of a finished Recap says which model wrote it, and **Change Model** writes it again with another; **More detail** asks the same model. **Buffer: Recap With…** in the command palette picks the model first. A model of your own reads far more at once than the one on your Mac, so a long Recap usually takes one pass. See [Your own AI models](/guide/ai-models).
+
+**Offer Recap** in **Settings → Intelligence → Recap** turns Recap off everywhere: the Go menu item, the right-click items, the palette commands, the card's **Open Full Recap** and Siri. In settings.json it's [`intelligence.recap`](/reference/settings#intelligence.recap).
 
 <Screenshot src="/screenshots/recap-lighter.webp" alt="A Recap of #vela in the Lighter theme: Topics, with More detail open on the first one, then For you, where wren asked you to review the sidebar rail PR" caption="A Recap of #vela in Lighter, with More detail on a topic." />

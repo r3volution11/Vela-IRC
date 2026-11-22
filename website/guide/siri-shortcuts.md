@@ -7,7 +7,7 @@ description: Ask Siri to catch you up, check mentions or send a message, use Vel
 
 Vela works with Siri, the Shortcuts app and Spotlight without any setup. Ask Siri what you missed, send a quick message, set yourself away from a shortcut, or open a channel from Spotlight.
 
-<Screenshot src="/screenshots/settings-siri.webp" alt="Settings → Apple Intelligence, scrolled to Siri & Shortcuts: the Show channels in Spotlight switch, a list of things to ask Siri, and an Open Shortcuts button" caption="Settings → Apple Intelligence → Siri & Shortcuts." />
+<Screenshot src="/screenshots/settings-siri.webp" alt="Settings → Intelligence, scrolled to Siri & Shortcuts: the Show channels in Spotlight switch, a list of things to ask Siri, and an Open Shortcuts button" caption="Settings → Intelligence → Siri & Shortcuts." />
 
 ## Ask Siri {#siri}
 
@@ -30,7 +30,7 @@ Siri asks for anything you leave out, such as the message. Before sending, it ma
 
 The phrases are in English, so they work when Siri's language is English. In other languages, use Vela's actions in the [Shortcuts app](#shortcuts) instead.
 
-**Catch me up** needs [Apple Intelligence](/guide/apple-intelligence#requirements). Siri reads the overview aloud and shows the topics. With nothing unread, it says "You're all caught up." Name a channel you've already caught up on and Siri gives you that summary again, until you quit Vela; with no summary to give, it says "There's nothing new in #vela." Siri never cuts a catch-up short:
+**Catch me up** needs [Apple Intelligence](/guide/apple-intelligence#requirements), or uses [your own model](/guide/ai-models) when you've chosen one for it (Siri can't ask for your OK to send it messages: catch up in Vela once first). Siri reads the overview aloud and shows the topics. With nothing unread, it says "You're all caught up." Name a channel you've already caught up on and Siri gives you that summary again, until you quit Vela; with no summary to give, it says "There's nothing new in #vela." Siri never cuts a catch-up short:
 
 - **A short stretch** (about 100 messages, which your Mac reads in one quick pass) Siri summarizes and reads out itself.
 - **A longer one opens Vela.** Siri says so ("That's 412 messages in #vela. Opening Vela to catch you up."), and Vela opens to the channel with the [Catch me up card](/guide/apple-intelligence#catch-me-up) summarizing all of it. Siri may ask first whether to open Vela.
@@ -41,7 +41,7 @@ The phrases are in English, so they work when Siri's language is English. In oth
 
 ## Shortcuts actions {#shortcuts}
 
-In the **Shortcuts** app, search for "Vela" to find its actions, or click **Open Shortcuts** in **Settings → Apple Intelligence → Siri & Shortcuts**.
+In the **Shortcuts** app, search for "Vela" to find its actions, or click **Open Shortcuts** in **Settings → Intelligence → Siri & Shortcuts**.
 
 | Action | Parameters | What it does |
 | --- | --- | --- |
@@ -74,7 +74,7 @@ Make a "Back at my desk" shortcut: **Connect Network** for your favorite network
 
 Your channels and conversations show up in Spotlight, with their network. Choose one to open it in Vela.
 
-Spotlight only ever gets their **names**, never messages. To keep them out of Spotlight, turn off **Show channels in Spotlight** in **Settings → Apple Intelligence → Siri & Shortcuts** ([`intelligence.spotlightChannels`](/reference/settings#intelligence.spotlightChannels)); Vela removes them from Spotlight's results straight away.
+Spotlight only ever gets their **names**, never messages. To keep them out of Spotlight, turn off **Show channels in Spotlight** in **Settings → Intelligence → Siri & Shortcuts** ([`intelligence.spotlightChannels`](/reference/settings#intelligence.spotlightChannels)); Vela removes them from Spotlight's results straight away.
 
 The setting covers what Spotlight shows, not what Siri knows. On macOS 27, Vela also gives the system the same names for Siri, marked so that Spotlight doesn't show them: that's how Siri finds "#vela" or a nick when you ask it to send a message. They stay when the setting is off.
 

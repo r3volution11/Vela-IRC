@@ -121,7 +121,7 @@ public struct RecapIntent: AppIntent {
             place = .everywhere
         }
         services.availability.refresh()
-        let output: RecapScope.Output = services.availability.status.isAvailable ? .summary : .log
+        let output: RecapScope.Output = services.status(for: .recap).isAvailable ? .summary : .log
         return RecapScope(place: place, person: person, span: span.span, output: output)
     }
 

@@ -30,7 +30,7 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
         case .media: "Media"
         case .networks: "Networks"
         case .notifications: "Notifications"
-        case .intelligence: "Apple Intelligence"
+        case .intelligence: "Intelligence"
         case .updates: "Updates"
         case .advanced: "Advanced"
         }

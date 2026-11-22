@@ -23,7 +23,7 @@ struct CatchUpMarkerButton: View {
         let unread = CatchUpEligibility.unreadLineCount(buffer.lines, after: buffer.unreadMarkerAfter)
         let shows = CatchUpEligibility.showsButton(
             isEnabled: app.settings[.intelligenceCatchUp],
-            status: intelligence.availability.status,
+            status: intelligence.status(for: .catchUp),
             unreadLines: unread,
             threshold: app.settings[.intelligenceCatchUpThreshold]
         )
@@ -32,6 +32,8 @@ struct CatchUpMarkerButton: View {
             CatchUpEligibility.cardHidesButton(isRunning: $0.isRunning, coversThrough: $0.coversThrough, marker: buffer.unreadMarkerAfter)
         } ?? false
         if shows, !hiddenByCard {
+            // Only Apple's model is named here; a provider's is on the card.
+            let writer = app.settings.usesAppleModel(for: .catchUp) ? " with Apple Intelligence" : ""
             Button {
                 CatchUpActions.open(buffer, session: controller.session, app: app, store: intelligence.catchUp)
             } label: {
@@ -42,9 +44,9 @@ struct CatchUpMarkerButton: View {
                 }
             }
             .buttonStyle(CatchUpCapsuleButtonStyle())
-            .help("Summarize the \(CatchUpActions.messagesLabel(unread)) you missed with Apple Intelligence")
+            .help("Summarize the \(CatchUpActions.messagesLabel(unread)) you missed\(writer)")
             .accessibilityLabel("Catch me up")
-            .accessibilityHint("Summarizes the \(CatchUpActions.messagesLabel(unread)) you missed with Apple Intelligence")
+            .accessibilityHint("Summarizes the \(CatchUpActions.messagesLabel(unread)) you missed\(writer)")
             .onAppear {
                 if CatchUpDemo.takeLaunchRequest(isDemo: app.isDemo) {
                     CatchUpActions.open(buffer, session: controller.session, app: app, store: intelligence.catchUp)

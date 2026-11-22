@@ -14,6 +14,9 @@ import VelaStore
 struct RecapWindowValue: Codable, Hashable {
     var scope: RecapScope
     var choosesPerson = false
+    /// The model to write it with ("Recap With…"); nil follows Recap's
+    /// setting.
+    var model: AIModelChoice?
 }
 
 /// Opening Recaps, naming them, jumping from them to a message, and Copy
@@ -34,10 +37,11 @@ enum RecapActions {
         return RecapScope(place: place, output: preferredOutput(intelligence))
     }
 
-    /// Summary, or Log when Apple Intelligence can't run.
+    /// Summary, or Log when Recap's model can't run (Apple Intelligence
+    /// off, with no provider's model chosen instead).
     static func preferredOutput(_ intelligence: IntelligenceServices?) -> RecapScope.Output {
         guard let intelligence else { return .summary }
-        return intelligence.availability.status.isAvailable ? .summary : .log
+        return intelligence.status(for: .recap).isAvailable ? .summary : .log
     }
 
     static func open(_ value: RecapWindowValue, openWindow: OpenWindowAction) {

@@ -16,6 +16,19 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **Nothing changes when you update.** Your settings stay exactly as they were, and each row shows the choice they match: the old **Classic IRC** preset is Sidebar, Classic IRC and Compact; **Modern Chat** is Sidebar, Modern and Standard; **Tabbed** is Tabs on Top and Modern; and the old **Focus** is Tabs in Title Bar and Columns. The old Tabbed and Focus spacing shows as a customized density. What else the old presets set (font size, media sizes, unread settings) stays as it was.
 - The message preview in **Settings → Messages** now spaces messages as the conversation does: the message spacing between messages in every layout, and none between the lines of one person's run.
 
+### AI models
+
+- **Use your own AI models for Catch me up and Recap.** Add **OpenAI**, **Anthropic (Claude)** or **Google Gemini** with your own API key, or a server that speaks OpenAI's API, such as **Ollama** or **LM Studio** on your Mac or your network, in **Settings → Intelligence → Models**. Apple Intelligence stays the default (**Automatic (Apple)**) until you choose another model. See [Your own AI models](https://velairc.app/guide/ai-models).
+  - **Choose the default model,** or a model for Catch me up or Recap only. Menus list Apple's model first, then each provider's, with Vela's recommended pick first: Claude Opus 5.5, GPT-6.2 Sol and Gemini 3.8 Flash. **Test** fetches a provider's models with your key, and lists are kept between launches.
+  - **See which model wrote it, and try another.** A Catch me up card and a Recap say which model wrote them, and **Change** writes them again with another one.
+  - **Works on any Mac.** With a model of your own, Catch me up and Recap's summaries work without Apple Intelligence, on an Intel Mac too.
+  - **Fewer passes.** Hosted models read far more at once than the model on your Mac, so a long catch-up or Recap usually takes one pass.
+- **You decide what's sent.** The first time a provider would be used, Vela asks, and says exactly what goes: the text and nicks of the messages you ask about and your nick, never channel, network or server names or your account, under the provider's data policy, billed to your key. Take it back any time in **Settings → Intelligence**. Keys are kept in your Keychain, never in settings.json.
+- **Clear errors, and never a silent switch.** Offline, a key that's turned down, an account out of credit or a refusal each says so, with **Try with Apple Intelligence** where it can run. Vela never falls back to another provider on its own.
+- **In the command palette:** **AI: Set Default Model…**, **AI: Manage Providers…**, **Buffer: Catch Me Up With…** and **Buffer: Recap With…**.
+- **Settings → Apple Intelligence is now Settings → Intelligence.** Translation stays on your Mac with Apple's Translation framework, and Writing Tools is still macOS's own.
+- **New settings:** [`intelligence.model`](https://velairc.app/reference/settings#intelligence.model), [`intelligence.catchUpModel`](https://velairc.app/reference/settings#intelligence.catchUpModel), [`intelligence.recapModel`](https://velairc.app/reference/settings#intelligence.recapModel) and [`intelligence.providers`](https://velairc.app/reference/settings#intelligence.providers).
+
 ## 1.1.0 - 2026-11-21
 
 Vela 1.1 brings an updater, the whole window from the keyboard, and a choice about saving your chat history. The highlights:

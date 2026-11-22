@@ -68,7 +68,7 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 
 ## Catch me up doesn't appear {#catch-me-up}
 
-- **Is Apple Intelligence ready?** The box at the top of **Settings → Apple Intelligence** says. Catch me up needs a Mac with Apple silicon, Apple Intelligence turned on in System Settings, its model downloaded, and a supported language. See [What you need](/guide/apple-intelligence#requirements).
+- **Is Apple Intelligence ready?** The box at the top of **Settings → Intelligence** says. Catch me up needs a Mac with Apple silicon, Apple Intelligence turned on in System Settings, its model downloaded, and a supported language. See [What you need](/guide/apple-intelligence#requirements).
 - **Are enough messages new?** The button waits for 25 new messages by default (**Show the button after**). To catch up on fewer, right-click the channel and choose **Catch Me Up**.
 - **Is Offer Catch me up in busy channels on?** Turned off, it removes Catch me up everywhere: the button, the right-click menu, the command palette and Siri.
 - **Is anything new?** The button sits on the **New** marker, so it only appears in a channel with messages you haven't read. **Catch Me Up** in the right-click menu or the command palette works either way: with nothing new, it shows the summary you made there earlier, or says there's nothing new and when the button will be back.
@@ -83,7 +83,7 @@ If the card says it skipped some messages, Apple Intelligence's safety checks de
 
 ## Translate isn't offered {#translate}
 
-- **It's for other people's messages** in a language other than the one in **Settings → Apple Intelligence → Translate into**.
+- **It's for other people's messages** in a language other than the one in **Settings → Intelligence → Translate into**.
 - **The message needs enough words** for its language to be clear. Short replies, emoji and bare links aren't offered.
 - **macOS must be able to translate between the two languages.**
 - **A declined download** stops automatic translation from that language. Choose **Translate** on one of its messages to be asked again.
@@ -92,7 +92,7 @@ If the card says it skipped some messages, Apple Intelligence's safety checks de
 
 Open Vela once, so macOS registers its actions. If Vela's actions still don't appear, check that there's **only one copy of Vela.app** on your Mac (an old copy in Downloads, or one you built yourself, confuses macOS about which to use), delete the others, and open Vela from Applications. See [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts#troubleshooting).
 
-**Siri doesn't understand "Catch me up in Vela" and the other phrases.** They're in English, so they work when Siri's language is English (**System Settings → Apple Intelligence & Siri → Language**). In other languages, use Vela's actions in the **Shortcuts** app instead.
+**Siri doesn't understand "Catch me up in Vela" and the other phrases.** They're in English, so they work when Siri's language is English (**System Settings → Intelligence & Siri → Language**). In other languages, use Vela's actions in the **Shortcuts** app instead.
 
 ## macOS asks about the Keychain
 
@@ -152,11 +152,11 @@ If you used Vela before this setting existed, nothing changed for you: your hist
 
 ### Which macOS versions does Vela support?
 
-macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writing Tools need Apple Intelligence, which needs Apple silicon; [translation](/guide/apple-intelligence#translate-messages) doesn't. On macOS 27, [Siri can do more](/guide/siri-shortcuts#macos-27) with Vela.
+macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writing Tools need Apple Intelligence, which needs Apple silicon (Catch me up and Recap also work with [a model of your own](/guide/ai-models), on any Mac); [translation](/guide/apple-intelligence#translate-messages) doesn't. On macOS 27, [Siri can do more](/guide/siri-shortcuts#macos-27) with Vela.
 
 ### Does Vela send my messages to an AI service?
 
-No. [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. A later version will let you send long catch-ups to Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) (macOS 27 or later, off by default), where requests are encrypted and not stored, and Apple can't read them. This version never does. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
+Not unless you set one up. You can choose [a model of your own](/guide/ai-models) (OpenAI, Anthropic, Google Gemini, or a server such as Ollama) for Catch me up and Recap; Vela then asks first, and sends it the messages you ask about, their nicks and your nick, never channel or network names. Otherwise, [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. A later version will let you send long catch-ups to Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) (macOS 27 or later, off by default), where requests are encrypted and not stored, and Apple can't read them. This version never does. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
 
 ### Is Vela free?
 

@@ -88,15 +88,22 @@ enum CatchUpActions {
     /// With nothing new, it shows the buffer's latest summary again (its
     /// stretch has been read since), or a card at the end saying there's
     /// nothing new and when the button comes back.
-    static func open(_ buffer: BufferModel, session: NetworkSession, app: AppModel, store: CatchUpStore) {
+    ///
+    /// - Parameter model: A model chosen for this summary ("Catch Me Up
+    ///   With…"); nil uses Catch me up's setting.
+    static func open(_ buffer: BufferModel, session: NetworkSession, app: AppModel, store: CatchUpStore, model: AIModelChoice? = nil) {
         // Build the request before selecting: selecting marks the buffer
         // read, but the New marker it places covers the same lines.
         let marker = buffer.unreadMarkerAfter ?? buffer.lastReadAt
-        let request = CatchUpRequest(buffer: buffer, session: session, since: marker)
+        var request = CatchUpRequest(buffer: buffer, session: session, since: marker)
+        request.model = model
         let isNew = hasUnread(buffer, app: app) && !request.lines.isEmpty
         if app.selectedBufferID != buffer.id { app.select(buffer) }
         if isNew {
             store.open(request, marker: buffer.unreadMarkerAfter ?? marker)
+        } else if let model, store.reopen(buffer.id) {
+            // Nothing new: the latest stretch again, with the model chosen.
+            store.rerun(buffer.id, with: model)
         } else if !store.reopen(buffer.id) {
             var nothing = request
             nothing.lines = []
@@ -108,7 +115,9 @@ enum CatchUpActions {
     /// arrived since. Also Try Again after a failure. The stretch starts at
     /// the card's own anchor, wherever the live New marker has gone.
     static func regenerate(_ card: CatchUpCard, buffer: BufferModel, session: NetworkSession, store: CatchUpStore) {
-        let request = CatchUpRequest(buffer: buffer, session: session, since: card.anchor)
+        var request = CatchUpRequest(buffer: buffer, session: session, since: card.anchor)
+        // The model chosen on the card stays.
+        request.model = card.request.model
         store.regenerate(request.lines.isEmpty ? card.request : request, marker: card.marker)
     }
 

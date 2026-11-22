@@ -131,6 +131,7 @@ Back to a busy channel? **Catch me up** summarizes what you missed, topic by top
 - **Translate** messages from other languages, one at a time or a whole channel as they arrive.
 - **Writing Tools** proofreads your message without touching commands, nicks or links.
 - **Siri and Shortcuts** can catch you up, check your mentions or set you away, and your channels are in Spotlight.
+- **[Your own models](/guide/ai-models)**, if you like: OpenAI, Anthropic, Google Gemini or a local server such as Ollama, with your own key.
 
 </ShowcaseRow>
 

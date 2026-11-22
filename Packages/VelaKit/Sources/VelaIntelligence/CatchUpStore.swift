@@ -5,6 +5,7 @@
 import Foundation
 import Observation
 import VelaCore
+import VelaStore
 
 /// One "Catch me up" card: the conversation it covers and how far
 /// summarizing it has got. Observable on its own, so a streaming summary
@@ -37,6 +38,10 @@ public final class CatchUpCard {
     public var anchor: Date { marker ?? .distantPast }
 
     @ObservationIgnored var key: CatchUpRangeKey
+    /// The consent sheet was shown for this card's provider, so the card
+    /// doesn't show it again each time it scrolls into view (its Review…
+    /// button still does).
+    @ObservationIgnored public var hasAskedForConsent = false
 
     init(request: CatchUpRequest, marker: Date?, phase: Phase) {
         self.bufferID = request.bufferID
@@ -47,6 +52,7 @@ public final class CatchUpCard {
     }
 
     func replace(with request: CatchUpRequest, marker: Date?) {
+        if request.model != self.request.model { hasAskedForConsent = false }
         self.request = request
         self.marker = marker
         key = CatchUpRangeKey(request)
@@ -84,11 +90,14 @@ nonisolated struct CatchUpRangeKey: Hashable, Sendable {
     var bufferID: BufferID
     var newestLineID: UUID?
     var count: Int
+    /// The model asked for: each model's summary is its own.
+    var model: AIModelChoice?
 
     init(_ request: CatchUpRequest) {
         bufferID = request.bufferID
         newestLineID = request.lines.last?.id
         count = request.lines.count
+        model = request.model
     }
 }
 
@@ -232,6 +241,16 @@ public final class CatchUpStore {
         remember(request, marker: marker)
         // Always a fresh job: one Siri is still waiting on keeps going for it.
         card.phase = .running(startJob(request, key: card.key).latest)
+    }
+
+    /// Summarizes the buffer's card's stretch again with `model`: the
+    /// card's Change menu, and Try with Apple Intelligence. Nil follows
+    /// the settings again. Later Regenerates keep the model.
+    public func rerun(_ bufferID: BufferID, with model: AIModelChoice?) {
+        guard let card = cards[bufferID] else { return }
+        var request = card.request
+        request.model = model
+        regenerate(request, marker: card.marker)
     }
 
     /// Closes the buffer's card and stops its summary (unless Siri is

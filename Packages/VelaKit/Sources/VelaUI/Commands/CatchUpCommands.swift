@@ -23,7 +23,7 @@ extension VelaCommandCatalog {
         guard let buffer = app.selectedBuffer, let session = app.selectedSession,
               CatchUpEligibility.canOffer(
                   isEnabled: app.settings[.intelligenceCatchUp],
-                  status: intelligence.availability.status,
+                  status: intelligence.status(for: .catchUp),
                   kind: buffer.kind
               )
         else { return [] }

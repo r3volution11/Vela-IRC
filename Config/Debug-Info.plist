@@ -10,5 +10,16 @@
 	<!-- The GIF picker's KLIPY key (Config/Vela.xcconfig). -->
 	<key>VelaKLIPYAPIKey</key>
 	<string>$(VELA_KLIPY_API_KEY)</string>
+	<!--
+	  AI servers such as Ollama or LM Studio over plain http: localhost,
+	  .local names and IP addresses only (as in Vela/Info.plist).
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Vela connects to an AI server on your network only when you add one in Settings → Intelligence.</string>
 </dict>
 </plist>

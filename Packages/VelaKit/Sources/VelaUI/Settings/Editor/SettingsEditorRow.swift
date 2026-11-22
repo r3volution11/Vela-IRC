@@ -54,6 +54,10 @@ enum SettingControlKind: Equatable {
         case "array":
             if let values = descriptor.itemEnumValues {
                 self = .enumList(values)
+            } else if descriptor.schema.objectValue?["items"]?.objectValue?["type"]?.stringValue == "object" {
+                // A list of objects (`intelligence.providers`): edited in
+                // settings.json, or on its Settings pane.
+                self = .object
             } else {
                 self = .stringList(descriptor.suggestionSource)
             }
