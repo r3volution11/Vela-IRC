@@ -34,4 +34,18 @@ enum WindowChrome {
         if window.appearance?.name != appearanceName { window.appearance = NSAppearance(named: appearanceName) }
         if window.tabbingMode != .disallowed { window.tabbingMode = .disallowed }
     }
+
+    /// Selected text in the window's shared field editor, in the theme's
+    /// selection color. On macOS 26 SwiftUI can draw selectable text
+    /// (messages, link previews) as text fields edited by that editor, and
+    /// its default highlight there was barely visible (#DFF2F0 on a #F4F5F6
+    /// row). On macOS 27 the same text draws its own highlight, which this
+    /// doesn't touch. Fields that set their own (the palette's search) still
+    /// do.
+    static func applySelectionColor(_ color: NSColor, to window: NSWindow) {
+        guard let editor = window.fieldEditor(true, for: nil) as? NSTextView else { return }
+        if editor.selectedTextAttributes[.backgroundColor] as? NSColor != color {
+            editor.selectedTextAttributes = [.backgroundColor: color]
+        }
+    }
 }

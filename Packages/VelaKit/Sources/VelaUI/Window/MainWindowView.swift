@@ -179,6 +179,7 @@ struct WindowConfigurator: NSViewRepresentable {
             isOpaque: !vibrancy.isTranslucent,
             appearanceName: theme.appearanceName
         )
+        WindowChrome.applySelectionColor(theme.color(ThemeKey.chatSelectionBackground).nsColor, to: window)
     }
 }
 
