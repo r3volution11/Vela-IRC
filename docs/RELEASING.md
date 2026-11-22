@@ -11,6 +11,8 @@ If no published release is marked latest, or the latest has no asset named `Vela
 
 A release has just the one disk image, with no version in its name: the release page already says which version it is. The mounted disk is named "Vela", and from version 2 on it carries the major version ("Vela 2"), so a major release looks like one. `--publish` takes care of both.
 
+Beside it, every release has **`Vela.alfredworkflow`**, the Alfred workflow from `integrations/alfred`, and `SHA256SUMS` lists both. See [The Alfred workflow](#the-alfred-workflow). The Raycast extension (`integrations/raycast`) isn't part of a release: it's published through Raycast's store.
+
 From 1.1, Vela updates itself with [Sparkle](https://sparkle-project.org): installed copies read the update feed at `https://velairc.app/appcast.xml` and install the same `Vela.dmg` from the GitHub release. `--publish` signs the DMG for the updater and adds the release to the feed. See [Updates](#updates).
 
 ## Release builds and development builds
@@ -110,15 +112,16 @@ What it does:
 2. Finds your **Developer ID Application** certificate and Team ID, and checks that the `vela-notary` profile exists.
 3. Checks that `Vela/Info.plist` has the [update signing key](#the-update-signing-key)'s public half, not the placeholder (`--adhoc` only notes it). With `--publish`, also checks that `gh` is installed and signed in, that the key in 1Password is the one `Vela/Info.plist` has (1Password asks you to approve), that the [update feed](#the-update-feed) takes this build, and that there are [release notes](#release-notes). If not, it stops before building anything.
 4. **Runs the [preflight checks](#preflight-checks)** (`scripts/release-preflight.sh`): git, the version and changelog, CI, the adult-domain list, the generated files, the package tests, the website, the media sites and the scroll benchmark. If one fails, it prints the summary and stops before archiving.
-5. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`. The build's full output is in `build/release/archive.log`.
-6. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp, signed with `Vela/Vela.entitlements`. The export signs Sparkle's framework, XPC services and helpers with your Developer ID too.
-7. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
-8. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
-9. **Builds the DMG** with `scripts/make-dmg.sh` (`Vela.app` plus an Applications shortcut, in a window drawn like the website; see [The disk image window](#the-disk-image-window)), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
-10. **Checks the DMG** as users get it, with the [post-build checks](#post-build-checks) (`scripts/verify-release.sh`). If one fails, it stops.
-11. Writes `build/release/Vela.dmg` and `build/release/SHA256SUMS`.
-12. With `--publish`, **publishes** the release once every check has passed: signs the DMG for the updater and adds it to the update feed, then the tag, the GitHub release, a check of the download, and the feed on velairc.app. See [Publishing](#publishing).
-13. Prints a summary of every check and its result.
+5. **Builds the [Alfred workflow](#the-alfred-workflow)**, `build/release/Vela.alfredworkflow`, with `scripts/build-alfred-workflow.sh`, which checks and tests it first. If that fails, it stops before archiving.
+6. **Archives** a universal (Apple silicon + Intel) Release build into `build/release/Vela.xcarchive`. The build's full output is in `build/release/archive.log`.
+7. **Exports** it with Developer ID signing, the hardened runtime and a secure timestamp, signed with `Vela/Vela.entitlements`. The export signs Sparkle's framework, XPC services and helpers with your Developer ID too.
+8. **Verifies** the signature (`codesign --verify --deep --strict`), both architectures, and that the App Sandbox entitlement is present.
+9. **Notarizes the app and staples** the ticket to it, so it verifies offline even after it's copied out of the disk image.
+10. **Builds the DMG** with `scripts/make-dmg.sh` (`Vela.app` plus an Applications shortcut, in a window drawn like the website; see [The disk image window](#the-disk-image-window)), signs it, **notarizes and staples** the DMG too, and runs a Gatekeeper assessment.
+11. **Checks the DMG** as users get it, with the [post-build checks](#post-build-checks) (`scripts/verify-release.sh`). If one fails, it stops.
+12. Writes `build/release/Vela.dmg`, `build/release/Vela.alfredworkflow` and `build/release/SHA256SUMS`, which lists both.
+13. With `--publish`, **publishes** the release once every check has passed: signs the DMG for the updater and adds it to the update feed, then the tag, the GitHub release, a check of the download, and the feed on velairc.app. See [Publishing](#publishing).
+14. Prints a summary of every check and its result.
 
 Notarization usually takes a few minutes. If Apple rejects a submission, the script prints Apple's log; the usual causes are an unsigned nested binary or a missing hardened-runtime flag. For testing the pipeline, `--skip-notarize` signs without notarizing, and `--adhoc` doesn't use your Developer ID at all; see [Options](#options).
 
@@ -303,7 +306,7 @@ Finder caches window layouts by volume name, so give each try a new name.
    - The tag is signed (`git tag -s`) when git has a signing key: `user.signingkey`, or `tag.gpgSign`. With an SSH key in 1Password, 1Password asks you to approve it.
    - Otherwise it's an annotated tag (`git tag -a`), and the script prints a note saying so.
 4. **Pushes** the tag to `origin`.
-5. **Creates the GitHub release** with `gh release create --verify-tag --latest`. It's titled `Vela <version>`, with the [release notes](#release-notes) and two files: `Vela.dmg` and `SHA256SUMS`.
+5. **Creates the GitHub release** with `gh release create --verify-tag --latest`. It's titled `Vela <version>`, with the [release notes](#release-notes) and three files: `Vela.dmg`, `Vela.alfredworkflow` and `SHA256SUMS`.
 6. **Checks the download.** `releases/latest/download/Vela.dmg` must redirect to `releases/download/v<version>/Vela.dmg`. It tries for about a minute, while GitHub catches up. Then the DMG downloaded from that link must match `SHA256SUMS`.
 7. **Pushes the feed's commit** to `main`, which deploys velairc.app (the **Deploy Website** workflow). The feed goes last, so installed copies are never offered an update whose download isn't there yet.
 8. **Checks the feed online.** It waits up to about 8 minutes for `https://velairc.app/appcast.xml` to list this build.
@@ -319,7 +322,7 @@ The script stops and deletes nothing: not the tag, and not the release. After th
     v1.1.0 is on origin, but the GitHub release wasn't created. Nothing was deleted. To finish, run:
 
       cd '/Users/you/Projects/Vela IRC'
-      gh release create v1.1.0 build/release/Vela.dmg build/release/SHA256SUMS --repo r3volution11/Vela-IRC --verify-tag --title 'Vela 1.1.0' --notes-file build/release/release-notes.md --latest
+      gh release create v1.1.0 build/release/Vela.dmg build/release/Vela.alfredworkflow build/release/SHA256SUMS --repo r3volution11/Vela-IRC --verify-tag --title 'Vela 1.1.0' --notes-file build/release/release-notes.md --latest
       curl -sS -o /dev/null -w '%{redirect_url}\n' https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg
       curl -sSL https://github.com/r3volution11/Vela-IRC/releases/latest/download/Vela.dmg | shasum -a 256
 
@@ -334,7 +337,7 @@ Fix what the failed check says, then run the commands. If `gh` made the release 
 Without `--notes`, the release notes are:
 
 1. the body of this version's section in `CHANGELOG.md`, without its `## <version>` heading. Relative links, such as `ROADMAP.md`, point at the file on GitHub as of the tag;
-2. then `scripts/release-notes-footer.md`: Requirements, Install, Update (with how to update from 1.0, which has no updater) and Learn more. It's the same for every release; edit it there.
+2. then `scripts/release-notes-footer.md`: Requirements, Install, Update (with how to update from 1.0, which has no updater), Alfred (the workflow beside the DMG) and Learn more. It's the same for every release; edit it there.
 
 They're written to `build/release/release-notes.md` when the build starts (after the preflight checks), so you can read them while Vela builds.
 
@@ -350,7 +353,7 @@ If you built without `--publish`:
 v=1.1.0   # the version you built
 git tag -s "v$v" -m "Vela $v"     # tags HEAD, the commit you built; -a for an unsigned tag
 git push origin "v$v"
-gh release create "v$v" build/release/Vela.dmg build/release/SHA256SUMS \
+gh release create "v$v" build/release/Vela.dmg build/release/Vela.alfredworkflow build/release/SHA256SUMS \
   --verify-tag --title "Vela $v" --notes-file release-notes.md --latest
 ```
 
@@ -390,6 +393,20 @@ gh release create "v$v" build/release/Vela.dmg build/release/SHA256SUMS \
 - **A preflight or post-build check fails:** see [Release checks](#release-checks) for what each one needs.
 - **A release went out with a broken updater:** the feed can't fix a copy that can't update. Ship a fixed version, say so in the release notes, and ask people to download it once from the website.
 - **The feed lists a bad release:** add a fixed version (bump the build number); Sparkle offers the newest. Don't delete items from the feed by hand.
+- **"The Alfred workflow didn't build":** the summary's **Alfred workflow** line shows what `scripts/build-alfred-workflow.sh` said. Fix it and check with `scripts/build-alfred-workflow.sh` before running the release again.
+
+## The Alfred workflow
+
+Every release carries `Vela.alfredworkflow`, the Alfred workflow in `integrations/alfred` (its `README.md` explains how it works). `scripts/release.sh` builds it into `build/release/` before archiving, with `scripts/build-alfred-workflow.sh`, which:
+
+1. checks that `info.plist` is a valid property list and that `scripts/vela.js` compiles (`osacompile -l JavaScript`);
+2. runs the workflow's tests (`node --test integrations/alfred/test/*.test.mjs`), which never talk to Vela: they run the script against a stand-in, and compile its AppleScript against a throwaway copy of Vela's dictionary;
+3. sets the workflow's version to Vela's (`MARKETING_VERSION`), and its About to `integrations/alfred/README.md` up to the "end of the workflow's About" marker;
+4. zips `info.plist`, the icons and the script, with fixed dates, so the same commit always makes the same file.
+
+To try it before a release: `scripts/build-alfred-workflow.sh`, double-click `build/Vela.alfredworkflow`, and choose **Vela Dev** in its configuration. The README has a checklist for testing it by hand.
+
+The workflow isn't in the Alfred Gallery yet; `integrations/alfred/README.md` lists what a submission needs. The Raycast extension (`integrations/raycast`) isn't part of a release at all: it's submitted to Raycast's store from its folder (its `README.md`, "Store submission").
 
 ## Updates
 

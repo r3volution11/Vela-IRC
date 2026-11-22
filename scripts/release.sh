@@ -22,10 +22,10 @@
 # 1Password into a pipe), adds the release to the update feed
 # (website/public/appcast.xml) and commits it, tags the commit it built as
 # v<version>, pushes the tag to origin, creates the GitHub release with
-# Vela.dmg and SHA256SUMS, marked Latest, checks that the website's download
-# link (releases/latest/download/Vela.dmg) gives this DMG, then pushes the
-# feed's commit to main and waits for velairc.app to serve it. The feed goes
-# last, so the updater never offers a release whose download isn't there
+# Vela.dmg, Vela.alfredworkflow and SHA256SUMS, marked Latest, checks that
+# the website's download link (releases/latest/download/Vela.dmg) gives this
+# DMG, then pushes the feed's commit to main and waits for velairc.app to
+# serve it. The feed goes last, so the updater never offers a release whose download isn't there
 # yet. The tag is signed when git has a signing key (user.signingkey or
 # tag.gpgSign), and annotated otherwise. The release notes are CHANGELOG.md's
 # section for the version followed by scripts/release-notes-footer.md, written
@@ -79,7 +79,12 @@
 #                        (default: my.1password.com, Personal,
 #                        "Vela - Sparkle - Mac Update Signing Key")
 #
-# Output: build/release/Vela.dmg (+ SHA256SUMS),
+# Every release also carries the Alfred workflow, Vela.alfredworkflow, built
+# and tested (scripts/build-alfred-workflow.sh) before the archive, so a
+# broken workflow stops the release before the long build; SHA256SUMS lists
+# both files.
+#
+# Output: build/release/Vela.dmg and Vela.alfredworkflow (+ SHA256SUMS),
 # and with --publish (without --notes) build/release/release-notes.md, plus
 # build/release/appcast-notes.md (the feed's release notes) and a commit of
 # website/public/appcast.xml
@@ -339,6 +344,24 @@ fi
 rm -rf "$out"
 mkdir -p "$out"
 
+# ---------------------------------------------------------------- Alfred workflow
+# Vela.alfredworkflow goes on the release beside Vela.dmg. It's built now,
+# before the long archive, so a broken workflow stops the release early:
+# scripts/build-alfred-workflow.sh checks and tests it first (the tests never
+# talk to Vela).
+RELEASE_CHECKS_RESULTS="$results"
+check_section "Alfred workflow"
+if output=$(scripts/build-alfred-workflow.sh --version "$version" --output "$out/Vela.alfredworkflow" 2>&1); then
+  check_pass "Alfred workflow" "$out/Vela.alfredworkflow, version $version"
+else
+  print -r -- "$output" | sed 's/^/    /'
+  check_fail "Alfred workflow" "scripts/build-alfred-workflow.sh failed (above)" \
+    "Fix what it says, then check with scripts/build-alfred-workflow.sh (integrations/alfred/README.md)."
+  show_summary
+  print
+  fail "The Alfred workflow didn't build, so no release was built."
+fi
+
 # The release notes for --publish: CHANGELOG.md's section for this version,
 # with its relative links (such as ROADMAP.md) pointing at the files on GitHub
 # as of the tag, then the standard footer. Written now, so they can be read
@@ -477,9 +500,10 @@ if ! scripts/verify-release.sh "$out/Vela.dmg" "${verify_options[@]}"; then
   fail "$out/Vela.dmg failed the post-build checks, so SHA256SUMS wasn't written. Fix what the summary lists, then build again."
 fi
 
-(cd "$out" && shasum -a 256 Vela.dmg > SHA256SUMS)
+(cd "$out" && shasum -a 256 Vela.dmg Vela.alfredworkflow > SHA256SUMS)
 step "Done"
 print "    $out/Vela.dmg"
+print "    $out/Vela.alfredworkflow"
 sed 's/^/    /' "$out/SHA256SUMS"
 
 # ---------------------------------------------------------------- publish
@@ -499,7 +523,7 @@ release_url="https://github.com/$github_repo/releases/tag/$tag"
 latest_url="https://github.com/$github_repo/releases/latest/download/Vela.dmg"
 expected_location="https://github.com/$github_repo/releases/download/$tag/Vela.dmg"
 expected_sha=$(awk '$2 == "Vela.dmg" || $2 == "*Vela.dmg" { print $1 }' "$out/SHA256SUMS")
-assets=("$out/Vela.dmg" "$out/SHA256SUMS")
+assets=("$out/Vela.dmg" "$out/Vela.alfredworkflow" "$out/SHA256SUMS")
 publish_steps=(sign appcast tag push release link checksum feed served)
 typeset -A publish_check=(
   sign "Update signature"
@@ -673,7 +697,7 @@ else
   finish_by_hand push "$tag is tagged here but isn't on $remote, so nothing was published."
 fi
 
-print "    Creating the release, with Vela.dmg and SHA256SUMS…"
+print "    Creating the release, with Vela.dmg, Vela.alfredworkflow and SHA256SUMS…"
 if output=$(gh release create "$tag" "${assets[@]}" --repo "$github_repo" --verify-tag \
     --title "$release_title" --notes-file "$notes_file" --latest 2>&1); then
   check_pass "$publish_check[release]" "$release_url, marked Latest, notes from $notes_file"

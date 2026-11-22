@@ -38,6 +38,12 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **People in Spotlight.** The people you talk to in private show up in Spotlight as people (with **Show channels in Spotlight**), including conversations you closed since Vela started; choosing one opens or reopens it. There's a new **Open Private Conversation** action too.
 - **Search in Vela, and Vela's actions in Spotlight.** Type in Spotlight and choose **Search in Vela** to open message search, or run **Search Messages** and Vela's other actions there with what they ask for. Actions find better with everyday words ("DM", "afk", "find"), and Siri knows "Search messages in Vela" and "Join a channel in Vela".
 
+### Alfred and Raycast
+
+- **An Alfred workflow.** Type `vela` in Alfred for your channels and private conversations: mentions first, then what's unread, then the rest, each with its network and how many mentions and unread messages it has. Type to filter by name or network, or `vela unread` for what's waiting. ↩ shows one in Vela, ⌘↩ opens Catch me up, ⌥↩ a Recap, ⇧↩ marks it read and ⌘C copies its `vela://` link. ⌃↩ writes a message: type it, then ↩ sends it, or ⌘↩ puts it in the message box instead. `vela catch`, `vela recap` and `vela mark` run **Catch Me Up**, **Open Recap** and **Mark All Read**, and `vsearch` or the **Search in Vela** Universal Action searches your messages. Every release has **Vela.alfredworkflow** beside the disk image (Alfred 5 or later, with the Powerpack). See [Alfred & Raycast](https://velairc.app/guide/alfred-and-raycast#alfred).
+- **A Raycast extension**, in Vela's source code (`integrations/raycast`) until it's in the Raycast Store: **Search Conversations**, in Mentions, Unread and All sections, with actions to open, catch up, recap, write a message, draft it in Vela, mark read and copy a link; **Send Message**; **Catch Me Up**; and, if you turn it on, **Unread Conversations** in the menu bar with your mentions. See [Alfred & Raycast](https://velairc.app/guide/alfred-and-raycast#raycast).
+- **Neither opens Vela just to list things,** and both say what's wrong in words: Vela isn't running (with a way to open it), isn't allowed to be controlled (with a way to the setting), isn't connected, you're not in that channel, or Catch me up is turned off. Either can talk to Vela Dev instead, for working on Vela. Neither has any tracking.
+
 ## 1.1.0 - 2026-11-21
 
 Vela 1.1 brings an updater, the whole window from the keyboard, and a choice about saving your chat history. The highlights:

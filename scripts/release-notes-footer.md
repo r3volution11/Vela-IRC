@@ -17,6 +17,10 @@
 
 Either way, your settings, networks and saved history stay.
 
+## Alfred
+
+To use Vela from Alfred (Alfred 5 or later, with the Powerpack), download **Vela.alfredworkflow** below and double-click it. See [Alfred & Raycast](https://velairc.app/guide/alfred-and-raycast).
+
 ## Learn more
 
 - Website and user guide: https://velairc.app

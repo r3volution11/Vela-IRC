@@ -159,6 +159,7 @@ Three choices that combine freely, each changing only its own settings. Presets 
 - **Command palette** (⇧⌘P) runs any command: layouts, message styles, densities, themes, network actions, settings and more.
 - **Settings editor:** every setting in one searchable list, VS Code style, with filters such as `@modified`, plus a JSON view of `settings.json` that suggests settings and values, flags mistakes as you type and shows docs on hover.
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
+- **Alfred and Raycast:** jump to a channel or private conversation, send a message, and open Catch me up or a Recap from Alfred (the workflow comes with every release) or Raycast, mentions and unread first. Underneath are `vela://` links and an AppleScript dictionary, for your own scripts too. See [Alfred & Raycast](https://velairc.app/guide/alfred-and-raycast).
 - **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. An emoji picker (⇧⌘E) and a send button. GIF search (KLIPY or GIPHY, sent as links) comes in a later version; for now it's only in development builds. Pasting multiple lines asks for confirmation before sending.
 - **Typing options:** spelling, grammar, autocorrect, text replacements and smart quotes, following your Mac's settings until you change them. Commands, nicks, channel names, links and code are never corrected.
 - **User menu:** right-click a nick in the member list or in a message for Message, Mention, Whois, Ping, CTCP, Invite and Ignore, plus the ops, voices, kicks, bans and quiets your rank in the channel allows. Select several people in the member list to act on them all.
@@ -286,6 +287,8 @@ Packages/VelaKit/
   Sources/VelaIntents    Siri, Shortcuts and Spotlight (App Intents)
   Sources/VelaUI         SwiftUI views, scenes, command palette
 schemas/                 JSON Schema for theme files
+integrations/alfred/     The Alfred workflow (scripts/build-alfred-workflow.sh builds it)
+integrations/raycast/    The Raycast extension
 website/                 velairc.app (VitePress)
 docs/                    Theme authoring guide, credits, release process
 design/app-icon/         App icon generators and geometry (see its README)

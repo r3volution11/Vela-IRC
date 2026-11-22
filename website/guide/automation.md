@@ -10,7 +10,7 @@ Vela can be driven from outside the app in two ways:
 - **`vela://` links** open things in Vela: a channel, a private conversation, Catch me up, a Recap, message search, or a message box with text filled in. A link only ever *shows* things, so it's safe to put one anywhere: on a web page, in your notes, in an Alfred or Raycast quicklink.
 - **The AppleScript dictionary** lets a script read your networks and conversations and act: send a message, join a channel, mark things read, set yourself away. macOS asks you first, once for each app that wants to script Vela.
 
-For Siri, the Shortcuts app and Spotlight, see [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts).
+For Siri, the Shortcuts app and Spotlight, see [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts). Vela's own Alfred workflow and Raycast extension, built on both, are in [Alfred & Raycast](/guide/alfred-and-raycast).
 
 ## vela:// links {#links}
 
@@ -191,6 +191,8 @@ end tell
 ```
 
 ### For Alfred and Raycast {#alfred-raycast}
+
+Vela has its own [Alfred workflow and Raycast extension](/guide/alfred-and-raycast). If you're writing your own, or a script command:
 
 - **Keep ids, not names.** A conversation's `id` never changes, works in `conversation id "…"` and in `vela://open?id=`, and can't be ambiguous.
 - **Use links to show, AppleScript to act.** A quicklink like `vela://open?network=Libera.Chat&channel=%23{query}` needs no permission. Sending, joining and reading lists need AppleScript.

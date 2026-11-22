@@ -1,6 +1,6 @@
 ---
 title: Presets
-description: Choose a window layout (Sidebar, Tabs on Top, Tabs in Title Bar or Focus), a message style (Modern, Classic IRC or Columns) and a density (Compact, Standard or Comfortable) in Vela, each on its own. Presets never change your theme.
+description: Pick Vela's window layout, message style (Modern, Classic IRC or Columns) and density, each on its own. Presets never change your theme.
 ---
 
 # Presets

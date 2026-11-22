@@ -38,6 +38,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Recap', link: '/guide/recap' },
       { text: 'Siri, Shortcuts & Spotlight', link: '/guide/siri-shortcuts' },
       { text: 'Links & AppleScript', link: '/guide/automation' },
+      { text: 'Alfred & Raycast', link: '/guide/alfred-and-raycast' },
     ],
   },
   {
