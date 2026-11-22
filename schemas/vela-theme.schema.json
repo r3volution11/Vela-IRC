@@ -213,7 +213,7 @@
           "type" : "string"
         },
         "chat.mention" : {
-          "description" : "Your nickname where it's mentioned in message text.\n\nDefault: accentText",
+          "description" : "Your nickname where it's mentioned in message text. Like your nickname on your own messages, unless a theme sets it.\n\nDefault: chat.selfNick",
           "format" : "color-hex",
           "pattern" : "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
           "patternErrorMessage" : "Use a hex color: #RGB, #RGBA, #RRGGBB or #RRGGBBAA.",

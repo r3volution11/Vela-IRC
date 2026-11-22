@@ -48,7 +48,6 @@
     "chat.selfNick": "#84FFFF",
     "chat.highlightBackground": "#14252D",
     "chat.highlightBorder": "#84FFFF",
-    "chat.mention": "#84FFFF",
     "chat.notice": "#F78C6C",
     "chat.action": "#C792EA",
     "chat.event": "#666D8A",

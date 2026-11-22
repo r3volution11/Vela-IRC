@@ -543,7 +543,7 @@ The conversation view.
 | `chat.selfMessageBackground` | Background behind your own messages. | `chat.background` | `chat.background` |
 | `chat.highlightBackground` | Background of messages that mention you. | `mix(chat.background, chat.highlightBorder, 12%)` | `mix(chat.background, chat.highlightBorder, 10%)` |
 | `chat.highlightBorder` | Bar along the edge of messages that mention you. | `chat.mention` | `chat.mention` |
-| `chat.mention` | Your nickname where it's mentioned in message text. | `accentText` | `accentText` |
+| `chat.mention` | Your nickname where it's mentioned in message text. Like your nickname on your own messages, unless a theme sets it. | `chat.selfNick` | `chat.selfNick` |
 | `chat.notice` | NOTICE messages. | `mix(chat.foreground, status.warning, 55.0%)` | `mix(chat.foreground, status.warning, 55.0%)` |
 | `chat.action` | /me action messages. | `mix(chat.foreground, accentText, 35%)` | `mix(chat.foreground, accentText, 35%)` |
 | `chat.event` | Membership and state events (joins, parts, modes…) unless a more specific token is set. | `chat.secondaryForeground` | `chat.secondaryForeground` |
