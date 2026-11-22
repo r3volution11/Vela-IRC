@@ -56,7 +56,20 @@ public struct ChatStyle: Equatable {
     public var tabsShowUnreadBadges = true
     public var tabsShowCloseButtons = true
 
+    /// How much of a row's padding goes under its text rather than over it
+    /// for the two to look the same: a font has more room over its lowercase
+    /// letters (ascender above the x-height) than under its baseline
+    /// (descender), so equal padding looks low. Half the difference, from
+    /// `bodyNSFont`; set with the fonts (`init(settings:)`).
+    public var rowOpticalShift: CGFloat = ChatStyle.opticalShift(for: .systemFont(ofSize: 13))
+
     public init() {}
+
+    static func opticalShift(for font: NSFont) -> CGFloat {
+        let above = font.ascender - font.xHeight
+        let below = -font.descender
+        return max(0, (above - below) / 2)
+    }
 
     /// Corner radius for a tab of `height`, from square (0) to pill (1).
     public func tabCornerRadius(forHeight height: Double) -> Double {
@@ -106,6 +119,7 @@ public struct ChatStyle: Equatable {
         serverTabRow = settings[.tabsServerRow]
         tabsShowUnreadBadges = settings[.tabsShowUnreadBadges]
         tabsShowCloseButtons = settings[.tabsShowCloseButtons]
+        rowOpticalShift = Self.opticalShift(for: bodyNSFont)
     }
 
     // MARK: Fonts

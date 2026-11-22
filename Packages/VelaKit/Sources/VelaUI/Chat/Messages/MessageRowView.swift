@@ -101,6 +101,10 @@ struct MessageRow: View {
                         .frame(width: 3)
                 }
             }
+            // The space between messages, outside the row's colors (a
+            // mention, the hover, a selection), so they sit evenly around the
+            // message. The hover toolbar and the hover area keep it.
+            .padding(.top, gapAbove)
             .overlay(alignment: .topTrailing) {
                 if isHovered || isPickerOpen {
                     MessageHoverToolbar(line: line, links: links, isPickerOpen: $isPickerOpen)
@@ -146,15 +150,29 @@ struct MessageRow: View {
         style.layout == .grouped ? GroupedMetrics(style: style).leading : style.rowHorizontalPadding
     }
 
-    private var topPadding: CGFloat {
-        let base: CGFloat = switch style.layout {
-        case .grouped: item.isContinuation ? 1 : style.messageSpacing + 5
-        case .classic, .columns: item.isContinuation ? 1 : max(1, style.messageSpacing / 2) + 1
-        }
-        return base + (timePlacement.slot == .above ? TimestampLine.rowInset : 0)
+    /// Inside the row's colors, the same above and below its content, so a
+    /// mention, the hover or a selection sits evenly around the message,
+    /// one line or several, with its nick and time on a line of their own or
+    /// beside it. The Modern layout's header line gets a little more room.
+    private var rowInset: CGFloat { style.layout == .grouped ? 2 : 1 }
+
+    /// Over the text: the inset less the font's optical shift
+    /// (`ChatStyle.rowOpticalShift`), so the text sits in the middle of the
+    /// row's colors to the eye, not just by the numbers.
+    private var topInset: CGFloat { max(0, rowInset - style.rowOpticalShift) }
+
+    private var topPadding: CGFloat { topInset + (timePlacement.slot == .above ? TimestampLine.rowInset : 0) }
+
+    private var bottomPadding: CGFloat {
+        topInset + 2 * style.rowOpticalShift + (timePlacement.slot == .below ? TimestampLine.rowInset : 0)
     }
 
-    private var bottomPadding: CGFloat { 1 + (timePlacement.slot == .below ? TimestampLine.rowInset : 0) }
+    /// The space between messages (`chat.messageSpacing`), above the row and
+    /// outside its colors: the same in every layout, and none between the
+    /// lines of one sender's run. (It was `spacing + 5` above a Modern row and
+    /// `spacing / 2 + 1` above a Classic one, with 1 point under each, so
+    /// one setting spaced the layouts differently and the colors sat low.)
+    private var gapAbove: CGFloat { item.isContinuation ? 0 : style.messageSpacing }
 
     /// Where the row's time goes, hovered or not (for the row's padding
     /// and the toolbar, which only care about the place).

@@ -36,7 +36,7 @@ In **Settings → Messages**:
 - **Font** is the system font by default; choose any font installed on your Mac.
 - **Use a monospace font** renders all chat text in the monospace font, like irssi or WeeChat. **Monospace font** (SF Mono by default) is also used for code and for the columns layout's fixed-width parts.
 - **Size** sets the font size, from 9 to 28 points (13 by default). **View → Bigger** (<kbd>⌘+</kbd>), **Smaller** (<kbd>⌘−</kbd>) and **Actual Size** (<kbd>⌘0</kbd>) change it from anywhere.
-- **Line spacing** adds space between the lines of one message (4 points by default); **Message spacing** adds space between messages and groups (12 points by default). In settings.json they're [`chat.lineSpacing`](/reference/settings#chat.lineSpacing) and [`chat.messageSpacing`](/reference/settings#chat.messageSpacing).
+- **Line spacing** adds space between the lines of one message (4 points by default); **Message spacing** adds space between messages and groups (12 points by default), the same in every layout. A mention's highlight, the hover color and a selection cover the message itself, evenly above and below it, and not the space around it. In settings.json they're [`chat.lineSpacing`](/reference/settings#chat.lineSpacing) and [`chat.messageSpacing`](/reference/settings#chat.messageSpacing).
 
 ## Timestamps
 

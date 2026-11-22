@@ -356,7 +356,7 @@ extension SettingKey where Value == Double {
         .init("chat.lineSpacing", default: 4, summary: "Extra spacing between lines of a message, in points.")
     }
     public static var chatMessageSpacing: SettingKey<Double> {
-        .init("chat.messageSpacing", default: 12, summary: "Spacing between message groups, in points.")
+        .init("chat.messageSpacing", default: 12, summary: "Spacing between messages, in points: the same in every layout, and outside a message's highlight and hover colors.")
     }
     public static var chatGroupingInterval: SettingKey<Double> {
         .init("chat.groupingInterval", default: 300,
