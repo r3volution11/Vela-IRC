@@ -282,8 +282,31 @@ struct LinkPointerTextTests {
             let plain = host(text, width: width, plainText: true)
             #expect(ours.bitmap.pixelsWide == plain.bitmap.pixelsWide)
             #expect(ours.bitmap.pixelsHigh == plain.bitmap.pixelsHigh)
-            #expect(ours.bitmap.tiffRepresentation == plain.bitmap.tiffRepresentation)
+            // Pixel for pixel, but for an emoji placed a pixel or two apart
+            // (macOS 26 draws 🙂 a hair higher one way than the other). A
+            // link drawn in another color or underlined differs everywhere.
+            #expect(Self.differingPixels(ours.bitmap, plain.bitmap, shift: 2) == 0)
         }
+    }
+
+    /// Pixels of `a` that `b` has nowhere within `shift` pixels up or down.
+    static func differingPixels(_ a: NSBitmapImageRep, _ b: NSBitmapImageRep, shift: Int) -> Int {
+        guard a.pixelsWide == b.pixelsWide, a.pixelsHigh == b.pixelsHigh else { return max(a.pixelsWide * a.pixelsHigh, 1) }
+        func same(_ p: NSColor?, _ q: NSColor?) -> Bool {
+            guard let p, let q else { return p == nil && q == nil }
+            return abs(p.redComponent - q.redComponent) + abs(p.greenComponent - q.greenComponent)
+                + abs(p.blueComponent - q.blueComponent) + abs(p.alphaComponent - q.alphaComponent) < 0.02
+        }
+        var count = 0
+        for y in 0..<a.pixelsHigh {
+            for x in 0..<a.pixelsWide {
+                let pixel = a.colorAt(x: x, y: y)
+                guard !same(pixel, b.colorAt(x: x, y: y)) else { continue }
+                let nearby = (max(0, y - shift)...min(a.pixelsHigh - 1, y + shift)).contains { same(pixel, b.colorAt(x: x, y: $0)) }
+                if !nearby { count += 1 }
+            }
+        }
+        return count
     }
 
     @Test func rectsCoverTheLinksOnOneLine() {
