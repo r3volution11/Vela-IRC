@@ -580,13 +580,16 @@ final class LinkClickMonitor {
                 target = linkTarget(at: event)
             }
             tracker.mouseDown(at: event.locationInWindow, clickCount: event.clickCount, modifiers: event.modifierFlags, target: target)
-            if target != nil, Self.pressTracksTheMouse(event) {
-                // Checked once the view under it is done with the mouse: on
-                // the next pass of the run loop's default mode, which the
-                // view's own tracking loop doesn't run.
+            if target != nil {
+                // Checked once the press has been handled: on the next pass
+                // of the run loop's default mode, which a view's own
+                // mouse-tracking loop doesn't run.
                 let pressedAt = event.timestamp
+                let windowNumber = event.windowNumber
                 RunLoop.main.perform(inModes: [.default]) {
-                    MainActor.assumeIsolated { LinkClickMonitor.shared.finishTrackedPress(pressedAt: pressedAt) }
+                    MainActor.assumeIsolated {
+                        LinkClickMonitor.shared.finishTrackedPress(pressedAt: pressedAt, in: NSApp.window(withWindowNumber: windowNumber))
+                    }
                 }
             }
         case .leftMouseDragged:
@@ -605,30 +608,37 @@ final class LinkClickMonitor {
         }
     }
 
-    /// Whether the press lands on a view that follows the mouse itself until
-    /// it's released, in a loop of its own that takes the drags and the
-    /// release from the queue: macOS 26's one-line selectable text (SwiftUI's
-    /// `SelectionTextField`, in link previews' site names and titles, GIF and
-    /// video captions). This monitor never sees those events, so the release
-    /// that ends a click is looked for afterwards (`finishTrackedPress`).
-    static func pressTracksTheMouse(_ event: NSEvent) -> Bool {
-        guard let content = event.window?.contentView,
-              var view = content.hitTest(content.convert(event.locationInWindow, from: nil))
-        else { return false }
-        while true {
-            if NSStringFromClass(type(of: view)).hasSuffix("SelectionTextField") { return true }
-            guard let parent = view.superview else { return false }
-            view = parent
+    /// After a press on a link has been handled. A view can take the mouse
+    /// in a mouse-tracking loop of its own until the release, and this
+    /// monitor never sees events taken in such a loop: on macOS 26 SwiftUI
+    /// can draw selectable text (link previews, and message text) as
+    /// `SelectionTextField`, which does that, and a click on a link there
+    /// opened nothing.
+    ///
+    /// So once the press has been handled: if something newer than it has
+    /// been (the release, or an event after it) and the button is up, the
+    /// release went by unseen, where the pointer is now (or where the
+    /// release says, when it's the current event); this opens the link when
+    /// that makes a click with the press, as the release seen here would
+    /// have. A drag that selected text ends away from the press and opens
+    /// nothing. Otherwise (macOS 27, or the button still held) the release
+    /// comes through the monitor, and nothing happens here. Checked in a
+    /// macOS 26 VM with real clicks.
+    func finishTrackedPress(pressedAt: TimeInterval, in window: NSWindow?) {
+        // Nothing newer than the press handled since (or the press itself):
+        // its release is still to come, through the monitor.
+        guard let window, let current = NSApp.currentEvent, current.timestamp > pressedAt else { return }
+        let release: CGPoint
+        if current.type == .leftMouseUp, current.timestamp >= pressedAt {
+            release = current.locationInWindow
+        } else if NSEvent.pressedMouseButtons & 1 == 0 {
+            // Released, unseen: where the pointer is now.
+            release = window.convertPoint(fromScreen: NSEvent.mouseLocation)
+        } else {
+            // Still held: the release comes through the monitor.
+            return
         }
-    }
-
-    /// After a press on such a view: the release it took is the app's
-    /// current event. Opens the link when the two make a click, as the
-    /// release seen here would have.
-    func finishTrackedPress(pressedAt: TimeInterval) {
-        guard let release = NSApp.currentEvent, release.type == .leftMouseUp, release.timestamp >= pressedAt,
-              let clicked = tracker.mouseUp(at: release.locationInWindow, clickCount: release.clickCount)
-        else { return }
+        guard let clicked = tracker.mouseUp(at: release, clickCount: 1) else { return }
         clicked.open(clicked.url)
     }
 
