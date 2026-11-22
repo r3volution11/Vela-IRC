@@ -37,6 +37,9 @@ struct InlineImageView: View {
     /// Called instead of showing an error when the image redirects into a
     /// blocked site, so the link can show why (and offer "Show once").
     var onBlocked: ((SiteBlock) -> Void)?
+    /// KLIPY's watermark goes in the corner while the picture shows (a
+    /// KLIPY GIF; see `GIFCornerMarks`).
+    var watermark = false
     let onHide: () -> Void
 
     /// Widest an inline image gets in full mode, even in a very wide window.
@@ -63,6 +66,7 @@ struct InlineImageView: View {
         maxImageHeight: CGFloat,
         onUnsupported: (() -> Void)? = nil,
         onBlocked: ((SiteBlock) -> Void)? = nil,
+        watermark: Bool = false,
         onHide: @escaping () -> Void
     ) {
         self.linkURL = linkURL
@@ -72,6 +76,7 @@ struct InlineImageView: View {
         self.maxImageHeight = maxImageHeight
         self.onUnsupported = onUnsupported
         self.onBlocked = onBlocked
+        self.watermark = watermark
         self.onHide = onHide
         let memory = EmbedMemory.shared
         _pixelSize = State(initialValue: memory.pixelSize(for: imageURL, policy: policy))
@@ -175,9 +180,10 @@ struct InlineImageView: View {
         .clipShape(shape)
         .overlay(shape.strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1))
         .overlay(alignment: .bottomLeading) {
-            if isAnimated {
-                AnimationBadge(compact: compact, isPlaying: player.isPlaying, hovering: hovering, toggle: togglePlayback)
-                    .padding(compact ? 4 : 8)
+            GIFCornerMarks(watermark: watermark && (still != nil || player.hasFrame), compact: compact) {
+                if isAnimated {
+                    AnimationBadge(compact: compact, isPlaying: player.isPlaying, hovering: hovering, toggle: togglePlayback)
+                }
             }
         }
         .overlay {

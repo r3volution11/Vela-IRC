@@ -648,14 +648,16 @@ struct ComposerPickerPieceTests {
         #expect(GIFSearchSetup(service: .klipy, provider: KLIPYProvider(), apiKey: nil, usesOwnKey: false).problem == .noBuiltInKey)
     }
 
-    /// The attribution strip names each service, with its site link.
-    @Test(arguments: [GIFSearchServiceID.klipy, .giphy])
-    func theAttributionNamesTheService(_ id: GIFSearchServiceID) async throws {
+    /// The attribution strip names each service, with its site link. KLIPY's
+    /// is its logo, an image VoiceOver reads by the same name, in dark and
+    /// light themes alike; GIPHY's is text.
+    @Test(arguments: [GIFSearchServiceID.klipy, .giphy], [ResolvedTheme.fallbackLight, .fallbackDark])
+    func theAttributionNamesTheService(_ id: GIFSearchServiceID, theme: ResolvedTheme) async throws {
         let provider: any GIFSearchProvider = id == .klipy ? KLIPYProvider() : GIPHYProvider()
         var opened = 0
         let view = GIFAttributionBar(provider: provider) { opened += 1 }
             .frame(width: 360)
-            .environment(\.theme, ResolvedTheme.fallbackLight)
+            .environment(\.theme, theme)
         let host = NSHostingView(rootView: view)
         let window = NSWindow(contentRect: CGRect(x: -9000, y: -9000, width: 360, height: 40), styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
@@ -672,7 +674,8 @@ struct ComposerPickerPieceTests {
         for _ in 0..<40 where PickerHost.element(labeled: "View on \(name)", in: host) == nil {
             try await Task.sleep(for: .milliseconds(50))
         }
-        #expect(PickerHost.element(labeled: "Powered by \(name)", in: host) != nil)
+        let attribution = try #require(PickerHost.element(labeled: "Powered by \(name)", in: host))
+        #expect((attribution.accessibilityRole?() ?? nil) == (id == .klipy ? .image : .staticText))
         let link = try #require(PickerHost.element(labeled: "View on \(name)", in: host))
         _ = link.accessibilityPerformPress?()
         #expect(opened == 1)

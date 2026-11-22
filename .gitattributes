@@ -1,0 +1,3 @@
+# KLIPY's logos, kept byte for byte as KLIPY publishes them: one has Windows
+# line endings, which Git would otherwise change.
+Packages/VelaKit/Sources/VelaUI/Resources/KLIPY/*.svg -text

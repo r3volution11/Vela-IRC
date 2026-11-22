@@ -14,7 +14,9 @@ import Foundation
 ///   KLIPY's Partner Panel; an ad item that came anyway couldn't be shown).
 /// - Media loads from the URLs KLIPY returns, unchanged, and results keep
 ///   KLIPY's order.
-/// - The search field reads "Search KLIPY", as KLIPY requires.
+/// - The search field reads "Search KLIPY", as KLIPY requires. Under the
+///   results, KLIPY's "Powered by KLIPY" logo, and on KLIPY's GIFs in the
+///   conversation its watermark, as its attribution guidelines recommend.
 public struct KLIPYProvider: GIFSearchProvider {
     public static let apiBase = "https://api.klipy.com/api/v1/"
 
@@ -22,6 +24,7 @@ public struct KLIPYProvider: GIFSearchProvider {
     public var displayName: String { "KLIPY" }
     public var searchPlaceholder: String { "Search KLIPY" }
     public var attribution: String { "Powered by KLIPY" }
+    public var attributionLogo: GIFAttributionLogo? { .klipy }
     public var pageSize: Int { 24 }
     public var allowsResponseCaching: Bool { true }
     /// KLIPY allows "search results thumbnails stored within a user's copy

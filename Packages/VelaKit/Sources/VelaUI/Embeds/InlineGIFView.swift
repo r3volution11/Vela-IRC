@@ -11,7 +11,8 @@ import VelaTheme
 /// A GIF from Tenor, GIPHY, Imgur (`.gifv`) or KLIPY, playing inline like a
 /// GIF, with a "via Tenor · tenor.com" caption that opens the link when
 /// clicked (and whose text can be selected). KLIPY's opens the GIF's page on
-/// klipy.com instead, or klipy.com itself (see `GIFCaption`).
+/// klipy.com instead, or klipy.com itself (see `GIFCaption`), and KLIPY's
+/// GIFs carry its watermark in the bottom-left corner (`GIFCornerMarks`).
 ///
 /// The site's MP4 rendition plays muted in a loop, with no controls: a tenth
 /// of the GIF's size or less, and decoded by the GPU. Without one (stickers,
@@ -98,6 +99,7 @@ struct InlineGIFView: View {
                     compact: compact,
                     maxImageHeight: maxImageHeight,
                     onBlocked: onBlocked,
+                    watermark: gif.provider.showsWatermark,
                     onHide: onHide
                 )
             }
@@ -359,8 +361,9 @@ private struct LoopingGIFView: View {
         .clipShape(shape)
         .overlay(shape.strokeBorder(theme[ThemeKey.embedBorder], lineWidth: 1))
         .overlay(alignment: .bottomLeading) {
-            AnimationBadge(compact: compact, isPlaying: shouldAnimate, hovering: hovering, toggle: togglePlayback)
-                .padding(compact ? 4 : 8)
+            GIFCornerMarks(watermark: gif.provider.showsWatermark && (poster != nil || (hasPlayer && video != nil)), compact: compact) {
+                AnimationBadge(compact: compact, isPlaying: shouldAnimate, hovering: hovering, toggle: togglePlayback)
+            }
         }
         .overlay {
             if video != nil, !compact, !shouldAnimate, isVisible, reduceMotion || userPlayback == false {

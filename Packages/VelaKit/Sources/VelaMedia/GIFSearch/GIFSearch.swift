@@ -180,8 +180,12 @@ public protocol GIFSearchProvider: Sendable {
     var displayName: String { get }
     /// The search field's placeholder, as the service asks ("Search KLIPY").
     var searchPlaceholder: String { get }
-    /// The attribution shown under the results ("Powered by KLIPY").
+    /// The attribution shown under the results ("Powered by KLIPY"), and
+    /// VoiceOver's name for `attributionLogo`.
     var attribution: String { get }
+    /// The service's own "Powered by" logo, shown in place of `attribution`'s
+    /// text; nil to show the text.
+    var attributionLogo: GIFAttributionLogo? { get }
     /// Results per request.
     var pageSize: Int { get }
     /// Whether answers may be kept in memory for the session, so a search
@@ -205,6 +209,15 @@ public protocol GIFSearchProvider: Sendable {
 extension GIFSearchProvider {
     /// "View on KLIPY".
     public var viewOnSiteTitle: String { "View on \(displayName)" }
+
+    public var attributionLogo: GIFAttributionLogo? { nil }
+}
+
+/// A GIF service's "Powered by" logo, which the picker draws in place of
+/// the attribution's text (VelaUI has the files).
+public enum GIFAttributionLogo: Sendable, Hashable {
+    /// KLIPY's "Powered by KLIPY", as its attribution guidelines ask.
+    case klipy
 }
 
 // MARK: - Shared helpers

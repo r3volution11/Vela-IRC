@@ -188,6 +188,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## KLIPY's logos
+
+Vela.app includes KLIPY's "Powered by KLIPY" logo, in white and in gray, and its "KLIPY" watermark (`Packages/VelaKit/Sources/VelaUI/Resources/KLIPY/`): KLIPY's own files from its brand assets for apps that use its API, unchanged. The GIF picker shows the logo under KLIPY's results, and KLIPY's GIFs in the conversation show the watermark, as KLIPY's attribution guidelines ask. The logos are KLIPY's trademarks. They are not covered by Vela's license (the Mozilla Public License), and using Vela's source doesn't give you any right to use them.
+
 ## Protocol references
 
 Vela's IRC implementation follows the [Modern IRC Client Protocol](https://modern.ircdocs.horse) and the [IRCv3 specifications](https://ircv3.net/irc/).

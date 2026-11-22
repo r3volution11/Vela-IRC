@@ -86,17 +86,20 @@ let package = Package(
         ),
 
         // SwiftUI views and scenes. Resources/AppIcons holds the Dock icons
-        // (design/app-icon/build.sh writes them). Resources/CHANGELOG.md is
-        // a symbolic link to the repository's CHANGELOG.md, for What's New;
-        // SwiftPM and Xcode both copy the file it points to. The welcome
-        // scene draws through Savage (on screen and as SVG).
+        // (design/app-icon/build.sh writes them). Resources/KLIPY holds
+        // KLIPY's logos for the GIF picker and KLIPY's GIFs, KLIPY's own SVGs
+        // unchanged (KLIPY's trademarks; see THIRD_PARTY_NOTICES.md).
+        // Resources/CHANGELOG.md is a symbolic link to the repository's
+        // CHANGELOG.md, for What's New; SwiftPM and Xcode both copy the file
+        // it points to. The welcome scene draws through Savage (on screen
+        // and as SVG).
         .target(
             name: "VelaUI",
             dependencies: [
                 "VelaCore", "VelaTheme", "VelaMedia", "VelaIRC", "VelaStore", "VelaIntelligence", "VelaIntents",
                 .product(name: "Savage", package: "Savage"),
             ],
-            resources: [.copy("Resources/AppIcons"), .copy("Resources/CHANGELOG.md")],
+            resources: [.copy("Resources/AppIcons"), .copy("Resources/KLIPY"), .copy("Resources/CHANGELOG.md")],
             swiftSettings: mainActorByDefault
         ),
 

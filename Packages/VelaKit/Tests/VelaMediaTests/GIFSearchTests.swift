@@ -164,6 +164,8 @@ struct KLIPYProviderTests {
         #expect(klipy.websiteURL(for: .search("café")).absoluteString == "https://klipy.com/search/caf%C3%A9")
         #expect(klipy.searchPlaceholder == "Search KLIPY")
         #expect(klipy.attribution == "Powered by KLIPY")
+        // KLIPY's logo stands in for the text, as its guidelines ask.
+        #expect(klipy.attributionLogo == .klipy)
         #expect(klipy.viewOnSiteTitle == "View on KLIPY")
     }
 }
@@ -238,6 +240,7 @@ struct GIPHYProviderTests {
         #expect(giphy.websiteURL(for: .search("funny cats")).absoluteString == "https://giphy.com/search/funny-cats")
         #expect(giphy.websiteURL(for: .search("a#b?c")).absoluteString == "https://giphy.com/search/a%23b%3Fc")
         #expect(giphy.attribution == "Powered by GIPHY")
+        #expect(giphy.attributionLogo == nil)
         #expect(giphy.searchPlaceholder == "Search GIPHY")
     }
 }

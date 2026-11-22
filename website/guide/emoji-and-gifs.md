@@ -39,13 +39,13 @@ The **GIFs** tab shows what's trending until you search. Type at least two lette
 
 Picking a GIF adds it to the message field as a small **GIF** chip. Add some words if you like, then press <kbd>Return</kbd>. To take the GIF out, click **×** on the chip, or press <kbd>Delete</kbd> at the start of the message.
 
-**On IRC, a GIF is a link.** Your message goes out as your words followed by the GIF's address. People whose client shows images, Vela included, see the GIF play; everyone else sees the link. In Vela, the **via KLIPY · klipy.com** line under a GIF you sent opens the GIF's own page on klipy.com until you quit; under anyone else's KLIPY GIF, it opens klipy.com.
+**On IRC, a GIF is a link.** Your message goes out as your words followed by the GIF's address. People whose client shows images, Vela included, see the GIF play; everyone else sees the link. In Vela, KLIPY's GIFs have a small **KLIPY** watermark in the corner, and the **via KLIPY · klipy.com** line under a GIF you sent opens the GIF's own page on klipy.com until you quit; under anyone else's KLIPY GIF, it opens klipy.com.
 
 GIF previews play while they're in view. To show still images instead, turn off **Play previews** in **Settings → Media → GIFs**. With **Reduce Motion** on in macOS, they're always still.
 
 ### Where GIFs come from {#services}
 
-GIFs are powered by [KLIPY](https://klipy.com). Its name is under the results, and **View on KLIPY** opens your search, or what's trending, on klipy.com. You can switch to [GIPHY](https://giphy.com) in **Settings → Media → GIFs**; it needs a key of your own (see below).
+GIFs are powered by [KLIPY](https://klipy.com). KLIPY's **Powered by KLIPY** logo is under the results (white in a dark theme, gray in a light one), and **View on KLIPY** opens your search, or what's trending, on klipy.com. You can switch to [GIPHY](https://giphy.com) in **Settings → Media → GIFs**; it needs a key of your own (see below).
 
 Vela never mixes services or changes their results: you see them in the order the service sends them, and the GIFs load straight from it.
 

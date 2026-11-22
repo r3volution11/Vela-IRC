@@ -62,6 +62,12 @@ Vela also uses [Observation](https://developer.apple.com/documentation/observati
 
 Emoji in the [emoji picker](/guide/emoji-and-gifs) and the reaction picker are searched by their [Unicode](https://unicode.org/emoji/) names, and `:shortcode:` names follow the spellings common in chat apps. Both are built into Vela's code; no emoji data file is bundled.
 
+## Logos {#logos}
+
+| Logo | What Vela uses it for | License |
+| --- | --- | --- |
+| [KLIPY](https://klipy.com)'s "Powered by KLIPY" logo (white and gray) and "KLIPY" watermark, KLIPY's own files, unchanged | The logo under KLIPY's results in [GIF search](/guide/emoji-and-gifs#services), and the watermark in the corner of [KLIPY's GIFs](/guide/inline-media#gifs), as KLIPY's attribution guidelines ask | KLIPY's trademarks, not covered by Vela's license (the MPL) |
+
 ## IRC specifications {#specifications}
 
 Vela's IRC support is written from these documents. Thanks to the people who keep IRC documented.

@@ -69,7 +69,7 @@ Vela 1.1 brings an updater, the whole window from the keyboard, and a choice abo
 
 ### Inline media
 
-- **GIFs from KLIPY play inline,** like those from Tenor, GIPHY and Imgur: links to a GIF's `.gif`, `.webp` or `.mp4` file on KLIPY's servers (`static.klipy.com`), with a **via KLIPY · klipy.com** line under them that opens klipy.com. Your media settings apply to them as to other GIFs, and a site rule for `klipy.com` covers them. See [Supported media sites](https://velairc.app/reference/media-sites#gifs).
+- **GIFs from KLIPY play inline,** like those from Tenor, GIPHY and Imgur: links to a GIF's `.gif`, `.webp` or `.mp4` file on KLIPY's servers (`static.klipy.com`), with a **via KLIPY · klipy.com** line under them that opens klipy.com, and KLIPY's watermark, small and see-through, in the bottom-left corner, as KLIPY asks. Your media settings apply to them as to other GIFs, and a site rule for `klipy.com` covers them. See [Supported media sites](https://velairc.app/reference/media-sites#gifs).
 
 ### Appearance
 

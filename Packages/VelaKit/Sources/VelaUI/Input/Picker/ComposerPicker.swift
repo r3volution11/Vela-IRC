@@ -296,19 +296,31 @@ struct ComposerPickerView: View {
 
 /// Under the GIFs: "Powered by KLIPY" (as KLIPY's and GIPHY's terms ask)
 /// and "View on KLIPY", which opens the search (or what's trending) on the
-/// service's site.
+/// service's site. KLIPY's is its own logo, as its attribution guidelines
+/// ask: white on a dark theme, gray on a light one. VoiceOver reads it as
+/// "Powered by KLIPY". Other services' is text.
 struct GIFAttributionBar: View {
     @Environment(\.theme) private var theme
+    @Environment(\.displayScale) private var displayScale
     let provider: any GIFSearchProvider
     let onViewOnSite: () -> Void
     @State private var hovering = false
 
+    /// The logo's height: "KLIPY" about as tall as the link's capitals.
+    static let logoHeight: CGFloat = 16
+
+    /// Which of KLIPY's files `provider`'s logo is drawn from (the theme's
+    /// own dark or light), or nil for text.
+    static func logo(for provider: any GIFSearchProvider, dark: Bool) -> KLIPYLogo? {
+        switch provider.attributionLogo {
+        case .klipy: KLIPYLogo.poweredBy(dark: dark)
+        case nil: nil
+        }
+    }
+
     var body: some View {
         HStack(spacing: 8) {
-            Text(provider.attribution)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
-                .accessibilityAddTraits(.isStaticText)
+            attribution
             Spacer(minLength: 8)
             Button(action: onViewOnSite) {
                 HStack(spacing: 3) {
@@ -329,6 +341,19 @@ struct GIFAttributionBar: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 38)
+    }
+
+    @ViewBuilder
+    private var attribution: some View {
+        if let logo = Self.logo(for: provider, dark: theme.kind == .dark),
+           let image = logo.rendered(height: Self.logoHeight, scale: displayScale) {
+            Image(image, scale: displayScale, label: Text(provider.attribution))
+        } else {
+            Text(provider.attribution)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
+                .accessibilityAddTraits(.isStaticText)
+        }
     }
 }
 
