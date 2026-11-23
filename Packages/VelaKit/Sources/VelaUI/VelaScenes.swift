@@ -156,8 +156,8 @@ private final class AppInstances {
     let siri: SiriSceneSupport
     /// Opens Recap windows asked for by Siri, Shortcuts and AppKit menus.
     let recaps: RecapWindowRouter
-    /// Shows the chosen Dock icon (`appearance.appIcon`), the DEV band and
-    /// the offline mark. Snapshot runs leave the Dock alone.
+    /// Shows the chosen Dock icon (`appearance.appIcon`) and the offline
+    /// mark. Snapshot runs leave the Dock alone.
     let dockIcon: DockIconController?
 
     private static var current: AppInstances?

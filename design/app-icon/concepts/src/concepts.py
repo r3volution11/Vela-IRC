@@ -17,6 +17,11 @@
 #
 #   python3 -I concepts.py --icon <letter> <colourway> <out.icon>
 #
+# Or the Vela Dev icon (Debug builds), Glint in Sunrise with two more stars
+# (design/app-icon/build.sh writes Vela/AppIconDev.icon this way):
+#
+#   python3 -I concepts.py --dev-icon <out.icon>
+#
 # Or the website's favicon, Glint's V and star without the tile
 # (scripts/export-icon.sh writes website/public/favicon.svg this way, and
 # rasterizes the flat version into the PNG and ICO favicons):
@@ -281,6 +286,16 @@ def concept_glint(W=596, T=262, B=806, t=140, k=54, star_r=56, star_y=None):
                 notes=dict(width=W, height=B - T, stroke=t, angle=math.degrees(math.atan(slope)),
                            chamfer=k, star_r=star_r, star_y=sy, notch=crotch[1]))
 
+# The Vela Dev icon (Debug builds): Glint in Sunrise, with two smaller stars
+# beside the one in the notch, so a development build is easy to tell from
+# the release in the Dock, Finder and the app switcher. (cx, cy, half-width).
+DEV_STARS = [(258, 650, 42), (786, 556, 28)]
+
+def concept_glint_dev():
+    concept = concept_glint()
+    concept["extra_stars"] = DEV_STARS
+    return concept
+
 def concept_neon(W=600, T=262, B=780, t=96, flat=54, k=36):
     OL, BL, d, slope, h, IL, crotch = arm_frame(W, T, B, t, flat / 2)
     c0, c1 = chamfer_45(OL, slope, k)
@@ -366,9 +381,16 @@ def glow_fragment(concept, cw, p, blur=40):
 
 def accent_fragment(concept, cw, mono, p):
     a, b = ("#FFFFFF", "#F2F4F6") if mono else cw["star"]
-    defs = (f'<radialGradient id="{p}star" gradientUnits="userSpaceOnUse" cx="512" cy="{concept["notes"]["star_y"]}" r="60">'
-            f'<stop offset="0" stop-color="{a}"/><stop offset="1" stop-color="{b}"/></radialGradient>')
-    return defs, f'<path d="{concept["accent"]}" fill="url(#{p}star)"/>'
+    def grad(gid, cx, cy, r):
+        return (f'<radialGradient id="{p}{gid}" gradientUnits="userSpaceOnUse" cx="{cx:g}" cy="{cy:g}" r="{r:g}">'
+                f'<stop offset="0" stop-color="{a}"/><stop offset="1" stop-color="{b}"/></radialGradient>')
+    defs = grad("star", 512, concept["notes"]["star_y"], 60)
+    body = f'<path d="{concept["accent"]}" fill="url(#{p}star)"/>'
+    # Extra stars (the Vela Dev icon), on the same layer as the main one.
+    for i, (cx, cy, r) in enumerate(concept.get("extra_stars", []), start=1):
+        defs += grad(f"star{i}", cx, cy, r * 1.07)
+        body += f'\n<path d="{star_path(cx, cy, r, 0.15, 1.18)}" fill="url(#{p}star{i})"/>'
+    return defs, body
 
 def hex01(h):
     h = h.lstrip("#")
@@ -547,6 +569,8 @@ def write_one(letter, cwkey, path):
 if __name__ == "__main__":
     if len(sys.argv) == 5 and sys.argv[1] == "--icon":
         write_one(sys.argv[2], sys.argv[3], sys.argv[4])
+    elif len(sys.argv) == 3 and sys.argv[1] == "--dev-icon":
+        write_icon(sys.argv[2], concept_glint_dev(), COLORWAYS["sunrise"], "glint")
     elif len(sys.argv) == 4 and sys.argv[1] == "--favicon":
         write_favicon(sys.argv[2], sys.argv[3])
     else:

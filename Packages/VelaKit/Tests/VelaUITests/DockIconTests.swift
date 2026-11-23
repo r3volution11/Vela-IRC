@@ -4,6 +4,7 @@
 
 import AppKit
 import Foundation
+import ImageIO
 import Observation
 import Testing
 import VelaStore
@@ -135,7 +136,7 @@ struct DockIconTests {
     }
 }
 
-// MARK: - Composition: icon × DEV band × offline mark
+// MARK: - Composition: icon × offline mark
 
 @MainActor
 @Suite("Dock icon composition")
@@ -144,11 +145,11 @@ struct DockIconCompositionTests {
     /// own icon isn't Vela's).
     private let standard = { DockIcon.image(for: .vela)! }
 
-    @Test(arguments: [false, true], [false, true])
-    func onlyTheStandardIconAloneNeedsNoImage(devBand: Bool, offlineMark: Bool) {
+    @Test(arguments: [false, true])
+    func onlyTheStandardIconAloneNeedsNoImage(offlineMark: Bool) {
         for icon in AppIcon.allCases {
-            let content = DockTileContent(icon: icon, devBand: devBand, offlineMark: offlineMark)
-            let expected = icon != .vela || devBand || offlineMark
+            let content = DockTileContent(icon: icon, offlineMark: offlineMark)
+            let expected = icon != .vela || offlineMark
             #expect(content.needsImage == expected, "\(content)")
             #expect((DockIcon.dockImage(for: content, standardIcon: standard) != nil) == expected, "\(content)")
         }
@@ -169,8 +170,7 @@ struct DockIconCompositionTests {
         _ = DockIcon.dockImage(for: DockTileContent(icon: .paper, offlineMark: true), standardIcon: standard)
         #expect(drawnOn == 0)
         _ = DockIcon.dockImage(for: DockTileContent(offlineMark: true), standardIcon: standard)
-        _ = DockIcon.dockImage(for: DockTileContent(devBand: true), standardIcon: standard)
-        #expect(drawnOn == 2)
+        #expect(drawnOn == 1)
     }
 
     /// The sRGB color at `point` (bottom-left origin) of a composed image.
@@ -189,18 +189,8 @@ struct DockIconCompositionTests {
         return NSPoint(x: mark.midX, y: mark.midY + mark.height * 0.3)
     }
 
-    /// A point on the DEV band, clear of its text and of the mark.
-    private var bandEnd: NSPoint {
-        let body = DockIcon.iconBody(in: canvas)
-        return NSPoint(x: body.maxX - 20, y: body.minY + body.height * 0.17)
-    }
-
     private func isAmber(_ c: (red: CGFloat, green: CGFloat, blue: CGFloat)) -> Bool {
         c.red > 0.9 && c.green > 0.62 && c.green < 0.85 && c.blue < 0.35
-    }
-
-    private func isDevOrange(_ c: (red: CGFloat, green: CGFloat, blue: CGFloat)) -> Bool {
-        c.red > 0.9 && c.green > 0.45 && c.green < 0.62 && c.blue < 0.3
     }
 
     @Test func theMarkSitsBottomLeftOppositeTheBadge() {
@@ -225,20 +215,38 @@ struct DockIconCompositionTests {
         }
     }
 
-    @Test func devBandAndMarkCombine() throws {
-        let both = DockIcon.dockImage(for: DockTileContent(icon: .vela, devBand: true, offlineMark: true), standardIcon: standard)
-        #expect(isDevOrange(try color(both, at: bandEnd)), "the band is still there")
-        #expect(isAmber(try color(both, at: markFace)), "the mark is drawn over the band")
-        let mark = DockIcon.offlineMarkFrame(in: canvas)
-        let band = DockIcon.iconBody(in: canvas)
-        #expect(markFace.y < band.minY + band.height * 0.28 + mark.height, "the sample overlaps the band's left end")
+    /// The standard icon drawn under the mark is the bundle's own flat
+    /// copy (`CFBundleIconFile`), read from the file: Icon Services once
+    /// handed Vela Dev a generic document icon instead.
+    @Test func theStandardIconComesFromTheBundlesIcns() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("DockIconTests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let bundleURL = folder.appendingPathComponent("Test.app")
+        let resources = bundleURL.appendingPathComponent("Contents/Resources")
+        try FileManager.default.createDirectory(at: resources, withIntermediateDirectories: true)
+        let info: [String: Any] = ["CFBundleIdentifier": "test.dock-icon", "CFBundleIconFile": "TestIcon", "CFBundlePackageType": "APPL"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: bundleURL.appendingPathComponent("Contents/Info.plist"))
 
-        let devOnly = DockIcon.dockImage(for: DockTileContent(icon: .sunrise, devBand: true), standardIcon: standard)
-        #expect(isDevOrange(try color(devOnly, at: bandEnd)))
-        #expect(!isAmber(try color(devOnly, at: markFace)), "no mark unless offline")
+        // A solid coral 256 px icon, written as an .icns.
+        let coral = DockIcon.rasterized(size: 256) { rect in
+            NSColor(srgbRed: 0.95, green: 0.4, blue: 0.48, alpha: 1).setFill()
+            rect.fill()
+        }
+        let cgImage = try #require(coral.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        let destination = try #require(CGImageDestinationCreateWithURL(
+            resources.appendingPathComponent("TestIcon.icns") as CFURL, "com.apple.icns" as CFString, 1, nil
+        ))
+        CGImageDestinationAddImage(destination, cgImage, nil)
+        #expect(CGImageDestinationFinalize(destination))
 
-        let markOnly = DockIcon.dockImage(for: DockTileContent(icon: .sunrise, offlineMark: true), standardIcon: standard)
-        #expect(!isDevOrange(try color(markOnly, at: bandEnd)), "no band in release builds")
+        let bundle = try #require(Bundle(url: bundleURL))
+        let icon = DockIcon.bundleIcon(in: bundle)
+        #expect(icon.representations.allSatisfy { $0 is NSBitmapImageRep }, "read from the file, not Icon Services")
+        let marked = DockIcon.dockImage(for: DockTileContent(offlineMark: true), standardIcon: { icon })
+        let center = try color(marked, at: NSPoint(x: canvas.midX, y: canvas.midY))
+        #expect(center.red > 0.9 && center.green < 0.5 && center.blue > 0.4 && center.blue < 0.6, "the coral icon, under the mark")
+        #expect(isAmber(try color(marked, at: markFace)))
     }
 
     // MARK: Controller
@@ -247,7 +255,7 @@ struct DockIconCompositionTests {
         let settings = DockIconTests.makeSettings()
         let offline = OfflineFlag()
         var shown: [NSImage?] = []
-        let controller = DockIconController(settings: settings, isDevBuild: false, setImage: { shown.append($0) }, isOffline: { offline.value })
+        let controller = DockIconController(settings: settings, setImage: { shown.append($0) }, isOffline: { offline.value })
         controller.start()
         controller.didFinishLaunching()
         #expect(shown.isEmpty, "the standard icon and nothing to draw: the Dock is left alone")
@@ -259,7 +267,7 @@ struct DockIconCompositionTests {
 
         settings[.appearanceAppIcon] = .sunrise
         try await waitFor(controller) { $0.applied == .sunrise }
-        #expect(controller.appliedContent == DockTileContent(icon: .sunrise, devBand: false, offlineMark: true))
+        #expect(controller.appliedContent == DockTileContent(icon: .sunrise, offlineMark: true))
         #expect(shown.count == 2)
         #expect(shown.last! !== DockIcon.image(for: .sunrise), "drawn with the mark")
 
@@ -271,24 +279,6 @@ struct DockIconCompositionTests {
         try await waitFor(controller) { $0.applied == .vela }
         #expect(shown.last! == nil, "back to the real icon")
         #expect(shown.count == 4)
-    }
-
-    @Test func devBuildsKeepTheBandWithOrWithoutTheMark() async throws {
-        let settings = DockIconTests.makeSettings()
-        let offline = OfflineFlag()
-        var shown: [NSImage?] = []
-        let controller = DockIconController(settings: settings, isDevBuild: true, setImage: { shown.append($0) }, isOffline: { offline.value })
-        controller.start()
-        controller.didFinishLaunching()
-        #expect(shown.count == 1)
-        #expect(controller.appliedContent == DockTileContent(icon: .vela, devBand: true, offlineMark: false))
-
-        offline.value = true
-        try await waitFor(controller) { $0.appliedContent.offlineMark }
-        offline.value = false
-        try await waitFor(controller) { !$0.appliedContent.offlineMark }
-        #expect(shown.count == 3)
-        #expect(shown.allSatisfy { $0 != nil }, "a dev build never shows the bare icon")
     }
 
     private func waitFor(_ controller: DockIconController, _ condition: (DockIconController) -> Bool) async throws {
