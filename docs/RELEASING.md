@@ -21,6 +21,7 @@ Vela has two identities, so a release never collides with your own testing.
 | --- | --- | --- |
 | Built by | `scripts/release.sh` (signed and notarized), or `scripts/run.sh` (local, unsigned) | `scripts/run.sh --dev`, or ⌘R in Xcode |
 | Configuration | Release | Debug |
+| Signed | With your Developer ID certificate (`scripts/release.sh`), or ad hoc (`scripts/run.sh`) | Ad hoc, or with your own certificate after `scripts/dev-signing.sh` (git-ignored `Config/Signing.xcconfig`), so the Keychain trusts every build |
 | App name | Vela | Vela Dev |
 | App icon | Glint (`Vela/AppIcon.icon`) | Sunrise with two more stars (`Vela/AppIconDev.icon`) |
 | Bundle id | `io.github.r3volution11.Vela` | `io.github.r3volution11.Vela.dev` |

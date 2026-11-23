@@ -16,3 +16,13 @@ VELA_ENTITLEMENTS = Vela/Vela-Local.entitlements
 // Without it, the GIFs tab says GIFs aren't set up in this build.
 VELA_KLIPY_API_KEY =
 #include? "Secrets.xcconfig"
+
+// How Vela Dev (Debug builds) is signed: ad hoc, unless Signing.xcconfig,
+// which git ignores and `scripts/dev-signing.sh` writes, names your own
+// certificate. Signed with a certificate, every build has the same identity,
+// so the Keychain stops asking for your password after each one. Release
+// builds are signed by scripts/release.sh.
+VELA_DEV_SIGN_IDENTITY = -
+VELA_DEV_SIGN_STYLE = Automatic
+VELA_DEV_TEAM =
+#include? "Signing.xcconfig"
