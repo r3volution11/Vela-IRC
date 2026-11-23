@@ -23,7 +23,8 @@ Vela has two identities, so a release never collides with your own testing.
 | --- | --- | --- |
 | Built by | `scripts/release.sh` (signed and notarized), or `scripts/run.sh` (local, unsigned) | `scripts/run.sh --dev`, or ⌘R in Xcode |
 | Configuration | Release | Debug |
-| App name | Vela | Vela Dev (a **DEV** badge on the Dock icon) |
+| App name | Vela | Vela Dev |
+| App icon | Glint (`Vela/AppIcon.icon`) | Sunrise with two more stars (`Vela/AppIconDev.icon`) |
 | Bundle id | `io.github.r3volution11.Vela` | `io.github.r3volution11.Vela.dev` |
 | Data | `~/Library/Containers/io.github.r3volution11.Vela/` | `~/Library/Containers/io.github.r3volution11.Vela.dev/` |
 | Updates | From velairc.app's feed, once the [update key](#the-update-signing-key) is in `Vela/Info.plist` | Never: no feed, and the updater isn't started |

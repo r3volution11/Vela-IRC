@@ -256,7 +256,7 @@ scripts/run.sh --demo        # launch with offline sample content
 
 Or open `Vela.xcodeproj` in Xcode (the project file, not the folder), choose the **Vela** scheme and **My Mac**, and press ⌘R.
 
-**Release and development builds run side by side.** Debug builds (`scripts/run.sh --dev`, or ⌘R in Xcode) are a separate app, **Vela Dev** (bundle id `io.github.r3volution11.Vela.dev`), with a **DEV** badge on its Dock icon. Because macOS keys an app's sandbox to its bundle id, Vela Dev has its own settings, networks, message history, Keychain items, notifications and Siri & Shortcuts registration. So you can keep your everyday Vela connected while you test changes, and nothing you do in the dev build touches it. `scripts/run.sh` with no flag builds the Release configuration as `build/Vela.app`, the same identity that `scripts/release.sh` signs and ships.
+**Release and development builds run side by side.** Debug builds (`scripts/run.sh --dev`, or ⌘R in Xcode) are a separate app, **Vela Dev** (bundle id `io.github.r3volution11.Vela.dev`), with its own icon: the Sunrise colorway with two more stars, in the Dock and Finder alike. Because macOS keys an app's sandbox to its bundle id, Vela Dev has its own settings, networks, message history, Keychain items, notifications and Siri & Shortcuts registration. So you can keep your everyday Vela connected while you test changes, and nothing you do in the dev build touches it. `scripts/run.sh` with no flag builds the Release configuration as `build/Vela.app`, the same identity that `scripts/release.sh` signs and ships.
 
 ```sh
 swift test --package-path Packages/VelaKit                    # unit tests (2,000+)

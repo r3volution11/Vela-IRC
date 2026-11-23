@@ -11,8 +11,9 @@
 #
 # "Vela Dev" (bundle id io.github.r3volution11.Vela.dev) is a separate app:
 # its own settings, networks, history, Keychain items, Siri/Shortcuts and
-# Dock icon (badged DEV). It runs side by side with your everyday Vela and
-# never touches its data. --debug is an alias for --dev.
+# icon (Vela/AppIconDev.icon: Sunrise with two more stars). It runs side by
+# side with your everyday Vela and never touches its data. --debug is an
+# alias for --dev.
 set -euo pipefail
 cd "${0:A:h}/.."
 

@@ -11,7 +11,7 @@ Thanks for helping build Vela! This guide covers the basics.
    swift test  --package-path Packages/VelaKit
    ```
 3. Almost all code lives in `Packages/VelaKit`. The `Vela/` app target is intentionally tiny.
-4. Run the app with `scripts/run.sh --dev` (or ⌘R in Xcode). Debug builds are a separate app, **Vela Dev** (bundle id `io.github.r3volution11.Vela.dev`, a **DEV** badge on its Dock icon), with their own sandbox: settings, networks, history and Keychain items. They never touch the Vela you use every day, and the two can run at the same time. To try things without any network, add `--demo`. Vela Dev also has a **Developer** menu: an element inspector, layout outlines, a performance HUD and a state simulator (see [Developer tools](#developer-tools-vela-dev)).
+4. Run the app with `scripts/run.sh --dev` (or ⌘R in Xcode). Debug builds are a separate app, **Vela Dev** (bundle id `io.github.r3volution11.Vela.dev`, with its own icon: the Sunrise colorway with two more stars), with their own sandbox: settings, networks, history and Keychain items. They never touch the Vela you use every day, and the two can run at the same time. To try things without any network, add `--demo`. Vela Dev also has a **Developer** menu: an element inspector, layout outlines, a performance HUD and a state simulator (see [Developer tools](#developer-tools-vela-dev)).
 5. GIF search in local builds needs Vela's KLIPY key, kept out of the repository: maintainers run `scripts/klipy-key.sh --local` once, which writes it from 1Password to the git-ignored `Config/Secrets.xcconfig`. Without it, use your own free key from [KLIPY](https://partner.klipy.com) in **Settings → Media → GIFs**.
 
 ## Code guidelines

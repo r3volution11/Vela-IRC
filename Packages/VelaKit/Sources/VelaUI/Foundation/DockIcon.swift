@@ -6,19 +6,20 @@ import AppKit
 import Observation
 import VelaStore
 
-/// What the Dock tile shows: the chosen icon (`appearance.appIcon`), the
-/// "DEV" band of development builds and the offline mark
-/// (`dock.showOffline`). ``DockIconController`` keeps the Dock in step with it.
+/// What the Dock tile shows: the chosen icon (`appearance.appIcon`) and the
+/// offline mark (`dock.showOffline`). ``DockIconController`` keeps the Dock
+/// in step with it.
+///
+/// Vela Dev needs nothing extra: its own app icon (`Vela/AppIconDev.icon`,
+/// Sunrise with two more stars) tells it apart everywhere, Finder included.
 struct DockTileContent: Equatable {
     var icon: AppIcon = .vela
-    /// The orange "DEV" band across the bottom (Vela Dev builds).
-    var devBand = false
     /// The amber offline mark in the bottom-left corner.
     var offlineMark = false
 
     /// Whether the Dock needs a drawn image. Without one it shows the
     /// app's own icon (`applicationIconImage = nil`), with its system styling.
-    var needsImage: Bool { icon != .vela || devBand || offlineMark }
+    var needsImage: Bool { icon != .vela || offlineMark }
 }
 
 /// The Dock icon choices (`appearance.appIcon`) and their images.
@@ -60,10 +61,17 @@ enum DockIcon {
         bundle.url(forResource: icon.rawValue, withExtension: "png", subdirectory: "AppIcons")
     }
 
-    /// The picker's thumbnail of `icon`.
+    /// The picker's thumbnail of `icon`. In Vela Dev, the standard choice
+    /// is Vela Dev's own icon, since that's what choosing it shows.
     static func image(for icon: AppIcon) -> NSImage? {
         if let cached = images[icon] { return cached }
-        guard let url = resourceURL(for: icon), let image = NSImage(contentsOf: url) else { return nil }
+        let image: NSImage
+        if icon == .vela, isDevBuild {
+            image = bundleIcon()
+        } else {
+            guard let url = resourceURL(for: icon), let bundled = NSImage(contentsOf: url) else { return nil }
+            image = bundled
+        }
         images[icon] = image
         return image
     }
@@ -76,17 +84,17 @@ enum DockIcon {
 
     /// What to give `NSApplication.applicationIconImage` for `content`:
     /// `nil` (the real app icon) when there's nothing to draw, an
-    /// alternate's render when that's all, otherwise the icon with the DEV
-    /// band and the offline mark drawn on it.
+    /// alternate's render when that's all, otherwise the icon with the
+    /// offline mark drawn on it.
     ///
     /// - Parameter standardIcon: The picture of the standard icon to draw
-    ///   on when `content.icon` is `.vela`: by default the app's own icon,
-    ///   as Finder shows it (``bundleIcon()``); the bundled render in tests.
+    ///   on when `content.icon` is `.vela`: by default the app's own icon
+    ///   (``bundleIcon(in:)``); the bundled render in tests.
     static func dockImage(for content: DockTileContent, standardIcon: (() -> NSImage)? = nil) -> NSImage? {
         guard content.needsImage else { return nil }
         let base = dockImage(for: content.icon) ?? standardIcon?() ?? bundleIcon()
-        guard content.devBand || content.offlineMark else { return base }
-        return composed(base, devBand: content.devBand, offlineMark: content.offlineMark)
+        guard content.offlineMark else { return base }
+        return withOfflineMark(base)
     }
 
     /// The choice after `icon`, wrapping around to Vela.
@@ -102,7 +110,7 @@ enum DockIcon {
     // MARK: Development builds
 
     /// True for "Vela Dev" (Debug builds, bundle id ending in `.dev`), which
-    /// run beside the release app with their own data.
+    /// run beside the release app with their own data and their own icon.
     static var isDevBuild: Bool {
         Bundle.main.bundleIdentifier?.hasSuffix(".dev") == true
     }
@@ -111,42 +119,21 @@ enum DockIcon {
 
     /// The side of composed Dock images, in pixels: twice what the largest
     /// Dock icon (128 points, 256 pixels on a Retina display) needs, so
-    /// the mark and band stay crisp when scaled down.
+    /// the mark stays crisp when scaled down.
     static let composedSize = 512
 
-    /// `image` with the DEV band and the offline mark drawn on it, as a
-    /// bitmap (drawn once, here, rather than whenever AppKit draws it).
-    static func composed(_ image: NSImage, devBand: Bool, offlineMark: Bool) -> NSImage {
+    /// `image` with the offline mark drawn on it, as a bitmap (drawn once,
+    /// here, rather than whenever AppKit draws it).
+    static func withOfflineMark(_ image: NSImage) -> NSImage {
         rasterized(size: composedSize) { rect in
             image.draw(in: rect)
-            if devBand { drawDevBand(in: rect, textClearOf: offlineMark ? offlineMarkFrame(in: rect) : nil) }
-            if offlineMark { drawOfflineMark(in: rect) }
+            drawOfflineMark(in: rect)
         }
     }
 
     /// The icon body inside the macOS icon grid's margins.
     nonisolated static func iconBody(in rect: NSRect) -> NSRect {
         rect.insetBy(dx: rect.width * 0.098, dy: rect.height * 0.098)
-    }
-
-    /// An orange "DEV" band across the bottom, so a development build is
-    /// easy to tell apart in the Dock and app switcher. With `mark` (the
-    /// offline mark's frame), the text centers in the band beside it.
-    nonisolated static func drawDevBand(in rect: NSRect, textClearOf mark: NSRect? = nil) {
-        let body = iconBody(in: rect)
-        let band = NSRect(x: body.minX, y: body.minY + body.height * 0.06, width: body.width, height: body.height * 0.22)
-        NSColor(srgbRed: 1.0, green: 0.55, blue: 0.16, alpha: 0.95).setFill()
-        NSBezierPath(roundedRect: band, xRadius: band.height * 0.18, yRadius: band.height * 0.18).fill()
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: band.height * 0.62, weight: .heavy),
-            .foregroundColor: NSColor.white,
-            .kern: band.height * 0.06,
-        ]
-        let text = NSAttributedString(string: "DEV", attributes: attributes)
-        let textSize = text.size()
-        let left = max(band.minX, mark?.maxX ?? band.minX)
-        let centerX = (left + band.maxX) / 2
-        text.draw(at: NSPoint(x: centerX - textSize.width / 2, y: band.midY - textSize.height / 2))
     }
 
     /// Where the offline mark sits in `rect`: a disc on the icon's
@@ -159,8 +146,8 @@ enum DockIcon {
     }
 
     /// Amber, not red, so it never reads as a count; a light ring and a
-    /// soft shadow set it apart from any icon, the DEV band and light or
-    /// dark wallpapers.
+    /// soft shadow set it apart from any icon and from light or dark
+    /// wallpapers.
     nonisolated static var offlineMarkTop: NSColor { NSColor(srgbRed: 1.0, green: 0.80, blue: 0.30, alpha: 1) }
     nonisolated static var offlineMarkBottom: NSColor { NSColor(srgbRed: 0.96, green: 0.62, blue: 0.04, alpha: 1) }
     nonisolated static var offlineMarkGlyph: NSColor { NSColor(srgbRed: 0.22, green: 0.13, blue: 0.0, alpha: 1) }
@@ -241,22 +228,31 @@ enum DockIcon {
     static func offlineMarkPreview(for icon: AppIcon) -> NSImage? {
         if let cached = offlineMarkPreviews[icon] { return cached }
         guard let base = image(for: icon) else { return nil }
-        let preview = composed(base, devBand: false, offlineMark: true)
+        let preview = withOfflineMark(base)
         offlineMarkPreviews[icon] = preview
         return preview
     }
 
     private static var offlineMarkPreviews: [AppIcon: NSImage] = [:]
 
-    /// The app's own icon, as Finder shows it.
-    static func bundleIcon() -> NSImage {
-        NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
+    /// The app's own icon: the flat copy Xcode compiles into the bundle
+    /// (`CFBundleIconFile`, AppIcon.icns for Vela, AppIconDev.icns for Vela
+    /// Dev), read straight from it rather than asked of Icon Services
+    /// (`NSWorkspace.icon(forFile:)`), which once handed Vela Dev a generic
+    /// document icon to draw on.
+    static func bundleIcon(in bundle: Bundle = .main) -> NSImage {
+        let name = (bundle.object(forInfoDictionaryKey: "CFBundleIconFile") as? String).map {
+            ($0 as NSString).deletingPathExtension
+        }
+        if let name, let url = bundle.url(forResource: name, withExtension: "icns"), let image = NSImage(contentsOf: url) {
+            return image
+        }
+        return NSWorkspace.shared.icon(forFile: bundle.bundlePath)
     }
 }
 
 /// Keeps the Dock tile in step with ``DockTileContent``: the chosen icon
-/// (`appearance.appIcon`), the DEV band of development builds and the
-/// offline mark (`AppModel.showsOfflineMark`). It's the one place that sets
+/// (`appearance.appIcon`) and the offline mark (`AppModel.showsOfflineMark`). It's the one place that sets
 /// `NSApplication.applicationIconImage`: once Vela has finished launching,
 /// and whenever one of them changes after that (in Settings, the command
 /// palette or settings.json, or a network going offline), with or without a
@@ -269,8 +265,6 @@ enum DockIcon {
 final class DockIconController {
     private let settings: SettingsStore
     private let setImage: (NSImage?) -> Void
-    /// Development builds always band the Dock icon "DEV".
-    private let isDevBuild: Bool
     /// Whether to draw the offline mark. Observable.
     private let isOffline: () -> Bool
     /// What the Dock shows now. It starts as the real icon.
@@ -288,19 +282,17 @@ final class DockIconController {
     ///     observation tracking, so an observable value is followed.
     init(
         settings: SettingsStore,
-        isDevBuild: Bool = DockIcon.isDevBuild,
         setImage: @escaping (NSImage?) -> Void = { NSApplication.shared.applicationIconImage = $0 },
         isOffline: @escaping () -> Bool = { false }
     ) {
         self.settings = settings
-        self.isDevBuild = isDevBuild
         self.isOffline = isOffline
         self.setImage = setImage
     }
 
     /// What the Dock should show now.
     var content: DockTileContent {
-        DockTileContent(icon: settings[.appearanceAppIcon], devBand: isDevBuild, offlineMark: isOffline())
+        DockTileContent(icon: settings[.appearanceAppIcon], offlineMark: isOffline())
     }
 
     func start() {

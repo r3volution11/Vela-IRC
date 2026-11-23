@@ -8,6 +8,8 @@
 #   Vela/AppIcon.icon     the Icon Composer document Xcode compiles into the
 #                         app (the Vela colourway), with its Default, Dark,
 #                         Clear and Tinted appearances
+#   Vela/AppIconDev.icon  Vela Dev's icon (Debug builds): Sunrise, with two
+#                         more stars
 #   Packages/VelaKit/Sources/VelaUI/Resources/AppIcons/<colourway>.png
 #                         the Dock icons for Settings → Appearance → Dock icon:
 #                         flat 256 px renders on the macOS icon grid
@@ -30,6 +32,7 @@ here=${0:A:h}
 root=${here:h:h}
 src="$here/concepts/src"
 icon="$root/Vela/AppIcon.icon"
+devicon="$root/Vela/AppIconDev.icon"
 dock="$root/Packages/VelaKit/Sources/VelaUI/Resources/AppIcons"
 ictool="$(xcode-select -p)/../Applications/Icon Composer.app/Contents/Executables/ictool"
 previews=${1:-$(mktemp -d -t vela-icon)}
@@ -47,8 +50,9 @@ render() { # <icon> <out.png> <rendition> <size>
     --width "$4" --height "$4" --scale 1 "${extra[@]}" >/dev/null
 }
 
-# The app icon.
+# The app icon, and Vela Dev's.
 python3 -I "$src/concepts.py" --icon E vela "$icon"
+python3 -I "$src/concepts.py" --dev-icon "$devicon"
 
 # Dock icons: every colourway, Vela included (the picker's thumbnail; the
 # app itself restores the real icon for Vela). 256 px is the Dock's largest
@@ -85,10 +89,17 @@ for r in Default Dark ClearLight ClearDark TintedLight TintedDark; do
   modes+=("$label=$previews/${r:l}-512.png")
 done
 "$work/compose" modes "$previews/appearances.png" "Glint" "${modes[@]}"
+devmodes=()
+for r in Default Dark ClearLight TintedDark; do
+  render "$devicon" "$previews/dev-${r:l}-512.png" $r 512
+  label=${r/Light/ (light)}; label=${label/Dark/ (dark)}; [[ $r == Dark ]] && label=Dark
+  devmodes+=("$label=$previews/dev-${r:l}-512.png")
+done
+"$work/compose" modes "$previews/dev-appearances.png" "Vela Dev" "${devmodes[@]}"
 for s b i in 16 13 1  32 26 3  64 52 6; do
   render "$icon" "$work/body-$b.png" Default $b
   "$work/compose" small "$work/body-$b.png" "$previews/small-$s.png" $s $i
 done
 
-echo "Vela/AppIcon.icon and $(ls "$dock" | wc -l | tr -d ' ') Dock icons written"
+echo "Vela/AppIcon.icon, Vela/AppIconDev.icon and $(ls "$dock" | wc -l | tr -d ' ') Dock icons written"
 echo "Previews (Display P3): $previews"
