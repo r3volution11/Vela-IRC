@@ -13,8 +13,10 @@ build/
 *.dSYM.zip
 *.dSYM
 
-# Local secrets (scripts/klipy-key.sh --local)
+# Local secrets (scripts/klipy-key.sh --local) and Vela Dev's signing
+# certificate (scripts/dev-signing.sh)
 Config/Secrets.xcconfig
+Config/Signing.xcconfig
 
 # Swift Package Manager
 .build/
