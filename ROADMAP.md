@@ -75,6 +75,14 @@
 - [x] **Catch me up:** bouncer replays count, one summary at a time, progress, and Siri hands long catch-ups to Vela
 - [x] **A redesigned welcome screen**
 
+## Milestone 3: your models, your tools (1.5.0)
+
+- [x] **Presets** as three choices that combine freely: window layout, message style and density, with the new **Focus** layout
+- [x] **AI providers:** Catch me up and Recap with OpenAI, Anthropic or Google Gemini and your own key, or Ollama and LM Studio on your Mac, with **Settings → AI Privacy**
+- [x] **Automation:** `vela://` links and an AppleScript dictionary
+- [x] **Message search,** and your saved messages in Spotlight (opt-in)
+- [x] **Integrations:** **Settings → Integrations**, an Alfred workflow and a Raycast extension
+
 ## Later
 
 - **GIF search** in releases (built, in development builds for now), once KLIPY approves Vela's key
@@ -82,7 +90,6 @@
 
 - **Uploads:** paste or drag images, via IRCv3 FILEHOST (soju) and a custom uploader config
 - **Distribution:** a Mac App Store build, and a beta channel for testing releases early
-- **Search:** message search UI on top of the existing FTS5 index
 - **iCloud sync** of networks, settings and themes
 - **Per-network/per-channel themes**
 - **More IRCv3:**
@@ -90,6 +97,6 @@
   - `draft/read-marker` sync
   - `draft/metadata-2` avatars
   - Message edits once the spec is ratified
-- **Scripting and plugins**
+- **IRC scripts and plugins** inside Vela
 - **DCC** file transfer and chat
 - **Accessibility:** a full VoiceOver audit and a high-contrast theme set
