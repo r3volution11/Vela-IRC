@@ -216,10 +216,10 @@ extension LinkSelectionTests {
         /// lines (or right away, once it does). Longer than the list keeps
         /// trying for (`BottomSettle`), for a busy machine.
         private func settled(_ hosted: Hosted, within seconds: Double = 6) async throws -> Shown {
-            let deadline = Date().addingTimeInterval(seconds)
+            var deadline = RunningDeadline(.seconds(seconds))
             try await Task.sleep(for: .milliseconds(300))
             var shown = try shown(hosted)
-            while !(shown.showsLines && shown.showsTheNewestLine), Date() < deadline {
+            while !(shown.showsLines && shown.showsTheNewestLine), deadline.hasTimeLeft() {
                 try await Task.sleep(for: .milliseconds(100))
                 shown = try self.shown(hosted)
             }

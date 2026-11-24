@@ -417,12 +417,7 @@ extension LinkSelectionTests {
         /// frame or two; a CI machine running other suites at the same time
         /// can take far longer than a fixed wait allows.
         private func eventually(timeout: Duration = .seconds(5), _ condition: () throws -> Bool) async throws -> Bool {
-            let deadline = ContinuousClock.now + timeout
-            while ContinuousClock.now < deadline {
-                if try condition() { return true }
-                try await Task.sleep(for: .milliseconds(20))
-            }
-            return try condition()
+            try await RunningDeadline.wait(timeout: timeout, every: .milliseconds(20), until: condition)
         }
     }
 }

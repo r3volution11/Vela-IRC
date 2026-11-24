@@ -317,12 +317,7 @@ final class PickerHost {
 
     /// Waits up to `seconds` for `condition`.
     func wait(_ seconds: Double = 3, until condition: () -> Bool) async throws -> Bool {
-        let deadline = Date().addingTimeInterval(seconds)
-        while Date() < deadline {
-            if condition() { return true }
-            try await Task.sleep(for: .milliseconds(30))
-        }
-        return condition()
+        await RunningDeadline.wait(timeout: .seconds(seconds), every: .milliseconds(30), until: condition)
     }
 
     static func findAll(in view: NSView, where matches: (NSView) -> Bool) -> [NSView] {

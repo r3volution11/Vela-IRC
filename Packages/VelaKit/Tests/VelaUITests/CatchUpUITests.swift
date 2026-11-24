@@ -152,12 +152,7 @@ struct CatchUpUITests {
     }
 
     private func eventually(timeout: Duration = .seconds(3), _ condition: () -> Bool) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if condition() { return true }
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        return condition()
+        await RunningDeadline.wait(timeout: timeout, every: .milliseconds(5), until: condition)
     }
 
     /// Going to another channel while a summary is written, then back:

@@ -191,10 +191,7 @@ struct AnimatedFramesTests {
         player.attach(layer)
         player.play()
         // Generous: the main actor is shared with every other UI test.
-        let deadline = ContinuousClock.now + .seconds(15)
-        while !player.hasFrame, ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        _ = await RunningDeadline.wait(timeout: .seconds(15)) { player.hasFrame }
         player.pause()
         #expect(player.hasFrame)
         #expect(!player.isPlaying)

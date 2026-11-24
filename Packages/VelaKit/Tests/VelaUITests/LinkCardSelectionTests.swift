@@ -148,12 +148,12 @@ extension LinkSelectionTests {
             // SwiftUI adds the text views as it lays the card out: sooner on
             // some systems than others (on macOS 26 not within 150 ms).
             var found: [NSView] = []
-            let deadline = ContinuousClock.now + .seconds(3)
+            var deadline = RunningDeadline(.seconds(3))
             repeat {
                 try await Task.sleep(for: .milliseconds(50))
                 host.layoutSubtreeIfNeeded()
                 found = Self.findAll(in: host) { Self.isSelectableText($0) }
-            } while found.count < (size == .minimal ? 2 : 3) && ContinuousClock.now < deadline
+            } while found.count < (size == .minimal ? 2 : 3) && deadline.hasTimeLeft()
             // Top to bottom, then left to right (a Minimal card is one row).
             let texts = found
                 .sorted { a, b in
