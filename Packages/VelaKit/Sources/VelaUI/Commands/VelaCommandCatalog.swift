@@ -292,12 +292,14 @@ struct VelaCommandCatalog {
         }
     }
 
+    /// Tabs only: the sidebar and Focus have no server row, so it's dimmed
+    /// there (and out of the palette).
     var toggleServerTabRow: VelaCommand {
         let always = settings[.tabsServerRow] == .always
         let settings = settings
         return VelaCommand(
             id: "tabs.toggleServerRow", category: .tabs, title: "Always Show Server Row",
-            keywords: ["networks"], isChecked: always
+            keywords: ["networks"], isEnabled: settings[.navigationStyle] == .tabs, isChecked: always
         ) {
             settings[.tabsServerRow] = always ? .auto : .always
         }
@@ -923,14 +925,14 @@ struct VelaCommandCatalog {
 
     /// The selected channel or conversation one place back or on among its
     /// siblings: "Left" and "Right" with tabs, "Up" and "Down" with the
-    /// sidebar.
+    /// sidebar. Dimmed in Focus, which shows neither.
     func moveSelectedBuffer(forward: Bool) -> VelaCommand {
         let app = app
-        let usesSidebar = settings[.navigationStyle] == .sidebar
-        let direction = usesSidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
+        let navigation = settings[.navigationStyle]
+        let direction = navigation == .sidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
         let buffer = app.selectedBuffer
         var isEnabled = false
-        if let buffer, buffer.kind != .server, let session = app.session(for: buffer.id.networkID) {
+        if navigation != .focus, let buffer, buffer.kind != .server, let session = app.session(for: buffer.id.networkID) {
             let siblings = session.bufferSiblings(of: buffer)
             if let index = siblings.firstIndex(where: { $0.id == buffer.id }) {
                 isEnabled = forward ? index < siblings.count - 1 : index > 0
@@ -951,13 +953,14 @@ struct VelaCommandCatalog {
     }
 
     /// The selected network one place back or on among its siblings (a
-    /// bouncer's networks among that bouncer's).
+    /// bouncer's networks among that bouncer's). Dimmed in Focus, which
+    /// shows no networks to move.
     func moveSelectedNetwork(forward: Bool) -> VelaCommand {
         let app = app
-        let usesSidebar = settings[.navigationStyle] == .sidebar
-        let direction = usesSidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
+        let navigation = settings[.navigationStyle]
+        let direction = navigation == .sidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
         var isEnabled = false
-        if let session = app.selectedSession {
+        if navigation != .focus, let session = app.selectedSession {
             let siblings = app.networkSiblings(of: session.id)
             if let index = siblings.firstIndex(where: { $0.id == session.id }) {
                 isEnabled = forward ? index < siblings.count - 1 : index > 0

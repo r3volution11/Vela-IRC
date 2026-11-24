@@ -21,7 +21,7 @@ The cards work from the keyboard: <kbd>Tab</kbd> goes from row to row, <kbd>←<
 
 You can also choose from:
 
-- the **View** menu: **View → Layout**, **View → Message Style** and **View → Density**, with a checkmark next to the choice your settings match. **View → Layout** also has **Tabs at Bottom** and **Always Show Server Row**, and **View → Message Style** has **Show**, **Collapse** and **Hide Join/Part Messages**.
+- the **View** menu: **View → Layout**, **View → Message Style** and **View → Density**, with a checkmark next to the choice your settings match. **View → Layout** also has **Tabs at Bottom** and **Always Show Server Row** (with tabs only), and **View → Message Style** has **Show**, **Collapse** and **Hide Join/Part Messages**.
 - the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>): **Layout: Tabs on Top**, **Message Style: Columns**, **Density: Compact** and the rest. Type "layout", "message style" or "density" to list them.
 - the **Presets** section at the top of **Settings → Appearance**: a menu each for **Window layout**, **Message style** and **Density**, which reads **Customized** when no choice matches. **All presets** brings you here.
 
@@ -46,7 +46,7 @@ Focus takes away everything you use to move between channels, so the conversatio
 
 With no sidebar or tabs to show unread counts, **Go to Conversation…** shows them instead, with a badge for mentions, and the [Dock icon's badge](/guide/notifications#dock-badge) and notifications tell you about new messages. With no **+** button, add a network or join a channel from the **File** menu (<kbd>⇧⌘N</kbd> and <kbd>⌘J</kbd>). What a channel's right-click menu does is in the [command palette](/guide/command-palette) too, such as **Buffer: Mute** and **Channel: Leave #channel**.
 
-**Go → Focus Sidebar** (<kbd>⌥⌘1</kbd>) has nothing to go to in Focus, so <kbd>F6</kbd> goes round the messages, the message box and the member list. **View → Collapse Sidebar** and **Show Channel Title Bar** are for the other layouts, so they're dimmed.
+**Go → Focus Sidebar** (<kbd>⌥⌘1</kbd>) has nothing to go to in Focus, so <kbd>F6</kbd> goes round the messages, the message box and the member list. **View → Collapse Sidebar**, **Show Channel Title Bar** and **View → Layout → Always Show Server Row**, and **Network → Move Channel** and **Move Network**, are for the other layouts, so they're dimmed (and left out of the command palette).
 
 Earlier versions of Vela don't know Focus: if one of them reads your settings.json, it shows the sidebar.
 

@@ -30,7 +30,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | Category | Commands |
 | --- | --- |
 | **View** | Toggle Sidebar (with the sidebar), Toggle Member List, Show Channel Title Bar (with tabs), Toggle Full Screen |
-| **Tabs** | Move to Bottom, Always Show Server Row, Move Channel Left / Right (Up / Down with the sidebar, and Move Conversation for a conversation) |
+| **Tabs** | Move to Bottom, Always Show Server Row (with tabs), Move Channel Left / Right (Up / Down with the sidebar, and Move Conversation for a conversation; not in Focus) |
 | **Layout** | Sidebar, Tabs on Top, Tabs in Title Bar, Focus (the [window layouts](/guide/presets#window-layout)) |
 | **Message Style** | Modern, Classic IRC, Columns |
 | **Density** | Compact, Standard, Comfortable |
@@ -47,7 +47,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Go** | Go to Conversation…, Search Messages…, Previous / Next Conversation, Previous / Next Tab, Previous / Next Network, Previous / Next Unread, Focus Sidebar (or Focus Tabs), Focus Messages, Focus Message Box, Focus Member List, Focus Next / Previous Area |
 | **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Translate Messages Automatically, Catch Me Up, Catch Me Up With… and Recap With… (once you've [added a provider](/guide/ai-models)), Recap…, Recap Conversations with…, Don't Log This Channel (while chat logs are on), Close (a conversation), Reopen Closed Channel, and Reopen _#channel_ (_network_) for each one in File → Recently Closed |
 | **Channel** | Join…, Leave _#channel_ or Join _#channel_, Hide _#channel_ (a channel detached on a bouncer), Remove _#channel_, and Show _#channel_ (_network_) for each [hidden channel](/guide/joining-channels#hidden-channels) |
-| **Network** | Add Network…, Recap _network_… and Recap All Networks… (see [Recap](/guide/recap)), Sort Channels A–Z (for the network you're in), Move Network Left / Right (Up / Down with the sidebar), and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |
+| **Network** | Add Network…, Recap _network_… and Recap All Networks… (see [Recap](/guide/recap)), Sort Channels A–Z (for the network you're in), Move Network Left / Right (Up / Down with the sidebar; not in Focus), and Connect, Disconnect, Reconnect, Edit… and Remove… for each network |
 | **AI** | Set Default Model…, Manage Providers… (see [AI providers](/guide/ai-models)) |
 | **Help** | What's New in Vela, About Vela, Check for Updates… |
 

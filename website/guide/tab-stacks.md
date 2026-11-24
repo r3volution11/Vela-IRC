@@ -43,7 +43,7 @@ With VoiceOver, the channel's name in the title bar has a **Hide Channel Title B
 
 ## The network row
 
-The row of network tabs shows each network's connection status and a badge when something there mentions you. With **Network row** set to **Auto** (the default), it's hidden while you're connected to just one network, and that network's name appears on its console tab instead. Choose **Always** to keep it, or turn on **View → Layout → Always Show Server Row**.
+The row of network tabs shows each network's connection status and a badge when something there mentions you. With **Network row** set to **Auto** (the default), it's hidden while you're connected to just one network, and that network's name appears on its console tab instead. Choose **Always** to keep it, or turn on **View → Layout → Always Show Server Row** (dimmed with the sidebar and in Focus, which have no network row).
 
 ## More options
 

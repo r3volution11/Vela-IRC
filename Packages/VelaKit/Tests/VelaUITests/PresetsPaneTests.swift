@@ -369,6 +369,52 @@ struct PresetsPaneLogicTests {
         style.navigationStyle = .sidebar
         #expect(trafficLightInset(style: style, sidebarCollapsed: false) == 16)
     }
+
+    /// What a layout doesn't show can't be changed from the menus: in
+    /// Focus, moving a channel or network is dimmed (and out of the
+    /// palette), and Always Show Server Row is for tabs only.
+    @MainActor
+    @Test func commandsFollowTheLayout() async throws {
+        let app = AppModel.demo()
+        await app.ready()
+        let themes = FileManager.default.temporaryDirectory.appending(path: "VelaLayoutCommands-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: themes) }
+        func catalog() -> VelaCommandCatalog {
+            VelaCommandCatalog(VelaCommandContext(
+                app: app, themeStore: ThemeStore(userThemesDirectory: themes), uiState: UIState(),
+                openWindow: EnvironmentValues().openWindow,
+                openSettings: EnvironmentValues().openSettings
+            ))
+        }
+        // A channel in the middle of its network's, so both ways can move.
+        let session = try #require(app.selectedSession)
+        let siblings = session.bufferSiblings(of: try #require(app.selectedBuffer))
+        try #require(siblings.count >= 3)
+        app.select(siblings[1])
+        func moves(_ catalog: VelaCommandCatalog) -> [Bool] {
+            [catalog.moveSelectedBuffer(forward: false), catalog.moveSelectedBuffer(forward: true),
+             catalog.moveSelectedNetwork(forward: false), catalog.moveSelectedNetwork(forward: true)].map(\.isEnabled)
+        }
+
+        app.settings[.navigationStyle] = .tabs
+        var commands = catalog()
+        #expect(moves(commands).prefix(2) == [true, true])
+        #expect(commands.moveSelectedBuffer(forward: true).title == "Move Channel Right")
+        #expect(commands.toggleServerTabRow.isEnabled)
+
+        app.settings[.navigationStyle] = .sidebar
+        commands = catalog()
+        #expect(moves(commands).prefix(2) == [true, true])
+        #expect(commands.moveSelectedBuffer(forward: true).title == "Move Channel Down")
+        #expect(!commands.toggleServerTabRow.isEnabled)
+
+        app.settings[.navigationStyle] = .focus
+        commands = catalog()
+        #expect(moves(commands) == [false, false, false, false])
+        #expect(!commands.toggleServerTabRow.isEnabled)
+        let ids = Set(commands.all.filter(\.isEnabled).map(\.id))
+        #expect(!ids.contains("tabs.moveForward") && !ids.contains("tabs.toggleServerRow"))
+    }
 }
 
 // MARK: - Hosted
