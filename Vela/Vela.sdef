@@ -200,7 +200,7 @@
 			<result type="conversation" description="The channel."/>
 		</command>
 
-		<command name="catch up" code="VelaCtUp" description="Bring Vela to the front with a conversation's Catch me up card summarizing what you missed (Apple Intelligence, on this Mac).">
+		<command name="catch up" code="VelaCtUp" description="Bring Vela to the front with a conversation's Catch me up card summarizing what you missed, with Apple Intelligence or the model you chose in Vela's settings.">
 			<cocoa class="VelaCatchUpCommand"/>
 			<direct-parameter type="conversation" optional="yes" description="The conversation. Without one: the unmuted one with the most unread messages."/>
 		</command>

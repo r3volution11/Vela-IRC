@@ -717,11 +717,11 @@ extension SettingKey where Value == SystemFollowingBool {
 extension SettingKey where Value == Bool {
     public static var intelligenceCatchUp: SettingKey<Bool> {
         .init("intelligence.catchUp", default: true,
-              summary: "Offer \"Catch me up\": an Apple Intelligence summary of what you missed in a busy channel, made on your Mac. Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri.")
+              summary: "Offer \"Catch me up\": a summary of what you missed in a busy channel, by Apple Intelligence on your Mac or the model you choose (intelligence.catchUpModel). Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri; links and scripts say it's off.")
     }
     public static var intelligenceRecap: SettingKey<Bool> {
         .init("intelligence.recap", default: true,
-              summary: "Offer Recap: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a span you pick, written by Apple Intelligence on your Mac or shown as a log. Reports are kept only while their window is open. Off hides it everywhere: the menus, the command palette, the Catch me up card and Siri.")
+              summary: "Offer Recap: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a span you pick, written by Apple Intelligence on your Mac or the model you choose (intelligence.recapModel), or shown as a log. Reports are kept only while their window is open. Off hides it everywhere: the menus, the command palette, the Catch me up card and Siri; links and scripts say it's off.")
     }
     public static var intelligencePrivateCloudCompute: SettingKey<Bool> {
         .init("intelligence.privateCloudCompute", default: false,
