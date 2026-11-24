@@ -59,7 +59,7 @@ struct AIModelChangeMenu: View {
             }
             if let uiState {
                 Divider()
-                Button("Manage Models…") { AIModelActions.openSettings(uiState: uiState, openSettings: openSettings) }
+                Button("Manage Providers…") { AIModelActions.openSettings(uiState: uiState, openSettings: openSettings) }
             }
         } label: {
             Text(title).font(font)

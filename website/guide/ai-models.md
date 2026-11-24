@@ -113,7 +113,7 @@ Once Vela has fetched a provider's list, its menus offer every model that writes
 
 ### For one summary {#change}
 
-Under a finished Catch me up card, and at the end of a Recap, Vela says which model wrote it, such as "Summarized by Claude Opus 5.5 (Anthropic)." or "Summarized on this Mac by Apple Intelligence." Once you've added a provider, **Change** (**Change Model** in a Recap) lists the models, with the one that wrote it checked: choose one to write it again with that model, or **Manage Models…** to open **Settings → AI Providers**. The card keeps the model you chose when you **Regenerate**, and a Recap's **More detail** asks the model that wrote it.
+Under a finished Catch me up card, and at the end of a Recap, Vela says which model wrote it, such as "Summarized by Claude Opus 5.5 (Anthropic)." or "Summarized on this Mac by Apple Intelligence." Once you've added a provider, **Change** (**Change Model** in a Recap) lists the models, with the one that wrote it checked: choose one to write it again with that model, or **Manage Providers…** to open **Settings → AI Providers**. The card keeps the model you chose when you **Regenerate**, and a Recap's **More detail** asks the model that wrote it.
 
 From the [command palette](/guide/command-palette), **Buffer: Catch Me Up With…** and **Buffer: Recap With…** (there once you've added a provider) let you pick the model first, and **AI: Set Default Model…** changes the default. They list the models the same way, with the one in use checked.
 

@@ -152,7 +152,7 @@ struct AIModelsUITests {
         #expect(SettingsPane.groups.flatMap { $0 } == SettingsPane.allCases)
         // Every pane id is one the snapshot tool and @pane: filter know.
         #expect(SettingsPane(rawValue: SettingsCategory.aiProviders.paneID) == .aiProviders)
-        // Manage Models… and Open Settings on a card go to AI Providers' list.
+        // Manage Providers… and Open Settings on a card go to AI Providers' list.
         #expect(SettingsReveal.aiModels == SettingsReveal(pane: .aiProviders, section: "models"))
     }
 
