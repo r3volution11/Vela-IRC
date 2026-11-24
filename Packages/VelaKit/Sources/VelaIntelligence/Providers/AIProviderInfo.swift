@@ -87,12 +87,63 @@ nonisolated extension AIProviderKind {
     }
 
     /// The provider's terms for what's sent to its API, linked from the
-    /// consent sheet.
+    /// consent sheet and Settings → AI Privacy.
     public var dataPolicyURL: URL? {
         switch self {
-        case .openAI: URL(string: "https://openai.com/policies/api-data-usage-policies/")
+        case .openAI: URL(string: "https://openai.com/enterprise-privacy/")
         case .anthropic: URL(string: "https://www.anthropic.com/legal/commercial-terms")
-        case .gemini: URL(string: "https://ai.google.dev/gemini-api/terms")
+        case .gemini: URL(string: "https://aistudio.google.com/docs/terms")
+        case .openAICompatible: nil
+        }
+    }
+
+    /// The provider's privacy policy, linked from Settings → AI Privacy.
+    public var privacyPolicyURL: URL? {
+        switch self {
+        case .openAI: URL(string: "https://openai.com/policies/privacy-policy/")
+        case .anthropic: URL(string: "https://www.anthropic.com/legal/privacy")
+        case .gemini: URL(string: "https://policies.google.com/privacy")
+        case .openAICompatible: nil
+        }
+    }
+
+    /// What to do on the page ``keyURL`` opens, in one line.
+    public var keySteps: String? {
+        switch self {
+        case .openAI: "Sign in, choose Create new secret key, and copy the key."
+        case .anthropic: "Sign in to the Claude Console, choose Create Key, and copy the key."
+        case .gemini: "Sign in with your Google account, choose Create API key, and copy the key."
+        case .openAICompatible: nil
+        }
+    }
+
+    /// Who pays, plainly. No prices: they change.
+    public var costNote: String? {
+        switch self {
+        case .openAI: "Usage is billed by OpenAI to your account, which needs credit."
+        case .anthropic: "Usage is billed by Anthropic to your account, which needs credit."
+        case .gemini: "Gemini has a free tier, with limits. Beyond it, usage is billed by Google to your account."
+        case .openAICompatible: nil
+        }
+    }
+
+    /// What the provider's models are called, for the setup sheet.
+    public var modelsBlurb: String? {
+        switch self {
+        case .openAI: "GPT models, with a key from the OpenAI Platform."
+        case .anthropic: "Claude models, with a key from the Claude Console."
+        case .gemini: "Gemini models, with a key from Google AI Studio."
+        case .openAICompatible: nil
+        }
+    }
+
+    /// The start of every key of this kind (`sk-ant-` for Anthropic). The
+    /// most specific first, so `sk-ant-` is never taken for OpenAI's `sk-`.
+    public var keyPrefix: String? {
+        switch self {
+        case .openAI: "sk-"
+        case .anthropic: "sk-ant-"
+        case .gemini: "AIza"
         case .openAICompatible: nil
         }
     }
@@ -137,6 +188,62 @@ nonisolated extension AIProviderKind {
     var fallbackContextTokens: Int {
         self == .openAICompatible ? AIProviderEntry.defaultCustomContextTokens : 128_000
     }
+}
+
+/// What a pasted key looks like, checked as you paste it, before it's
+/// tried: empty, the shape its provider's keys have, another provider's
+/// key, or something else (which may still work: Test says for sure).
+nonisolated public enum AIKeyShape: Equatable, Sendable {
+    case empty
+    case expected
+    case otherProvider(AIProviderKind)
+    case unexpected
+
+    /// Hosted providers' keys, most specific prefix first.
+    private static let hosted: [AIProviderKind] = [.anthropic, .gemini, .openAI]
+
+    /// The shortest a real key is: every provider's are far longer.
+    static let minimumLength = 20
+
+    public init(key: String, for kind: AIProviderKind) {
+        let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else {
+            self = .empty
+            return
+        }
+        guard kind != .openAICompatible else {
+            self = .expected
+            return
+        }
+        let owner = Self.hosted.first { $0.keyPrefix.map(key.hasPrefix) ?? false }
+        if let owner, owner != kind {
+            self = .otherProvider(owner)
+        } else if owner == kind, key.count >= Self.minimumLength, !key.contains(where: \.isWhitespace) {
+            self = .expected
+        } else {
+            self = .unexpected
+        }
+    }
+
+    /// One line under the key field; nil while it's empty.
+    public func message(for kind: AIProviderKind) -> String? {
+        switch self {
+        case .empty:
+            return nil
+        case .expected:
+            return "Looks like \(kind.article) \(kind.displayName) key."
+        case .otherProvider(let owner):
+            return "This looks like \(owner.article) \(owner.displayName) key, not \(kind.article) \(kind.displayName) one."
+        case .unexpected:
+            guard let prefix = kind.keyPrefix else { return nil }
+            return "\(kind.displayName) keys start with \(prefix). Check that you copied the whole key."
+        }
+    }
+}
+
+nonisolated extension AIProviderKind {
+    /// "an OpenAI key", "an Anthropic key", "a Google Gemini key".
+    var article: String { self == .openAI || self == .anthropic ? "an" : "a" }
 }
 
 /// Common local servers, offered when you add a custom one.

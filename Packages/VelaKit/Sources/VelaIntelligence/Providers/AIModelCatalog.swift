@@ -7,7 +7,7 @@ import Observation
 import VelaStore
 
 /// Each provider's model list: fetched when you ask (Test, Refresh), when
-/// a key changes, and when Settings → Intelligence shows a provider whose
+/// a key changes, and when Settings → AI Providers shows a provider whose
 /// list is missing or more than a day old. Until then, menus offer Vela's
 /// recommended models for the provider. Lists are kept in a small cache
 /// file (model names and limits only, nothing about you), so menus have
@@ -96,6 +96,8 @@ public final class AIModelCatalog {
         case .success(let models):
             lists[entry.id] = models
             states[entry.id] = .loaded
+            // Read the file first, so saving keeps the other lists.
+            loadCacheIfNeeded()
             cache[entry.id] = CachedList(kind: entry.kind, baseURL: entry.baseURL, fetched: Date(), models: models)
             saveCache()
         case .failure(let failure):
@@ -122,8 +124,18 @@ public final class AIModelCatalog {
         if cache.removeValue(forKey: providerID) != nil { saveCache() }
     }
 
+    /// Keeps `models` as `entry`'s list, fetched just now by someone else
+    /// (the setup sheet's check, or finding a server on this Mac).
+    func remember(_ models: [AIModelInfo], for entry: AIProviderEntry) {
+        loadCacheIfNeeded()
+        lists[entry.id] = models
+        states[entry.id] = .loaded
+        cache[entry.id] = CachedList(kind: entry.kind, baseURL: entry.baseURL, fetched: Date(), models: models)
+        saveCache()
+    }
+
     @concurrent
-    private nonisolated static func fetch(_ api: any AIProviderAPI) async -> Result<[AIModelInfo], AIProviderFailure> {
+    nonisolated static func fetch(_ api: any AIProviderAPI) async -> Result<[AIModelInfo], AIProviderFailure> {
         do {
             return .success(try await api.listModels())
         } catch let CatchUpModelError.provider(failure) {

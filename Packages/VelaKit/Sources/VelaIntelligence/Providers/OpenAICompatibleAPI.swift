@@ -80,7 +80,13 @@ nonisolated struct OpenAICompatibleAPI: AIProviderAPI {
     /// `GET {base}/models`, leaving out embedding models.
     func listModels() async throws -> [AIModelInfo] {
         let page = try await client.json(AIHTTPClient.request(baseURL.appending(path: "models"), headers: headers), api: self)
-        return (page["data"]?.arrayValue ?? []).compactMap { item in
+        return Self.models(in: page)
+    }
+
+    /// The models in a `/models` answer (`data`, which Ollama sends as
+    /// null when it has none), leaving out embedding models.
+    static func models(in page: JSONValue) -> [AIModelInfo] {
+        (page["data"]?.arrayValue ?? []).compactMap { item in
             guard let id = item["id"]?.stringValue, !id.lowercased().contains("embed") else { return nil }
             return AIModelInfo(id: id)
         }

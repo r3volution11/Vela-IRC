@@ -88,6 +88,8 @@ public final class AIModels {
     @ObservationIgnored private let offersPrivateCloudComputeNow: () -> Bool
     @ObservationIgnored private let makeFactory: () -> AIProviderFactory
     @ObservationIgnored private var madeFactory: AIProviderFactory?
+    @ObservationIgnored private let makeDetector: () -> LocalModelDetector
+    @ObservationIgnored private var madeDetector: LocalModelDetector?
 
     /// - Parameters:
     ///   - settings: Where providers and model choices are; nil (demo
@@ -95,13 +97,16 @@ public final class AIModels {
     ///   - offersPrivateCloudCompute: Whether Private Cloud Compute can be
     ///     chosen now: built in, macOS 27+, and `intelligence.privateCloudCompute` on.
     ///   - factory: Makes the providers' APIs, on first use (tests stub the network).
+    ///   - localServers: Looks for Ollama and LM Studio on this Mac, made on
+    ///     first use (tests stub the network).
     public init(
         settings: SettingsStore?,
         keys: AIKeyStore,
         catalog: AIModelCatalog = AIModelCatalog(),
         availability: IntelligenceAvailability,
         offersPrivateCloudCompute: @escaping () -> Bool = { false },
-        factory: @escaping () -> AIProviderFactory = AIProviderFactory.live
+        factory: @escaping () -> AIProviderFactory = AIProviderFactory.live,
+        localServers: @escaping () -> LocalModelDetector = LocalModelDetector.live
     ) {
         self.settings = settings
         self.keys = keys
@@ -109,6 +114,7 @@ public final class AIModels {
         self.availability = availability
         self.offersPrivateCloudComputeNow = offersPrivateCloudCompute
         self.makeFactory = factory
+        self.makeDetector = localServers
     }
 
     /// Apple's models only, for demo mode and tests that don't need providers.
@@ -247,7 +253,8 @@ public final class AIModels {
         update(providerID) { $0.consented = true }
     }
 
-    /// Settings → Intelligence: ask again before sending it anything.
+    /// Settings → AI Privacy: ask again before sending it anything. Until
+    /// you agree again, Catch me up and Recap send it nothing and ask.
     public func withdrawConsent(_ providerID: String) {
         update(providerID) { $0.consented = false }
     }
@@ -317,13 +324,94 @@ public final class AIModels {
     }
 
     /// Fetches the lists of providers that are on and ready (a key where
-    /// one's needed) when they're missing or old: Settings → Intelligence
+    /// one's needed) when they're missing or old: Settings → AI Providers
     /// showing.
     public func refreshStaleModels() {
         for entry in enabledProviders where catalog.isStale(entry) {
             if entry.kind.requiresKey, !keys.hasKey(for: entry.id) { continue }
             Task { await refreshModels(entry.id) }
         }
+    }
+
+    // MARK: Setting up
+
+    /// Tries `key` for a new provider of `kind` by fetching its model list,
+    /// without saving anything: the setup sheet's Test Connection. The key
+    /// goes only to that provider.
+    public func checkKey(_ key: String, for kind: AIProviderKind) async -> Result<[AIModelInfo], AIProviderFailure> {
+        let entry = AIProviderEntry(id: kind.rawValue, kind: kind, name: kind.displayName)
+        guard let key = AIKeyStore.cleaned(key) else {
+            return .failure(AIProviderFailure(providerID: entry.id, providerName: entry.name, reason: .missingKey))
+        }
+        guard let api = factory.api(for: entry, key: key) else {
+            return .failure(AIProviderFailure(providerID: entry.id, providerName: entry.name, reason: .unreachable))
+        }
+        return await AIModelCatalog.fetch(api)
+    }
+
+    /// Adds a provider of `kind` set up in the setup sheet: its key in the
+    /// Keychain, the model list its check fetched, your OK to send it
+    /// messages, and, given `defaultModel`, that model as the default. A
+    /// key the Keychain won't take adds nothing.
+    @discardableResult
+    public func addProvider(
+        _ kind: AIProviderKind,
+        key: String,
+        models: [AIModelInfo],
+        consented: Bool,
+        defaultModel: String? = nil
+    ) throws -> AIProviderEntry? {
+        guard let entry = addProvider(kind) else { return nil }
+        do {
+            try keys.setKey(key, for: entry.id)
+        } catch {
+            removeProvider(entry.id)
+            throw error
+        }
+        finishSetup(entry, models: models, consented: consented, defaultModel: defaultModel)
+        return providers.first { $0.id == entry.id }
+    }
+
+    /// Your OK and the default model, for a provider just added (by the
+    /// setup sheet, or Connect for a server on this Mac).
+    public func finishSetup(_ entry: AIProviderEntry, models: [AIModelInfo]? = nil, consented: Bool, defaultModel: String? = nil) {
+        if let models, !models.isEmpty { catalog.remember(models, for: entry) }
+        if consented { grantConsent(entry.id) }
+        if let defaultModel, let settings {
+            settings[.intelligenceModel] = AIModelChoice.provider(providerID: entry.id, modelID: defaultModel).settingValue
+        }
+    }
+
+    // MARK: Models on this Mac
+
+    var detector: LocalModelDetector {
+        if let madeDetector { return madeDetector }
+        let made = makeDetector()
+        madeDetector = made
+        return made
+    }
+
+    /// Looks for Ollama and LM Studio on this Mac. Nothing in demo mode,
+    /// which never goes online.
+    public func detectLocalServers() async -> [LocalModelServer: LocalServerState] {
+        guard canAddProviders else { return [:] }
+        return await detector.detect()
+    }
+
+    /// The provider already connected to `server`, if there is one.
+    public func provider(for server: LocalModelServer) -> AIProviderEntry? {
+        providers.first { server.isConnected(as: $0) }
+    }
+
+    /// Connect for a server found on this Mac: a provider at its address,
+    /// named for it, with the models it listed. It still asks for your OK
+    /// before it's sent anything.
+    @discardableResult
+    public func connect(_ server: LocalModelServer, models: [AIModelInfo]) -> AIProviderEntry? {
+        if let existing = provider(for: server) { return existing }
+        guard let entry = addProvider(.openAICompatible, name: server.name, baseURL: server.baseURL.absoluteString) else { return nil }
+        if !models.isEmpty { catalog.remember(models, for: entry) }
+        return entry
     }
 
     private enum APIReadiness: Sendable {
