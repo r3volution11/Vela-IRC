@@ -18,9 +18,9 @@
 #            --no-selection (the demo's networks with no conversation open),
 #            --accent <name> (one of the theme's accent swatches, e.g. Cyan),
 #            --settings-pane <pane> (presets, appearance, layout, messages,
-#              media, networks, notifications, intelligence, updates,
-#              advanced; renders the Settings window instead, 820x600
-#              unless --size is given),
+#              media, networks, notifications, intelligence, aiProviders,
+#              aiPrivacy, integrations, updates, advanced; renders the
+#              Settings window instead, 820x600 unless --size is given),
 #            --settings-scroll <points> (scroll the pane down first),
 #            --theme-editor <theme> (renders the Theme Editor started from
 #              that theme, 760x680 unless --size is given),

@@ -190,24 +190,28 @@ enum SnapshotSupport {
         AccentActions.select(swatch, in: palette, settings: settings)
     }
 
-    /// Scrolls the outermost scroll view (a Settings pane's page) down by
-    /// `offset` points, clamped to its content.
+    /// Scrolls a Settings pane's page down by `offset` points, clamped to
+    /// its content. The page is the widest scroll view, outermost first:
+    /// Settings' sidebar scrolls too, and comes first.
     private static func scroll(_ window: NSWindow, down offset: CGFloat) {
         guard let root = window.contentView else { return }
         root.layoutSubtreeIfNeeded()
+        var page: NSScrollView?
         var queue: [NSView] = [root]
         while !queue.isEmpty {
             let view = queue.removeFirst()
-            if let scrollView = view as? NSScrollView, let document = scrollView.documentView {
-                let clip = scrollView.contentView
-                let maxOffset = max(0, document.frame.height - clip.bounds.height)
-                let y = min(max(0, offset), maxOffset)
-                clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: document.isFlipped ? y : maxOffset - y))
-                scrollView.reflectScrolledClipView(clip)
-                return
+            if let scrollView = view as? NSScrollView, scrollView.documentView != nil {
+                if scrollView.frame.width > (page?.frame.width ?? 0) { page = scrollView }
+                continue
             }
             queue.append(contentsOf: view.subviews)
         }
+        guard let scrollView = page, let document = scrollView.documentView else { return }
+        let clip = scrollView.contentView
+        let maxOffset = max(0, document.frame.height - clip.bounds.height)
+        let y = min(max(0, offset), maxOffset)
+        clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: document.isFlipped ? y : maxOffset - y))
+        scrollView.reflectScrolledClipView(clip)
     }
 
     private static func capture(_ window: NSWindow, to url: URL) {
