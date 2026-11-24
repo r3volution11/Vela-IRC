@@ -131,6 +131,11 @@ struct AIProviderSetupSheet: View {
 
     private var models: AIModels { intelligence.models }
 
+    /// Opened by Connect, for a provider already added.
+    private var isConnecting: Bool {
+        if case .connected = request.start { true } else { false }
+    }
+
     /// The provider Connect added, for a server on this Mac.
     private var connectedEntry: AIProviderEntry? {
         guard case .connected(let id) = request.start else { return nil }
@@ -221,7 +226,7 @@ struct AIProviderSetupSheet: View {
             if step == .key, request.start == .choose {
                 Button("Back") { step = .choose }
                     .buttonStyle(ThemedButtonStyle())
-            } else if step == .allow, connectedEntry == nil {
+            } else if step == .allow, !isConnecting {
                 Button("Back") { step = .key }
                     .buttonStyle(ThemedButtonStyle())
             }
@@ -245,14 +250,21 @@ struct AIProviderSetupSheet: View {
                     .keyboardShortcut(.defaultAction)
                     .themedDisabled(!canTest)
             case .allow:
-                if let connectedEntry {
-                    Button("Not Now") { dismiss() }
-                        .buttonStyle(ThemedButtonStyle())
-                        .keyboardShortcut(.cancelAction)
-                        .accessibilityHint("Keeps \(connectedEntry.name). Vela asks before sending it anything.")
-                    Button("Allow") { allow(connectedEntry) }
-                        .buttonStyle(ThemedButtonStyle(prominent: true))
-                        .keyboardShortcut(.defaultAction)
+                if isConnecting {
+                    if let connectedEntry {
+                        Button("Not Now") { dismiss() }
+                            .buttonStyle(ThemedButtonStyle())
+                            .keyboardShortcut(.cancelAction)
+                            .accessibilityHint("Keeps \(connectedEntry.name). Vela asks before sending it anything.")
+                        Button("Allow") { allow(connectedEntry) }
+                            .buttonStyle(ThemedButtonStyle(prominent: true))
+                            .keyboardShortcut(.defaultAction)
+                    } else {
+                        // Removed meanwhile.
+                        Button("Close") { dismiss() }
+                            .buttonStyle(ThemedButtonStyle(prominent: true))
+                            .keyboardShortcut(.defaultAction)
+                    }
                 } else {
                     Button("Cancel") { dismiss() }
                         .buttonStyle(ThemedButtonStyle())

@@ -42,7 +42,7 @@ final class LocalModelsFinder {
         isLooking = true
         task = Task { [weak self] in
             let found = await models.detectLocalServers()
-            guard let self else { return }
+            guard let self, !Task.isCancelled else { return }
             if states != found { states = found }
             isLooking = false
             hasLooked = true
