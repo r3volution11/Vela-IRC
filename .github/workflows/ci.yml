@@ -22,6 +22,11 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # The Alfred workflow the app bundles must be the one its record
+      # describes (scripts/update-alfred-workflow.sh writes both).
+      - name: Bundled Alfred workflow
+        run: scripts/update-alfred-workflow.sh --check
+
       - name: Cache SwiftPM
         uses: actions/cache@v4
         with:

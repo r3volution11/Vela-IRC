@@ -26,6 +26,9 @@
 #   • its App Intents metadata has every App Shortcut, Catch Me Up and Open
 #     Channel, and the VelaIntents package (check_app_intents in
 #     scripts/lib/release-checks.zsh);
+#   • it carries the Alfred workflow Settings → Integrations installs
+#     (Resources/Vela.alfredworkflow), the one integrations/alfred-workflow.json
+#     records;
 #   • codesign --verify --deep --strict passes;
 #   • it's signed with a Developer ID Application certificate (of --team, if
 #     given), with a secure timestamp;
@@ -222,6 +225,22 @@ unset pcc_entitlement pcc_switch pcc_found
 
 # Siri, Shortcuts and Spotlight: the App Intents metadata (lib/release-checks.zsh).
 check_app_intents "$app" Vela/VelaShortcuts.swift
+
+# The Alfred workflow Settings → Integrations opens in Alfred: the file
+# integrations/alfred-workflow.json records (scripts/update-alfred-workflow.sh).
+workflow="$app/Contents/Resources/Vela.alfredworkflow"
+workflow_sha=$(plutil -extract sha256 raw -o - integrations/alfred-workflow.json 2>/dev/null || true)
+workflow_version=$(plutil -extract version raw -o - integrations/alfred-workflow.json 2>/dev/null || true)
+if [[ ! -f "$workflow" ]]; then
+  check_fail "Alfred workflow" "the app has no Contents/Resources/Vela.alfredworkflow" \
+    "Check that Vela/Integrations/Vela.alfredworkflow is committed; the Vela target copies it into the app."
+elif [[ "$(shasum -a 256 "$workflow" | cut -d' ' -f1)" != "$workflow_sha" ]]; then
+  check_fail "Alfred workflow" "the app's Vela.alfredworkflow isn't the one integrations/alfred-workflow.json records" \
+    "Build from a checkout where scripts/update-alfred-workflow.sh --check passes."
+else
+  check_pass "Alfred workflow" "version $workflow_version, as integrations/alfred-workflow.json records"
+fi
+unset workflow workflow_sha workflow_version
 
 if verify_output=$(codesign --verify --deep --strict "$app" 2>&1); then
   check_pass "Signature" "codesign --verify --deep --strict passes"

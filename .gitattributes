@@ -1,3 +1,7 @@
 # KLIPY's logos, kept byte for byte as KLIPY publishes them: one has Windows
 # line endings, which Git would otherwise change.
 Packages/VelaKit/Sources/VelaUI/Resources/KLIPY/*.svg -text
+
+# The Alfred workflow the app bundles: a zip whose SHA-256 is recorded in
+# integrations/alfred-workflow.json, so its bytes must never change.
+*.alfredworkflow binary
