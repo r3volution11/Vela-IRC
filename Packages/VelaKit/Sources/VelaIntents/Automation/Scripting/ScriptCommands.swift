@@ -72,7 +72,10 @@ public enum ScriptCommandHandler {
 
         case .draftMessage:
             let raw = try self.text(direct)
-            guard let text = VelaLink.cleanDraft(raw) else { throw AutomationError.emptyMessage }
+            guard let text = VelaLink.cleanDraft(raw, maximumLength: .max) else { throw AutomationError.emptyMessage }
+            guard text.count <= VelaLink.maximumDraftLength else {
+                throw AutomationError.draftTooLong(text.count, limit: VelaLink.maximumDraftLength)
+            }
             let (_, buffer) = try conversation(arguments[ScriptArgument.target], automation)
             automation.show(buffer, draft: text)
             return .done(nil)
@@ -123,7 +126,10 @@ public enum ScriptCommandHandler {
 
         case .search:
             let raw = try self.text(direct)
-            guard let query = VelaLink.cleanQuery(raw) else { throw AutomationError.emptyMessage }
+            guard let query = VelaLink.cleanQuery(raw, maximumLength: .max) else { throw AutomationError.emptyMessage }
+            guard query.count <= VelaLink.maximumQueryLength else {
+                throw AutomationError.queryTooLong(query.count, limit: VelaLink.maximumQueryLength)
+            }
             let scope = arguments[ScriptArgument.scope]
             if scope == nil {
                 automation.search(query)

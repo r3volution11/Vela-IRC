@@ -150,8 +150,9 @@ nonisolated public enum VelaLink: Equatable, Sendable {
     /// Text for the message box: line endings made `\n`, control
     /// characters other than newlines and tabs taken out (IRC formatting
     /// codes and direction overrides could hide what you'd be sending), and
-    /// at most ``maximumDraftLength`` characters. Nil if nothing's left.
-    static func cleanDraft(_ raw: String) -> String? {
+    /// at most `maximumLength` characters. Nil if nothing's left, or it's
+    /// longer than that.
+    static func cleanDraft(_ raw: String, maximumLength: Int = maximumDraftLength) -> String? {
         let normalized = raw.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
         var scalars = String.UnicodeScalarView()
         for scalar in normalized.unicodeScalars {
@@ -164,15 +165,16 @@ nonisolated public enum VelaLink: Equatable, Sendable {
             }
         }
         let text = String(scalars)
-        guard text.count <= maximumDraftLength, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        guard text.count <= maximumLength, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         return text
     }
 
-    /// A search query: one line, trimmed, at most ``maximumQueryLength``.
-    static func cleanQuery(_ raw: String) -> String? {
-        guard let text = cleanDraft(raw)?.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\t", with: " ") else { return nil }
+    /// A search query: one line, trimmed, at most `maximumLength`
+    /// characters. Nil if nothing's left, or it's longer than that.
+    static func cleanQuery(_ raw: String, maximumLength: Int = maximumQueryLength) -> String? {
+        guard let text = cleanDraft(raw, maximumLength: .max)?.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\t", with: " ") else { return nil }
         let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty, trimmed.count <= maximumQueryLength else { return nil }
+        guard !trimmed.isEmpty, trimmed.count <= maximumLength else { return nil }
         return trimmed
     }
 

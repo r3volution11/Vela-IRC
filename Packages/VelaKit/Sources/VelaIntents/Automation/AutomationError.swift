@@ -27,11 +27,16 @@ nonisolated public enum AutomationError: Error, Equatable, LocalizedError {
     case tooManyLines(Int, limit: Int)
     /// More IRC messages than one command may send.
     case messageTooLong(Int, limit: Int)
+    /// More characters than a draft may have (`draft message`).
+    case draftTooLong(Int, limit: Int)
+    /// More characters than a search may have (`search`).
+    case queryTooLong(Int, limit: Int)
     case invalidChannelName(String)
     case noConnectedNetworks
     /// Catch me up or Recap is turned off in Settings.
     case turnedOff(String)
-    /// Apple Intelligence can't run, and why.
+    /// The model Catch me up uses can't run (Apple Intelligence, when it
+    /// isn't one of your own providers'), and why.
     case intelligenceUnavailable(String)
     /// Vela isn't ready to be scripted (it's still starting, or quitting).
     case notReady
@@ -51,6 +56,10 @@ nonisolated public enum AutomationError: Error, Equatable, LocalizedError {
             "That's \(count) lines. The message box asks before sending more than \(limit); add “allowing multiple lines true” to send them."
         case .messageTooLong(let count, let limit):
             "That would be \(count) IRC messages; Vela sends at most \(limit) at once."
+        case .draftTooLong(let count, let limit):
+            "That's \(count.formatted()) characters; a draft can have at most \(limit.formatted())."
+        case .queryTooLong(let count, let limit):
+            "That's \(count.formatted()) characters; a search can have at most \(limit.formatted())."
         case .invalidChannelName(let name): "“\(name)” isn't a channel name."
         case .noConnectedNetworks: "You're not connected to any networks."
         case .turnedOff(let feature): "\(feature) is turned off in Vela's settings."
@@ -68,7 +77,7 @@ nonisolated public enum AutomationError: Error, Equatable, LocalizedError {
         case .notConnected, .noConnectedNetworks: 1002
         case .notJoined: 1003
         case .emptyMessage: 1004
-        case .tooManyLines, .messageTooLong: 1005
+        case .tooManyLines, .messageTooLong, .draftTooLong, .queryTooLong: 1005
         case .serverBuffer: 1006
         case .turnedOff: 1007
         case .intelligenceUnavailable: 1008

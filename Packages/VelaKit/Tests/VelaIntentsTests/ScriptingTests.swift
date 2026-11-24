@@ -191,6 +191,36 @@ struct ScriptingTests {
         #expect(fixture.libera.buffer(named: "#swift")?.lines.last?.text != "almost4 done")
     }
 
+    /// Text too long for a draft or a search says so, with the same number
+    /// as a message too long to send (1005), not "nothing to send".
+    @Test func overlongDraftsAndSearchesSaySo() async throws {
+        let fixture = try await fixture()
+        let swift = try conversation("#swift", on: fixture.libera)
+        let before = fixture.app.showRequest
+        let draft = String(repeating: "x", count: VelaLink.maximumDraftLength + 1)
+        await #expect(throws: AutomationError.draftTooLong(VelaLink.maximumDraftLength + 1, limit: VelaLink.maximumDraftLength)) {
+            _ = try await run(.draftMessage, direct: draft, [ScriptArgument.target: swift], fixture)
+        }
+        #expect(fixture.app.showRequest == before)
+        // Exactly the limit is fine; blank is still "nothing to send".
+        let longest = String(repeating: "x", count: VelaLink.maximumDraftLength)
+        _ = try await run(.draftMessage, direct: longest, [ScriptArgument.target: swift], fixture)
+        #expect(fixture.app.showRequest?.draft == longest)
+        await #expect(throws: AutomationError.emptyMessage) {
+            _ = try await run(.draftMessage, direct: " \n\u{02}", [ScriptArgument.target: swift], fixture)
+        }
+
+        let query = String(repeating: "q", count: VelaLink.maximumQueryLength + 1)
+        await #expect(throws: AutomationError.queryTooLong(VelaLink.maximumQueryLength + 1, limit: VelaLink.maximumQueryLength)) {
+            _ = try await run(.search, direct: query, fixture)
+        }
+        #expect(fixture.presenter.calls.isEmpty)
+
+        let error = AutomationError.draftTooLong(4_001, limit: 4_000)
+        #expect(error.scriptErrorNumber == AutomationError.messageTooLong(51, limit: 50).scriptErrorNumber)
+        #expect(error.errorDescription?.contains("draft can have at most") == true)
+    }
+
     @Test func join() async throws {
         let fixture = try await fixture()
         let result = try await run(.join, direct: "swift-dev", [ScriptArgument.network: ScriptNetwork(networkID: fixture.libera.id)], fixture)
@@ -215,6 +245,24 @@ struct ScriptingTests {
         #expect(fixture.services.catchUp.card(for: swift.bufferID) != nil)
         fixture.app.settings[.intelligenceCatchUp] = false
         await #expect(throws: AutomationError.turnedOff("Catch me up")) {
+            _ = try await run(.catchUp, direct: swift, fixture)
+        }
+    }
+
+    /// `catch up` (and Alfred's and Raycast's Catch Me Up) on a Mac without
+    /// Apple Intelligence, with Catch me up set to your own provider's model.
+    @Test func catchUpWithYourProviderWithoutAppleIntelligence() async throws {
+        let fixture = try await AutomationFixture.withProviderOnly()
+        VelaAutomation.shared = fixture.automation
+        let swift = try conversation("#swift", on: fixture.libera)
+        _ = try await run(.catchUp, direct: swift, fixture)
+        #expect(fixture.services.catchUp.card(for: swift.bufferID) != nil)
+        // A Recap is summarized by the provider too, not a log.
+        _ = try await run(.openRecap, direct: swift, fixture)
+        #expect(fixture.services.recaps.latest?.scope.output == .summary)
+
+        fixture.app.settings.reset(.intelligenceCatchUpModel)
+        await #expect(throws: AutomationError.intelligenceUnavailable(IntelligenceStatus.deviceNotEligible.detail)) {
             _ = try await run(.catchUp, direct: swift, fixture)
         }
     }
@@ -281,6 +329,9 @@ struct ScriptingTests {
         #expect(AutomationError.notJoined(channel: "x", network: "y").scriptErrorNumber == 1003)
         #expect(AutomationError.emptyMessage.scriptErrorNumber == 1004)
         #expect(AutomationError.tooManyLines(4, limit: 3).scriptErrorNumber == 1005)
+        #expect(AutomationError.messageTooLong(51, limit: 50).scriptErrorNumber == 1005)
+        #expect(AutomationError.draftTooLong(4_001, limit: 4_000).scriptErrorNumber == 1005)
+        #expect(AutomationError.queryTooLong(501, limit: 500).scriptErrorNumber == 1005)
         #expect(AutomationError.serverBuffer(network: "x").scriptErrorNumber == 1006)
         #expect(AutomationError.turnedOff("Recap").scriptErrorNumber == 1007)
         #expect(AutomationError.intelligenceUnavailable("x").scriptErrorNumber == 1008)
