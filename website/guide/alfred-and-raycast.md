@@ -29,14 +29,16 @@ You can also download **Vela.alfredworkflow** from the workflow's [latest releas
 
 | Type | To |
 | --- | --- |
-| `vela` | List your channels and private conversations: mentions first, then what's unread, then the rest. Type to filter by name or network. |
-| `vela unread` | Only the ones with something unread (`vela mentions` for mentions). |
+| `vela` | List your channels and private conversations: mentions first, then what's unread, then the rest. Type to filter by name or network (`vela libera`). |
+| `vela unread` | Only the ones with something unread (`vela mentions` for mentions, `vela dm` for private conversations). |
 | `vela catch` | **Catch Me Up**: open Catch me up for the unmuted conversation with the most unread messages. |
 | `vela recap` | **Open Recap**: a Recap of every network since you last read. |
 | `vela mark` | **Mark All Read**: mark every channel and conversation read. |
 | `vsearch` *words* | Open [message search](/guide/automation#message-search) in Vela on the words. |
 
-Select text anywhere, open Alfred's Universal Actions, and choose **Search in Vela** to search your messages for it.
+**Catch Me Up**, **Open Recap** and **Mark All Read** are also at the end of the `vela` list. Catch Me Up and Mark All Read say so when there's nothing unread.
+
+Select text anywhere, open Alfred's Universal Actions, and choose **Search in Vela** to search your messages for it. `vsearch` and **Search in Vela** use a [`vela://` link](/guide/automation#links), so they open Vela if it isn't running.
 
 Each result shows the channel's or person's name, its network, and how many mentions and unread messages it has, and says when it's muted or a channel you've left. A channel has a **#** icon and a private conversation a person; a red dot means it mentions you, and a channel you've left is dimmed.
 
@@ -48,16 +50,17 @@ Each result shows the channel's or person's name, its network, and how many ment
 | <kbd>⌘↩</kbd> | Opens it with its Catch me up card. |
 | <kbd>⌥↩</kbd> | Opens a Recap of it, since your first unread message. |
 | <kbd>⌃↩</kbd> | Writes a message to it: type the message, then <kbd>↩</kbd> sends it, or <kbd>⌘↩</kbd> puts it in Vela's message box instead, without sending it. Not for a channel you've left. |
-| <kbd>⇧↩</kbd> | Marks it read. |
+| <kbd>⇧↩</kbd> | Marks it read, when something's unread. |
 | <kbd>⌘C</kbd> | Copies its `vela://` link. |
+| <kbd>⌘L</kbd> | Shows its name and network in Large Type. |
 
-Hold a modifier to see what it will do in the result's subtitle. Messages are sent as the message box sends them: as plain text (a message starting with `/` is sent as it is, never run as a command), split and paced like everything you send. Alfred posts a notification saying what was sent or marked read, or what went wrong.
+Hold a modifier to see what it will do in the result's subtitle. Messages are sent as the message box sends them: as plain text (a message starting with `/` is sent as it is, never run as a command), split and paced like everything you send. A message longer than 3 lines isn't sent from Alfred: put it in the message box with <kbd>⌘↩</kbd> and send it from there. Alfred posts a notification saying what was sent or marked read, or what went wrong.
 
 ## Raycast {#raycast}
 
 ### Install the extension {#raycast-install}
 
-The extension is coming to the Raycast Store, and **Settings → Integrations** will open it there. Until then, you can add it from [its source code](https://github.com/r3volution11/vela-raycast-extension), with [Node.js](https://nodejs.org) 22 or later:
+The extension is coming to the Raycast Store, and **Settings → Integrations** will open it there. Until then, you can add it from [its source code](https://github.com/r3volution11/vela-raycast-extension), with [Node.js](https://nodejs.org) 22.22 or later:
 
 ```sh
 git clone https://github.com/r3volution11/vela-raycast-extension.git
@@ -73,9 +76,9 @@ Raycast adds the extension as a development extension, and keeps it after you st
 | Command | What it does |
 | --- | --- |
 | **Search Conversations** | Every channel and private conversation, in three sections: **Mentions**, **Unread** and **All**. Each row shows its network, the unread count, mentions as a red `@` tag, and whether it's muted or a channel you've left. Type to filter by name or network. |
-| **Send Message** | Pick a channel you're in or a private conversation (mentions and unread ones first), and send a message. |
+| **Send Message** | Pick a channel you're in or a private conversation (mentions and unread ones first), and send a message. Raycast keeps what you've typed if you close it before sending. |
 | **Catch Me Up** | Opens Catch me up for the unmuted conversation with the most unread messages, or says you're all caught up. |
-| **Unread Conversations** | A menu bar command, off until you turn it on in **Raycast Settings → Extensions → Vela**. It shows how many mentions you have, with the conversations that have something unread in its menu. It reads Vela every 5 minutes and when you open its menu, and never while Vela isn't running. |
+| **Unread Conversations** | A menu bar command, off until you turn it on in **Raycast Settings → Extensions → Vela**. It shows how many mentions you have, and its menu lists the conversations with mentions or something unread (choose one to open it), then **Catch Me Up**, **Mark All Read**, **Search Conversations…** and **Open Vela**. It reads Vela every 5 minutes and when you open its menu, and never while Vela isn't running. |
 
 ### Actions in Search Conversations {#raycast-actions}
 
@@ -99,7 +102,7 @@ The first time Alfred or Raycast asks Vela for something, macOS asks: "“Alfred
 
 If you clicked **Don't Allow**, the workflow and the extension say so and offer to open the settings: in **System Settings → Privacy & Security → Automation**, turn on **Vela** under **Alfred** or **Raycast**.
 
-Showing a conversation from Raycast, copying a link, and searching from Alfred use `vela://` links, which need no permission. Listing conversations, sending, Catch me up, Recap and marking read need it. See [What links can't do](/guide/automation#link-safety) for why.
+Showing a conversation from Raycast, copying a link, and searching from Alfred use `vela://` links, which need no permission. Listing conversations, sending, drafting, Catch me up, Recap and marking read need it. See [What links can't do](/guide/automation#link-safety) for why.
 
 ## Vela Dev {#vela-dev}
 
@@ -116,7 +119,7 @@ They then use Vela Dev's bundle id (`io.github.r3volution11.Vela.dev`) and its `
 - **"Alfred isn't allowed to control Vela"** (or Raycast). See [Permissions](#permissions).
 - **"Vela didn't answer."** macOS may be waiting for you to answer its permission question, sometimes behind other windows. Click **Allow**, then try again.
 - **"Vela is still starting."** Vela was just opened and is restoring your networks. Alfred asks again every second; in Raycast, press <kbd>⌘R</kbd> in a moment.
-- **"This Vela can't talk to Alfred yet"** or **"Update Vela."** The workflow and the extension need Vela 1.5 or later. Choose **Vela → Check for Updates…**.
+- **"This workflow needs Vela 1.5 or later"** (or **"This extension needs Vela 1.5 or later"** in Raycast). The workflow and the extension need Vela 1.5 or later. Choose **Vela → Check for Updates…**.
 - **"You're not in #vela" or "You're not connected."** Messages go only to channels you're in and networks you're connected to. Join or reconnect in Vela, or put the text in the message box instead (<kbd>⌘↩</kbd> in Alfred, **Draft in Vela** in Raycast).
 - **Catch me up or Recap says it's turned off, or that Apple Intelligence isn't available.** Turn it on in **Settings → Intelligence**, and see [Apple Intelligence](/guide/apple-intelligence#requirements) or [your own AI models](/guide/ai-models).
 - **Counts look out of date.** Alfred shows the list it saw last at once, then reads it again if it's more than 5 seconds old. In Raycast, press <kbd>⌘R</kbd>.

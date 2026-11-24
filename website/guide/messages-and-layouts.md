@@ -1,11 +1,13 @@
 ---
 title: Messages & layouts
-description: Vela's three message layouts (Classic, Modern grouped and Compact columns), fonts and spacing, timestamps, join/part display, nick colors, mIRC formatting, unread messages and scrollback.
+description: Vela's three message layouts (Classic, Modern and Compact columns), fonts and spacing, timestamps, join/part display, nick colors, mIRC formatting, unread messages and scrollback.
 ---
 
 # Messages & layouts
 
-Vela can lay out a conversation three ways. Switch in **Settings → Messages**, or pick a message style in **Settings → Presets**, **View → Message Style** or the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>, type "message style"). The change applies instantly.
+Vela can lay out a conversation three ways. Switch with the **Layout** cards at the top of **Settings → Messages**, or pick a [message style](/guide/presets#message-style) in **Settings → Presets**, **View → Message Style** or the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>, type "message style"). The change applies instantly.
+
+A message style also sets the monospaced font: **Classic IRC** turns it on, **Modern** and **Columns** turn it off. The cards in **Settings → Messages** change only the layout. In settings.json it's [`chat.layout`](/reference/settings#chat.layout): `"classic"`, `"grouped"` (Modern, the default) or `"columns"`.
 
 ## Classic
 
@@ -15,9 +17,9 @@ One line per message, `[12:01] <nick> text`, like [Textual](https://www.textuala
 
 Pair it with **Use a monospace font** (below) for a terminal feel; the **Classic IRC** [message style](/guide/presets#message-style) does exactly that.
 
-## Modern grouped
+## Modern {#modern-grouped}
 
-<Screenshot src="/screenshots/preset-modern.webp" alt="The Modern grouped layout: a name and time header over consecutive messages from the same person" />
+<Screenshot src="/screenshots/preset-modern.webp" alt="The Modern layout: a name and time header over consecutive messages from the same person" />
 
 Like [Slack](https://slack.com) or [Discord](https://discord.com): consecutive messages from one person share a single header with their name and the time. Hover a follow-up message to see its time in the margin. You can [move the time](#timestamp-position) too.
 
@@ -36,7 +38,7 @@ In **Settings → Messages**:
 - **Font** is the system font by default; choose any font installed on your Mac.
 - **Use a monospace font** renders all chat text in the monospace font, like irssi or WeeChat. **Monospace font** (SF Mono by default) is also used for code and for the columns layout's fixed-width parts.
 - **Size** sets the font size, from 9 to 28 points (13 by default). **View → Bigger** (<kbd>⌘+</kbd>), **Smaller** (<kbd>⌘−</kbd>) and **Actual Size** (<kbd>⌘0</kbd>) change it from anywhere.
-- **Line spacing** adds space between the lines of one message (4 points by default); **Message spacing** adds space between messages and groups (12 points by default), the same in every layout. A mention's highlight, the hover color and a selection cover the message itself, evenly above and below it, and not the space around it. In settings.json they're [`chat.lineSpacing`](/reference/settings#chat.lineSpacing) and [`chat.messageSpacing`](/reference/settings#chat.messageSpacing). The [density](/guide/presets#density) in **Settings → Presets** (or **View → Density**) sets both at once: **Compact** (1 and 2 points), **Standard** (4 and 12) or **Comfortable** (6 and 18). It never changes the font size.
+- **Line spacing** adds space between the lines of one message (0 to 10 points, 4 by default); **Message spacing** adds space between messages and groups (0 to 24 points, 12 by default), the same in every layout. Messages one person sends in a row, within the **Group messages within** time, get no message spacing between them. A mention's highlight, the hover color and a selection cover the message itself, evenly above and below it, and not the space around it. The preview at the top of **Settings → Messages** is spaced just like the conversation. In settings.json they're [`chat.lineSpacing`](/reference/settings#chat.lineSpacing) and [`chat.messageSpacing`](/reference/settings#chat.messageSpacing). The [density](/guide/presets#density) in **Settings → Presets** (or **View → Density**) sets both at once: **Compact** (2 and 4 points), **Standard** (4 and 12) or **Comfortable** (6 and 18). It never changes the font size.
 
 ## Timestamps
 
@@ -82,7 +84,7 @@ In settings.json these are [`chat.timestampPosition.classic`](/reference/setting
 - **Collapse** a run of them into one summary, such as "alice, bob and 3 others joined · carol left", which you can expand. This is the default.
 - **Hide** them completely.
 
-The same choices are in **View → Message Style**.
+The same choices are in **View → Message Style** and the command palette (**Chat: Show Join/Part Messages**, **Collapse** and **Hide**). In settings.json it's [`chat.showJoinPart`](/reference/settings#chat.showJoinPart): `"show"`, `"collapse"` or `"hide"`.
 
 ## Colors and formatting
 
@@ -96,7 +98,7 @@ The same choices are in **View → Message Style**.
 ## Reading a conversation
 
 - **Day dividers** ("Today", "Yesterday", "Monday, November 10") separate days.
-- A **New** line shows where you stopped reading. In a busy channel, it offers **Catch me up**, an Apple Intelligence summary of what you missed. See [Catch me up](/guide/apple-intelligence#catch-me-up). You can turn the line off; see [Unread messages](#unread-messages).
+- A **New** line shows where you stopped reading. In a busy channel, it offers **Catch me up**, a summary of what you missed, written by Apple Intelligence or [a model of your own](/guide/ai-models). See [Catch me up](/guide/apple-intelligence#catch-me-up). You can turn the line off; see [Unread messages](#unread-messages).
 - When you scroll up, **Jump to present** brings you back to the newest messages, with a count of what arrived meanwhile. So does <kbd>Esc</kbd> in the message field, when there's no reply or paste to cancel.
 - **From the keyboard,** <kbd>Page Up</kbd>, <kbd>Page Down</kbd>, <kbd>Home</kbd> and <kbd>End</kbd> in the message field scroll the conversation. Press <kbd>⌥⌘2</kbd> to pick a message instead: <kbd>↑</kbd> and <kbd>↓</kbd> move through the messages, skipping joins and parts, and the selected one has a highlight in your theme's selection color. Then <kbd>R</kbd> replies, <kbd>E</kbd> reacts, <kbd>C</kbd> copies, <kbd>Return</kbd> opens its link, <kbd>U</kbd> opens the sender's menu, <kbd>T</kbd> translates and <kbd>Space</kbd> shows every action. <kbd>Esc</kbd> goes back to the message field. VoiceOver reads each message as you select it. See [The messages](/reference/keyboard-shortcuts#the-messages).
 - While you scroll, messages passing under the pointer don't light up or show their toolbar. The one under the pointer does as soon as you stop.

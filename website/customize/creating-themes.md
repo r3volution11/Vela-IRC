@@ -18,7 +18,7 @@ How Vela looks is split between the theme and your settings:
 | A theme decides | Your settings decide |
 | --- | --- |
 | Every color: backgrounds, text, borders, badges, buttons, highlights, link previews, the Settings window | [Sidebar or tab stacks](/guide/the-window#sidebar-or-tabs), tab placement and roundness |
-| The palette nicknames are colored from | The [message layout](/guide/messages-and-layouts): Classic, Modern grouped or Compact columns |
+| The palette nicknames are colored from | The [message layout](/guide/messages-and-layouts): Classic, Modern or Compact columns |
 | The 99 [mIRC](https://www.mirc.com) colors other people's colored text uses | Fonts, text size, line spacing and density |
 | Whether it's a dark or a light theme, which macOS follows for menus and alerts | Avatars, timestamps and their format, and whether nicks are colored at all |
 | Translucency (`vibrancy`) | The member list, link previews, images and videos |
@@ -524,7 +524,7 @@ To propose a theme for Vela's built-in collection, open a [theme submission](htt
 
 1. **No contrast issues.** Every built-in theme passes every [check](#checking-contrast).
 2. **An `author` and a one-sentence `description`**, which appears on the [Built-in themes](/reference/built-in-themes) page.
-3. **Screenshots** of all three message layouts: Classic, Modern grouped and Compact columns.
+3. **Screenshots** of all three message layouts: Classic, Modern and Compact columns.
 4. **For a port of someone else's theme, a license that allows it**, and attribution in [THEME-CREDITS.md](https://github.com/r3volution11/Vela-IRC/blob/main/docs/THEME-CREDITS.md).
 
 A pull request adds the file to `Packages/VelaKit/Sources/VelaTheme/BuiltInThemes/` and a row to the built-in themes table in [THEMES.md](https://github.com/r3volution11/Vela-IRC/blob/main/docs/THEMES.md#built-in-themes). See [CONTRIBUTING.md](https://github.com/r3volution11/Vela-IRC/blob/main/CONTRIBUTING.md).

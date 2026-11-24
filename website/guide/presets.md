@@ -15,9 +15,15 @@ Pick any layout with any style and any density. Each row changes only its own se
 
 <Screenshot src="/screenshots/settings-presets.webp" alt="Settings → Presets: four window layout cards, three message style cards, the density control and a preview of messages" />
 
-The cards are drawn in your own theme and with your own settings, so each one shows what you'd get. The **Preview** under them is your chat as it looks now, with your theme, font and other message settings.
+The cards are drawn in your own theme and with your own settings, so each one shows what you'd get. The **Preview** under them is your chat as it looks now, with your theme, font and other message settings. **Make it yours**, at the bottom, links to **Layout**, **Messages**, **Media** and **Themes** for everything else.
 
-You can also choose from the **View** menu (**Layout**, **Message Style** and **Density**), from the [command palette](/guide/command-palette) (type "layout", "message style" or "density"), and from the top of **Settings → Appearance**.
+The cards work from the keyboard: <kbd>Tab</kbd> goes from row to row, <kbd>←</kbd> and <kbd>→</kbd> move between the cards in a row (<kbd>Home</kbd> and <kbd>End</kbd> go to the first and the last), and <kbd>Space</kbd> or <kbd>Return</kbd> picks one. VoiceOver reads each card as a button, says which one is selected, and says when a row is customized.
+
+You can also choose from:
+
+- the **View** menu: **View → Layout**, **View → Message Style** and **View → Density**, with a checkmark next to the choice your settings match. **View → Layout** also has **Tabs at Bottom** and **Always Show Server Row**, and **View → Message Style** has **Show**, **Collapse** and **Hide Join/Part Messages**.
+- the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>): **Layout: Tabs on Top**, **Message Style: Columns**, **Density: Compact** and the rest. Type "layout", "message style" or "density" to list them.
+- the **Presets** section at the top of **Settings → Appearance**: a menu each for **Window layout**, **Message style** and **Density**, which reads **Customized** when no choice matches. **All presets** brings you here.
 
 ## Window layout
 
@@ -30,13 +36,17 @@ You can also choose from the **View** menu (**Layout**, **Message Style** and **
 
 ### Focus
 
-Focus takes away everything you use to move between channels, so the conversation has the whole window. To switch channels:
+Focus takes away everything you use to move between channels, so the conversation has the whole window, with the channel's name, how many people are in it and its topic above it. Pick its card here, choose **View → Layout → Focus**, or use the **Focus** card under **Navigation** in **Settings → Layout**. To switch channels:
 
-- press <kbd>⌘P</kbd> (or <kbd>⌘K</kbd>) for **Go to Conversation…** and type a few letters of the channel;
+- press <kbd>⌘P</kbd> (or <kbd>⌘K</kbd>) for **Go to Conversation…** and type a few letters of the channel (network consoles are there too);
 - press <kbd>⌘1</kbd>–<kbd>⌘9</kbd> for the network's first nine channels and conversations, in the order the tabs would show them;
-- use **Go → Next Unread** (<kbd>⇧⌥⌘↓</kbd>), **Next Conversation** (<kbd>⌥⌘↓</kbd>) and the rest of the **Go** menu.
+- use **Go → Next Unread** (<kbd>⌥⇧⌘↓</kbd>), **Next Conversation** (<kbd>⌥⌘↓</kbd>), **Next Network** (<kbd>⌃⌘]</kbd>) and the rest of the **Go** menu.
 
-With no sidebar or tabs to show unread counts, **Go to Conversation…** shows them instead, with a badge for mentions, and the [Dock icon's badge](/guide/notifications#dock-badge) and notifications tell you about new messages. **Go → Focus Sidebar** (<kbd>⌥⌘1</kbd>) has nothing to go to in Focus, and F6 goes round the messages, the message box and the member list.
+With no sidebar or tabs to show unread counts, **Go to Conversation…** shows them instead, with a badge for mentions, and the [Dock icon's badge](/guide/notifications#dock-badge) and notifications tell you about new messages. With no **+** button, add a network or join a channel from the **File** menu (<kbd>⇧⌘N</kbd> and <kbd>⌘J</kbd>). What a channel's right-click menu does is in the [command palette](/guide/command-palette) too, such as **Buffer: Mute** and **Channel: Leave #channel**.
+
+**Go → Focus Sidebar** (<kbd>⌥⌘1</kbd>) has nothing to go to in Focus, so <kbd>F6</kbd> goes round the messages, the message box and the member list. **View → Collapse Sidebar** and **Show Channel Title Bar** are for the other layouts, so they're dimmed.
+
+Earlier versions of Vela don't know Focus: if one of them reads your settings.json, it shows the sidebar.
 
 ### Tabs at the bottom
 
@@ -51,6 +61,8 @@ Tabs can also sit at the bottom, above the message box (**View → Layout → Ta
 | **Columns** | The time, a right-aligned column of names, then the message, like [WeeChat](https://weechat.org). |
 
 A style sets the [message layout](/guide/messages-and-layouts) and whether chat uses the monospaced font. Classic IRC turns the monospaced font on; Modern and Columns turn it off. Everything else about messages, like timestamps, avatars, nick colors and join and part messages, stays as you have it.
+
+The **Layout** cards in **Settings → Messages** change only the layout, not the font. So the Classic layout without the monospaced font, or Modern with it, shows as a customized message style.
 
 ## Density
 
@@ -68,7 +80,7 @@ Standard is Vela's default. Compact fits the most messages on screen while keepi
 
 ## Customized
 
-Each row shows which choice your settings match. If you've changed one of a row's settings yourself, say the message spacing in **Settings → Messages**, no card is selected and the row says **Customized**, with what's different and a link to where you can fine-tune it.
+Each row shows which choice your settings match. If you've changed one of a row's settings yourself, say the message spacing in **Settings → Messages**, no card is selected and the row says **Customized**. Under it, a line says what's different ("Customized: 2 pt between lines and 6 pt between messages", say), with **Fine-tune in Layout** or **Fine-tune in Messages** to go where you can change it.
 
 Picking a card again resets just that row's settings and leaves the other rows alone. Your own changes elsewhere, like your font size, media and unread settings, are never touched.
 

@@ -28,7 +28,7 @@ open "vela://open?network=Libera.Chat&channel=%23vela"
 | `vela://open?id=…` | Shows a conversation by its id (the `id` AppleScript gives it). |
 | `vela://join?network=Libera.Chat&channel=%23vela` | Shows the channel if you're in it. Otherwise it opens **Join Channel** with the channel filled in, and you click **Join**. |
 | `vela://join/%23vela` | The same, on the network you're looking at. Channel names in messages are links like this. |
-| `vela://catchup?network=Libera.Chat&channel=%23vela` | Opens the conversation with its [Catch me up](/guide/apple-intelligence#catch-me-up) card. Without a conversation, the unmuted one with the most unread messages. |
+| `vela://catchup?network=Libera.Chat&channel=%23vela` | Opens the conversation with its [Catch me up](/guide/apple-intelligence#catch-me-up) card. Without a conversation, the unmuted one with the most unread messages; with nothing unread, Vela says you're all caught up. If Catch me up is turned off or can't run, it shows the conversation with a note saying why. |
 | `vela://recap?network=Libera.Chat&channel=%23vela&span=today` | Opens a [Recap](/guide/recap). Every parameter is optional: `vela://recap` is every network since your first unread message. |
 | `vela://draft?network=Libera.Chat&channel=%23vela&text=Hello%20all` | Puts the text in the conversation's message box. You press <kbd>Return</kbd> to send it. |
 | `vela://search?q=release%20notes` | Opens [message search](#message-search) with the words. |
@@ -37,12 +37,14 @@ open "vela://open?network=Libera.Chat&channel=%23vela"
 
 - **`network`**: the network's name as Vela shows it (`Libera.Chat`; capitals don't matter) or its id. Leave it out and Vela looks on the network you're looking at first, then on the others. If the name is on more than one of the others, the link says so and does nothing.
 - **`channel`**: `#vela`. Written without its `#`, Vela adds one.
-- **`nick`**: someone's nick, for a private conversation.
+- **`nick`**: someone's nick, for a private conversation. `open` and `draft` start one if there isn't one yet; the others need one that's open.
 - **`id`**: a conversation's id, `<network id>/<name in lowercase>`, as AppleScript's `id of conversation` gives it.
 - **`span`** (Recap): `unread` (the default), `30m`, `1h`, `4h`, `today`, `1d`, `3d` or `1w`.
-- **`person`** (Recap): one person's nick: their messages, messages that name them, and your private conversation with them.
+- **`person`** (Recap): one person's nick: their messages, messages that name them, and your private conversation with them. With a `channel`, the Recap covers that channel's whole network, so it can include your private conversation.
 - **`text`** (draft): up to 4,000 characters. Lines are kept.
-- **`q`** (search): the words to find. Add `network`, or a `channel` or `nick`, to search only there.
+- **`q`** (search): the words to find, up to 500 characters. Add `network`, or a `channel` or `nick`, to search only there.
+
+Give each conversation one way only: `channel`, `nick` or `id`. Names, nicks and networks can be up to 200 characters.
 
 Encode what a URL can't hold as it is: `#` as `%23`, a space as `%20`, `&` as `%26`. A `+` is a plus sign, not a space. If you type `#` as it is (`vela://join/#vela`), Vela understands that too.
 
@@ -53,7 +55,7 @@ Any web page can open a `vela://` link, so links are limited to showing things:
 - **A link never sends a message.** `draft` only fills the message box. It goes after anything you'd already typed there (it never replaces it), and text that starts with `/` is put in as `//…`, so pressing <kbd>Return</kbd> sends it as text rather than running a command. If you're in the middle of typing a command, the text isn't added at all.
 - **A link never joins a channel by itself.** `join` opens **Join Channel**, filled in, for you to confirm. (A channel name you click in a message, inside Vela, still joins straight away.)
 - **A link never hands anything back** to the page or app that opened it.
-- **A link Vela can't follow does nothing** but bring Vela forward with a short note saying why: an unknown channel, a name on several networks, a parameter given twice, or a value with control characters in it.
+- **A link Vela can't follow does nothing** but bring Vela forward with a short note saying why: an unknown channel, a name on several networks, a parameter it doesn't know (such as a tracking tag a site added) or one given twice, or a value that's too long or has control characters in it.
 - **The same link opened again within a second is ignored,** so a page can't pile up windows by opening it over and over.
 
 Text from a link loses anything that could hide what you'd be sending: IRC formatting codes, other control characters and direction overrides.
@@ -85,8 +87,9 @@ The **application** has:
 | `networks` | Your networks, in sidebar order. |
 | `conversations` | Every channel and private conversation, in sidebar order. |
 | `unread conversations` | The ones with something unread (muted ones only when they mention you). |
-| `current conversation` | The channel or private conversation you're looking at, or `missing value`. |
+| `current conversation` | The channel or private conversation you're looking at, or `missing value` (a network console, or nothing). |
 | `scripting version` | The dictionary's version, an integer (now 1). It goes up only when a change could break scripts, the Alfred workflow or the Raycast extension; new terms never change it. |
+| `version` | Vela's own version, such as `"1.5.0"`. |
 
 A **network** has `id` (its UUID, which never changes), `name`, `connected` (true or false), `nickname` (your nick there) and its `conversations`.
 
@@ -102,7 +105,7 @@ A **conversation** has:
 | `joined` | Whether you're in the channel (private conversations always are). |
 | `muted`, `topic` | Whether it's muted, and the channel's topic. |
 
-Name a conversation by its name (`conversation "#vela"`, the network you're looking at first), by its name on a network (`conversation "#vela" of network "Libera.Chat"`) or by its id (`conversation id "…"`). AppleScript's own filters work too:
+Name a conversation by its name, with or without its `#` (`conversation "#vela"`), by its name on a network (`conversation "#vela" of network "Libera.Chat"`) or by its id (`conversation id "…"`). A name alone means the one on the network you're looking at, or else on the first network in the sidebar that has it, so name the network when you're in channels with the same name on several. AppleScript's own filters work too:
 
 ```applescript
 tell application "Vela"
@@ -126,14 +129,14 @@ osascript -e 'tell application "Vela" to get {id, name} of current conversation'
 | --- | --- |
 | `show` *conversation* | Brings Vela to the front, showing the conversation. |
 | `send message` *text* `to` *conversation* | Sends the text. [More below](#sending). |
-| `draft message` *text* `to` *conversation* | Shows the conversation with the text added to its message box, after anything already there. Nothing is sent. |
-| `join` *text* [`on` *network*] [`key` *text*] | Joins a channel without switching to it, and returns it. Without a network: the one you're looking at, or the only one you're connected to. |
-| `catch up` [*conversation*] | Brings Vela to the front with the conversation's Catch me up card. Without one, the unmuted conversation with the most unread messages. |
-| `open recap` [*conversation or network*] [`person` *text*] [`span` *span*] | Opens a Recap. Spans: `since unread` (the default), `last half hour`, `last hour`, `last four hours`, `today`, `last day`, `last three days`, `last week`. |
+| `draft message` *text* `to` *conversation* | Shows the conversation with the text added to its message box, after anything already there, as a [`draft` link](#link-safety) does: up to 4,000 characters, and text that starts with `/` goes in as `//…`. Nothing is sent. |
+| `join` *text* [`on` *network*] [`key` *text*] | Joins a channel (adding `#` if you leave it out) without switching to it, and returns it once the server says you're in, or after a few seconds. Without a network: the one you're looking at, or the only one you're connected to. |
+| `catch up` [*conversation*] | Brings Vela to the front with the conversation's Catch me up card. Without one, the unmuted conversation with the most unread messages; with nothing unread, it does nothing. |
+| `open recap` [*conversation or network*] [`person` *text*] [`span` *span*] | Opens a Recap: the conversation, else the network, else every network. With a `person`, a conversation's Recap covers its whole network. Spans: `since unread` (the default), `last half hour`, `last hour`, `last four hours`, `today`, `last day`, `last three days`, `last week`. |
 | `mark read` *conversation* | Marks everything in it read. |
 | `mark all read` | Marks every channel and conversation read, and returns how many had something unread. |
 | `search` *text* [`on` *conversation or network*] | Brings Vela to the front with message search open on the words. |
-| `set away` [*text*] | Marks you away on every network you're connected to, like `/away`, and returns their names. |
+| `set away` [*text*] | Marks you away on every network you're connected to, like `/away`, and returns their names. Without text, your away message is "Away". |
 | `set back` | Marks you back, like `/back`, and returns the networks' names. |
 
 ```sh
@@ -160,7 +163,7 @@ osascript -e 'tell application "Vela" to send message "Deploy finished ✅" to c
 - **Plain text only.** Text that starts with `/` is sent as it is; it's never run as a command.
 - **Only to a channel you're in, or a private conversation you have open.** It never joins a channel or starts a conversation by itself.
 - **Long text is split** into IRC messages the way the message box splits it, and goes out at the network's pace, like everything you send.
-- **More than 3 lines needs saying so**, as the message box asks before sending a paste that long: add `allowing multiple lines true`. One command sends at most 50 IRC messages.
+- **More than 3 lines needs saying so**, as the message box asks before sending a paste that long: add `allowing multiple lines true`. Blank lines don't count. One command sends at most 50 IRC messages.
 - If the network is still connecting (the script just opened Vela, say), Vela waits up to 10 seconds for it.
 
 ### Errors
@@ -170,7 +173,7 @@ When a command can't do what it's asked, the script gets an error with a message
 | Number | Meaning |
 | --- | --- |
 | -1728 | There's no such network or conversation. |
-| 1001 | The name is on more than one network, or you have several and didn't say which. |
+| 1001 | More than one network has that name, you have several networks and didn't say which, or the command was given more than one conversation. |
 | 1002 | You're not connected to the network (or to any). |
 | 1003 | You're not in that channel. |
 | 1004 | There's nothing to send (or search for). |
@@ -179,7 +182,9 @@ When a command can't do what it's asked, the script gets an error with a message
 | 1007 | Catch me up or Recap is turned off in Settings. |
 | 1008 | Apple Intelligence isn't available. |
 | 1009 | That isn't a channel name. |
-| 1010 | Vela is still starting. Try again in a moment. |
+| 1010 | Vela isn't ready yet. Try again in a moment. |
+
+Anything else comes back with AppleScript's usual numbers. A command sent while Vela is still opening waits until your networks and conversations are back, then runs.
 
 ```applescript
 tell application "Vela"
@@ -202,7 +207,14 @@ Vela has its own [Alfred workflow and Raycast extension](/guide/alfred-and-rayca
 
 ## Message search {#message-search}
 
-**Search Messages…** in the [command palette](/guide/command-palette), `vela://search`, AppleScript's `search` and Spotlight's **Search in Vela** all open the same search at the top of the window. It finds messages in your [saved history](/guide/messages-and-layouts#scrollback-and-history) and in what your open channels and conversations have in memory, newest first. Use ↑ and ↓ to move through the results and <kbd>Return</kbd> to show one in its conversation; <kbd>Esc</kbd> closes it.
+Vela can search your messages. **Go: Search Messages…** in the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>), `vela://search`, AppleScript's `search`, the [Search Messages](/guide/siri-shortcuts#shortcuts) action, Alfred's [`vsearch`](/guide/alfred-and-raycast#alfred-keywords) and Spotlight's [Search in Vela](/guide/siri-shortcuts#spotlight-actions) all open the same search at the top of the window.
+
+- **Type some words.** It finds messages that have all of them (capitals and accents don't matter), in your [saved history](/guide/messages-and-layouts#scrollback-and-history) and in what your open channels and conversations have in memory, newest first, up to 100. Without saved history, it searches what's in memory.
+- **Each result** shows who said it and what, then the channel or conversation, the network and when.
+- **Move** with <kbd>↑</kbd> <kbd>↓</kbd> (or <kbd>Page Up</kbd> <kbd>Page Down</kbd>), and press <kbd>Return</kbd> or click to show the message in its conversation, loading older history to reach it. <kbd>Esc</kbd> closes the search.
+- **A link or a script can search one network or conversation.** The search field then says where, such as "Search messages in #vela".
+
+Network consoles and deleted messages aren't searched. A message whose conversation you've since closed or removed can't be shown; Vela says so.
 
 ## Privacy
 

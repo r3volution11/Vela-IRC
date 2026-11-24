@@ -9,7 +9,7 @@ Instead of a sidebar, Vela can show your networks and channels as **two rows of 
 
 <Screenshot src="/screenshots/preset-tabbed.webp" alt="Tab stacks at the top of the window: a row of networks above a row of channels, with the selected tab merging into the conversation" caption="Tabs at the top." eager />
 
-Turn them on by choosing **Tabs on Top** or **Tabs in Title Bar** in **Settings → Presets** or **View → Layout** (see [Window layout](/guide/presets#window-layout)), or **Tabs** in **Settings → Layout**.
+Turn them on by choosing **Tabs on Top** or **Tabs in Title Bar** in **Settings → Presets** or **View → Layout** (see [Window layout](/guide/presets#window-layout)), or the **Tabs** card under **Navigation** in **Settings → Layout**. The settings in its **Tabs** section apply while you use tabs.
 
 ## Placement
 
@@ -29,13 +29,13 @@ With tabs at the top or the bottom, the channel title bar shows the channel's na
 
 To bring it back, right-click an empty part of the title bar, before or after the tabs, and choose **Show Channel Title Bar**. The tabs go back where they were, at the top or the bottom. If they've been in the title bar since you opened Vela, they go to the top. Right-clicking a tab still opens the tab's own menu.
 
-**View → Show Channel Title Bar** does the same. It has a checkmark while the title bar is showing. Hiding the title bar is the same as choosing **Title bar** for **Placement**, so **Settings → Layout** shows the change. With the sidebar, the title bar always shows.
+**View → Show Channel Title Bar** does the same. It has a checkmark while the title bar is showing. Hiding the title bar is the same as choosing **Title bar** for **Placement**, so **Settings → Layout** shows the change. With the sidebar or the [Focus layout](/guide/presets#focus), the title bar always shows.
 
 With VoiceOver, the channel's name in the title bar has a **Hide Channel Title Bar** action, and the channel tabs in the title bar have **Show Channel Title Bar**.
 
 ## Roundness
 
-**Roundness** goes from square corners (0) to fully rounded pills (1). At about 0.8 and above, tabs become free-standing pills rather than tabs attached to the conversation.
+**Roundness** goes from **Square** (0%) to **Pill** (100%), 35% by default, with a row of sample tabs under it that follows along. From 80% up, tabs become free-standing pills rather than tabs attached to the conversation. In settings.json it's a number from `0` to `1`.
 
 <Screenshot src="/screenshots/tabs-square.webp" alt="Square tabs at the top of the window" caption="Roundness 0: square tabs." />
 
@@ -43,7 +43,7 @@ With VoiceOver, the channel's name in the title bar has a **Hide Channel Title B
 
 ## The network row
 
-The row of network tabs shows each network's connection status and a badge when something there mentions you. With **Network row** set to **Auto** (the default), it's hidden while you're connected to just one network, and that network's name appears on its console tab instead. Choose **Always** to keep it.
+The row of network tabs shows each network's connection status and a badge when something there mentions you. With **Network row** set to **Auto** (the default), it's hidden while you're connected to just one network, and that network's name appears on its console tab instead. Choose **Always** to keep it, or turn on **View → Layout → Always Show Server Row**.
 
 ## More options
 

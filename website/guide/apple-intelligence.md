@@ -16,10 +16,10 @@ Summaries, Recaps and translations are made on your Mac. Vela doesn't send your 
 
 ## What you need {#requirements}
 
-Catch me up and Writing Tools use **Apple Intelligence**, so they need:
+Catch me up, Recap's summaries and Writing Tools use **Apple Intelligence**, so they need:
 
 - a Mac with Apple silicon;
-- Apple Intelligence turned on in **System Settings → Intelligence & Siri**, with its model downloaded (macOS downloads it after you turn Apple Intelligence on);
+- Apple Intelligence turned on in **System Settings → Apple Intelligence & Siri**, with its model downloaded (macOS downloads it after you turn Apple Intelligence on);
 - a language Apple Intelligence supports.
 
 **Translation doesn't need Apple Intelligence**, so it also works on Macs that can't run it. Neither do Catch me up and Recap when they use [a model of your own](/guide/ai-models).
@@ -88,7 +88,9 @@ In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#int
 
 ### Another model {#models}
 
-Catch me up uses the **Default model** in **Settings → AI Providers**, which is **Automatic (Apple)** until you choose another, or the **Model** in its own section of **Settings → Intelligence**. Once you've added a provider, the card's footer says which model wrote the summary, and **Change** writes it again with another. **Buffer: Catch Me Up With…** in the command palette picks the model first. See [AI providers](/guide/ai-models).
+Catch me up uses the **Default model** in **Settings → AI Providers**, which is **Automatic (Apple)** until you choose another, or the **Model** in its own section of **Settings → Intelligence** (there once you've added a provider). The card's footer says which model wrote the summary, such as "Summarized by Claude Opus 5.5 (Anthropic).", and once you've added a provider, **Change** writes it again with another. **Buffer: Catch Me Up With…** in the command palette picks the model first, and Siri uses Catch me up's model too.
+
+The first time Catch me up would use a provider you haven't allowed, Vela shows what it would be sent and waits for your OK. OpenAI, Anthropic and Gemini usually read the whole stretch in one pass, so the parts and timings below are Apple Intelligence's. See [AI providers](/guide/ai-models).
 
 ### What it reads, and how long it takes {#catch-up-limits}
 
@@ -119,7 +121,7 @@ In this version of Vela, every catch-up is summarized on your Mac, and there's n
 
 In settings.json, it's [`intelligence.privateCloudCompute`](/reference/settings#intelligence.privateCloudCompute), which only development builds know for now. It has no effect on macOS 26.
 
-If something goes wrong, the card says why and offers **Try Again**, or **Open System Settings** when Apple Intelligence needs attention. When people are writing in a language Apple Intelligence can't summarize yet, the card says "This conversation's language isn't supported for summaries yet." That's about the conversation, not your Mac's language, so there's nothing to change in System Settings.
+If something goes wrong, the card says why and offers **Try Again**, or **Open System Settings** when Apple Intelligence needs attention. With a model of your own, see [When something goes wrong](/guide/ai-models#problems). When people are writing in a language Apple Intelligence can't summarize yet, the card says "This conversation's language isn't supported for summaries yet." That's about the conversation, not your Mac's language, so there's nothing to change in System Settings.
 
 ::: warning Summaries can contain mistakes
 A summary can misread a conversation or leave out something that matters. Click a topic to read the messages behind it before you act on it.
@@ -166,12 +168,12 @@ Writing Tools leaves commands, nicks, channel names, links and code alone, and i
 
 ## Privacy
 
-- **Catch me up and Recap run on your Mac,** on the Apple Intelligence model that macOS keeps on it. The messages they read and the summaries they write stay on your Mac, and summaries are kept only in memory: a Recap only as long as its window is open.
+- **With Apple Intelligence, Catch me up and Recap run on your Mac,** on the model that macOS keeps on it. The messages they read and the summaries they write stay on your Mac, and summaries are kept only in memory: a Recap only as long as its window is open.
 - **Apple Intelligence reads the messages and your nick,** so the summary can say what was asked of "you". It isn't told the channel's or the network's name, or who a Recap is about.
 - **Private Cloud Compute comes in a later version.** In it, you'll be able to send a catch-up too long for one pass on your Mac to Apple's Private Cloud Compute (macOS 27 or later, off by default): encrypted, used only to write the summary, not stored, and not readable by Apple. See [Private Cloud Compute for long catch-ups](#private-cloud-compute).
 - **Translation runs on your Mac,** with Apple's Translation framework, and so does working out a message's language. Only the language downloads come from Apple, and macOS asks before each one. Translations are kept only in memory.
 - **Writing Tools is Apple's.** Vela hands it the text in the message field, and Apple Intelligence handles it as it does in any app.
-- **Your own models get what Apple Intelligence gets,** and only once you've agreed: the messages you ask about, their nicks and your nick, never a channel's, network's or server's name. They go to the provider you chose, under its policy, or stay on your Mac with Ollama or LM Studio. **Settings → AI Privacy** lists each one, and takes your OK back. See [AI privacy](/guide/ai-privacy).
+- **Your own models get what Apple Intelligence gets,** and only once you've agreed: the messages you ask about, their nicks and your nick, never a channel's, network's or server's name. They go to the provider you chose, under its policy, or stay on your Mac with Ollama or LM Studio. With no provider added, nothing goes to one. **Settings → AI Privacy** lists each one, and takes your OK back. See [AI privacy](/guide/ai-privacy).
 - **There's no Vela server.** None of these features sends anything to Vela's developers.
 
 See [Privacy](/help/privacy) for everything else Vela does and doesn't do.

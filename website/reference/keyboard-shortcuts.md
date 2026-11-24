@@ -83,11 +83,13 @@ With the member list focused (<kbd>⌥⌘4</kbd>). The highlighted person has a 
 
 | Action | Shortcut |
 | --- | --- |
-| Collapse or expand the sidebar | <kbd>⌃⌘S</kbd> |
+| Collapse or expand the sidebar (with the Sidebar layout) | <kbd>⌃⌘S</kbd> |
 | Show or hide the member list | <kbd>⇧⌘M</kbd> |
 | Bigger text | <kbd>⌘+</kbd> |
 | Smaller text | <kbd>⌘−</kbd> |
 | Actual size | <kbd>⌘0</kbd> |
+
+**View → Layout**, **Message Style** and **Density** have no shortcuts. In the command palette, type "layout", "message style" or "density" for **Layout: Focus**, **Message Style: Columns**, **Density: Compact** and the rest. See [Presets](/guide/presets).
 
 ## Networks and channels
 
@@ -180,12 +182,26 @@ In a [Recap](/guide/recap) window:
 | Switch from conversations to commands | type <kbd>></kbd> |
 | Switch back to conversations | <kbd>Backspace</kbd> in the empty field |
 
+## Message search
+
+In [message search](/guide/automation#message-search) (**Go: Search Messages…** in the command palette):
+
+| Action | Shortcut |
+| --- | --- |
+| Move through the results | <kbd>↑</kbd> <kbd>↓</kbd> |
+| Move a page at a time | <kbd>Page Up</kbd> <kbd>Page Down</kbd> |
+| Show the message in its conversation | <kbd>Return</kbd> |
+| Close | <kbd>Esc</kbd> |
+
 ## Settings
 
 | Action | Shortcut |
 | --- | --- |
 | Previous / next section | <kbd>⌘[</kbd> / <kbd>⌘]</kbd> |
 | Move through the sections, when their list has the focus | <kbd>↑</kbd> <kbd>↓</kbd> |
+| In **Settings → Presets**, go from row to row | <kbd>Tab</kbd> |
+| Move between the cards in a row, or to the first or the last | <kbd>←</kbd> <kbd>→</kbd>, <kbd>Home</kbd> <kbd>End</kbd> |
+| Pick the card | <kbd>Space</kbd> or <kbd>Return</kbd> |
 | Close Settings | <kbd>⌘W</kbd> |
 
 ## The settings editor

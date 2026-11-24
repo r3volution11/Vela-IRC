@@ -38,7 +38,7 @@ The bar under the title says what the Recap covers. Change any of it and the Rec
 
 The switch at the right of the bar shows the Recap two ways.
 
-**Summary** is Apple Intelligence's report, in sections:
+**Summary** is the written report, by Apple Intelligence or [a model of your own](#models), in sections:
 
 - **Overview:** a few short bullets on the whole stretch, the most important first.
 - **Topics:** each subject people talked about, with a sentence or two on what was said or decided, who took part, and a link to where it starts.
@@ -46,9 +46,9 @@ The switch at the right of the bar shows the Recap two ways.
 - **Decisions and follow-ups:** what was **Decided**, **Open questions** left unanswered, and **Follow-ups**: who said they'd do what.
 - **Links shared:** videos, images, sites with several links, and other pages, with who shared each one and when. Titles come from link previews Vela has already loaded; nothing is fetched for a Recap.
 
-**For you** and **Links shared** are found on your Mac, so they show at once. The rest fills in as Apple Intelligence writes it: "Reading 340 of 1,200 messages", then "Writing the Recap…". A long stretch is read in parts, and each part's topics show as **Topics so far** until they're combined.
+**For you** and **Links shared** are found on your Mac, so they show at once. The rest fills in as it's written: "Reading 340 of 1,200 messages", then "Writing the Recap…". A long stretch is read in parts, and each part's topics show as **Topics so far** until they're combined.
 
-**Log** shows every matching message as it was written, by conversation and day, in nick colors. It doesn't use Apple Intelligence, so it works on any Mac, and right away. While Apple Intelligence is off or not available, **Summary** is dimmed and says why.
+**Log** shows every matching message as it was written, by conversation and day, in nick colors. It uses no AI model, so it works on any Mac, and right away. While Apple Intelligence is off or not available, and Recap doesn't use a model of your own, a Recap opens on **Log**, and **Summary** is dimmed and says why.
 
 ## Go to the messages {#jump}
 
@@ -56,7 +56,7 @@ Every topic, note and link has a time link, such as **2:14 PM in #vela ↗**. Cl
 
 ## More detail {#more-detail}
 
-Click **More detail** under a topic, a decision, an open question or a follow-up. Apple Intelligence reads just the messages behind it and writes a few more points, in order: what was said, by whom, and what was decided or left open. It's one short pass, so it's quick. **Less detail** hides them again.
+Click **More detail** under a topic, a decision, an open question or a follow-up. The model that wrote the Recap reads just the messages behind it and writes a few more points, in order: what was said, by whom, and what was decided or left open. It's one short pass, so it's quick. **Less detail** hides them again.
 
 **More detail** is ready once the Recap is written.
 
@@ -73,31 +73,36 @@ The buttons at the top of the window:
 
 ## How long it takes {#limits}
 
-- **Up to the latest 2,000 messages are summarized.** That's a few minutes of work on a base M1. For a bigger stretch, the Recap says how many it left out; narrow it to a channel, a person or a shorter span to cover the rest.
+- **Up to the latest 2,000 messages are summarized.** That's a few minutes of work for Apple Intelligence on a base M1; OpenAI, Anthropic and Gemini usually read them in one pass. For a bigger stretch, the Recap says how many it left out; narrow it to a channel, a person or a shorter span to cover the rest.
 - **Up to 10,000 messages are gathered,** the newest, for the log and for **For you** and **Links shared**.
-- **A long Recap asks first,** such as "About 2 minutes on this Mac." Click **Start**, or **Show Log** to read the messages instead. The estimate gets better as Vela learns how fast your Mac is.
+- **A long Recap asks first,** such as "About 2 minutes on this Mac." or "About 2 minutes with Ollama." Click **Start**, or **Show Log** to read the messages instead. The estimate gets better as Vela learns how fast your Mac is.
 - **You can keep using Vela meanwhile.** A Recap runs at low priority, and you can **Stop** it any time.
-- **One summary at a time.** Recaps, More detail and Catch me up take turns with Apple Intelligence, so a Mac with 8 GB of memory never runs two at once. A Recap waiting its turn says "Waiting for another summary to finish…".
+- **One summary at a time.** Recaps, More detail and Catch me up take turns with Apple Intelligence, so a Mac with 8 GB of memory never runs two at once. A Recap waiting its turn says "Waiting for another summary to finish…". A Recap with a model of your own doesn't wait.
 - **Long lines are cut,** and links are reduced to the site they point to, as for Catch me up.
-- **A part Apple Intelligence won't summarize is skipped,** and the Recap says how many messages it left out, instead of failing.
+- **A part the model won't summarize is skipped,** and the Recap says how many messages it left out, instead of failing.
 - **[Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) comes in a later version.** When it does, a long Recap will be able to use it, as a long catch-up will.
 
 ::: warning Recaps can contain mistakes
 A summary can misread a conversation or leave out something that matters. Click through to the messages before you act on something.
 :::
 
+## Another model {#models}
+
+Recap uses the **Default model** in **Settings → AI Providers**, or the **Model** in its own section of **Settings → Intelligence** (there once you've added a provider). The footer of a finished Recap says which model wrote it, such as "Summarized by Claude Opus 5.5 (Anthropic).", and once you've added a provider, **Change Model** writes it again with another; **More detail** asks the model that wrote it. **Buffer: Recap With…** in the command palette picks the model first. A hosted model reads far more at once than the one on your Mac, so a long Recap usually takes one pass. See [AI providers](/guide/ai-models).
+
+The first time a Recap would use a provider you haven't allowed, Vela shows what it would be sent and waits for your OK. Until you give it, the Recap says so, with **Review…**, **Use Apple Intelligence** (where it can run) and **Show Log**. If the provider fails, the Recap says why, with **Try Again**, **Try with Apple Intelligence** (where it can run), **Open Settings** when Settings can fix it, and **Show Log**: Vela never switches to another provider on its own. See [When something goes wrong](/guide/ai-models#problems).
+
 ## What's sent, and what's kept {#privacy}
 
 - **Apple Intelligence reads the messages and your nick,** so it can say what was asked of "you". It isn't told any channel's or network's name, or who the Recap is about. Several conversations are told apart by number only.
 - **It runs on your Mac,** on the Apple Intelligence model that macOS keeps there.
+- **A model of your own gets the same,** and only once you've agreed: the messages and their nicks, and your nick, never a channel's, network's or server's name, or who the Recap is about. See [AI privacy](/guide/ai-privacy).
 - **Nothing is saved.** A Recap lives in its window: closing the window stops it and forgets it. Copy and Save as Markdown are the only ways to keep one.
-- **A log uses no Apple Intelligence at all.**
+- **A log uses no AI model at all.**
 
 See [Privacy](/help/privacy) for everything else.
 
 ## Turn it off {#settings}
-
-**A model of your own.** Recap uses the **Default model** in **Settings → AI Providers**, or the **Model** in its own section of **Settings → Intelligence**. The footer of a finished Recap says which model wrote it, and **Change Model** writes it again with another; **More detail** asks the same model. **Buffer: Recap With…** in the command palette picks the model first. A model of your own reads far more at once than the one on your Mac, so a long Recap usually takes one pass. See [Your own AI models](/guide/ai-models).
 
 **Offer Recap** in **Settings → Intelligence → Recap** turns Recap off everywhere: the Go menu item, the right-click items, the palette commands, the card's **Open Full Recap** and Siri. In settings.json it's [`intelligence.recap`](/reference/settings#intelligence.recap).
 
