@@ -19,6 +19,9 @@ public final class VelaLinkRouter {
         case refused(String)
         /// Ignored: the same link again, straight away.
         case throttled
+        /// Held while Vela is still starting, and followed once its
+        /// networks and conversations are back (a link that launched it).
+        case waiting
     }
 
     private let automation: VelaAutomation
@@ -42,6 +45,17 @@ public final class VelaLinkRouter {
         last = (url, time)
         guard let link = VelaLink.parse(url) else {
             return refuse("Vela doesn't know what to do with that link.")
+        }
+        guard automation.app.isReady else {
+            // A link that launched Vela: its networks and conversations
+            // are still coming back from the message store. Follow it once
+            // they are, as Siri waits (`ready()` starts Vela if need be).
+            let app = automation.app
+            Task { [weak self] in
+                await app.ready()
+                self?.follow(link)
+            }
+            return .waiting
         }
         return follow(link)
     }

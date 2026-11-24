@@ -250,6 +250,18 @@ public final class AppModel: SessionHost {
         prunePreviewCache()
     }
 
+    /// For a script reading networks or conversations, which Cocoa
+    /// scripting can't wait for: starts Vela if it hasn't been (a script
+    /// can launch it before the main window appears), and while it's still
+    /// launching, restores each network's channels and conversations from
+    /// the store now. Their history and unread counts arrive as usual. Does
+    /// nothing once Vela is ready.
+    public func restoreConversationsNow() {
+        guard !isReady else { return }
+        start()
+        for session in sessions { session.restoreBuffersNow() }
+    }
+
     /// Starts Vela if it hasn't been (Siri and Shortcuts can run before the
     /// main window appears) and waits until saved networks and buffers are
     /// restored, and each buffer's recent lines have loaded from the

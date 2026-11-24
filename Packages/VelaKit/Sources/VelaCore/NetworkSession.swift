@@ -277,10 +277,27 @@ public final class NetworkSession: Identifiable {
 
     /// Restores buffers known from previous runs (offline, unjoined).
     /// Detached channels come back detached, and hidden ones stay out of
-    /// the list (``hiddenChannels``).
+    /// the list (``hiddenChannels``). Once: a second call, or one that
+    /// finishes after ``restoreBuffersNow()``, does nothing.
     public func restoreBuffers() async {
-        guard let database else { return }
+        guard let database, !hasRestoredBuffers else { return }
         guard let records = try? await database.buffers(networkID: id) else { return }
+        applyRestoredBuffers(records)
+    }
+
+    /// ``restoreBuffers()`` at once, reading the store on the main thread:
+    /// for a script that asks for conversations while Vela is launching,
+    /// which Cocoa scripting can't wait for.
+    public func restoreBuffersNow() {
+        guard let database, !hasRestoredBuffers, let records = try? database.buffersNow(networkID: id) else { return }
+        applyRestoredBuffers(records)
+    }
+
+    @ObservationIgnored private var hasRestoredBuffers = false
+
+    private func applyRestoredBuffers(_ records: [BufferRecord]) {
+        guard !hasRestoredBuffers else { return }
+        hasRestoredBuffers = true
         for record in records where record.kind != BufferKind.server.rawValue {
             let folded = fold(record.name)
             autoRejoin[folded] = record.autoRejoin

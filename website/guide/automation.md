@@ -22,6 +22,8 @@ Open one from the terminal with `open`, from a browser, or from any app that ope
 open "vela://open?network=Libera.Chat&channel=%23vela"
 ```
 
+A link that opens Vela waits until your networks and conversations are back, then does what it says.
+
 | Link | What it does |
 | --- | --- |
 | `vela://` or `vela://show` | Brings Vela to the front. |
@@ -179,14 +181,14 @@ When a command can't do what it's asked, the script gets an error with a message
 | 1002 | You're not connected to the network (or to any). |
 | 1003 | You're not in that channel. |
 | 1004 | There's nothing to send (or search for). |
-| 1005 | Too many lines without `allowing multiple lines true`, or more than 50 IRC messages. |
+| 1005 | Too many lines without `allowing multiple lines true`, more than 50 IRC messages, a draft over 4,000 characters, or a search over 500. |
 | 1006 | A network console takes commands, not messages. |
 | 1007 | Catch me up or Recap is turned off in Settings. |
-| 1008 | Apple Intelligence isn't available. |
+| 1008 | The model Catch me up uses can't run: Apple Intelligence isn't available, and Catch me up isn't set to [a model of your own](/guide/ai-models). |
 | 1009 | That isn't a channel name. |
 | 1010 | Vela isn't ready yet. Try again in a moment. |
 
-Anything else comes back with AppleScript's usual numbers. A command sent while Vela is still opening waits until your networks and conversations are back, then runs.
+Anything else comes back with AppleScript's usual numbers. A command sent while Vela is still opening waits until your networks and conversations are back, then runs. A script that opens Vela and reads its networks or conversations straight away gets them all; their unread counts may still be catching up for a moment.
 
 ```applescript
 tell application "Vela"

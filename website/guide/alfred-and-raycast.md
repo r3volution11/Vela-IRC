@@ -121,7 +121,7 @@ They then use Vela Dev's bundle id (`io.github.r3volution11.Vela.dev`) and its `
 - **"Vela is still starting."** Vela was just opened and is restoring your networks. Alfred asks again every second; in Raycast, press <kbd>⌘R</kbd> in a moment.
 - **"This workflow needs Vela 1.5 or later"** (or **"This extension needs Vela 1.5 or later"** in Raycast). The workflow and the extension need Vela 1.5 or later. Choose **Vela → Check for Updates…**.
 - **"You're not in #vela" or "You're not connected."** Messages go only to channels you're in and networks you're connected to. Join or reconnect in Vela, or put the text in the message box instead (<kbd>⌘↩</kbd> in Alfred, **Draft in Vela** in Raycast).
-- **Catch me up or Recap says it's turned off, or that Apple Intelligence isn't available.** Turn it on in **Settings → Intelligence**, and see [Apple Intelligence](/guide/apple-intelligence#requirements) or [your own AI models](/guide/ai-models).
+- **Catch me up or Recap says it's turned off, or that Apple Intelligence isn't available.** Turn it on in **Settings → Intelligence**. Without Apple Intelligence, set it to [one of your own AI models](/guide/ai-models) there, and it works from Alfred and Raycast too; see [Apple Intelligence](/guide/apple-intelligence#requirements).
 - **Counts look out of date.** Alfred shows the list it saw last at once, then reads it again if it's more than 5 seconds old. In Raycast, press <kbd>⌘R</kbd>.
 - **No notification from Alfred.** Check that Alfred may post notifications in **System Settings → Notifications**.
 - **The wrong Vela answers.** Check the **App** setting ([Vela Dev](#vela-dev)).

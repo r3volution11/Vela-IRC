@@ -229,7 +229,15 @@ enum ScriptLookup {
 /// The application's elements and properties in Vela's dictionary, as
 /// keys Cocoa scripting reads from `NSApp`.
 extension NSApplication {
-    private var automation: VelaAutomation? { VelaAutomation.shared }
+    /// The running app's automation. A script can launch Vela and ask for
+    /// its conversations before they're back from the message store, and
+    /// Cocoa scripting can't wait: they're restored there and then
+    /// (``AppModel/restoreConversationsNow()``, nothing once Vela's ready).
+    private var automation: VelaAutomation? {
+        guard let automation = VelaAutomation.shared else { return nil }
+        automation.app.restoreConversationsNow()
+        return automation
+    }
 
     /// `networks`, in sidebar order.
     @objc public var velaNetworks: [ScriptNetwork] {
