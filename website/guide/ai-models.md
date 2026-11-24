@@ -19,7 +19,7 @@ A model of your own also works on a Mac that can't run Apple Intelligence (an In
 
 ## Settings → AI Providers {#settings}
 
-<Screenshot src="/screenshots/settings-ai-providers.webp" alt="Settings → AI Providers: a green box saying Apple Intelligence is on, the Default model menu, the Providers section with no providers yet, and On this Mac with links to ollama.com and lmstudio.ai" caption="Settings → AI Providers before you add a provider." />
+<Screenshot src="/screenshots/settings-ai-providers.webp" alt="Settings → AI Providers: a green box saying Apple Intelligence is on, the Default model menu set to Automatic (Apple), the Providers section with no providers yet, and On this Mac with links to ollama.com and lmstudio.ai" caption="Settings → AI Providers before you add a provider." />
 
 Open **Settings → AI Providers** (<kbd>⌘,</kbd>), or run **AI: Manage Providers…** or **Settings: AI Providers** from the [command palette](/guide/command-palette). From top to bottom:
 
