@@ -46,7 +46,7 @@ Focus takes away everything you use to move between channels, so the conversatio
 
 With no sidebar or tabs to show unread counts, **Go to Conversation…** shows them instead, with a badge for mentions, and the [Dock icon's badge](/guide/notifications#dock-badge) and notifications tell you about new messages. With no **+** button, add a network or join a channel from the **File** menu (<kbd>⇧⌘N</kbd> and <kbd>⌘J</kbd>). What a channel's right-click menu does is in the [command palette](/guide/command-palette) too, such as **Buffer: Mute** and **Channel: Leave #channel**.
 
-**Go → Focus Sidebar** (<kbd>⌥⌘1</kbd>) has nothing to go to in Focus, so <kbd>F6</kbd> goes round the messages, the message box and the member list. **View → Collapse Sidebar**, **Show Channel Title Bar** and **View → Layout → Always Show Server Row**, and **Network → Move Channel** and **Move Network**, are for the other layouts, so they're dimmed (and left out of the command palette).
+**Go → Focus Sidebar** (<kbd>⌥⌘1</kbd>) has nothing to go to in Focus, so <kbd>F6</kbd> goes round the messages, the message box and the member list. **View → Collapse Sidebar**, **Show Channel Title Bar**, **View → Layout → Always Show Server Row**, **Network → Move Channel** and **Move Network** are for the other layouts, so they're dimmed, and the command palette leaves them out.
 
 Earlier versions of Vela don't know Focus: if one of them reads your settings.json, it shows the sidebar.
 
