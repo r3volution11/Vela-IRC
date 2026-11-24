@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "sha256": "205087b3bca2ab4c5fee3df73a6fd4b8a736776f8f6d6bfdd7ed3006a8abaced",
-  "source": "local build",
-  "commit": "be17b667fa4c",
+  "source": "https://github.com/r3volution11/vela-alfred-workflow/releases/tag/v1.0.0",
   "updated": "2026-11-23"
 }
