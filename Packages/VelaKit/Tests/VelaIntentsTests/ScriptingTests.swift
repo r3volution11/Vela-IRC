@@ -96,6 +96,19 @@ struct ScriptingTests {
         #expect(libera.valueInVelaConversations(withUniqueID: "\(fixture.oftc.id.uuidString)/#debian") == nil)
     }
 
+    /// `scripting version`, which the Alfred workflow and the Raycast
+    /// extension read before anything else. It answers without the app's
+    /// automation too, as while Vela is starting.
+    @Test func scriptingVersion() async throws {
+        _ = try await fixture()
+        #expect(NSApplication.shared.velaScriptingVersion == 1)
+        #expect(VelaAutomation.scriptingVersion == 1)
+        let shared = VelaAutomation.shared
+        VelaAutomation.shared = nil
+        defer { VelaAutomation.shared = shared }
+        #expect(NSApplication.shared.velaScriptingVersion == 1)
+    }
+
     @Test func unreadConversationsSkipMutedOnesWithoutMentions() async throws {
         let fixture = try await fixture()
         let swift = try #require(fixture.libera.buffer(named: "#swift"))

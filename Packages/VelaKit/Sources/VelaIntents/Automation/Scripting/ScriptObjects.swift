@@ -279,4 +279,9 @@ extension NSApplication {
         guard let buffer = automation?.app.selectedBuffer, buffer.kind != .server else { return nil }
         return ScriptConversation(bufferID: buffer.id)
     }
+
+    /// `scripting version`: the dictionary's version
+    /// (``VelaAutomation/scriptingVersion``). It needs no automation, so it
+    /// answers while Vela is still starting.
+    @objc public var velaScriptingVersion: Int { VelaAutomation.scriptingVersion }
 }

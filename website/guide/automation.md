@@ -86,6 +86,7 @@ The **application** has:
 | `conversations` | Every channel and private conversation, in sidebar order. |
 | `unread conversations` | The ones with something unread (muted ones only when they mention you). |
 | `current conversation` | The channel or private conversation you're looking at, or `missing value`. |
+| `scripting version` | The dictionary's version, an integer (now 1). It goes up only when a change could break scripts, the Alfred workflow or the Raycast extension; new terms never change it. |
 
 A **network** has `id` (its UUID, which never changes), `name`, `connected` (true or false), `nickname` (your nick there) and its `conversations`.
 
@@ -197,6 +198,7 @@ Vela has its own [Alfred workflow and Raycast extension](/guide/alfred-and-rayca
 - **Keep ids, not names.** A conversation's `id` never changes, works in `conversation id "…"` and in `vela://open?id=`, and can't be ambiguous.
 - **Use links to show, AppleScript to act.** A quicklink like `vela://open?network=Libera.Chat&channel=%23{query}` needs no permission. Sending, joining and reading lists need AppleScript.
 - **Asking is cheap.** Reading networks, conversations and their counts goes through what Vela has open, never its database, so a script filter can ask on every keystroke.
+- **Check `scripting version`** if you share your script. It's 1 today, and it only goes up when a term your script uses might be renamed, removed or behave differently, so a script can say "Update Vela" or "Update this script" instead of failing halfway.
 
 ## Message search {#message-search}
 

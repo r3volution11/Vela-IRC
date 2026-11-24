@@ -59,6 +59,14 @@ public final class VelaAutomation {
     /// handed it). Set by the scene layer at launch.
     public static var shared: VelaAutomation?
 
+    /// The AppleScript dictionary's version, its application's `scripting
+    /// version`, which the Alfred workflow and the Raycast extension read.
+    /// Raised only when a change could break scripts, the Alfred workflow
+    /// or the Raycast extension: a term, code or cocoa key removed or
+    /// renamed, or a command that behaves differently. Adding to the
+    /// dictionary never raises it.
+    nonisolated public static let scriptingVersion = 1
+
     public init(app: AppModel, services: IntelligenceServices, presenter: (any AutomationPresenter)? = nil) {
         self.app = app
         self.services = services

@@ -68,6 +68,22 @@ struct ScriptingDictionaryTests {
         }
     }
 
+    /// `scripting version`: a read-only integer on the application, which
+    /// the Alfred workflow and the Raycast extension check. Its name, code
+    /// and key never change.
+    @Test func scriptingVersionProperty() throws {
+        let property = try #require(
+            try nodes("//class-extension[@extends='application']/property[@name='scripting version']").first,
+            "The application has no scripting version"
+        )
+        #expect(attribute(property, "code") == "VScV")
+        #expect(attribute(property, "type") == "integer")
+        #expect(attribute(property, "access") == "r")
+        let key = property.elements(forName: "cocoa").first.flatMap { attribute($0, "key") }
+        #expect(key == "velaScriptingVersion")
+        #expect(NSApplication.instancesRespond(to: Selector(("velaScriptingVersion"))))
+    }
+
     /// Each command class is the command its sdef entry describes.
     @Test func commandsMatchTheirClasses() throws {
         let kinds: [String: ScriptCommandKind] = [

@@ -6,10 +6,17 @@
   (OSAScriptingDefinition); website/guide/automation.md documents it.
 
   It's an interface others build on: never rename a term, a code or a cocoa
-  key, and only add. A command whose direct parameter is a network or a
-  conversation must be in that class's responds-to list too, or Cocoa
-  scripting answers "doesn't understand". Every cocoa class, key and method
-  here is in
+  key, and only add. The Alfred workflow
+  (github.com/r3volution11/vela-alfred-workflow) and the Raycast extension
+  (github.com/r3volution11/vela-raycast-extension) check their terms against
+  this file on main and next. A removal or a rename comes only after both
+  are updated, and raises the application's `scripting version`
+  (VelaAutomation.scriptingVersion), as does any other change that could
+  break a script.
+
+  A command whose direct parameter is a network or a conversation must be
+  in that class's responds-to list too, or Cocoa scripting answers "doesn't
+  understand". Every cocoa class, key and method here is in
   Packages/VelaKit/Sources/VelaIntents/Automation/Scripting/, and
   ScriptingDictionaryTests checks that they match.
 
@@ -67,6 +74,9 @@
 			</property>
 			<property name="current conversation" code="VCur" type="conversation" access="r" description="The channel or private conversation you're looking at (missing value if it's a network console or nothing).">
 				<cocoa key="velaCurrentConversation"/>
+			</property>
+			<property name="scripting version" code="VScV" type="integer" access="r" description="The version of this dictionary. Raised only when a change could break scripts, the Alfred workflow or the Raycast extension.">
+				<cocoa key="velaScriptingVersion"/>
 			</property>
 		</class-extension>
 
