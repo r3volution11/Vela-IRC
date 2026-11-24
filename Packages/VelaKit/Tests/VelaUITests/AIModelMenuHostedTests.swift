@@ -53,15 +53,21 @@ extension LinkSelectionTests {
                 window.orderOut(nil)
                 window.contentView = nil
             }
-            for _ in 0..<3 {
-                try await Task.sleep(for: .milliseconds(50))
+            // SwiftUI builds the menu's accessibility a few turns in, later
+            // still while other UI tests share the main actor.
+            var shown: String?
+            let found = await RunningDeadline.wait(timeout: .seconds(5), every: .milliseconds(50)) {
                 hosting.layoutSubtreeIfNeeded()
+                shown = Self.popUpValue(in: window).value
+                return shown != nil
             }
-            return Self.popUpValue(in: window)
+            if !found { Issue.record("No menu in:\n\(Self.popUpValue(in: window).tree)") }
+            return shown
         }
 
-        /// What VoiceOver reads as the menu's value: the title it shows.
-        private static func popUpValue(in window: NSWindow) -> String? {
+        /// What VoiceOver reads as the menu's value (the title it shows),
+        /// and the accessibility tree it was looked for in.
+        private static func popUpValue(in window: NSWindow) -> (value: String?, tree: String) {
             var found: String?
             var dump: [String] = []
             func visit(_ object: AnyObject, depth: Int) {
@@ -74,8 +80,7 @@ extension LinkSelectionTests {
                 for child in (object.accessibilityChildren?() ?? nil) ?? [] { visit(child as AnyObject, depth: depth + 1) }
             }
             visit(window, depth: 0)
-            if found == nil { Issue.record("No menu in:\n\(dump.joined(separator: "\n"))") }
-            return found
+            return (found, dump.joined(separator: "\n"))
         }
 
         @Test func theDefaultModelShowsAutomaticApple() async throws {

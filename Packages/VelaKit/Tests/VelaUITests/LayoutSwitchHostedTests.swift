@@ -46,12 +46,16 @@ extension LinkSelectionTests {
             defer { NotificationCenter.default.removeObserver(observer) }
 
             hosted.app.settings[.navigationStyle] = style
-            // Longer than the animation was.
+            let widened = await RunningDeadline.wait(timeout: .seconds(5), every: .milliseconds(20)) {
+                hosted.window.contentView?.layoutSubtreeIfNeeded()
+                return list.frame.width > before
+            }
+            #expect(widened, "the list didn't widen")
+            // Then longer than the animation was, for any frames after it.
             for _ in 0..<8 {
                 try await Task.sleep(for: .milliseconds(50))
                 hosted.window.contentView?.layoutSubtreeIfNeeded()
             }
-            #expect(list.frame.width > before, "the list didn't widen")
             #expect(resizes <= 2, "resized \(resizes) times")
         }
     }
