@@ -835,10 +835,6 @@ struct SettingsJSONSessionTests {
 
     /// Polls `condition` until it holds or `timeout` passes.
     private static func waitUntil(timeout: Duration = .seconds(5), _ condition: () -> Bool) async throws {
-        let clock = ContinuousClock()
-        let deadline = clock.now + timeout
-        while !condition(), clock.now < deadline {
-            try await Task.sleep(for: .milliseconds(20))
-        }
+        _ = await RunningDeadline.wait(timeout: timeout, every: .milliseconds(20), until: condition)
     }
 }

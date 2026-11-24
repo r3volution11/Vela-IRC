@@ -172,11 +172,9 @@ struct SendingFollowTests {
 
     /// Whether the message box is empty within `seconds`.
     private func composerEmpties(_ hosted: Hosted, within seconds: Double = 3) async throws -> Bool {
-        let deadline = Date().addingTimeInterval(seconds)
-        while try !composer(hosted).string.isEmpty, Date() < deadline {
-            try await Task.sleep(for: .milliseconds(20))
+        try await RunningDeadline.wait(timeout: .seconds(seconds), every: .milliseconds(20)) {
+            try composer(hosted).string.isEmpty
         }
-        return try composer(hosted).string.isEmpty
     }
 
     /// Which line is the newest: one of yours, or a mention.
@@ -246,16 +244,16 @@ struct SendingFollowTests {
     /// Where the list is once it shows the newest line at the bottom, or
     /// after `seconds`: longer than the list keeps checking for (about 5 s
     /// with its late retries, `BottomSettle`), so a list that's only slow on
-    /// a busy machine gets there, and one still not there is stuck. With the
-    /// whole UI suite sharing the main actor on a 3-core CI runner, 3 s
-    /// wasn't always enough (macOS 27.0, now and then).
+    /// a busy machine gets there, and one still not there is stuck. Counted
+    /// in running time (``RunningDeadline``), since at the start of a CI run
+    /// the main actor goes to other tests' setup for 15 to 30 s at a time.
     static let settleSeconds: Double = 8
 
     private func settled(_ hosted: Hosted, newest: Newest, within seconds: Double = settleSeconds) async throws -> Look {
-        let deadline = Date().addingTimeInterval(seconds)
+        var deadline = RunningDeadline(.seconds(seconds))
         try await Task.sleep(for: .milliseconds(150))
         var look = try look(hosted, for: newest)
-        while !look.showsTheNewestLineAtTheBottom, Date() < deadline {
+        while !look.showsTheNewestLineAtTheBottom, deadline.hasTimeLeft() {
             try await Task.sleep(for: .milliseconds(50))
             look = try self.look(hosted, for: newest)
         }

@@ -223,10 +223,10 @@ struct ComposerLayoutTests {
     /// The layout once `holds` does, or after `seconds` (bar animations
     /// and the list's checks take a fraction of that).
     private func settled(_ hosted: Hosted, within seconds: Double = 2.5, until holds: (Layout) -> Bool) async throws -> Layout {
-        let deadline = Date().addingTimeInterval(seconds)
+        var deadline = RunningDeadline(.seconds(seconds))
         try await Task.sleep(for: .milliseconds(200))
         var layout = try layout(hosted)
-        while !holds(layout), Date() < deadline {
+        while !holds(layout), deadline.hasTimeLeft() {
             try await Task.sleep(for: .milliseconds(50))
             layout = try self.layout(hosted)
         }
