@@ -6,6 +6,7 @@ import CoreGraphics
 import Foundation
 import Testing
 import VelaCore
+import VelaStore
 @testable import VelaUI
 
 @Suite("Scroll pinning")
@@ -352,6 +353,124 @@ struct ClipViewSyncTests {
         #expect(!one)
         let more = sync.needsScroll(reportedMinY: 2618, clipMinY: 2616)
         #expect(more)
+    }
+}
+
+@Suite("The end of the list")
+struct ListEndTests {
+    /// Where the list sits at the bottom, in content coordinates, with the
+    /// space after the last row at 3035–3045 (as in the sending test).
+    private let bottom = ScrollMetrics(visibleMinY: 2575, visibleMaxY: 3045, contentHeight: 3078, containerHeight: 470)
+    private let endFrame = CGRect(x: 0, y: 3035, width: 900, height: 10)
+
+    private func metrics(_ base: ScrollMetrics, contentHeight: CGFloat? = nil, end: ListEnd) -> ScrollMetrics {
+        var metrics = base
+        if let contentHeight { metrics.contentHeight = contentHeight }
+        metrics.contentEnd = end.contentEnd(visibleMinY: metrics.visibleMinY, visibleMaxY: metrics.visibleMaxY)
+        return metrics
+    }
+
+    @Test func aFrameCountsUntilItTurnsOutOfDate() {
+        var end = ListEnd()
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == nil)
+        end.laidOut(at: endFrame)
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == 3045)
+        // Out of the visible rect.
+        #expect(end.contentEnd(visibleMinY: 1000, visibleMaxY: 1470) == nil)
+        // Out of the stack, usually only for a moment: it still counts…
+        end.disappeared()
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == 3045)
+        // …until it's found not to be there.
+        end.markOutOfDate()
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == nil)
+        // Still known, for what it's worth.
+        #expect(end.frame == endFrame)
+        // Back in the stack where it was (no new frame reported): it counts
+        // again, and says so.
+        let countsAgain = end.appeared()
+        #expect(countsAgain)
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == 3045)
+        // In the stack, it's never out of date.
+        end.markOutOfDate()
+        #expect(!end.isOutOfDate)
+        let unchanged = end.appeared()
+        #expect(!unchanged)
+        // Laid out somewhere else, it counts there.
+        end.disappeared()
+        end.markOutOfDate()
+        end.laidOut(at: CGRect(x: 0, y: 4035, width: 883, height: 10))
+        #expect(!end.isOutOfDate)
+        #expect(end.contentEnd(visibleMinY: 3575, visibleMaxY: 4045) == 4045)
+    }
+
+    /// Seen on CI and reproduced by narrowing the list just before a send:
+    /// the rows were measured anew and everything moved down a thousand
+    /// points, the space after the last row out of the stack with it, its
+    /// frame unreported. SwiftUI then reported the list at its old offset,
+    /// where that old frame sat at the bottom of the visible rect: the list
+    /// judged itself at the bottom and stopped, older messages in view. Once
+    /// the space is found missing there, it isn't, and it follows the
+    /// newest line.
+    @Test func aFrameFromBeforeTheRowsMovedIsNotTheBottom() {
+        var end = ListEnd()
+        end.laidOut(at: endFrame)
+        var pinning = ScrollPinning(isPinned: true)
+        let follows = pinning.update(metrics(bottom, end: end), driver: .idle)
+        #expect(!follows)
+
+        // The rows are measured anew: the space leaves the stack, unreported,
+        // and SwiftUI reports the old offset. By the old frame, that's the
+        // bottom…
+        end.disappeared()
+        #expect(ScrollPinning.isAtBottom(metrics(bottom, contentHeight: 4067, end: end)))
+        // …but the space isn't there (`MessageListController.queueEndCheck`).
+        end.markOutOfDate()
+        let moved = metrics(bottom, contentHeight: 4067, end: end)
+        #expect(moved.contentEnd == nil)
+        #expect(!ScrollPinning.isAtBottom(moved))
+        let followsAgain = pinning.update(moved, driver: .idle)
+        #expect(followsAgain)
+        #expect(pinning.isPinned)
+
+        // Once it's laid out at the bottom again, the list is there.
+        end.laidOut(at: CGRect(x: 0, y: 4035, width: 883, height: 10))
+        let there = metrics(ScrollMetrics(visibleMinY: 3575, visibleMaxY: 4045, contentHeight: 4045, containerHeight: 470), end: end)
+        let followsThere = pinning.update(there, driver: .idle)
+        #expect(!followsThere)
+    }
+
+    /// The check a turn later: a space that's back in the stack by then was
+    /// only early; one still missing is out of date, and the list judges
+    /// its position again.
+    @MainActor
+    @Test func theEndIsCheckedOnTheNextTurn() async throws {
+        let session = NetworkSession(config: NetworkConfig(name: "Test", host: "irc.test", nick: "doug"), database: nil)
+        let controller = MessageListController(buffer: session.ensureBuffer(name: "#end", kind: .channel, persist: false), session: session)
+        controller.isShown = true
+        controller.end.laidOut(at: endFrame)
+        _ = controller.scrollGeometryChanged(metrics(bottom, end: controller.end))
+        #expect(controller.metrics.map(ScrollPinning.isAtBottom) == true)
+
+        // Back in time: nothing to do.
+        var judgedAgain = 0
+        controller.end.disappeared()
+        controller.queueEndCheck { judgedAgain += 1 }
+        _ = controller.end.appeared()
+        let early = await RunningDeadline.wait(timeout: .seconds(1)) { judgedAgain > 0 }
+        #expect(!early)
+        #expect(!controller.end.isOutOfDate)
+
+        // Still missing a turn later: out of date, judged again.
+        controller.end.disappeared()
+        controller.queueEndCheck { judgedAgain += 1 }
+        // Asked again before then: one check.
+        controller.queueEndCheck { judgedAgain += 1 }
+        let checked = await RunningDeadline.wait(timeout: .seconds(5)) { judgedAgain > 0 }
+        #expect(checked)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(judgedAgain == 1)
+        #expect(controller.end.isOutOfDate)
+        #expect(controller.contentEnd(in: bottom) == nil)
     }
 }
 

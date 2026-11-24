@@ -107,12 +107,21 @@ struct MessageListView: View {
                 // Room under the last row (and for the typing line), and the
                 // target for scrolling to the bottom. Inside the stack, so
                 // scrolling here lays out the real last rows rather than
-                // estimated space. Where it ends is where the list ends.
+                // estimated space. Where it ends is where the list ends
+                // (`ListEnd`).
                 Color.clear
                     .frame(height: ListEndSpacing.height(typingLine: shownTypingLineHeight))
                     .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named(Self.contentSpace)) }) { frame in
-                        controller.endFrame = frame
+                        controller.end.laidOut(at: frame)
                         endChanged()
+                    }
+                    .onAppear {
+                        if controller.end.appeared() { endChanged() }
+                    }
+                    .onDisappear {
+                        controller.end.disappeared()
+                        // In view, by its frame: make sure it comes back.
+                        if controller.metrics?.contentEnd != nil { checkEnd() }
                     }
                     .id(DisplayItemID.end)
                     .accessibilityHidden(true)
@@ -170,11 +179,13 @@ struct MessageListView: View {
             }
         }
         .onAppear {
+            controller.isShown = true
             controller.trackLines()
             listOpened(items)
             linkToken = messageListLink?.register(buffer.id) { scroll in keyboardScroll(scroll) }
         }
         .onDisappear {
+            controller.isShown = false
             controller.bottomCheck?.cancel()
             if let linkToken { messageListLink?.unregister(buffer.id, token: linkToken) }
         }
@@ -256,6 +267,7 @@ struct MessageListView: View {
     /// Feeds where the list is to the pinning logic, which may ask to follow
     /// the newest line.
     private func positionChanged(_ metrics: ScrollMetrics) {
+        if metrics.contentEnd != nil, !controller.end.isLaidOut { checkEnd() }
         let follow = controller.scrollGeometryChanged(metrics)
         if follow == .scrollAnew, !controller.isUserScrolling {
             // The list got shorter (the composer grew a line). Right away,
@@ -284,9 +296,17 @@ struct MessageListView: View {
         controller.queueClipCheck { scrollToBottom(anew: true) }
     }
 
-    /// The space after the last row was laid out somewhere else. That can
-    /// happen without the scroll geometry changing (rows above it measured
-    /// at other heights than estimated), so the position is judged again.
+    /// Judged by where the space after the last row was last laid out, with
+    /// the stack not holding it: makes sure, on the next turn, that the
+    /// space is there (`ListEnd`).
+    private func checkEnd() {
+        controller.queueEndCheck { endChanged() }
+    }
+
+    /// The space after the last row was laid out somewhere else, or where
+    /// it was turned out to be out of date. That can happen without the
+    /// scroll geometry changing (rows above it measured at other heights
+    /// than estimated), so the position is judged again.
     private func endChanged() {
         guard var metrics = controller.metrics else { return }
         let end = controller.contentEnd(in: metrics)
@@ -383,10 +403,14 @@ struct MessageListView: View {
     ///
     /// Only with no rows in view: while the end is out of view its frame is
     /// where it was last laid out, and rows measured above it since (a
-    /// channel opening) can have moved it down. Rows in view mean the list
-    /// isn't past its end.
+    /// channel opening, the list getting narrower) can have moved it, by a
+    /// thousand points or more. Rows in view mean the list isn't past its
+    /// end. Landing where that frame was doesn't prove the list got there
+    /// either: if the space isn't laid out there, its frame is out of date
+    /// (`ListEnd`), and the list goes to it by id instead.
     private func scrollBackFromPastTheEnd() -> Bool {
-        guard let end = controller.endFrame, let metrics = controller.metrics, !metrics.fitsWithoutScrolling else { return false }
+        guard !controller.end.isOutOfDate, let end = controller.end.frame, let metrics = controller.metrics,
+              !metrics.fitsWithoutScrolling else { return false }
         // Partly past it: the end is in view (so where it is is current),
         // with empty space under it.
         let partly = metrics.contentEnd != nil && metrics.distancePastEnd > 1

@@ -47,6 +47,10 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 - **A Raycast extension**, coming to the Raycast Store, and on [GitHub](https://github.com/r3volution11/vela-raycast-extension) until then: **Search Conversations**, in Mentions, Unread and All sections, with actions to open, catch up, recap, write a message, draft it in Vela, mark read and copy a link; **Send Message**; **Catch Me Up**; and, if you turn it on, **Unread Conversations** in the menu bar with your mentions. See [Alfred & Raycast](https://velairc.app/guide/alfred-and-raycast#raycast).
 - **Neither opens Vela just to list things,** and both say what's wrong in words: Vela isn't running (with a way to open it), isn't allowed to be controlled (with a way to the setting), isn't connected, you're not in that channel, or Catch me up is turned off. Either can talk to Vela Dev instead, for working on Vela. Neither has any tracking.
 
+### Chat and messages
+
+- The message list no longer stops short of the newest messages when it gets narrower or wider (a scroll bar appearing, the window resized) just as you send. It could show older messages until the next one arrived.
+
 ## 1.1.0 - 2026-11-21
 
 Vela 1.1 brings an updater, the whole window from the keyboard, and a choice about saving your chat history. The highlights:

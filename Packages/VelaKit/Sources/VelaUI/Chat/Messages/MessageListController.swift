@@ -50,9 +50,8 @@ final class MessageListController {
     /// controller every time the list's parent runs and keeps only the first.
     @ObservationIgnored var lineTracker: LineTracker?
     @ObservationIgnored var topVisibleID: DisplayItemID?
-    /// Where the space after the last row was last laid out, in content
-    /// coordinates.
-    @ObservationIgnored var endFrame: CGRect?
+    /// Where the space after the last row is (`ListEnd`).
+    @ObservationIgnored var end = ListEnd()
     /// The checks that a scroll to the bottom got there
     /// (`MessageListView.scrollToBottom`).
     @ObservationIgnored var bottomCheck: Task<Void, Never>?
@@ -69,12 +68,17 @@ final class MessageListController {
     @ObservationIgnored private var clipBottomCheckQueued = false
     @ObservationIgnored private var clipSync = ClipViewSync()
     @ObservationIgnored private var clipCheckQueued = false
+    @ObservationIgnored private var endCheckQueued = false
     /// The user is dragging or flinging the list (trackpad or wheel gesture).
     @ObservationIgnored private(set) var isUserScrolling = false
     @ObservationIgnored private var programmaticScrollEnds = Date.distantPast
     @ObservationIgnored private var programmaticScrollGeneration = 0
     @ObservationIgnored private var followQueued = false
     @ObservationIgnored private var followsAnew = false
+    /// The list is on screen: between its `onAppear` and `onDisappear`. A
+    /// list on its way out, its space after the last row going with it,
+    /// doesn't check that space (`queueEndCheck`).
+    @ObservationIgnored var isShown = false
 
     var isPinnedToBottom: Bool { pinning.isPinned }
     var metrics: ScrollMetrics? { pinning.metrics }
@@ -99,11 +103,10 @@ final class MessageListController {
     private(set) var anchorsToBottom = true
 
     /// Where the rows end (`ScrollMetrics.contentEnd`) when the space after
-    /// the last row is laid out in the visible rect of `metrics`; nil when
-    /// it's somewhere else, or nowhere.
+    /// the last row was laid out in the visible rect of `metrics`; nil when
+    /// it's somewhere else, or nowhere, or that's out of date (`ListEnd`).
     func contentEnd(in metrics: ScrollMetrics) -> CGFloat? {
-        guard let endFrame, endFrame.maxY > metrics.visibleMinY, endFrame.minY < metrics.visibleMaxY else { return nil }
-        return endFrame.maxY
+        end.contentEnd(visibleMinY: metrics.visibleMinY, visibleMaxY: metrics.visibleMaxY)
     }
 
     /// How the list should follow new scroll geometry.
@@ -179,6 +182,25 @@ final class MessageListController {
                   let metrics = self.metrics, ScrollPinning.isAtBottom(metrics),
                   let clipMinY = self.scrollView?.contentView.bounds.minY else { return }
             if self.clipSync.needsScroll(reportedMinY: metrics.visibleMinY, clipMinY: clipMinY) { scrollToBottom() }
+        }
+    }
+
+    /// The list was just judged by where the space after the last row was
+    /// last laid out, with the stack not holding that space (`ListEnd`). If
+    /// it still doesn't on the next main-actor turn, with that frame still
+    /// in view, the frame is out of date, and `endIsOutOfDate` judges the
+    /// position again without it. Once per turn however many changes ask;
+    /// never while the space is laid out, as it is at the bottom.
+    func queueEndCheck(_ endIsOutOfDate: @escaping @MainActor () -> Void) {
+        guard !endCheckQueued, !end.isLaidOut, !end.isOutOfDate else { return }
+        endCheckQueued = true
+        Task { [weak self] in
+            guard let self else { return }
+            self.endCheckQueued = false
+            guard self.isShown, !self.end.isLaidOut, let metrics = self.metrics,
+                  self.contentEnd(in: metrics) != nil else { return }
+            self.end.markOutOfDate()
+            endIsOutOfDate()
         }
     }
 

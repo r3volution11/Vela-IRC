@@ -413,4 +413,33 @@ struct SendingFollowTests {
             }
         }
     }
+
+    /// The list getting narrower or wider just before a send: a scroll bar
+    /// appearing (always-shown scroll bars, as with a mouse), or the window
+    /// resized. Every row is measured anew, and here everything
+    /// below the rows in view moves by a thousand points, the space after
+    /// the last row with it, out of view and unreported. The list used to
+    /// take that space's old frame at its word: it scrolled back to it,
+    /// found it at the bottom and stopped there, older messages in view,
+    /// until the next line came in (`ListEnd`).
+    @Test(arguments: [-17.0, 17.0])
+    func aWidthChangeJustBeforeASendKeepsYourLineInView(_ change: Double) async throws {
+        let hosted = try host(Setup(preset: "tabbed"))
+        defer { hosted.close() }
+        try await Task.sleep(for: .milliseconds(800))
+        let opened = try await settled(hosted, newest: .mention, within: 10)
+        try #require(opened.showsTheNewestLineAtTheBottom, "the list didn't open at the newest line within 10 s: \(opened)")
+
+        var frame = hosted.window.frame
+        frame.size.width += change
+        hosted.window.setFrame(frame, display: false)
+        // Your line comes back on the next turn, as the server echoes it.
+        try await perform(hosted, [.send()], echoMessage: true)
+        let after = try await settled(hosted, newest: .mine)
+        #expect(after.showsTheNewestLineAtTheBottom, "\(change) pt wider: your line isn't at the bottom after \(Int(Self.settleSeconds)) s: \(after)")
+
+        let next = try await perform(hosted, [.incoming(mention: true)], echoMessage: true)
+        let followed = try await settled(hosted, newest: next)
+        #expect(followed.showsTheNewestLineAtTheBottom, "\(change) pt wider: the list stopped following: \(followed)")
+    }
 }

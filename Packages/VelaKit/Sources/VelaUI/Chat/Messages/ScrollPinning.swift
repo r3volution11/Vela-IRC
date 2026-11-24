@@ -53,6 +53,75 @@ nonisolated struct ScrollMetrics: Equatable, Sendable {
     var fitsWithoutScrolling: Bool { contentHeight <= containerHeight + 1 }
 }
 
+// MARK: The end of the list
+
+/// Where the space after the last row (`DisplayItemID.end`) is: where it
+/// was last laid out, whether the lazy stack holds it now, and whether that
+/// frame is known to be out of date.
+///
+/// Its frame is in content coordinates, and those move whenever rows above
+/// it are measured anew. When the list gets narrower or wider (a scroll bar
+/// appearing, the window resized), rows that had been estimated end up at
+/// their real height, and in a long channel everything below moves by a
+/// thousand points or more. The stack reports the space's new frame only
+/// while it holds it, so once it's out of view, its last frame can be far
+/// from where it is.
+///
+/// Taken at its word, such a frame put the list's end where older rows now
+/// were. The list scrolled there (`MessageListView.scrollBackFromPastTheEnd`),
+/// found that frame at the bottom of its visible rect, judged itself at the
+/// bottom and stopped, showing older messages until the next line came in.
+///
+/// A frame in the visible rect while the stack doesn't hold the space is
+/// usually just early: scrolled back into view, the space is laid out a
+/// moment after the scroll is reported. Still out of the stack on the next
+/// turn, it isn't there at all (`MessageListController.queueEndCheck`): its
+/// frame no longer counts as where the list ends (`contentEnd`), and the
+/// list goes to the space by id.
+nonisolated struct ListEnd: Equatable, Sendable {
+    /// Where the space was last laid out, in content coordinates.
+    private(set) var frame: CGRect?
+    /// The lazy stack holds the space: its frame is current.
+    private(set) var isLaidOut = false
+    /// The space wasn't in the stack where its frame put it in view.
+    private(set) var isOutOfDate = false
+
+    /// The space was laid out at `frame`.
+    mutating func laidOut(at frame: CGRect) {
+        self.frame = frame
+        isLaidOut = true
+        isOutOfDate = false
+    }
+
+    /// The stack took the space in again. If it's somewhere else now, its
+    /// new frame is reported too (`laidOut(at:)`). Returns whether its frame
+    /// counts again, having been out of date.
+    mutating func appeared() -> Bool {
+        isLaidOut = true
+        defer { isOutOfDate = false }
+        return isOutOfDate
+    }
+
+    /// The stack let the space go: from now on, rows measured above it can
+    /// move it without a word.
+    mutating func disappeared() {
+        isLaidOut = false
+    }
+
+    /// The space isn't in the stack, though its frame says it's in view.
+    mutating func markOutOfDate() {
+        if !isLaidOut { isOutOfDate = true }
+    }
+
+    /// The bottom of the space (`ScrollMetrics.contentEnd`) while its frame
+    /// is between `visibleMinY` and `visibleMaxY`; nil when it's elsewhere,
+    /// or out of date.
+    func contentEnd(visibleMinY: CGFloat, visibleMaxY: CGFloat) -> CGFloat? {
+        guard !isOutOfDate, let frame, frame.maxY > visibleMinY, frame.minY < visibleMaxY else { return nil }
+        return frame.maxY
+    }
+}
+
 // MARK: Pinning
 
 /// Decides when the message list follows the newest line.
