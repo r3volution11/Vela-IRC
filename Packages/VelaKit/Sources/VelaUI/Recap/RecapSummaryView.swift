@@ -123,7 +123,7 @@ struct RecapSummaryView: View {
                             .buttonStyle(ThemedButtonStyle())
                     }
                     if let uiState {
-                        Button("Manage Models…") { AIModelActions.openSettings(uiState: uiState, openSettings: openSettings) }
+                        Button("Manage Providers…") { AIModelActions.openSettings(uiState: uiState, openSettings: openSettings) }
                             .buttonStyle(ThemedButtonStyle())
                     }
                 }
@@ -135,7 +135,7 @@ struct RecapSummaryView: View {
             RecapNoteCallout(
                 systemImage: "clock",
                 text: estimate(plan),
-                detail: "Apple Intelligence reads \(RecapFormat.messages(min(session.input?.lineCount ?? 0, RecapLimits.summaryLines))) in \(plan.passes) passes. You can keep using Vela meanwhile, and Stop any time. The log is ready now."
+                detail: Self.confirmationDetail(plan, messages: min(session.input?.lineCount ?? 0, RecapLimits.summaryLines))
             ) {
                 HStack(spacing: 8) {
                     Button("Start") { session.confirm() }
@@ -201,6 +201,18 @@ struct RecapSummaryView: View {
 
     /// "About 2 minutes on this Mac", with Private Cloud Compute, or with
     /// one of your providers.
+    /// What asking before a long Recap says: the model that will read it,
+    /// Apple Intelligence or yours ("Claude Opus 5.5 (Anthropic) reads
+    /// 2,000 messages in 3 passes…").
+    static func confirmationDetail(_ plan: RecapPlan, messages: Int) -> String {
+        let reader = switch plan.venue {
+        case .onDevice, .privateCloudCompute: "Apple Intelligence"
+        case .provider(let label): label.title
+        }
+        let passes = plan.passes == 1 ? "in one pass" : "in \(plan.passes) passes"
+        return "\(reader) reads \(RecapFormat.messages(messages)) \(passes). You can keep using Vela meanwhile, and Stop any time. The log is ready now."
+    }
+
     private func estimate(_ plan: RecapPlan) -> String {
         let place = switch plan.venue {
         case .onDevice: "on this Mac"

@@ -130,9 +130,20 @@ struct RecapUITests {
         #expect(notes[0].hasPrefix("Vela has #vela back to "))
         #expect(notes[0].contains("Save message history is off"))
         #expect(notes[1] == "Shows the newest 10,000 of 12,000 matching messages.")
-        #expect(notes[2].hasPrefix("Apple Intelligence reads the latest 2,000 of these 2,100 messages."))
+        #expect(notes[2].hasPrefix("The summary reads the latest 2,000 of these 2,100 messages."))
         // A log reads them all.
         #expect(RecapActions.notes(for: input, output: .log, format: format).count == 2)
+    }
+
+    /// Asking before a long Recap names the model that will read it.
+    @Test func askingFirstNamesTheModel() {
+        let apple = RecapPlan(passes: 4, transcriptTokens: 20_000, estimatedSeconds: 120)
+        #expect(RecapSummaryView.confirmationDetail(apple, messages: 2_000).hasPrefix("Apple Intelligence reads 2,000 messages in 4 passes."))
+        let label = AIModelLabel(providerID: "ollama", providerName: "Ollama", modelID: "llama3", modelName: "llama3")
+        let provider = RecapPlan(passes: 1, transcriptTokens: 20_000, estimatedSeconds: 90, venue: .provider(label))
+        let detail = RecapSummaryView.confirmationDetail(provider, messages: 2_000)
+        #expect(detail.hasPrefix("llama3 (Ollama) reads 2,000 messages in one pass."))
+        #expect(!detail.contains("Apple Intelligence"))
     }
 
     @Test func theCardSaysWhatARecapAdds() {

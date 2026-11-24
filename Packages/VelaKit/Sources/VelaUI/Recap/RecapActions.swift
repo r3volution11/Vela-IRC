@@ -118,7 +118,7 @@ enum RecapActions {
             notes.append("Shows the newest \(RecapLimits.gatheredLines.formatted()) of \(input.matchingLines.formatted()) matching messages.")
         }
         if output == .summary, input.lineCount > RecapLimits.summaryLines {
-            notes.append("Apple Intelligence reads the latest \(RecapLimits.summaryLines.formatted()) of these \(input.lineCount.formatted()) messages. Narrow the Recap to a channel, a person or a shorter span to cover the rest.")
+            notes.append("The summary reads the latest \(RecapLimits.summaryLines.formatted()) of these \(input.lineCount.formatted()) messages. Narrow the Recap to a channel, a person or a shorter span to cover the rest.")
         }
         return notes
     }

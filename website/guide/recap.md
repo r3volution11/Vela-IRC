@@ -77,7 +77,7 @@ The buttons at the top of the window:
 
 - **Up to the latest 2,000 messages are summarized.** That's a few minutes of work for Apple Intelligence on a base M1; OpenAI, Anthropic and Gemini usually read them in one pass. For a bigger stretch, the Recap says how many it left out; narrow it to a channel, a person or a shorter span to cover the rest.
 - **Up to 10,000 messages are gathered,** the newest, for the log and for **For you** and **Links shared**.
-- **A long Recap asks first,** such as "About 2 minutes on this Mac." or "About 2 minutes with Ollama." Click **Start**, or **Show Log** to read the messages instead. The estimate gets better as Vela learns how fast your Mac is.
+- **A long Recap asks first,** such as "About 2 minutes on this Mac." or "About 2 minutes with Ollama.", and says which model reads how many messages ("llama3 (Ollama) reads 2,000 messages in one pass."). Click **Start**, or **Show Log** to read the messages instead. The estimate gets better as Vela learns how fast your Mac is.
 - **You can keep using Vela meanwhile.** A Recap runs at low priority, and you can **Stop** it any time.
 - **One summary at a time.** Recaps, More detail and Catch me up take turns with Apple Intelligence, so a Mac with 8 GB of memory never runs two at once. A Recap waiting its turn says "Waiting for another summary to finish…". A Recap with a model of your own doesn't wait.
 - **Long lines are cut,** and links are reduced to the site they point to, as for Catch me up.
