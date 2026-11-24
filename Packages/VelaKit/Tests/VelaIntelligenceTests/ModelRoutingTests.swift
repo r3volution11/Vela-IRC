@@ -329,7 +329,7 @@ struct ModelRoutingTests {
         off.enabled = false
         harness.models.updateProvider(off)
         let sections = harness.models.menuSections()
-        #expect(sections.map(\.id) == ["apple", "openai", "anthropic"])
+        #expect(sections.map(\.id) == [.apple, .provider("openai"), .provider("anthropic")])
         #expect(sections[0].items.map(\.choice) == [.automatic, .apple(.onDevice)])
         #expect(sections[2].items.first?.choice == .provider(providerID: "anthropic", modelID: "claude-opus-5-5"))
         #expect(sections[2].items.first?.isRecommended == true)

@@ -65,8 +65,20 @@ nonisolated public struct AIModelMenuItem: Identifiable, Hashable, Sendable {
 
 /// A group in a model menu: Apple's models, or one provider's.
 nonisolated public struct AIModelMenuSection: Identifiable, Hashable, Sendable {
-    /// `"apple"` or the provider's id.
-    public var id: String
+    /// Whose models a section lists.
+    ///
+    /// Not a string on purpose: a model setting's value is one, and
+    /// Automatic's is `"apple"`. A SwiftUI `Picker` tags each view of a
+    /// `ForEach` with its id when the types match, so a section with that
+    /// id was taken for the choice, and the menu showed "Apple" instead of
+    /// "Automatic (Apple)".
+    public enum Source: Hashable, Sendable {
+        case apple
+        /// A provider, by its id.
+        case provider(String)
+    }
+
+    public var id: Source
     public var title: String
     public var items: [AIModelMenuItem]
 }
@@ -213,12 +225,12 @@ public final class AIModels {
         if offersPrivateCloudCompute {
             apple.append(AIModelMenuItem(choice: .apple(.privateCloudCompute), title: Self.title(for: .apple(.privateCloudCompute)), isRecommended: false))
         }
-        var sections = [AIModelMenuSection(id: AIModelChoice.appleProviderID, title: "Apple", items: apple)]
+        var sections = [AIModelMenuSection(id: .apple, title: "Apple", items: apple)]
         for entry in enabledProviders {
             let items = catalog.models(for: entry).map { model in
                 AIModelMenuItem(choice: .provider(providerID: entry.id, modelID: model.id), title: model.name, isRecommended: model.isRecommended)
             }
-            sections.append(AIModelMenuSection(id: entry.id, title: entry.name, items: items))
+            sections.append(AIModelMenuSection(id: .provider(entry.id), title: entry.name, items: items))
         }
         return sections
     }
