@@ -622,9 +622,10 @@ struct MessageListView: View {
     /// as the list changes size, and on macOS 26 it misplaces it (the
     /// composer growing three lines moved a reader who'd jumped back by four
     /// messages). Only if nothing else has taken over the position since.
+    /// Where the clip view shows the list (`ClipViewSync.shown`).
     private func releaseJumpTarget(_ id: DisplayItemID) {
         guard position.viewID(type: DisplayItemID.self) == id, !controller.isPinnedToBottom,
-              !controller.isUserScrolling, let metrics = controller.metrics else { return }
+              !controller.isUserScrolling, let metrics = controller.shownMetrics else { return }
         position.scrollTo(y: metrics.visibleMinY)
     }
 
@@ -652,8 +653,14 @@ struct MessageListView: View {
     /// A page up or down, less `KeyboardPaging.overlap`, so the line at the
     /// edge stays in view. A page down that reaches the newest line jumps
     /// to the present, which follows new lines again.
+    ///
+    /// From where the clip view shows the list, the page the reader sees.
+    /// SwiftUI's report can be out of step with it (`ClipViewSync.shown`),
+    /// and a page up from there and a page back down stopped short of the
+    /// bottom it started from: the newest line under the bottom edge, and
+    /// the list no longer following.
     private func scrollPage(up: Bool, glides: Bool) {
-        guard let metrics = controller.metrics, !metrics.fitsWithoutScrolling else { return }
+        guard let metrics = controller.shownMetrics, !metrics.fitsWithoutScrolling else { return }
         let page = KeyboardPaging.distance(containerHeight: metrics.containerHeight)
         if up {
             guard metrics.visibleMinY > 0.5 else { return }
@@ -668,7 +675,7 @@ struct MessageListView: View {
     /// Home: the oldest line loaded, at the top, from where older history
     /// loads as it does when scrolling there.
     private func scrollToTop(glides: Bool) {
-        guard let metrics = controller.metrics, !metrics.fitsWithoutScrolling, metrics.visibleMinY > 0.5 else { return }
+        guard let metrics = controller.shownMetrics, !metrics.fitsWithoutScrolling, metrics.visibleMinY > 0.5 else { return }
         controller.unpin()
         // Long animated scrolls through a lazy stack land unreliably (rows
         // are estimated); animate only short trips.

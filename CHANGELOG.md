@@ -58,6 +58,7 @@ Vela 1.5 brings presets you mix yourself, AI models of your own, and Vela in the
 ### Chat and messages
 
 - The message list no longer stops short of the newest messages when it gets narrower or wider (a scroll bar appearing, the window resized) just as you send. It could show older messages until the next one arrived.
+- On macOS 26, Page Up and then Page Down in the message box bring the messages back to the newest one again. Page Up could go further than a page, and Page Down then stopped short, with the newest message under the bottom edge and the list no longer following new ones.
 
 ## 1.1.0 - 2026-11-21
 

@@ -354,6 +354,34 @@ struct ClipViewSyncTests {
         let more = sync.needsScroll(reportedMinY: 2618, clipMinY: 2616)
         #expect(more)
     }
+
+    /// Seen on macOS 26 under load: SwiftUI reported the list at 4472,
+    /// 74 pt short of the bottom, while the clip view showed the bottom at
+    /// 4545.5. Where the list is shown, it's at the bottom, and a page up
+    /// from there is a page from what the reader sees.
+    @Test func theListIsWhereTheClipViewShowsIt() {
+        var end = ListEnd()
+        end.laidOut(at: CGRect(x: 0, y: 5070.5, width: 883, height: 10))
+        var reported = ScrollMetrics(visibleMinY: 4472, visibleMaxY: 5007, contentHeight: 5081, containerHeight: 535)
+        reported.contentEnd = end.contentEnd(visibleMinY: reported.visibleMinY, visibleMaxY: reported.visibleMaxY)
+        #expect(!ScrollPinning.isAtBottom(reported))
+        #expect(reported.distanceFromBottom == 74)
+
+        let shown = ClipViewSync.shown(reported, clipMinY: 4545.5, end: end)
+        #expect(shown.visibleMinY == 4545.5)
+        #expect(shown.visibleMaxY == 5080.5)
+        #expect(shown.contentEnd == 5080.5)
+        #expect(ScrollPinning.isAtBottom(shown))
+        #expect(shown.contentHeight == reported.contentHeight)
+        #expect(shown.containerHeight == reported.containerHeight)
+
+        // In step (within a point), the report stands.
+        #expect(ClipViewSync.shown(reported, clipMinY: 4472.5, end: end) == reported)
+        // Out of date, the end's frame says nothing about where the list ends.
+        end.disappeared()
+        end.markOutOfDate()
+        #expect(ClipViewSync.shown(reported, clipMinY: 4545.5, end: end).contentEnd == nil)
+    }
 }
 
 @Suite("The end of the list")

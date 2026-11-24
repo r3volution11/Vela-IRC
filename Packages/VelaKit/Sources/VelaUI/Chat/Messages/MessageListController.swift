@@ -83,6 +83,15 @@ final class MessageListController {
     var isPinnedToBottom: Bool { pinning.isPinned }
     var metrics: ScrollMetrics? { pinning.metrics }
 
+    /// `metrics` where the clip view shows the list, which SwiftUI's
+    /// reports can fall out of step with (`ClipViewSync.shown`): what the
+    /// reader sees, for scrolls they ask for relative to it.
+    var shownMetrics: ScrollMetrics? {
+        guard let metrics else { return nil }
+        guard let clipMinY = scrollView?.contentView.bounds.minY else { return metrics }
+        return ClipViewSync.shown(metrics, clipMinY: clipMinY, end: end)
+    }
+
     var scrollDriver: ScrollPinning.Driver {
         if Date() < programmaticScrollEnds { return .programmatic }
         return isUserScrolling ? .user : .idle

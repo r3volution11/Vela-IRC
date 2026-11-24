@@ -413,6 +413,25 @@ nonisolated struct ClipViewSync: Equatable, Sendable {
     mutating func observe(reportedMinY: CGFloat, clipMinY: CGFloat) {
         if Self.agree(reportedMinY: reportedMinY, clipMinY: clipMinY) { resynced = nil }
     }
+
+    /// `reported` as the clip view at `clipMinY` shows the list: what the
+    /// reader sees. The visible rect is moved there, and where the rows end
+    /// (`ScrollMetrics.contentEnd`) is judged in it from `end`.
+    ///
+    /// The report can also be the one out of step. On macOS 26 SwiftUI
+    /// reported the list 74 pt short of the bottom while the clip view
+    /// showed the bottom, and kept reporting that: a scroll to the bottom
+    /// changed nothing, so nothing new was reported. Scrolling by a page
+    /// from the reported offset then went a page and 74 pt, and a page
+    /// back stopped 74 pt short of where it started.
+    static func shown(_ reported: ScrollMetrics, clipMinY: CGFloat, end: ListEnd) -> ScrollMetrics {
+        guard !agree(reportedMinY: reported.visibleMinY, clipMinY: clipMinY) else { return reported }
+        var shown = reported
+        shown.visibleMinY = clipMinY
+        shown.visibleMaxY = clipMinY + (reported.visibleMaxY - reported.visibleMinY)
+        shown.contentEnd = end.contentEnd(visibleMinY: shown.visibleMinY, visibleMaxY: shown.visibleMaxY)
+        return shown
+    }
 }
 
 // MARK: Line tracking
