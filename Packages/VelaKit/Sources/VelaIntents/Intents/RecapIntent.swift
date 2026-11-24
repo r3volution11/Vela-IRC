@@ -41,12 +41,13 @@ public enum RecapSpanOption: String, AppEnum, Sendable {
 
 /// Opens a Recap in Vela: a report of a channel, a network or everything,
 /// for anyone or one person, over a span. Vela opens to it; the summary is
-/// written there (on this Mac), or the log shows when Apple Intelligence
-/// isn't available. Nothing is said aloud from the messages.
+/// written there, by Apple Intelligence on this Mac or the model you chose,
+/// or the log shows when that model can't run. Nothing is said aloud from
+/// the messages.
 public struct RecapIntent: AppIntent {
     public static let title: LocalizedStringResource = "Open Recap"
     public static let description = IntentDescription(
-        "Opens a Recap in Vela: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a time span. Apple Intelligence writes it on this Mac, or Vela shows the messages as a log.",
+        "Opens a Recap in Vela: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a time span. Apple Intelligence writes it on this Mac, or the model you chose in Vela's settings; otherwise Vela shows the messages as a log.",
         categoryName: "Messages",
         searchKeywords: ["recap", "summary", "summarize", "report", "log", "history", "apple intelligence"]
     )

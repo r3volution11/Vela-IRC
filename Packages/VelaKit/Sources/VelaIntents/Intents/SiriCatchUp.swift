@@ -120,7 +120,7 @@ struct SiriCatchUp {
 
     /// What Siri says once the Recap is open.
     var recapOpenedDialog: String {
-        "Here's a Recap of \(request.bufferName). Apple Intelligence is writing it now."
+        "Here's a Recap of \(request.bufferName). It's being written now."
     }
 
     /// What Siri says once Vela is in front with the card.

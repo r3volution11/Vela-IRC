@@ -7,6 +7,7 @@ import Testing
 @testable import VelaCore
 @testable import VelaIntelligence
 @testable import VelaIntents
+import VelaStore
 
 /// Stands in for the window: records what automation asked of it.
 @MainActor
@@ -43,9 +44,26 @@ struct AutomationFixture {
     let ergo: NetworkSession
 
     static func make() async throws -> AutomationFixture {
+        try await make { _ in IntelligenceServices.demo() }
+    }
+
+    /// A Mac without Apple Intelligence, with Catch me up and Recap set to
+    /// one of your own providers' models (Anthropic's).
+    static func withProviderOnly() async throws -> AutomationFixture {
+        try await make { app in
+            let availability = IntelligenceAvailability.fixed(.deviceNotEligible)
+            let models = AIModels(settings: app.settings, keys: AIKeyStore(keychain: .inMemory()), availability: availability)
+            let provider = try #require(models.addProvider(.anthropic))
+            app.settings[.intelligenceCatchUpModel] = "\(provider.id)/claude-opus-5-5"
+            app.settings[.intelligenceRecapModel] = "\(provider.id)/claude-opus-5-5"
+            return IntelligenceServices(availability: availability, summarizer: CannedSummarizer(stepDelay: .zero), models: models)
+        }
+    }
+
+    static func make(services makeServices: (AppModel) throws -> IntelligenceServices) async throws -> AutomationFixture {
         let app = AppModel.demo()
         await app.ready()
-        let services = IntelligenceServices.demo()
+        let services = try makeServices(app)
         let presenter = FakeAutomationPresenter()
         let automation = VelaAutomation(app: app, services: services, presenter: presenter)
         return AutomationFixture(
@@ -206,6 +224,26 @@ struct VelaLinkRouterTests {
         #expect(open("vela://catchup?channel=%23swift&network=Libera.Chat", router(fixture)) == .shown)
         #expect(fixture.services.catchUp.card(for: swift.id) != nil)
         #expect(fixture.app.showRequest?.bufferID == swift.id)
+    }
+
+    /// Without Apple Intelligence, Catch me up runs on your own provider's
+    /// model when it's set to one, as it does in the window and for Siri.
+    @Test func catchUpUsesYourProviderWithoutAppleIntelligence() async throws {
+        let fixture = try await AutomationFixture.withProviderOnly()
+        let swift = try fixture.buffer("#swift", on: fixture.libera)
+        #expect(open("vela://catchup?channel=%23swift&network=Libera.Chat", router(fixture)) == .shown)
+        #expect(fixture.services.catchUp.card(for: swift.id) != nil)
+        #expect(fixture.presenter.notices.isEmpty)
+
+        // Back on Apple's model, which can't run here: refused, and why.
+        fixture.app.settings.reset(.intelligenceCatchUpModel)
+        fixture.services.catchUp.closeAll()
+        guard case .refused(let reason) = open("vela://catchup?channel=%23swift&network=Libera.Chat", router(fixture)) else {
+            Issue.record("Expected a refusal")
+            return
+        }
+        #expect(reason == IntelligenceStatus.deviceNotEligible.detail)
+        #expect(fixture.services.catchUp.card(for: swift.id) == nil)
     }
 
     @Test func catchUpWhileTurnedOffStillShowsTheConversation() async throws {

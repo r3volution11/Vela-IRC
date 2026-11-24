@@ -178,13 +178,15 @@ public final class VelaAutomation {
     }
 
     /// Opens `buffer` with its Catch me up card, as its menu item does.
-    /// Throws, without opening anything, while Catch me up is off or Apple
-    /// Intelligence can't run.
+    /// Throws, without opening anything, while Catch me up is off or the
+    /// model it uses can't run: Apple Intelligence, unless it uses one of
+    /// your own providers' models, which don't need it (as for Siri and
+    /// Recap).
     public func openCatchUp(_ buffer: BufferModel, session: NetworkSession) throws {
         guard buffer.kind != .server else { throw AutomationError.serverBuffer(network: session.displayName) }
         guard app.settings[.intelligenceCatchUp] else { throw AutomationError.turnedOff("Catch me up") }
         services.availability.refresh()
-        let status = services.availability.status
+        let status = services.status(for: .catchUp)
         guard status.isAvailable else { throw AutomationError.intelligenceUnavailable(status.detail) }
         services.catchUp.openCard(for: buffer, session: session, app: app)
         app.requestShow(buffer.id)
@@ -200,7 +202,8 @@ public final class VelaAutomation {
     /// The Recap asked for: one conversation, else one network, else every
     /// network. A person's Recap of a conversation covers its network, so
     /// it includes your private conversation with them. Summarized when
-    /// Apple Intelligence can run, a log otherwise.
+    /// Recap's model can run (Apple Intelligence, or your own provider's),
+    /// a log otherwise.
     public func recapScope(conversation: BufferID? = nil, network: UUID? = nil, person: String? = nil, span: RecapSpanOption = .sinceUnread) -> RecapScope {
         Self.recapScope(conversation: conversation, network: network, person: person, span: span, services: services)
     }
