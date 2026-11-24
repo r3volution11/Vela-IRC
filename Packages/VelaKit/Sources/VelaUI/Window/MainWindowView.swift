@@ -90,7 +90,10 @@ struct MainWindowView: View {
         .ignoresSafeArea()
         .frame(minWidth: 640, minHeight: 420)
         .animation(.snappy(duration: 0.2), value: showMembers)
-        .animation(.snappy(duration: 0.2), value: style.navigationStyle)
+        // A new layout (navigation.style) isn't animated: an animation here
+        // covered the whole window, resizing the chat column and laying out
+        // the message list on every frame for its whole length. Switching
+        // lays it out once.
         .onChange(of: appearsActive, initial: true) { _, active in
             app.isWindowActive = active
         }

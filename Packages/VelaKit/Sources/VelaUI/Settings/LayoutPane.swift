@@ -125,7 +125,9 @@ struct LayoutPane: View {
             title,
             subtitle: subtitle,
             isSelected: app.settings[.navigationStyle] == style,
-            action: { withAnimation(.snappy(duration: 0.2)) { app.settings[.navigationStyle] = style } },
+            // Not animated: switching lays the whole main window out once,
+            // not on every frame of an animation (see MainWindowView).
+            action: { app.settings[.navigationStyle] = style },
             preview: {
                 LayoutSchematic(config: config, theme: theme)
                     .overlay(

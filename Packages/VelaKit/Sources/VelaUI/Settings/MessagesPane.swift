@@ -265,7 +265,9 @@ struct MessagesPane: View {
             title,
             subtitle: subtitle,
             isSelected: app.settings[.chatLayout] == layout,
-            action: { withAnimation(.snappy(duration: 0.2)) { app.settings[.chatLayout] = layout } },
+            // Not animated: every message in the main window lays out
+            // again once, not on every frame of an animation.
+            action: { app.settings[.chatLayout] = layout },
             preview: {
                 LayoutSchematic(config: config, theme: theme, scope: .messages)
                     .overlay(
