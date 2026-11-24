@@ -249,11 +249,21 @@ struct SendingFollowTests {
     /// the main actor goes to other tests' setup for 15 to 30 s at a time.
     static let settleSeconds: Double = 8
 
-    private func settled(_ hosted: Hosted, newest: Newest, within seconds: Double = settleSeconds) async throws -> Look {
+    /// With `shownBefore` (`listPicture`), the list also has to show
+    /// something else than that: the line at the bottom before can be of
+    /// the newest line's kind (a mention after a mention), and a list that
+    /// hasn't caught up yet, held back by other tests' setup, still shows
+    /// it there.
+    private func settled(_ hosted: Hosted, newest: Newest, changedFrom shownBefore: Data? = nil, within seconds: Double = settleSeconds) async throws -> Look {
         var deadline = RunningDeadline(.seconds(seconds))
         try await Task.sleep(for: .milliseconds(150))
+        func done(_ look: Look) throws -> Bool {
+            guard look.showsTheNewestLineAtTheBottom else { return false }
+            guard let shownBefore else { return true }
+            return try listPicture(hosted) != shownBefore
+        }
         var look = try look(hosted, for: newest)
-        while !look.showsTheNewestLineAtTheBottom, deadline.hasTimeLeft() {
+        while try !done(look), deadline.hasTimeLeft() {
             try await Task.sleep(for: .milliseconds(50))
             look = try self.look(hosted, for: newest)
         }
@@ -386,7 +396,7 @@ struct SendingFollowTests {
                 let before = try look(hosted, for: .mention).offset
                 let shownBefore = try listPicture(hosted)
                 let newest = try await perform(hosted, steps, echoMessage: echoMessage)
-                let after = try await settled(hosted, newest: newest)
+                let after = try await settled(hosted, newest: newest, changedFrom: shownBefore)
                 // Return sends at once; the box empties on SwiftUI's next
                 // update, which a busy CI machine can hold back for a while.
                 let cleared = try await composerEmpties(hosted)
@@ -397,7 +407,7 @@ struct SendingFollowTests {
                 // by its offset: on macOS 26 that can shrink by thousands of
                 // points as rows above are measured, with the list showing
                 // the newest lines all along.)
-                #expect(try listPicture(hosted) != shownBefore, "\(scenario): the list didn't move: offset \(before) → \(after.offset)")
+                #expect(try listPicture(hosted) != shownBefore, "\(scenario): the list didn't move in \(Int(Self.settleSeconds)) s: offset \(before) → \(after.offset)")
 
                 // Still following: the next line is brought into view.
                 hosted.buffer.updateTyping(nick: "gus", state: .done)
