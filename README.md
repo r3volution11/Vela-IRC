@@ -159,7 +159,7 @@ Three choices that combine freely, each changing only its own settings. Presets 
 - **Command palette** (⇧⌘P) runs any command: layouts, message styles, densities, themes, network actions, settings and more.
 - **Settings editor:** every setting in one searchable list, VS Code style, with filters such as `@modified`, plus a JSON view of `settings.json` that suggests settings and values, flags mistakes as you type and shows docs on hover.
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
-- **Alfred and Raycast:** jump to a channel or private conversation, send a message, and open Catch me up or a Recap from Alfred (the workflow comes with every release) or Raycast, mentions and unread first. Underneath are `vela://` links and an AppleScript dictionary, for your own scripts too. See [Alfred & Raycast](https://velairc.app/guide/alfred-and-raycast).
+- **Alfred and Raycast:** jump to a channel or private conversation, send a message, and open Catch me up or a Recap from Alfred (the workflow comes with Vela) or Raycast, mentions and unread first. Underneath are `vela://` links and an AppleScript dictionary, for your own scripts too. **Settings → Integrations** sets them up, with Siri, Shortcuts and Spotlight. See [Integrations](https://velairc.app/guide/integrations).
 - **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. An emoji picker (⇧⌘E) and a send button. GIF search (KLIPY or GIPHY, sent as links) comes in a later version; for now it's only in development builds. Pasting multiple lines asks for confirmation before sending.
 - **Typing options:** spelling, grammar, autocorrect, text replacements and smart quotes, following your Mac's settings until you change them. Commands, nicks, channel names, links and code are never corrected.
 - **User menu:** right-click a nick in the member list or in a message for Message, Mention, Whois, Ping, CTCP, Invite and Ignore, plus the ops, voices, kicks, bans and quiets your rank in the channel allows. Select several people in the member list to act on them all.
@@ -204,7 +204,7 @@ Three choices that combine freely, each changing only its own settings. Presets 
 
 ## Customizing Vela
 
-- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Apple Intelligence, Updates and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
+- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Intelligence, Integrations, Updates and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
 - **Settings → Advanced** is a VS Code-style settings editor: every setting with the right control for it, search and filters (`@modified`, `@unknown`, `@category:`, `@pane:`), and a JSON view with suggestions, inline problems, hover docs and the defaults alongside.
 - **`settings.json`** holds everything, VS Code style. Edit it in the settings editor's JSON view, or open it in your own editor from **Theme → Open settings.json**. Edits made in any editor apply live, and changes made in Vela keep your comments and formatting. Example:
 
@@ -301,6 +301,10 @@ Ask in **#vela** on **Libera.Chat**, Vela's own channel: server `irc.libera.chat
 ## Contributing
 
 Contributions are welcome, especially themes. See [CONTRIBUTING.md](CONTRIBUTING.md). The [roadmap](ROADMAP.md) lists what's planned next, including image uploads, search and iCloud sync.
+
+### Working across Vela and the extensions
+
+The [Alfred workflow](https://github.com/r3volution11/vela-alfred-workflow) and the [Raycast extension](https://github.com/r3volution11/vela-raycast-extension) have their own repositories, and build on Vela's AppleScript dictionary (`Vela/Vela.sdef`). For a change that spans them, change Vela's dictionary first: additions are safe, while removals and renames come only after both are updated, and raise `scripting version`. Their CI checks their terms against `Vela.sdef` on `main` and `next`. Use branches with the same name in each repository, then refresh the workflow Vela bundles with `scripts/update-alfred-workflow.sh`. See [CONTRIBUTING.md](CONTRIBUTING.md#working-across-vela-and-the-extensions).
 
 ## License and credits
 

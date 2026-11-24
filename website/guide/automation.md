@@ -10,7 +10,7 @@ Vela can be driven from outside the app in two ways:
 - **`vela://` links** open things in Vela: a channel, a private conversation, Catch me up, a Recap, message search, or a message box with text filled in. A link only ever *shows* things, so it's safe to put one anywhere: on a web page, in your notes, in an Alfred or Raycast quicklink.
 - **The AppleScript dictionary** lets a script read your networks and conversations and act: send a message, join a channel, mark things read, set yourself away. macOS asks you first, once for each app that wants to script Vela.
 
-For Siri, the Shortcuts app and Spotlight, see [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts). Vela's own Alfred workflow and Raycast extension, built on both, are in [Alfred & Raycast](/guide/alfred-and-raycast).
+For Siri, the Shortcuts app and Spotlight, see [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts). Vela's own Alfred workflow and Raycast extension, built on both, are in [Alfred & Raycast](/guide/alfred-and-raycast). **Settings → [Integrations](/guide/integrations)** has all of them, with a few links to try.
 
 ## vela:// links {#links}
 
@@ -64,7 +64,7 @@ Development builds of Vela answer `vela-dev://` links instead, so a `vela://` li
 
 ## AppleScript {#applescript}
 
-Vela has an AppleScript dictionary: open **Script Editor**, choose **File → Open Dictionary…** and pick Vela to browse it. Scripts can run from Script Editor, the terminal (`osascript`), the Shortcuts app's **Run AppleScript** action, Alfred workflows and Raycast script commands.
+Vela has an AppleScript dictionary: click **Open Dictionary** in **Settings → Integrations**, or open **Script Editor**, choose **File → Open Dictionary…** and pick Vela, to browse it. Scripts can run from Script Editor, the terminal (`osascript`), the Shortcuts app's **Run AppleScript** action, Alfred workflows and Raycast script commands.
 
 The first time an app sends Vela a command, macOS asks: "“Raycast” wants access to control “Vela”." Click **Allow**. You can change your mind in **System Settings → Privacy & Security → Automation**. Because you're asked, scripts can do things links can't, like sending messages.
 

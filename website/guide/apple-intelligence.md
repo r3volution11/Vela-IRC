@@ -28,7 +28,7 @@ Catch me up and Writing Tools use **Apple Intelligence**, so they need:
 
 <Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Intelligence: a green “Apple Intelligence is on” box, then the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages, the Recap section with Offer Recap on, and the start of the Translation section" caption="Settings → Intelligence." />
 
-**Settings → Intelligence** has a section each for [your own models](/guide/ai-models) (**Models**), Catch me up, [Recap](/guide/recap), Translation, Writing Tools and [Siri & Shortcuts](/guide/siri-shortcuts). At the top, a box says whether Apple Intelligence is ready, and, when Catch me up or Recap uses one of your models, which:
+**Settings → Intelligence** has a section each for [your own models](/guide/ai-models) (**Models**), Catch me up, [Recap](/guide/recap), Translation and Writing Tools. [Siri, Shortcuts and Spotlight](/guide/siri-shortcuts) are in **Settings → [Integrations](/guide/integrations)**, which its last section links to. At the top, a box says whether Apple Intelligence is ready, and, when Catch me up or Recap uses one of your models, which:
 
 | Status | What it means |
 | --- | --- |

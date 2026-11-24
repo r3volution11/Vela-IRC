@@ -40,7 +40,8 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **Theme** | Select Theme…, Toggle Match System Appearance, Next Accent Color, Reset Accent Color, Open Theme Editor, Import Theme…, Reveal Themes Folder |
 | **Appearance** | Next App Icon, and App Icon: _name_ for each [Dock icon](/customize/app-icon) |
 | **Notifications** | Show Dock Badge |
-| **Settings** | Open Settings, Search…, Open settings.json |
+| **Settings** | Open Settings, Search…, Open settings.json, Integrations |
+| **Integrations** | Install Alfred Workflow… (see [Integrations](/guide/integrations)), and Open in Raycast Store once the Raycast extension is in the Store |
 | **Go** | Go to Conversation…, Search Messages…, Previous / Next Conversation, Previous / Next Tab, Previous / Next Network, Previous / Next Unread, Focus Sidebar (or Focus Tabs), Focus Messages, Focus Message Box, Focus Member List, Focus Next / Previous Area |
 | **Buffer** | Mark as Read, Mark All as Read, Mute / Unmute, Enable / Disable Inline Media, Blur Images, Translate Messages Automatically, Catch Me Up, Catch Me Up With… and Recap With… (once you've [added a model](/guide/ai-models)), Recap…, Recap Conversations with…, Don't Log This Channel (while chat logs are on), Close (a conversation), Reopen Closed Channel, and Reopen _#channel_ (_network_) for each one in File → Recently Closed |
 | **Channel** | Join…, Leave _#channel_ or Join _#channel_, Hide _#channel_ (a channel detached on a bouncer), Remove _#channel_, and Show _#channel_ (_network_) for each [hidden channel](/guide/joining-channels#hidden-channels) |
@@ -48,7 +49,7 @@ Add the network's name to narrow things down: `vela libera` finds `#vela` on Lib
 | **AI** | Set Default Model…, Manage Providers… (see [Your own AI models](/guide/ai-models)) |
 | **Help** | What's New in Vela, About Vela, Check for Updates… |
 
-Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, "nsfw" finds Hide Adult Site Previews, "alphabetical" finds Sort Channels A–Z, "summary" finds Catch Me Up, "report" finds Recap, "api key" or "ollama" finds Manage Providers, and "autocorrect" finds Correct Spelling Automatically.
+Commands also match words that aren't in their names: "nick list" finds Toggle Member List, "zoom in" finds Bigger, "nsfw" finds Hide Adult Site Previews, "alphabetical" finds Sort Channels A–Z, "summary" finds Catch Me Up, "report" finds Recap, "api key" or "ollama" finds Manage Providers, "autocorrect" finds Correct Spelling Automatically, and "alfred", "raycast" or "spotlight" finds Settings: Integrations.
 
 ## Choose a model
 

@@ -36,6 +36,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Apple Intelligence & translation', link: '/guide/apple-intelligence' },
       { text: 'Your own AI models', link: '/guide/ai-models' },
       { text: 'Recap', link: '/guide/recap' },
+      { text: 'Integrations', link: '/guide/integrations' },
       { text: 'Siri, Shortcuts & Spotlight', link: '/guide/siri-shortcuts' },
       { text: 'Links & AppleScript', link: '/guide/automation' },
       { text: 'Alfred & Raycast', link: '/guide/alfred-and-raycast' },

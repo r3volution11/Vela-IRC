@@ -135,7 +135,10 @@ pane() {
 # to the preview.
 pane settings-presets      820x960 presets
 pane settings-intelligence 820x534 intelligence
-pane settings-siri         820x640 intelligence --settings-scroll 9999
+# Integrations: Alfred and Raycast; then Shortcuts and Siri, and Spotlight
+# (check the crops when the 1.5 screenshots are taken).
+pane settings-integrations 820x520 integrations
+pane settings-siri         820x640 integrations --settings-scroll 460
 # Timestamps, with Position for the current layout (Modern) and Other layouts.
 pane settings-timestamps   820x450 messages --settings-scroll 949
 # Typing; then Memory and History (Save message history, off as for a new

@@ -15,7 +15,7 @@ Both views work on the same file. A change in the UI view, or anywhere else in S
 
 - **Settings → Advanced** (<kbd>⌘,</kbd>, then **Advanced**).
 - **Type in the Search field** at the top of the Settings sidebar. The results show in Advanced as you type, and <kbd>Return</kbd> moves you into the editor's own search field.
-- **Show in settings editor**, beside the title of the Appearance, Layout, Messages, Media, Networks, Notifications, Apple Intelligence and Updates panes, shows just that pane's settings.
+- **Show in settings editor**, beside the title of the Appearance, Layout, Messages, Media, Networks, Notifications, Intelligence and Updates panes, shows just that pane's settings. The Spotlight settings on **Integrations** are `intelligence` settings, so they're listed with Intelligence's.
 - **Vela → Search Settings…**, or **Settings: Search…** in the [command palette](/guide/command-palette), opens Advanced with the search field ready, keeping your last search.
 
 At the top right, the **UI** | **JSON** switch changes views, and the **⋯** menu has **Open settings.json in External Editor**, **Reveal Data Folder** and [Reset All Settings…](#reset-all).

@@ -7,7 +7,9 @@ description: Ask Siri to catch you up, check mentions or send a message, use Vel
 
 Vela works with Siri, the Shortcuts app and Spotlight without any setup. Ask Siri what you missed, send a quick message, set yourself away from a shortcut, or open a channel from Spotlight. To drive Vela from Alfred, Raycast or a script, see [Links & AppleScript](/guide/automation).
 
-<Screenshot src="/screenshots/settings-siri.webp" alt="Settings → Intelligence, scrolled to Siri & Shortcuts: the Show channels in Spotlight switch, the Search messages in Spotlight switch, dimmed until message history is saved, a list of things to ask Siri, and an Open Shortcuts button" caption="Settings → Intelligence → Siri & Shortcuts." />
+Their settings are in **Settings → Integrations**, under **Shortcuts and Siri** and **Spotlight**, beside Alfred, Raycast and AppleScript. See [Integrations](/guide/integrations).
+
+<!-- Screenshot to come: Settings → Integrations, scrolled to Shortcuts and Siri and Spotlight (website/scripts/screenshots.sh shoots settings-siri). -->
 
 ## Ask Siri {#siri}
 
@@ -43,7 +45,7 @@ The phrases are in English, so they work when Siri's language is English. In oth
 
 ## Shortcuts actions {#shortcuts}
 
-In the **Shortcuts** app, search for "Vela" to find its actions, or click **Open Shortcuts** in **Settings → Intelligence → Siri & Shortcuts**.
+In the **Shortcuts** app, search for "Vela" to find its actions, or click **Open Shortcuts** in **Settings → Integrations → Shortcuts and Siri**, which lists them all.
 
 | Action | Parameters | What it does |
 | --- | --- | --- |
@@ -78,7 +80,7 @@ Make a "Back at my desk" shortcut: **Connect Network** for your favorite network
 
 Your channels show up in Spotlight with their network, and so do the people you talk to in private: each open private conversation, and those you closed since Vela started. Choose one to open it in Vela; a closed conversation is reopened.
 
-Spotlight only gets their **names** and networks. To keep them out of Spotlight, turn off **Show channels in Spotlight** in **Settings → Intelligence → Siri & Shortcuts** ([`intelligence.spotlightChannels`](/reference/settings#intelligence.spotlightChannels)); Vela removes them from Spotlight's results straight away.
+Spotlight only gets their **names** and networks. To keep them out of Spotlight, turn off **Show channels in Spotlight** in **Settings → Integrations → Spotlight** ([`intelligence.spotlightChannels`](/reference/settings#intelligence.spotlightChannels)); Vela removes them from Spotlight's results straight away.
 
 The setting covers what Spotlight shows, not what Siri knows. On macOS 27, Vela also gives the system the same names for Siri, marked so that Spotlight doesn't show them: that's how Siri finds "#vela" or a nick when you ask it to send a message. They stay when the setting is off.
 
@@ -90,7 +92,7 @@ On macOS 26 and later, Spotlight runs Vela's [Shortcuts actions](#shortcuts) its
 
 ### Messages in Spotlight {#messages-in-spotlight}
 
-You can also let Spotlight search your messages. It's off unless you turn it on: **Search messages in Spotlight**, in **Settings → Intelligence → Siri & Shortcuts** ([`intelligence.spotlightMessages`](/reference/settings#intelligence.spotlightMessages)). It needs **Save message history** ([`history.save`](/reference/settings#history.save)), because Spotlight gets the messages Vela saves, and forgets them with the history.
+You can also let Spotlight search your messages. It's off unless you turn it on: **Search messages in Spotlight**, in **Settings → Integrations → Spotlight** ([`intelligence.spotlightMessages`](/reference/settings#intelligence.spotlightMessages)). It needs **Save message history** ([`history.save`](/reference/settings#history.save)), because Spotlight gets the messages Vela saves, and forgets them with the history.
 
 - **Turning it on** adds the newest 5,000 saved messages of each network, in the background. After that, each message is added as Vela saves it. Messages, actions and notices in channels and private conversations are added; joins, parts, network consoles and deleted messages aren't.
 - **Choose a result** to open its conversation scrolled to that message (or to the conversation, if the message is further back than Vela can load).

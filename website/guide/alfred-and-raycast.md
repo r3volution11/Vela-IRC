@@ -9,17 +9,21 @@ Vela has an **Alfred workflow** and a **Raycast extension**. From either one, ju
 
 Both need Vela 1.5 or later. They talk to Vela through its [AppleScript dictionary](/guide/automation#applescript) and its [`vela://` links](/guide/automation#links), on your Mac. Neither ever opens Vela just to list things: if Vela isn't running, they say so and offer to open it.
 
+**Settings → Integrations** has both, with whether Alfred and Raycast are installed and a button to set each one up. See [Integrations](/guide/integrations).
+
 ## Alfred {#alfred}
 
 ### Install the workflow {#alfred-install}
 
-You need **Alfred 5 or later** with the Powerpack, which workflows need.
+You need **Alfred 5 or later** with the Powerpack, which workflows need. The workflow comes with Vela.
 
-1. Download **Vela.alfredworkflow** from the [latest release](https://github.com/r3volution11/Vela-IRC/releases/latest), and double-click it.
+1. Open **Settings → Integrations** (<kbd>⌘,</kbd>) and click **Install Workflow…** under **Alfred**. (Or run **Integrations: Install Alfred Workflow…** from the [command palette](/guide/command-palette).)
 2. Alfred shows the workflow's settings. The defaults are fine: the keywords `vela` and `vsearch`, and **Vela** as the app. Click **Import**.
 3. Type `vela` in Alfred. The first time, macOS asks whether Alfred may control Vela: click **Allow** (see [Permissions](#permissions)).
 
 To change a keyword later, open **Alfred Preferences → Workflows**, select **Vela** and click **Configure Workflow…**.
+
+You can also download **Vela.alfredworkflow** from the workflow's [latest release](https://github.com/r3volution11/vela-alfred-workflow/releases/latest) and double-click it. Its releases can be newer than the copy that comes with Vela. Installing either one again updates the workflow and keeps your settings.
 
 ### Keywords {#alfred-keywords}
 
@@ -53,11 +57,11 @@ Hold a modifier to see what it will do in the result's subtitle. Messages are se
 
 ### Install the extension {#raycast-install}
 
-The extension isn't in the Raycast Store yet. Until it is, you can add it from Vela's source code, with [Node.js](https://nodejs.org) 22 or later:
+The extension is coming to the Raycast Store, and **Settings → Integrations** will open it there. Until then, you can add it from [its source code](https://github.com/r3volution11/vela-raycast-extension), with [Node.js](https://nodejs.org) 22 or later:
 
 ```sh
-git clone https://github.com/r3volution11/Vela-IRC.git
-cd Vela-IRC/integrations/raycast
+git clone https://github.com/r3volution11/vela-raycast-extension.git
+cd vela-raycast-extension
 npm install
 npm run dev
 ```
@@ -121,4 +125,4 @@ They then use Vela Dev's bundle id (`io.github.r3volution11.Vela.dev`) and its `
 
 ## Privacy {#privacy}
 
-The workflow and the extension have no analytics or tracking of any kind. They run on your Mac and talk only to Vela: they read your conversations' names, networks and counts (never your messages), and the only thing that leaves your Mac is a message you send, which Vela sends to your IRC network. Their source is in Vela's repository, in [`integrations/alfred`](https://github.com/r3volution11/Vela-IRC/tree/main/integrations/alfred) and [`integrations/raycast`](https://github.com/r3volution11/Vela-IRC/tree/main/integrations/raycast).
+The workflow and the extension have no analytics or tracking of any kind. They run on your Mac and talk only to Vela: they read your conversations' names, networks and counts (never your messages), and the only thing that leaves your Mac is a message you send, which Vela sends to your IRC network. Their source code is open: [vela-alfred-workflow](https://github.com/r3volution11/vela-alfred-workflow) and [vela-raycast-extension](https://github.com/r3volution11/vela-raycast-extension).

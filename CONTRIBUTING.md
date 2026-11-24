@@ -60,7 +60,7 @@ All of it happens on a network of its own, **Simulator**, which the first of the
 
 ### Checking links and the AppleScript dictionary
 
-`Vela/Vela.sdef` is an interface Alfred and Raycast integrations build on: only ever add to it (never rename a term, code or cocoa key). `ScriptingDictionaryTests` check it against the code, but not Cocoa scripting itself, and `osascript` needs your terminal to be allowed to control Vela Dev (a permission prompt). Instead, Vela Dev in demo mode can drive its own dictionary, and a `vela-dev://` link, from inside the app, where macOS asks nothing, and write a report:
+`Vela/Vela.sdef` is an interface the Alfred workflow, the Raycast extension and people's scripts build on: only ever add to it (never rename a term, code or cocoa key without [updating the extensions first](#working-across-vela-and-the-extensions)). `ScriptingDictionaryTests` check it against the code, but not Cocoa scripting itself, and `osascript` needs your terminal to be allowed to control Vela Dev (a permission prompt). Instead, Vela Dev in demo mode can drive its own dictionary, and a `vela-dev://` link, from inside the app, where macOS asks nothing, and write a report:
 
 ```sh
 open -g -n build/DerivedData/Build/Products/Debug/Vela.app --args --demo --no-activate --automation-self-test
@@ -101,6 +101,15 @@ VELA=build/DerivedData-release/Build/Products/Release/Vela.app/Contents/MacOS/Ve
 nm -a "$VELA" | grep -c 'DevTag\|DevTools\|DevSimulator\|devToolsHost'
 strings -a "$VELA" | grep -c 'Inspect Element\|simulator.invalid\|Message row'
 ```
+
+## Working across Vela and the extensions
+
+The Alfred workflow and the Raycast extension live in their own repositories, [vela-alfred-workflow](https://github.com/r3volution11/vela-alfred-workflow) and [vela-raycast-extension](https://github.com/r3volution11/vela-raycast-extension). Both talk to Vela through its AppleScript dictionary (`Vela/Vela.sdef`) and its `vela://` links, and **Settings → Integrations** offers them. For a change that touches Vela and either of them:
+
+1. **Change Vela's dictionary first.** Additions are safe: a new term, property or command breaks nothing. A removal or a rename (of a term, a four-character code or a cocoa key), or a command that behaves differently, comes only after both extensions have been updated not to need the old one, and raises the application's `scripting version` (`VelaAutomation.scriptingVersion`), which the extensions read. `ScriptingDictionaryTests` check the dictionary against Vela's code.
+2. **The extensions' CI checks their terms against `Vela.sdef`** on Vela's `main` and `next`, so a term they use that Vela doesn't have (yet, or any more) fails there.
+3. **Use the same branch name in every repository** for one cross-cutting change, so it's easy to see what goes together, and merge Vela's side first.
+4. **Refresh the workflow Vela bundles** once the workflow's change is released: `scripts/update-alfred-workflow.sh --release latest` (or `--local` to try an unreleased build from a checkout next to Vela's), then commit `Vela/Integrations/Vela.alfredworkflow` and `integrations/alfred-workflow.json` together. CI fails when they don't match. See [integrations/README.md](integrations/README.md).
 
 ## Media sites
 
