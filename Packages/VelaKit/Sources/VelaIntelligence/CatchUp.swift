@@ -30,6 +30,25 @@ nonisolated public struct CatchUpLine: Sendable, Hashable {
     }
 }
 
+/// Whose lines may go to an AI model: people's, never the server's or the
+/// network's. A server can send a notice or message to a channel itself,
+/// and its name stands where a nick would (`irc.example.org: …`); its
+/// words are often about the server or network too. Prompts carry message
+/// text and nicks only, never a channel's, network's or server's name, so
+/// Catch me up and Recap leave those lines out (they aren't conversation).
+nonisolated public enum PromptSpeaker {
+    /// Whether `nick` is a person's: not empty, without the dot every
+    /// server name has and no nick can (`irc.libera.chat`), not starting
+    /// with `*` (the server, or a bouncer module such as ZNC's
+    /// `*buffextras`), and not one of `serverNames` (folded with
+    /// `caseMapping`), the names a network and its server go by
+    /// (`NetworkSession.serverNames`), such as a server called `ircd`.
+    public static func isPerson(_ nick: String, serverNames: Set<String> = [], caseMapping: CaseMapping = .rfc1459) -> Bool {
+        guard !nick.isEmpty, !nick.contains("."), !nick.hasPrefix("*") else { return false }
+        return serverNames.isEmpty || !serverNames.contains(caseMapping.fold(nick))
+    }
+}
+
 /// What to summarize.
 nonisolated public struct CatchUpRequest: Sendable, Hashable {
     /// The buffer it came from.
@@ -67,12 +86,16 @@ extension CatchUpRequest {
     /// The conversation in `buffer` newer than `since` (by default, the
     /// buffer's New marker or last-read time): messages, actions and
     /// notices only, with formatting stripped. Your own lines are kept for
-    /// context; deleted (redacted) ones are left out.
+    /// context; deleted (redacted) ones are left out, and so is anything
+    /// the server or network sent rather than a person (``PromptSpeaker``).
     @MainActor
     public init(buffer: BufferModel, session: NetworkSession, since: Date? = nil) {
         let cutoff = since ?? buffer.unreadMarkerAfter ?? buffer.lastReadAt ?? .distantPast
+        let serverNames = session.serverNames
+        let caseMapping = session.isupport.caseMapping
         let lines = buffer.lines.lazy
             .filter { $0.kind.isConversation && !$0.isRedacted && $0.time > cutoff }
+            .filter { $0.isSelf || PromptSpeaker.isPerson($0.nick ?? "", serverNames: serverNames, caseMapping: caseMapping) }
             .map { line in
                 CatchUpLine(
                     id: line.id,

@@ -46,7 +46,7 @@ Vela never fetches previews from your local network (`localhost`, private IP add
 **Nothing goes to an AI provider unless you add one.** Out of the box, Catch me up and Recap use Apple Intelligence on your Mac, and Vela never contacts OpenAI, Anthropic, Google or anyone else for them. If you add a provider in **Settings → AI Providers**:
 
 - **What it's sent:** the text and nicks of the messages you ask Catch me up or a Recap about, and your own nick, with Vela's instructions for the summary. Links are shortened to the site they point to.
-- **What it's never sent:** the names of channels, networks or servers, who a Recap is about, your account, or when the messages were written.
+- **What it's never sent:** the names of channels, networks or servers, who a Recap is about, your account, or when the messages were written. Lines the server, the network or a bouncer sent a channel itself (a server notice, say) aren't sent at all: only what people said.
 - **When:** only when you ask for a summary with one of its models (in Vela, or by asking Siri to catch you up), and only once you've agreed on the sheet that says all this. Never in the background, and Vela never switches to another provider on its own. Testing a key, or fetching a provider's list of models, sends your key and nothing else.
 - **Where it goes:** OpenAI, Anthropic and Google handle it under their data policy, and the usage is billed to your key; on Gemini's free tier, Google may use it to improve its products. Ollama or LM Studio on your Mac keeps it on your Mac. A server elsewhere is under its owner's rules.
 - **Your key** stays in your Keychain, never in settings.json, and goes only to its own provider.

@@ -32,6 +32,8 @@ The bar under the title says what the Recap covers. Change any of it and the Rec
 
 **With nothing unread, the Recap asks how far back to go**, with the same spans as buttons.
 
+**A Recap covers what people said:** their messages, actions and notices. Joins, parts and other events, deleted messages, and anything the server, the network or a bouncer sent a channel itself (a server notice, say) are left out of both the summary and the log.
+
 **A Recap reads what Vela has.** With **Save message history** off (the default for new installs), that's what arrived while Vela was open, plus what your [bouncer](/guide/bouncers) or server replayed. With it on, a Recap also reads your saved history for the span. When the span reaches back before Vela was open (or before the oldest messages it kept in memory) and nothing saved covers it, the Recap says how far back it goes, such as "Vela has #vela back to 2:14 PM." See [Scrollback and history](/guide/messages-and-layouts#scrollback-and-history).
 
 ## Summary or Log {#output}
@@ -94,7 +96,7 @@ The first time a Recap would use a provider you haven't allowed, Vela shows what
 
 ## What's sent, and what's kept {#privacy}
 
-- **Apple Intelligence reads the messages and your nick,** so it can say what was asked of "you". It isn't told any channel's or network's name, or who the Recap is about. Several conversations are told apart by number only.
+- **Apple Intelligence reads the messages and your nick,** so it can say what was asked of "you". It isn't told any channel's, network's or server's name, or who the Recap is about. Several conversations are told apart by number only, and what the server itself sent a channel isn't read at all.
 - **It runs on your Mac,** on the Apple Intelligence model that macOS keeps there.
 - **A model of your own gets the same,** and only once you've agreed: the messages and their nicks, and your nick, never a channel's, network's or server's name, or who the Recap is about. See [AI privacy](/guide/ai-privacy).
 - **Nothing is saved.** A Recap lives in its window: closing the window stops it and forgets it. Copy and Save as Markdown are the only ways to keep one.

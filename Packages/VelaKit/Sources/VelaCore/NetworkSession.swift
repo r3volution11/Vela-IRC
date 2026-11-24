@@ -97,6 +97,10 @@ public final class NetworkSession: Identifiable {
     /// haven't disconnected since.
     @ObservationIgnored private var wantsConnection = false
     @ObservationIgnored private var connectedAt: Date?
+    /// The name the server gave itself when you connected (the source of
+    /// its welcome), such as `tantalum.libera.chat`. Kept across
+    /// reconnects; see ``serverNames``.
+    @ObservationIgnored public private(set) var serverName: String?
     @ObservationIgnored var bufferIndex: [String: BufferModel] = [:]
     @ObservationIgnored private var pendingNames: [String: [String: Member]] = [:]
     @ObservationIgnored private var historyBatches: [String: HistoryBatch] = [:]
@@ -178,6 +182,21 @@ public final class NetworkSession: Identifiable {
     public var displayName: String {
         if !config.name.isEmpty { return config.name }
         return isupport.network ?? config.host
+    }
+
+    /// The names this network and its server go by, folded as the network
+    /// compares nicks: the address you connect to, the server's own name,
+    /// the network's name (yours for it, and the one it announces), and a
+    /// bouncer's service (`*status`, BouncerServ). A line "from" one of
+    /// these is the server or network talking, never a person: Catch me up
+    /// and Recap leave such lines out of what they send to an AI model,
+    /// which is never told a server's or network's name.
+    public var serverNames: Set<String> {
+        let names = [config.host, serverName, config.name, isupport.network, bouncerServiceNick]
+        return Set(names.compactMap { name in
+            guard let name = name?.trimmingCharacters(in: .whitespaces), !name.isEmpty else { return nil }
+            return fold(name)
+        })
     }
 
     public var isConnected: Bool { connectionState == .connected }
@@ -904,6 +923,7 @@ public final class NetworkSession: Identifiable {
 
         switch message.command {
         case "001", "002", "003", "004", "251", "252", "253", "254", "255", "265", "266", "250", "042", "396":
+            if message.command == "001", let source = message.source?.nick, !source.isEmpty { serverName = source }
             info(text, in: serverBuffer)
         case "005":
             break

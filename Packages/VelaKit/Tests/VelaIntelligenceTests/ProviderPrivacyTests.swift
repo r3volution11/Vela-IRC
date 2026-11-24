@@ -23,12 +23,12 @@ struct ProviderPrivacyTests {
 
     var names: [String] { Self.channels + Self.networks + Self.servers }
 
-    func check(_ requests: [StubServer.Request], kind: AIProviderKind) {
+    func check(_ requests: [StubServer.Request], kind: AIProviderKind, names: [String]? = nil) {
         #expect(!requests.isEmpty, "no requests to \(kind)")
         for request in requests {
             let headers = request.headers.map { "\($0.key): \($0.value)" }.joined(separator: "\n")
             for text in [request.url.absoluteString, headers, request.bodyText] {
-                for name in names {
+                for name in names ?? self.names {
                     #expect(!text.localizedCaseInsensitiveContains(name), "\(name) sent to \(kind): \(text.prefix(300))")
                 }
             }
@@ -96,6 +96,41 @@ struct ProviderPrivacyTests {
         if kind == .openAICompatible { #expect(harness.requests(kind).count > 3) }
         check(harness.requests(kind), kind: kind)
         #expect(harness.allRequests.count == harness.requests(kind).count)
+    }
+
+    /// What the server (or the network, or a bouncer) sends a channel
+    /// itself is shown there but never sent: its name stands where a nick
+    /// would, and its words name servers. Catch me up and Recap gather
+    /// people's lines only, from a real session (``ServerLineFixture``).
+    @Test(arguments: AIProviderKind.allCases)
+    func serverLinesNeverReachAProvider(kind: AIProviderKind) async throws {
+        let fixture = try await ServerLineFixture.make()
+        defer { fixture.remove() }
+        fixture.expectServerLinesShown()
+
+        // Catch me up.
+        let request = fixture.catchUpRequest
+        #expect(request.lines.map { "\($0.nick): \($0.text)" } == ServerLineFixture.peoplesLines)
+        let catchUp = RoutingHarness(reply: { prompt in
+            CatchUpReply.render(CatchUpDraft(overview: "Talk about the build.", topics: [.init(title: "Build", participants: ["alice"], firstLine: lineNumbers(in: prompt).first)]))
+        })
+        let catchUpEntry = catchUp.add(kind)
+        catchUp.settings[.intelligenceCatchUpModel] = "\(catchUpEntry.id)/\(kind.recommendedModels.first?.id ?? "llama3")"
+        _ = try await catchUp.summarizer.summary(for: request)
+        check(catchUp.requests(kind), kind: kind, names: ServerLineFixture.names)
+
+        // Recap.
+        let input = await fixture.recapInput()
+        #expect(input.conversations.flatMap(\.lines).map { "\($0.nick): \($0.text)" } == ServerLineFixture.peoplesLines)
+        let recap = RoutingHarness(reply: { prompt in
+            let numbers = lineNumbers(in: prompt)
+            guard let first = numbers.first, let last = numbers.last else { return "POINT: Talk." }
+            return "OVERVIEW: Talk.\nTOPIC: [\(first)-\(last)] | Build | Talked about the build. | alice, bob"
+        })
+        let recapEntry = recap.add(kind)
+        recap.settings[.intelligenceRecapModel] = "\(recapEntry.id)/\(kind.recommendedModels.first?.id ?? "llama3")"
+        for try await _ in recap.summarizer.recap(input) {}
+        check(recap.requests(kind), kind: kind, names: ServerLineFixture.names)
     }
 
     /// The consent sheet promises exactly this; the prompt builders are

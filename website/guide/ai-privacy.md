@@ -29,6 +29,7 @@ When Catch me up or a Recap uses one of [your providers](/guide/ai-models), it's
 It's **never** sent:
 
 - **The names of channels, networks or servers**, who a Recap is about, or your account. Several conversations in one Recap are told apart by number only, and the messages go without their times.
+- **What the server sent a channel itself,** such as a server notice, or the network or a bouncer did: only what people said is sent. Those lines stay in the channel, where you see them.
 
 And:
 

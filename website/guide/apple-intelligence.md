@@ -94,7 +94,7 @@ The first time Catch me up would use a provider you haven't allowed, Vela shows 
 
 ### What it reads, and how long it takes {#catch-up-limits}
 
-- **The new messages, actions and notices** after the New marker (or where it would be, with the New line off). Joins, parts, other events and deleted messages are left out, and links are reduced to the site they point to.
+- **The new messages, actions and notices** after the New marker (or where it would be, with the New line off). Joins, parts, other events, deleted messages, and anything the server, the network or a bouncer sent the channel itself (a server notice, say) are left out, and links are reduced to the site they point to.
 - **At most the latest 600.** For a longer stretch, the card says "Covers the latest 600 messages." A [Recap](/guide/recap) reads up to 2,000.
 - **It takes a while.** On a fast Mac, about 10 seconds for a few dozen messages and about a minute for 600, most of it spent reading the parts. A slower Mac, or one on macOS 26.0–26.3 (whose model reads less at a time), can take a few minutes for a long stretch. You can go to another channel meanwhile.
 - **Long stretches are read in parts.** The card counts them ("Reading… 3 of 8"), then says "Writing the summary…" until the first words appear. Before that, a short stretch says "Reading 40 messages…".
@@ -169,7 +169,7 @@ Writing Tools leaves commands, nicks, channel names, links and code alone, and i
 ## Privacy
 
 - **With Apple Intelligence, Catch me up and Recap run on your Mac,** on the model that macOS keeps on it. The messages they read and the summaries they write stay on your Mac, and summaries are kept only in memory: a Recap only as long as its window is open.
-- **Apple Intelligence reads the messages and your nick,** so the summary can say what was asked of "you". It isn't told the channel's or the network's name, or who a Recap is about.
+- **Apple Intelligence reads the messages and your nick,** so the summary can say what was asked of "you". It isn't told the channel's, the network's or the server's name, or who a Recap is about, and what the server itself sent a channel isn't read at all.
 - **Private Cloud Compute comes in a later version.** In it, you'll be able to send a catch-up too long for one pass on your Mac to Apple's Private Cloud Compute (macOS 27 or later, off by default): encrypted, used only to write the summary, not stored, and not readable by Apple. See [Private Cloud Compute for long catch-ups](#private-cloud-compute).
 - **Translation runs on your Mac,** with Apple's Translation framework, and so does working out a message's language. Only the language downloads come from Apple, and macOS asks before each one. Translations are kept only in memory.
 - **Writing Tools is Apple's.** Vela hands it the text in the message field, and Apple Intelligence handles it as it does in any app.
