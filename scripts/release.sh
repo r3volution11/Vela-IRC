@@ -10,9 +10,9 @@
 #
 # Before archiving (after the quick certificate checks), it runs the preflight
 # checks (scripts/release-preflight.sh): git, version and changelog, CI, the
-# adult-domain list, generated files, the package tests, the website, the
-# media sites (scripts/check-media-sites.sh) and the scroll benchmark
-# (scripts/benchmark-scroll.sh). If one fails, no release is built. Once the DMG is made, notarized and stapled, scripts/verify-release.sh
+# adult-domain list, generated files, the bundled Alfred workflow, the package
+# tests, the website, the media sites (scripts/check-media-sites.sh) and the
+# scroll benchmark (scripts/benchmark-scroll.sh). If one fails, no release is built. Once the DMG is made, notarized and stapled, scripts/verify-release.sh
 # checks the app inside it, and a failure there stops the release too. A
 # summary of every check ends the output. See docs/RELEASING.md,
 # "Release checks", for what each check needs.
@@ -22,7 +22,7 @@
 # 1Password into a pipe), adds the release to the update feed
 # (website/public/appcast.xml) and commits it, tags the commit it built as
 # v<version>, pushes the tag to origin, creates the GitHub release with
-# Vela.dmg, Vela.alfredworkflow and SHA256SUMS, marked Latest, checks that
+# Vela.dmg and SHA256SUMS, marked Latest, checks that
 # the website's download link (releases/latest/download/Vela.dmg) gives this
 # DMG, then pushes the feed's commit to main and waits for velairc.app to
 # serve it. The feed goes last, so the updater never offers a release whose download isn't there
@@ -79,12 +79,12 @@
 #                        (default: my.1password.com, Personal,
 #                        "Vela - Sparkle - Mac Update Signing Key")
 #
-# Every release also carries the Alfred workflow, Vela.alfredworkflow, built
-# and tested (scripts/build-alfred-workflow.sh) before the archive, so a
-# broken workflow stops the release before the long build; SHA256SUMS lists
-# both files.
+# The app carries the Alfred workflow (Vela/Integrations/Vela.alfredworkflow,
+# which the preflight checks against integrations/alfred-workflow.json); the
+# workflow's own repository publishes its releases, so a Vela release has
+# just the DMG.
 #
-# Output: build/release/Vela.dmg and Vela.alfredworkflow (+ SHA256SUMS),
+# Output: build/release/Vela.dmg (+ SHA256SUMS),
 # and with --publish (without --notes) build/release/release-notes.md, plus
 # build/release/appcast-notes.md (the feed's release notes) and a commit of
 # website/public/appcast.xml
@@ -311,8 +311,8 @@ fi
 
 # ---------------------------------------------------------------- preflight
 # Git, version and changelog, CI, the adult-domain list, generated files, the
-# tests, the website, the media sites and the scroll benchmark (docs/RELEASING.md,
-# "Release checks").
+# bundled Alfred workflow, the tests, the website, the media sites and the
+# scroll benchmark (docs/RELEASING.md, "Release checks").
 if (( publish )); then
   built_commit=$(git rev-parse HEAD)
 fi
@@ -343,24 +343,6 @@ fi
 
 rm -rf "$out"
 mkdir -p "$out"
-
-# ---------------------------------------------------------------- Alfred workflow
-# Vela.alfredworkflow goes on the release beside Vela.dmg. It's built now,
-# before the long archive, so a broken workflow stops the release early:
-# scripts/build-alfred-workflow.sh checks and tests it first (the tests never
-# talk to Vela).
-RELEASE_CHECKS_RESULTS="$results"
-check_section "Alfred workflow"
-if output=$(scripts/build-alfred-workflow.sh --version "$version" --output "$out/Vela.alfredworkflow" 2>&1); then
-  check_pass "Alfred workflow" "$out/Vela.alfredworkflow, version $version"
-else
-  print -r -- "$output" | sed 's/^/    /'
-  check_fail "Alfred workflow" "scripts/build-alfred-workflow.sh failed (above)" \
-    "Fix what it says, then check with scripts/build-alfred-workflow.sh (integrations/alfred/README.md)."
-  show_summary
-  print
-  fail "The Alfred workflow didn't build, so no release was built."
-fi
 
 # The release notes for --publish: CHANGELOG.md's section for this version,
 # with its relative links (such as ROADMAP.md) pointing at the files on GitHub
@@ -500,10 +482,9 @@ if ! scripts/verify-release.sh "$out/Vela.dmg" "${verify_options[@]}"; then
   fail "$out/Vela.dmg failed the post-build checks, so SHA256SUMS wasn't written. Fix what the summary lists, then build again."
 fi
 
-(cd "$out" && shasum -a 256 Vela.dmg Vela.alfredworkflow > SHA256SUMS)
+(cd "$out" && shasum -a 256 Vela.dmg > SHA256SUMS)
 step "Done"
 print "    $out/Vela.dmg"
-print "    $out/Vela.alfredworkflow"
 sed 's/^/    /' "$out/SHA256SUMS"
 
 # ---------------------------------------------------------------- publish
@@ -523,7 +504,7 @@ release_url="https://github.com/$github_repo/releases/tag/$tag"
 latest_url="https://github.com/$github_repo/releases/latest/download/Vela.dmg"
 expected_location="https://github.com/$github_repo/releases/download/$tag/Vela.dmg"
 expected_sha=$(awk '$2 == "Vela.dmg" || $2 == "*Vela.dmg" { print $1 }' "$out/SHA256SUMS")
-assets=("$out/Vela.dmg" "$out/Vela.alfredworkflow" "$out/SHA256SUMS")
+assets=("$out/Vela.dmg" "$out/SHA256SUMS")
 publish_steps=(sign appcast tag push release link checksum feed served)
 typeset -A publish_check=(
   sign "Update signature"
@@ -697,7 +678,7 @@ else
   finish_by_hand push "$tag is tagged here but isn't on $remote, so nothing was published."
 fi
 
-print "    Creating the release, with Vela.dmg, Vela.alfredworkflow and SHA256SUMS…"
+print "    Creating the release, with Vela.dmg and SHA256SUMS…"
 if output=$(gh release create "$tag" "${assets[@]}" --repo "$github_repo" --verify-tag \
     --title "$release_title" --notes-file "$notes_file" --latest 2>&1); then
   check_pass "$publish_check[release]" "$release_url, marked Latest, notes from $notes_file"

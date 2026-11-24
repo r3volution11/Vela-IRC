@@ -276,7 +276,7 @@ To build a signed and notarized release, see [docs/RELEASING.md](docs/RELEASING.
 ## Project layout
 
 ```
-Vela/                    Thin macOS app target (entry point, app icon, entitlements, the Sparkle updater)
+Vela/                    Thin macOS app target (entry point, app icon, entitlements, the Sparkle updater, the AppleScript dictionary, the bundled Alfred workflow)
 Packages/VelaKit/
   Sources/VelaIRC        IRC protocol, IRCv3 negotiation, SASL, TLS connection
   Sources/VelaStore      SQLite scrollback, settings.json, networks, Keychain, presets
@@ -287,8 +287,7 @@ Packages/VelaKit/
   Sources/VelaIntents    Siri, Shortcuts and Spotlight (App Intents)
   Sources/VelaUI         SwiftUI views, scenes, command palette
 schemas/                 JSON Schema for theme files
-integrations/alfred/     The Alfred workflow (scripts/build-alfred-workflow.sh builds it)
-integrations/raycast/    The Raycast extension
+integrations/            Where the Alfred workflow and the Raycast extension live, and the record of the bundled workflow
 website/                 velairc.app (VitePress)
 docs/                    Theme authoring guide, credits, release process
 design/app-icon/         App icon generators and geometry (see its README)
