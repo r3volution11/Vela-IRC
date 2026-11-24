@@ -135,6 +135,11 @@ pane() {
 # to the preview.
 pane settings-presets      820x960 presets
 pane settings-intelligence 820x534 intelligence
+# AI Providers and AI Privacy. Demo mode has no providers and never looks for
+# Ollama or LM Studio, so these show Apple Intelligence, the default model and
+# the empty states (check the crops when the 1.5 screenshots are taken).
+pane settings-ai-providers 820x640 aiProviders
+pane settings-ai-privacy   820x640 aiPrivacy
 # Integrations: Alfred and Raycast; then Shortcuts and Siri, and Spotlight
 # (check the crops when the 1.5 screenshots are taken).
 pane settings-integrations 820x520 integrations

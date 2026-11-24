@@ -68,7 +68,7 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 
 ## Catch me up doesn't appear {#catch-me-up}
 
-- **Is Apple Intelligence ready?** The box at the top of **Settings → Intelligence** says. Catch me up needs a Mac with Apple silicon, Apple Intelligence turned on in System Settings, its model downloaded, and a supported language. See [What you need](/guide/apple-intelligence#requirements).
+- **Is Apple Intelligence ready?** The box at the top of **Settings → AI Providers** says. Catch me up needs a Mac with Apple silicon, Apple Intelligence turned on in System Settings, its model downloaded, and a supported language. See [What you need](/guide/apple-intelligence#requirements).
 - **Are enough messages new?** The button waits for 25 new messages by default (**Show the button after**). To catch up on fewer, right-click the channel and choose **Catch Me Up**.
 - **Is Offer Catch me up in busy channels on?** Turned off, it removes Catch me up everywhere: the button, the right-click menu, the command palette and Siri.
 - **Is anything new?** The button sits on the **New** marker, so it only appears in a channel with messages you haven't read. **Catch Me Up** in the right-click menu or the command palette works either way: with nothing new, it shows the summary you made there earlier, or says there's nothing new and when the button will be back.
@@ -87,6 +87,18 @@ If the card says it skipped some messages, Apple Intelligence's safety checks de
 - **The message needs enough words** for its language to be clear. Short replies, emoji and bare links aren't offered.
 - **macOS must be able to translate between the two languages.**
 - **A declined download** stops automatic translation from that language. Choose **Translate** on one of its messages to be asked again.
+
+## Ollama or LM Studio isn't found {#local-models}
+
+- **Is it running?** Ollama's server starts when you open Ollama (its icon is in the menu bar). LM Studio's server has to be turned on, in its **Developer** tab. Then click **Look Again** in **Settings → AI Providers → On this Mac**.
+- **Is it on its usual port?** Vela looks on `127.0.0.1`, at port 11434 for Ollama and 1234 for LM Studio. For another port, or a server on another Mac, add it by hand: **Add Provider → Other OpenAI-Compatible Server**. See [Other servers](/guide/ai-models#local-servers).
+- **No models yet?** Vela still finds it, and says it has no models. Download one in Ollama or LM Studio, then **Test** it in **Settings → AI Providers**.
+
+## A key doesn't pass Test Connection {#api-key}
+
+- **"Didn't accept this key":** copy the whole key again from the provider's page (**Get a Key** opens it), or make a new one. Each provider's keys start the same way: `sk-` for OpenAI, `sk-ant-` for Anthropic and `AIza` for Google Gemini, and the sheet says when a key looks like another provider's.
+- **"Out of credit or over its limit":** OpenAI and Anthropic need credit on your account; Gemini's free tier has limits. Check billing with the provider.
+- **"Couldn't reach":** check your internet connection. **Continue Anyway** adds the provider, and Vela tries the key when it's first used.
 
 ## Siri or Shortcuts doesn't find Vela {#siri}
 
@@ -156,7 +168,7 @@ macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writin
 
 ### Does Vela send my messages to an AI service?
 
-Not unless you set one up. You can choose [a model of your own](/guide/ai-models) (OpenAI, Anthropic, Google Gemini, or a server such as Ollama) for Catch me up and Recap; Vela then asks first, and sends it the messages you ask about, their nicks and your nick, never channel or network names. Otherwise, [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. A later version will let you send long catch-ups to Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) (macOS 27 or later, off by default), where requests are encrypted and not stored, and Apple can't read them. This version never does. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
+Not unless you set one up. You can choose [a model of your own](/guide/ai-models) (OpenAI, Anthropic, Google Gemini, or Ollama or LM Studio on your Mac) for Catch me up and Recap; Vela then asks first, and sends it the messages you ask about, their nicks and your nick, never channel or network names. **Settings → AI Privacy** says what each one gets, and takes your OK back. See [AI privacy](/guide/ai-privacy). Otherwise, [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. A later version will let you send long catch-ups to Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) (macOS 27 or later, off by default), where requests are encrypted and not stored, and Apple can't read them. This version never does. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
 
 ### Is Vela free?
 

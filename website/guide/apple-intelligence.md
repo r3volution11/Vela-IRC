@@ -12,7 +12,7 @@ Vela uses Apple's built-in intelligence to help with busy channels and other lan
 - **[Translate](#translate-messages)** shows messages from other languages in yours.
 - **[Writing Tools](#writing-tools)** proofreads and rewrites what you type.
 
-Summaries, Recaps and translations are made on your Mac. Vela doesn't send your conversations to Apple, to a server of its own or anywhere else, unless you choose [a model of your own](/guide/ai-models) for Catch me up or Recap: OpenAI, Anthropic, Google Gemini, or a server such as Ollama. See [Privacy](#privacy) for the details. ([Private Cloud Compute](#private-cloud-compute) for long catch-ups, which you'll be able to turn on, comes in a later version.)
+Summaries, Recaps and translations are made on your Mac. Vela doesn't send your conversations to Apple, to a server of its own or anywhere else, unless you choose [a model of your own](/guide/ai-models) for Catch me up or Recap: a model on your Mac with Ollama or LM Studio, or OpenAI, Anthropic or Google Gemini. See [Privacy](#privacy) and [AI privacy](/guide/ai-privacy) for the details. ([Private Cloud Compute](#private-cloud-compute) for long catch-ups, which you'll be able to turn on, comes in a later version.)
 
 ## What you need {#requirements}
 
@@ -26,9 +26,16 @@ Catch me up and Writing Tools use **Apple Intelligence**, so they need:
 
 ## The Settings pane {#settings}
 
-<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Intelligence: a green “Apple Intelligence is on” box, then the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages, the Recap section with Offer Recap on, and the start of the Translation section" caption="Settings → Intelligence." />
+<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Intelligence: the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages, the Recap section with Offer Recap on, and the start of the Translation section" caption="Settings → Intelligence." />
 
-**Settings → Intelligence** has a section each for [your own models](/guide/ai-models) (**Models**), Catch me up, [Recap](/guide/recap), Translation and Writing Tools. [Siri, Shortcuts and Spotlight](/guide/siri-shortcuts) are in **Settings → [Integrations](/guide/integrations)**, which its last section links to. At the top, a box says whether Apple Intelligence is ready, and, when Catch me up or Recap uses one of your models, which:
+**Settings → Intelligence** is about what the features do: it has a section each for Catch me up, [Recap](/guide/recap), Translation and Writing Tools, then links to the two panes after it, and to [Siri, Shortcuts and Spotlight](/guide/siri-shortcuts) in **Settings → [Integrations](/guide/integrations)**. Its subtitle says where summaries are made.
+
+The AI panes come next in the Settings sidebar:
+
+- **Settings → [AI Providers](/guide/ai-models)**: where the models come from. Apple Intelligence's status, the default model, OpenAI, Anthropic or Google Gemini with your own key, and Ollama or LM Studio on your Mac, which Vela finds for you.
+- **Settings → [AI Privacy](/guide/ai-privacy)**: what's sent where, plainly, with each provider's permission and policies.
+
+At the top of **AI Providers**, a box says whether Apple Intelligence is ready. While it isn't, and Catch me up or Recap uses it, **Intelligence** shows the same box, with **AI Providers** to choose a model of your own instead:
 
 | Status | What it means |
 | --- | --- |
@@ -81,7 +88,7 @@ In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#int
 
 ### Another model {#models}
 
-Catch me up uses the **Default model** in **Settings → Intelligence → Models**, which is **Automatic (Apple)** until you choose another, or the **Model** in its own section. Once you've added a provider, the card's footer says which model wrote the summary, and **Change** writes it again with another. **Buffer: Catch Me Up With…** in the command palette picks the model first. See [Your own AI models](/guide/ai-models).
+Catch me up uses the **Default model** in **Settings → AI Providers**, which is **Automatic (Apple)** until you choose another, or the **Model** in its own section of **Settings → Intelligence**. Once you've added a provider, the card's footer says which model wrote the summary, and **Change** writes it again with another. **Buffer: Catch Me Up With…** in the command palette picks the model first. See [AI providers](/guide/ai-models).
 
 ### What it reads, and how long it takes {#catch-up-limits}
 
@@ -164,7 +171,7 @@ Writing Tools leaves commands, nicks, channel names, links and code alone, and i
 - **Private Cloud Compute comes in a later version.** In it, you'll be able to send a catch-up too long for one pass on your Mac to Apple's Private Cloud Compute (macOS 27 or later, off by default): encrypted, used only to write the summary, not stored, and not readable by Apple. See [Private Cloud Compute for long catch-ups](#private-cloud-compute).
 - **Translation runs on your Mac,** with Apple's Translation framework, and so does working out a message's language. Only the language downloads come from Apple, and macOS asks before each one. Translations are kept only in memory.
 - **Writing Tools is Apple's.** Vela hands it the text in the message field, and Apple Intelligence handles it as it does in any app.
-- **Your own models get what Apple Intelligence gets,** and only once you've agreed: the messages you ask about, their nicks and your nick, never a channel's, network's or server's name. They go to the provider you chose, under its policy. See [Your own AI models](/guide/ai-models#consent).
+- **Your own models get what Apple Intelligence gets,** and only once you've agreed: the messages you ask about, their nicks and your nick, never a channel's, network's or server's name. They go to the provider you chose, under its policy, or stay on your Mac with Ollama or LM Studio. **Settings → AI Privacy** lists each one, and takes your OK back. See [AI privacy](/guide/ai-privacy).
 - **There's no Vela server.** None of these features sends anything to Vela's developers.
 
 See [Privacy](/help/privacy) for everything else Vela does and doesn't do.

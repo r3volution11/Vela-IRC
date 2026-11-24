@@ -31,7 +31,7 @@ Out of the box, Vela follows your Mac's light or dark appearance with the **Pale
 
 ## A quick tour of Settings
 
-Settings (<kbd>⌘,</kbd>) has eleven panes:
+Settings (<kbd>⌘,</kbd>) has thirteen panes:
 
 | Pane | What's there |
 | --- | --- |
@@ -42,7 +42,9 @@ Settings (<kbd>⌘,</kbd>) has eleven panes:
 | **Media** | Link preview size, video players, images, the adult-site filter, blurring and site rules. |
 | **Networks** | Add, edit, connect and remove networks and bouncers, whether to reconnect automatically, whether to ask before leaving or removing a channel, and moderation defaults. |
 | **Notifications** | Highlights, private messages and sounds; the Dock icon's badge, offline mark and bouncing; and your highlight words. |
-| **Intelligence** | Catch me up and Recap summaries, your own AI models, translation and Writing Tools. See [Apple Intelligence](/guide/apple-intelligence). |
+| **Intelligence** | Catch me up and Recap summaries (and the model each uses), translation and Writing Tools. See [Apple Intelligence](/guide/apple-intelligence). |
+| **AI Providers** | Where Catch me up and Recap's models come from: Apple Intelligence's status, the default model, OpenAI, Anthropic or Google Gemini with your own key, and Ollama or LM Studio on your Mac. See [AI providers](/guide/ai-models). |
+| **AI Privacy** | What's sent to AI models and where, and which providers may be sent messages. See [AI privacy](/guide/ai-privacy). |
 | **Integrations** | Alfred, Raycast, Shortcuts and Siri, Spotlight, and AppleScript and `vela://` links: what's installed and how to set each up. See [Integrations](/guide/integrations). |
 | **Updates** | Whether Vela is up to date, **Check for Updates**, and whether to check for and install new versions automatically. See [Updates](/guide/updates). |
 | **Advanced** | The [settings editor](/customize/settings-editor): every setting in one searchable list, and settings.json itself. |

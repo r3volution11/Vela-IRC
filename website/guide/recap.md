@@ -97,7 +97,7 @@ See [Privacy](/help/privacy) for everything else.
 
 ## Turn it off {#settings}
 
-**A model of your own.** Recap uses the **Default model** in **Settings → Intelligence → Models**, or the **Model** in its own section. The footer of a finished Recap says which model wrote it, and **Change Model** writes it again with another; **More detail** asks the same model. **Buffer: Recap With…** in the command palette picks the model first. A model of your own reads far more at once than the one on your Mac, so a long Recap usually takes one pass. See [Your own AI models](/guide/ai-models).
+**A model of your own.** Recap uses the **Default model** in **Settings → AI Providers**, or the **Model** in its own section of **Settings → Intelligence**. The footer of a finished Recap says which model wrote it, and **Change Model** writes it again with another; **More detail** asks the same model. **Buffer: Recap With…** in the command palette picks the model first. A model of your own reads far more at once than the one on your Mac, so a long Recap usually takes one pass. See [Your own AI models](/guide/ai-models).
 
 **Offer Recap** in **Settings → Intelligence → Recap** turns Recap off everywhere: the Go menu item, the right-click items, the palette commands, the card's **Open Full Recap** and Siri. In settings.json it's [`intelligence.recap`](/reference/settings#intelligence.recap).
 

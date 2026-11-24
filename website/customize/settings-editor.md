@@ -15,7 +15,7 @@ Both views work on the same file. A change in the UI view, or anywhere else in S
 
 - **Settings → Advanced** (<kbd>⌘,</kbd>, then **Advanced**).
 - **Type in the Search field** at the top of the Settings sidebar. The results show in Advanced as you type, and <kbd>Return</kbd> moves you into the editor's own search field.
-- **Show in settings editor**, beside the title of the Appearance, Layout, Messages, Media, Networks, Notifications, Intelligence and Updates panes, shows just that pane's settings. The Spotlight settings on **Integrations** are `intelligence` settings, so they're listed with Intelligence's.
+- **Show in settings editor**, beside the title of the Appearance, Layout, Messages, Media, Networks, Notifications, Intelligence, AI Providers and Updates panes, shows just that pane's settings. The Spotlight settings on **Integrations** are `intelligence` settings, so they're listed with Intelligence's. **AI Privacy** has no settings of its own: whether a provider may be sent messages is its `consent` in `intelligence.providers`, on AI Providers.
 - **Vela → Search Settings…**, or **Settings: Search…** in the [command palette](/guide/command-palette), opens Advanced with the search field ready, keeping your last search.
 
 At the top right, the **UI** | **JSON** switch changes views, and the **⋯** menu has **Open settings.json in External Editor**, **Reveal Data Folder** and [Reset All Settings…](#reset-all).
@@ -30,10 +30,10 @@ Type `@` for filters, which you can combine with words and with each other:
 | --- | --- |
 | `@modified` | Settings set in settings.json. The **Modified** button beside the field, with its count, turns this on and off. |
 | `@unknown` | Keys in settings.json that Vela doesn't know. |
-| `@category:chat` | One category, by its id or its name: `appearance`, `layout`, `chat` (or `messages`), `typing`, `history`, `media`, `notifications`, `connection`, `moderation`, `intelligence` and `updates`. |
-| `@pane:messages` | The settings on one pane: `appearance`, `layout`, `messages`, `media`, `networks`, `notifications`, `intelligence` or `updates`. This is what **Show in settings editor** uses. |
+| `@category:chat` | One category, by its id or its name: `appearance`, `layout`, `chat` (or `messages`), `typing`, `history`, `media`, `notifications`, `connection`, `moderation`, `intelligence`, `aiProviders` and `updates`. |
+| `@pane:messages` | The settings on one pane: `appearance`, `layout`, `messages`, `media`, `networks`, `notifications`, `intelligence`, `aiProviders` or `updates`. This is what **Show in settings editor** uses. |
 
-The chips under the field do the same for categories: **All**, **Appearance**, **Layout**, **Messages**, **Typing**, **History**, **Media**, **Notifications**, **Connection**, **Moderation**, **Apple Intelligence** and **Updates**. An **Unknown** chip, with a warning sign, appears when settings.json has keys Vela doesn't know.
+The chips under the field do the same for categories: **All**, **Appearance**, **Layout**, **Messages**, **Typing**, **History**, **Media**, **Notifications**, **Connection**, **Moderation**, **Intelligence**, **AI Providers** and **Updates**. An **Unknown** chip, with a warning sign, appears when settings.json has keys Vela doesn't know.
 
 <Screenshot src="/screenshots/settings-editor-modified.webp" alt="The settings editor filtered with @modified: the Modified button is on, with a count of 22, and the list shows only the Appearance and Layout settings that are set in settings.json, each with an accent bar on its left" caption="@modified: only what's set in settings.json." />
 

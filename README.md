@@ -134,7 +134,7 @@ Three choices that combine freely, each changing only its own settings. Presets 
 
 - **Catch me up:** back in a busy channel, an Apple Intelligence summary of what you missed, topic by topic, made on your Mac, including what your bouncer replayed. Letting long ones use Apple's Private Cloud Compute (macOS 27, opt-in) comes in a later version; for now it's only in development builds.
 - **Recap:** a report in a window of its own, for a channel, a network or everything, for anyone or one person, since your first unread message or over any span: an overview, the topics, what was for you (and whether you answered), what was decided and who'll do what, and the links shared, each linked to its message, with **More detail** on any of them. Or the same messages as a plain log, no Apple Intelligence needed. Copy or save it as Markdown; nothing is kept once you close it.
-- **Your own AI models:** have Catch me up and Recap written by OpenAI, Anthropic (Claude) or Google Gemini with your own API key, or by a local server such as Ollama or LM Studio, on any Mac. Vela asks before a provider is first sent anything, and never sends channel, network or server names; keys stay in your Keychain.
+- **Your own AI models:** have Catch me up and Recap written by OpenAI, Anthropic (Claude) or Google Gemini with your own API key, or by a model on your Mac with Ollama or LM Studio, on any Mac. **Settings → AI Providers** finds Ollama and LM Studio when they're running (**Connect**: no key, no account) and walks you through getting a key, pasting it and testing it. **Settings → AI Privacy** says what's sent where, and takes your OK back. Vela asks before a provider is first sent anything, and never sends channel, network or server names; keys stay in your Keychain.
 - **Translation:** translate a message from another language, or a whole channel as messages arrive, on your Mac with Apple's Translation framework. No Apple Intelligence needed.
 - **Writing Tools** in the message field, where Apple Intelligence is available.
 - **Siri and Shortcuts:** ask Siri to catch you up, check your mentions, send a message, open a channel or set you away, and use the same actions in your own shortcuts. Your channels show up in Spotlight (names only).
@@ -204,7 +204,7 @@ Three choices that combine freely, each changing only its own settings. Presets 
 
 ## Customizing Vela
 
-- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Intelligence, Integrations, Updates and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
+- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Intelligence, AI Providers, AI Privacy, Integrations, Updates and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
 - **Settings → Advanced** is a VS Code-style settings editor: every setting with the right control for it, search and filters (`@modified`, `@unknown`, `@category:`, `@pane:`), and a JSON view with suggestions, inline problems, hover docs and the defaults alongside.
 - **`settings.json`** holds everything, VS Code style. Edit it in the settings editor's JSON view, or open it in your own editor from **Theme → Open settings.json**. Edits made in any editor apply live, and changes made in Vela keep your comments and formatting. Example:
 
