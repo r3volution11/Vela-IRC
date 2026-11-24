@@ -8,7 +8,7 @@
 # own repository, github.com/r3volution11/vela-alfred-workflow; Vela carries a
 # built copy of it, with its version and SHA-256 recorded beside it.
 #
-#   scripts/update-alfred-workflow.sh --release v1.5.0   # a published release of the workflow
+#   scripts/update-alfred-workflow.sh --release v1.0.0   # a published release of the workflow
 #   scripts/update-alfred-workflow.sh --release latest   # its newest release
 #   scripts/update-alfred-workflow.sh --local            # build ../Vela Alfred Workflow
 #   scripts/update-alfred-workflow.sh --local <dir>      # build the workflow in <dir>
@@ -20,7 +20,9 @@
 # its repository's scripts/build.sh --output <file>, which tests it first and
 # takes the version from the workflow's own info.plist; <dir> defaults to
 # "Vela Alfred Workflow" next to Vela's main checkout. --skip-tests passes
-# --skip-tests on to it.
+# --skip-tests on to it. The workflow's tests check its AppleScript against
+# this checkout's Vela/Vela.sdef (VELA_SDEF, unless you set it), the
+# dictionary of the Vela the workflow will ship in.
 #
 # Every new file must be a zip with info.plist at its top, for the workflow
 # io.github.r3volution11.Vela.alfred, with a version. Then it's copied to
@@ -53,7 +55,7 @@ usage() { sed -n '/^# Refreshes/,/^set -euo/p' "$script" | sed '$d; s/^# \{0,1\}
 while (( $# )); do
   case "$1" in
     --release)
-      [[ $# -ge 2 && -n "$2" ]] || { print -u2 -r -- "--release needs a tag, such as v1.5.0 or latest."; exit 2; }
+      [[ $# -ge 2 && -n "$2" ]] || { print -u2 -r -- "--release needs a tag, such as v1.0.0 or latest."; exit 2; }
       mode=release; release_tag="$2"; shift ;;
     --local)
       mode=local
@@ -89,7 +91,7 @@ inspect() {
   [[ "$id" == "$bundle_id" ]] || fail "$name is the workflow \"${id:-without a bundle id}\", not $bundle_id."
   workflow_version=$(plutil -extract version raw -o - "$plist" 2>/dev/null || true)
   [[ "$workflow_version" =~ '^[0-9]+\.[0-9]+(\.[0-9]+)?$' ]] \
-    || fail "$name's info.plist has no version like 1.5.0 (it says \"$workflow_version\")."
+    || fail "$name's info.plist has no version like 1.0.0 (it says \"$workflow_version\")."
 }
 
 sha256() { shasum -a 256 "$1" | cut -d' ' -f1; }
@@ -130,7 +132,7 @@ case $mode in
       [[ "$latest" == */releases/tag/* && -n "$release_tag" ]] || fail "$repo has no published release yet."
       print "    $release_tag"
     fi
-    [[ "$release_tag" =~ '^[A-Za-z0-9._-]+$' ]] || fail "\"$release_tag\" isn't a tag like v1.5.0."
+    [[ "$release_tag" =~ '^[A-Za-z0-9._-]+$' ]] || fail "\"$release_tag\" isn't a tag like v1.0.0."
     step "Downloading Vela.alfredworkflow from $repo $release_tag"
     base="https://github.com/$repo/releases/download/$release_tag"
     curl -fsSL --retry 3 -o "$candidate" "$base/Vela.alfredworkflow" \
@@ -161,7 +163,9 @@ case $mode in
     step "Building the workflow in $local_dir"
     build_options=(--output "$candidate")
     (( skip_tests )) && build_options+=(--skip-tests)
-    "$local_dir/scripts/build.sh" "${build_options[@]}" || fail "$local_dir/scripts/build.sh failed (above)."
+    # Tested against the dictionary of the Vela it goes into: this checkout's.
+    VELA_SDEF=${VELA_SDEF:-$PWD/Vela/Vela.sdef} "$local_dir/scripts/build.sh" "${build_options[@]}" \
+      || fail "$local_dir/scripts/build.sh failed (above)."
     commit=$(git -C "$local_dir" rev-parse --short=12 HEAD 2>/dev/null || true)
     if [[ -n "$commit" && -n "$(git -C "$local_dir" status --porcelain 2>/dev/null)" ]]; then
       commit+=" with uncommitted changes"

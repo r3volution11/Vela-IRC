@@ -43,9 +43,9 @@ struct IntegrationsTests {
     // MARK: Alfred
 
     @Test func alfredsStatusSaysWhatsInstalled() {
-        let ready = AlfredWorkflow.status(alfred: app("6.0"), workflowVersion: "1.5.0", isBundled: true)
-        #expect(ready == IntegrationStatus(.ready, "Alfred 6 is installed", detail: "Workflow 1.5.0 included"))
-        let old = AlfredWorkflow.status(alfred: app("4.8.1"), workflowVersion: "1.5.0", isBundled: true)
+        let ready = AlfredWorkflow.status(alfred: app("6.0"), workflowVersion: "1.0.0", isBundled: true)
+        #expect(ready == IntegrationStatus(.ready, "Alfred 6 is installed", detail: "Workflow 1.0.0 included"))
+        let old = AlfredWorkflow.status(alfred: app("4.8.1"), workflowVersion: "1.0.0", isBundled: true)
         #expect(old.kind == .attention)
         #expect(old.text == "Alfred 4 is installed; the workflow needs Alfred 5 or later")
         let missing = AlfredWorkflow.status(alfred: nil, workflowVersion: nil, isBundled: true)

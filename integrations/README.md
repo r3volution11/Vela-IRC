@@ -18,7 +18,7 @@ Don't change either by hand. `scripts/update-alfred-workflow.sh` writes both:
 
 ```sh
 scripts/update-alfred-workflow.sh --release latest     # the workflow's newest release
-scripts/update-alfred-workflow.sh --release v1.5.0     # a given release
+scripts/update-alfred-workflow.sh --release v1.0.0     # a given release
 scripts/update-alfred-workflow.sh --local              # build ../Vela Alfred Workflow with its scripts/build.sh
 scripts/update-alfred-workflow.sh --local <dir>        # build a checkout somewhere else
 scripts/update-alfred-workflow.sh --check              # the bundled file matches its record

@@ -415,7 +415,7 @@ The app carries a built copy of the workflow, which **Settings → Integrations 
 `scripts/update-alfred-workflow.sh` writes both:
 
 ```sh
-scripts/update-alfred-workflow.sh --release latest   # the workflow's newest release (or --release v1.5.0)
+scripts/update-alfred-workflow.sh --release latest   # the workflow's newest release (or --release v1.0.0)
 scripts/update-alfred-workflow.sh --local            # build "Vela Alfred Workflow" next to your Vela checkout
 scripts/update-alfred-workflow.sh --check            # the bundled file matches its record
 ```

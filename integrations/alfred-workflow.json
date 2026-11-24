@@ -1,6 +1,7 @@
 {
-  "version": "1.5.0",
-  "sha256": "d8cd44de47667affcf41077d9f160654855c1f6ce0c90a8b0d0c6682e3ecc232",
+  "version": "1.0.0",
+  "sha256": "205087b3bca2ab4c5fee3df73a6fd4b8a736776f8f6d6bfdd7ed3006a8abaced",
   "source": "local build",
+  "commit": "be17b667fa4c",
   "updated": "2026-11-23"
 }
