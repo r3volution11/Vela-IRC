@@ -8,8 +8,42 @@ import VelaIntelligence
 import VelaStore
 
 extension VelaCommandCatalog {
+    /// "Settings: Intelligence", "Settings: AI Providers" and "Settings: AI
+    /// Privacy", each opening its pane.
+    var aiSettingsCommands: [VelaCommand] {
+        let context = context
+        return Self.aiSettingsCommands { pane in
+            context.uiState.settingsEditor.requestedPane = pane
+            context.openSettings()
+        }
+    }
+
+    /// Static, so tests can build them.
+    static func aiSettingsCommands(showPane: @escaping (SettingsPane) -> Void) -> [VelaCommand] {
+        [
+            VelaCommand(
+                id: "settings.intelligence", category: .settings, title: SettingsPane.intelligence.title,
+                keywords: ["catch me up", "recap", "summary", "translate", "translation", "writing tools", "apple intelligence"]
+            ) {
+                showPane(.intelligence)
+            },
+            VelaCommand(
+                id: "settings.aiProviders", category: .settings, title: SettingsPane.aiProviders.title,
+                keywords: ["models", "api key", "openai", "anthropic", "claude", "gemini", "ollama", "lm studio", "local", "apple intelligence", "byok"]
+            ) {
+                showPane(.aiProviders)
+            },
+            VelaCommand(
+                id: "settings.aiPrivacy", category: .settings, title: SettingsPane.aiPrivacy.title,
+                keywords: ["privacy", "consent", "permission", "withdraw", "what's sent", "data", "openai", "anthropic", "claude", "gemini"]
+            ) {
+                showPane(.aiPrivacy)
+            },
+        ]
+    }
+
     /// Your own AI models in the palette: "AI: Set Default Model…" and
-    /// "AI: Manage Providers…", and, where there's another model to
+    /// "AI: Manage Providers…" (Settings → AI Providers), and, where there's another model to
     /// choose, "Buffer: Catch Me Up With…" and "Buffer: Recap With…".
     var aiModelCommands: [VelaCommand] {
         guard let intelligence = context.intelligence else { return [] }

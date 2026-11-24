@@ -34,7 +34,7 @@ nonisolated public struct AIProviderFailure: Error, Sendable, Hashable {
         case emptyResponse
         /// You haven't agreed to send it messages yet: nothing was sent.
         case needsConsent
-        /// Turned off in Settings → Intelligence.
+        /// Turned off in Settings → AI Providers.
         case providerOff
         /// The chosen model's provider isn't set up any more.
         case providerMissing
@@ -63,13 +63,13 @@ nonisolated public struct AIProviderFailure: Error, Sendable, Hashable {
         case .offline:
             return "Couldn't reach \(name). Check your internet connection."
         case .unreachable:
-            return "Couldn't connect to \(name). Make sure the server is running and its address is right in Settings → Intelligence."
+            return "Couldn't connect to \(name). Make sure the server is running and its address is right in Settings → AI Providers."
         case .timedOut:
             return "\(name) took too long to answer."
         case .badKey:
-            return "\(name) didn't accept your API key. Check it in Settings → Intelligence."
+            return "\(name) didn't accept your API key. Check it in Settings → AI Providers."
         case .missingKey:
-            return "There's no API key for \(name). Add one in Settings → Intelligence."
+            return "There's no API key for \(name). Add one in Settings → AI Providers."
         case .quota:
             return "Your \(name) account is out of credit or over its usage limit."
         case .rateLimited:
@@ -80,21 +80,21 @@ nonisolated public struct AIProviderFailure: Error, Sendable, Hashable {
             return "\(name) declined to summarize this conversation."
         case .modelNotFound:
             let model = modelID.map { " \($0)" } ?? ""
-            return "\(name) doesn't offer the model\(model) to your account. Choose another in Settings → Intelligence."
+            return "\(name) doesn't offer the model\(model) to your account. Choose another in Settings → AI Providers."
         case .emptyResponse:
             return "\(name) didn't return a summary."
         case .needsConsent:
             return "Vela needs your OK before it sends messages to \(name)."
         case .providerOff:
-            return "\(name) is turned off in Settings → Intelligence."
+            return "\(name) is turned off in Settings → AI Providers."
         case .providerMissing:
-            return "The model chosen for this isn't set up any more. Choose another in Settings → Intelligence."
+            return "The model chosen for this isn't set up any more. Choose another in Settings → AI Providers."
         case .other(let detail):
             return "\(name) couldn't do it: \(detail)"
         }
     }
 
-    /// Settings → Intelligence can fix it (a key, a server address, a
+    /// Settings → AI Providers can fix it (a key, a server address, a
     /// model, a provider that's off).
     public var isFixedInSettings: Bool {
         switch reason {

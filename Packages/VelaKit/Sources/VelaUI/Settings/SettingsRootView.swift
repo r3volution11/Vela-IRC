@@ -16,6 +16,8 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
     case networks
     case notifications
     case intelligence
+    case aiProviders
+    case aiPrivacy
     case integrations
     case updates
     case advanced
@@ -32,6 +34,8 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
         case .networks: "Networks"
         case .notifications: "Notifications"
         case .intelligence: "Intelligence"
+        case .aiProviders: "AI Providers"
+        case .aiPrivacy: "AI Privacy"
         case .integrations: "Integrations"
         case .updates: "Updates"
         case .advanced: "Advanced"
@@ -48,6 +52,8 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
         case .networks: "network"
         case .notifications: "bell.badge"
         case .intelligence: "apple.intelligence"
+        case .aiProviders: "cpu"
+        case .aiPrivacy: "hand.raised"
         case .integrations: "puzzlepiece.extension"
         case .updates: "arrow.down.circle"
         case .advanced: "gearshape.2"
@@ -58,7 +64,8 @@ enum SettingsPane: String, CaseIterable, Identifiable, Hashable {
     static let groups: [[SettingsPane]] = [
         [.presets],
         [.appearance, .layout, .messages, .media],
-        [.networks, .notifications, .intelligence, .integrations],
+        [.networks, .notifications],
+        [.intelligence, .aiProviders, .aiPrivacy, .integrations],
         [.updates, .advanced],
     ]
 }
@@ -116,6 +123,8 @@ struct SettingsRootView: View {
         case .networks: NetworksPane()
         case .notifications: NotificationsPane()
         case .intelligence: IntelligencePane(navigate: navigate)
+        case .aiProviders: AIProvidersPane(navigate: navigate)
+        case .aiPrivacy: AIPrivacyPane(navigate: navigate)
         case .integrations: IntegrationsPane()
         case .updates: UpdatesPane()
         case .advanced: AdvancedPane()
@@ -150,31 +159,39 @@ private struct SettingsSidebar: View {
             .help("Search every setting. Results show in Advanced.")
             .padding(.horizontal, 10)
 
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(SettingsPane.groups.enumerated()), id: \.offset) { index, group in
-                    if index > 0 {
-                        Spacer().frame(height: 12)
-                    }
-                    ForEach(group) { pane in
-                        SettingsSidebarItem(pane: pane, isSelected: pane == selection) {
-                            selection = pane
+            // Scrolls when the window is shorter than the list.
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(SettingsPane.groups.enumerated()), id: \.offset) { index, group in
+                            if index > 0 {
+                                Spacer().frame(height: 12)
+                            }
+                            ForEach(group) { pane in
+                                SettingsSidebarItem(pane: pane, isSelected: pane == selection) {
+                                    selection = pane
+                                }
+                                .id(pane)
+                            }
                         }
                     }
-                }
-                Spacer(minLength: 12)
-                Text("Vela \(AppModel.appVersion)")
-                    .font(.system(size: 11))
-                    .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
                     .padding(.horizontal, 10)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Settings sections")
+                }
+                .scrollIndicators(.never)
+                .scrollBounceBehavior(.basedOnSize)
+                .focusable()
+                .focusEffectDisabled()
+                .onKeyPress(.upArrow) { move(by: -1) }
+                .onKeyPress(.downArrow) { move(by: 1) }
+                .onChange(of: selection) { _, pane in proxy.scrollTo(pane) }
             }
-            .padding(.horizontal, 10)
             .frame(maxHeight: .infinity, alignment: .top)
-            .focusable()
-            .focusEffectDisabled()
-            .onKeyPress(.upArrow) { move(by: -1) }
-            .onKeyPress(.downArrow) { move(by: 1) }
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Settings sections")
+            Text("Vela \(AppModel.appVersion)")
+                .font(.system(size: 11))
+                .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                .padding(.horizontal, 20)
         }
         .background { sectionShortcuts }
         .padding(.top, 14)

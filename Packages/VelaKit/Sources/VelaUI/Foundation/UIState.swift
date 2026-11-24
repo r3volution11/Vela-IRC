@@ -126,8 +126,8 @@ struct SettingsReveal: Equatable {
     var section: String
 
     static let gifs = SettingsReveal(pane: .media, section: "gifs")
-    /// Intelligence's Models: your providers and the default model.
-    static let aiModels = SettingsReveal(pane: .intelligence, section: "models")
+    /// AI Providers' list of your providers.
+    static let aiModels = SettingsReveal(pane: .aiProviders, section: "models")
 }
 
 public struct MentionRequest: Equatable {

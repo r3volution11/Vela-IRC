@@ -246,19 +246,6 @@ nonisolated extension AIProviderKind {
     var article: String { self == .openAI || self == .anthropic ? "an" : "a" }
 }
 
-/// Common local servers, offered when you add a custom one.
-nonisolated public struct AIServerPreset: Sendable, Hashable, Identifiable {
-    public var name: String
-    public var baseURL: String
-
-    public var id: String { name }
-
-    public static let all = [
-        AIServerPreset(name: "Ollama", baseURL: "http://localhost:11434/v1"),
-        AIServerPreset(name: "LM Studio", baseURL: "http://localhost:1234/v1"),
-    ]
-}
-
 nonisolated extension AIProviderEntry {
     /// Where its API is: the kind's for hosted providers, the entry's for
     /// a custom server (with `/v1` added when the address has no path).

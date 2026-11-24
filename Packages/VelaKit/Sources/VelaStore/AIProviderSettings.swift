@@ -5,7 +5,7 @@
 import Foundation
 import VelaFoundation
 
-// Your own AI providers (Settings → Intelligence → Models), as settings.json
+// Your own AI providers (Settings → AI Providers), as settings.json
 // stores them: what each provider is, its name, a custom server's address,
 // whether it's on, and whether you've agreed to send it messages. Never a
 // key: keys live only in the Keychain (`Keychain.aiProviderKeyAccount`).
@@ -38,7 +38,7 @@ nonisolated public struct AIProviderEntry: Codable, Sendable, Hashable, Identifi
     /// Off keeps the provider (and its key) but offers none of its models.
     public var enabled: Bool
     /// You agreed to send it messages (the consent sheet). Withdrawn in
-    /// Settings → Intelligence.
+    /// Settings → AI Privacy.
     public var consented: Bool
     /// The context window a custom server loads its models with, in
     /// tokens; nil uses ``defaultCustomContextTokens``.
@@ -297,7 +297,7 @@ extension SettingsStore {
 
 extension Keychain {
     /// The Keychain account for an AI provider's key you entered in
-    /// Settings → Intelligence: `ai/<provider id>` (`ai/anthropic`). Never
+    /// Settings → AI Providers: `ai/<provider id>` (`ai/anthropic`). Never
     /// settings.json.
     public static func aiProviderKeyAccount(_ providerID: String) -> String {
         "ai/\(providerID)"

@@ -46,7 +46,7 @@
 	<key>SUVerifyUpdateBeforeExtraction</key>
 	<true/>
 	<!--
-	  Your own AI models (Settings → Intelligence → Models) can be a server
+	  Your own AI models (Settings → AI Providers) can be a server
 	  such as Ollama or LM Studio, which usually listens on plain http:
 	  allow http to localhost, .local names and IP addresses only. Every
 	  other address keeps App Transport Security's https requirement.
@@ -59,7 +59,7 @@
 	</dict>
 	<!-- Shown when such a server is on another Mac on your network. -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Vela connects to an AI server on your network only when you add one in Settings → Intelligence.</string>
+	<string>Vela connects to an AI server on your network only when you add one in Settings → AI Providers.</string>
 
 	<!--
 	  Automation (website/guide/automation.md). Config/Debug-Info.plist has

@@ -46,6 +46,25 @@ struct SettingsMetadataTests {
         #expect(SettingsCategory.categories(forPane: "updates") == [.updates])
     }
 
+    /// Your providers and the default model are on AI Providers; each
+    /// feature's model and the rest of intelligence.* stay on Intelligence.
+    @Test func aiProvidersHasItsOwnKeys() {
+        #expect(SettingsCategory.category(forKey: "intelligence.providers") == .aiProviders)
+        #expect(SettingsCategory.category(forKey: "intelligence.model") == .aiProviders)
+        #expect(SettingsCategory.category(forKey: "intelligence.catchUpModel") == .intelligence)
+        #expect(SettingsCategory.category(forKey: "intelligence.recapModel") == .intelligence)
+        #expect(SettingsCategory.category(forKey: "intelligence.catchUp") == .intelligence)
+        #expect(SettingsCategory.categories(forPane: "aiProviders") == [.aiProviders])
+        #expect(SettingsCategory.categories(forPane: "aiPrivacy").isEmpty)
+        #expect(SettingsCatalog.descriptor(forKey: "intelligence.providers")?.settingsCategory?.paneID == "aiProviders")
+        // Every key a category names is a real setting.
+        for category in SettingsCategory.allCases {
+            for key in category.keys {
+                #expect(SettingsCatalog.descriptor(forKey: key) != nil, "\(key)")
+            }
+        }
+    }
+
     /// Checking is on by default, installing without asking off, and both
     /// show on the Updates pane with plain titles.
     @Test func updateSettings() {

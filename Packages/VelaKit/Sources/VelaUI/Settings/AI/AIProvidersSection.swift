@@ -9,16 +9,18 @@ import VelaIntelligence
 import VelaStore
 import VelaTheme
 
-/// Settings → Intelligence → Models: the default model for Catch me up and
-/// Recap, and your own providers (OpenAI, Anthropic, Google Gemini, or a
-/// server such as Ollama or LM Studio), each with its key (in the
-/// Keychain, never shown back), a Test that fetches its model list, and
-/// whether it may be sent messages. Apple Intelligence stays the default
-/// until you pick another model.
-struct IntelligenceModelsSection: View {
-    @Environment(AppModel.self) private var app
+/// Settings → AI Providers → Providers: your own providers (OpenAI,
+/// Anthropic, Google Gemini, or a server such as Ollama or LM Studio), each
+/// with its key (in the Keychain, never shown back), a Test that fetches its
+/// model list, and on or off. Adding OpenAI, Anthropic or Gemini opens the
+/// setup sheet; a server is added here, and filled in on its row. Whether
+/// each may be sent messages is in AI Privacy.
+struct AIProvidersSection: View {
     @Environment(IntelligenceServices.self) private var intelligence
     @Environment(\.theme) private var theme
+    let navigate: (SettingsPane) -> Void
+    /// Opens the setup sheet.
+    let startSetup: (AIProviderSetupRequest.Start) -> Void
 
     /// Providers whose details are open.
     @State private var expanded: Set<String> = []
@@ -26,17 +28,12 @@ struct IntelligenceModelsSection: View {
     var body: some View {
         let models = intelligence.models
         let providers = models.providers
-        SettingsSection("Models", footer: Self.footer) {
-            AIModelSettingRow(
-                title: "Default model",
-                detail: "For Catch me up and Recap, unless they pick their own below.",
-                key: .intelligenceModel
-            )
+        SettingsSection("Providers", footer: Self.footer) {
             if providers.isEmpty {
-                emptyRow
+                emptyRow(canAdd: models.canAddProviders)
             }
             ForEach(providers) { entry in
-                AIProviderRow(entry: entry, isExpanded: expandedBinding(entry.id))
+                AIProviderRow(entry: entry, isExpanded: expandedBinding(entry.id), navigate: navigate)
             }
         } accessory: {
             if models.canAddProviders {
@@ -52,33 +49,40 @@ struct IntelligenceModelsSection: View {
         .onAppear { models.refreshStaleModels() }
     }
 
-    static let footer = "Your providers get only the messages you ask about, their nicks and your own nick: never channel, network or server names. Each asks for your OK the first time, and its usage is billed to your key. Keys are kept in your Keychain. Translation always stays on this Mac."
+    static let footer = "Keys are kept in your Keychain and sent only to their own provider. What each provider is sent, and whether it may be, is in AI Privacy."
 
-    private var emptyRow: some View {
-        HStack(alignment: .top, spacing: 10) {
+    private func emptyRow(canAdd: Bool) -> some View {
+        HStack(alignment: .center, spacing: 10) {
             Image(systemName: "sparkles")
                 .font(.system(size: 13))
                 .foregroundStyle(theme[ThemeKey.accentText])
                 .accessibilityHidden(true)
-            Text("Add OpenAI, Anthropic, Google Gemini or a server such as Ollama or LM Studio to use your own models. Apple Intelligence stays the default until you choose another.")
+            Text("Use OpenAI, Anthropic or Google Gemini with your own key, or a server such as Ollama or LM Studio. Apple Intelligence stays the default until you choose another.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if canAdd {
+                Button("Add a Provider…") { startSetup(.choose) }
+                    .buttonStyle(ThemedButtonStyle(prominent: true))
+                    .fixedSize()
+                    .accessibilityHint("Walks you through getting a key and connecting OpenAI, Anthropic or Google Gemini")
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .accessibilityElement(children: .combine)
     }
 
     private func addMenu(existing: [AIProviderEntry]) -> some View {
         Menu {
-            ForEach([AIProviderKind.openAI, .anthropic, .gemini], id: \.self) { kind in
-                Button(kind.addTitle) { add(kind) }
+            ForEach(AIProviderSetupRequest.hostedKinds, id: \.self) { kind in
+                Button("\(kind.addTitle)…") { startSetup(.key(kind)) }
                     .disabled(existing.contains { $0.kind == kind })
             }
             Divider()
-            ForEach(AIServerPreset.all) { preset in
-                Button("\(preset.name) on This Mac") { add(.openAICompatible, name: preset.name, baseURL: preset.baseURL) }
+            ForEach(LocalModelServer.allCases) { server in
+                Button("\(server.name) on This Mac") { connect(server) }
+                    .disabled(intelligence.models.provider(for: server) != nil)
             }
             Button("Other OpenAI-Compatible Server") { add(.openAICompatible, name: "Custom server", baseURL: "") }
         } label: {
@@ -97,6 +101,12 @@ struct IntelligenceModelsSection: View {
         expanded.insert(entry.id)
     }
 
+    /// Ollama or LM Studio at its usual address, opened to Test it.
+    private func connect(_ server: LocalModelServer) {
+        guard let entry = intelligence.models.connect(server, models: []) else { return }
+        expanded.insert(entry.id)
+    }
+
     private func expandedBinding(_ id: String) -> Binding<Bool> {
         Binding(
             get: { expanded.contains(id) },
@@ -108,13 +118,14 @@ struct IntelligenceModelsSection: View {
 }
 
 /// One provider: its name and state, on or off, and (opened) its key, a
-/// custom server's address and context, the model list with Test, its
-/// consent, and Remove.
+/// custom server's address and context, the model list with Test, whether
+/// it may be sent messages (changed in AI Privacy), and Remove.
 private struct AIProviderRow: View {
     @Environment(IntelligenceServices.self) private var intelligence
     @Environment(\.theme) private var theme
     let entry: AIProviderEntry
     @Binding var isExpanded: Bool
+    let navigate: (SettingsPane) -> Void
 
     @State private var keyDraft = ""
     @State private var hasKey = false
@@ -150,8 +161,8 @@ private struct AIProviderRow: View {
             Button("Remove", role: .destructive) { models.removeProvider(entry.id) }
         } message: {
             Text(entry.kind.requiresKey
-                ? "Its key is deleted from your Keychain, and Catch me up and Recap go back to the default model if they used it."
-                : "Catch me up and Recap go back to the default model if they used it.")
+                ? "Its key is deleted from your Keychain, and Catch me up and Recap go back to Apple Intelligence or the default model if they used it."
+                : "Catch me up and Recap go back to Apple Intelligence or the default model if they used it.")
         }
     }
 
@@ -382,21 +393,16 @@ private struct AIProviderRow: View {
         return fetched ? "\(count)\(pick)" : "Vela's picks\(pick). Test to list all."
     }
 
+    /// Whether it may be sent messages; allowed and taken back in AI Privacy.
     private var consentRow: some View {
         labeled("Permission") {
-            if entry.consented {
-                HStack(spacing: 8) {
-                    Text("Allowed to receive messages you ask about")
-                        .font(.system(size: 12))
-                        .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
-                    Button("Withdraw") { models.withdrawConsent(entry.id) }
-                        .buttonStyle(ThemedButtonStyle())
-                        .accessibilityHint("Vela asks again before sending \(entry.name) anything")
-                }
-            } else {
-                Text("Vela asks before sending it anything.")
+            HStack(spacing: 8) {
+                Text(entry.consented ? "Allowed to receive the messages you ask about" : "Vela asks before sending it anything")
                     .font(.system(size: 12))
                     .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                SettingsLinkButton("AI Privacy", systemImage: SettingsPane.aiPrivacy.systemImage) { navigate(.aiPrivacy) }
+                    .fixedSize()
+                    .accessibilityHint("Opens Settings → AI Privacy, where you allow it or take it back")
             }
         }
     }

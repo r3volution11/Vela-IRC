@@ -762,7 +762,7 @@ extension SettingKey where Value == String {
 extension SettingKey where Value == [AIProviderEntry] {
     public static var intelligenceProviders: SettingKey<[AIProviderEntry]> {
         .init("intelligence.providers", default: [],
-              summary: "Your own AI providers for Catch me up and Recap, set up in Settings → Intelligence → Models. Each is an object: \"id\" (used in model choices, such as \"anthropic\"), \"kind\" (\"openai\", \"anthropic\", \"gemini\" or \"openaiCompatible\" for a server such as Ollama or LM Studio), \"name\", \"baseURL\" (custom servers, such as `http://localhost:11434/v1`), \"enabled\", \"consent\" (you agreed to send it messages) and \"contextTokens\" (how much a custom server reads at once). API keys are never stored here: they're in your Keychain.")
+              summary: "Your own AI providers for Catch me up and Recap, set up in Settings → AI Providers. Each is an object: \"id\" (used in model choices, such as \"anthropic\"), \"kind\" (\"openai\", \"anthropic\", \"gemini\" or \"openAICompatible\" for a server such as Ollama or LM Studio), \"name\", \"baseURL\" (custom servers, such as `http://localhost:11434/v1`), \"enabled\", \"consent\" (you agreed to send it messages; withdrawn in Settings → AI Privacy) and \"contextTokens\" (how much a custom server reads at once). API keys are never stored here: they're in your Keychain.")
     }
 }
 

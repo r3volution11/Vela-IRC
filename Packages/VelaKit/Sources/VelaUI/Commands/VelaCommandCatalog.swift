@@ -1046,6 +1046,7 @@ struct VelaCommandCatalog {
         commands += [textBigger, textSmaller, textActualSize]
         commands += [selectTheme, toggleFollowSystem, themeEditor, importTheme, revealThemesFolder]
         commands += [openSettings, searchSettings, openSettingsJSON]
+        commands += aiSettingsCommands
         commands += integrationCommands
         commands += [previousBuffer, nextBuffer, previousTab, nextTab, previousNetwork, nextNetwork, previousUnread, nextUnread]
         commands += [focusNavigation, focusMessages, focusInput, focusMembers, nextArea, previousArea]

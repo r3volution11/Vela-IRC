@@ -8,12 +8,12 @@ import VelaIntelligence
 import VelaStore
 import VelaTheme
 
-/// Opening Settings → Intelligence at its Models section.
+/// Opening Settings → AI Providers at its list of providers.
 @MainActor
 enum AIModelActions {
     static func openSettings(uiState: UIState, openSettings: OpenSettingsAction) {
         uiState.settingsSectionReveal = .aiModels
-        uiState.settingsEditor.requestedPane = .intelligence
+        uiState.settingsEditor.requestedPane = .aiProviders
         openSettings()
     }
 

@@ -31,9 +31,9 @@ struct IntegrationsTests {
 
     // MARK: The pane
 
-    @Test func thePaneIsRightAfterIntelligence() throws {
+    @Test func thePaneIsRightAfterTheAIPanes() throws {
         #expect(SettingsPane.integrations.title == "Integrations")
-        #expect(SettingsPane.groups.contains([.networks, .notifications, .intelligence, .integrations]))
+        #expect(SettingsPane.groups.contains([.intelligence, .aiProviders, .aiPrivacy, .integrations]))
         #expect(SettingsPane.groups.flatMap { $0 } == SettingsPane.allCases)
         // Its settings (Spotlight's) belong to Intelligence in settings.json,
         // so the pane has no "Show in settings editor" link of its own.

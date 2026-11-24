@@ -20,7 +20,7 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Vela connects to an AI server on your network only when you add one in Settings → Intelligence.</string>
+	<string>Vela connects to an AI server on your network only when you add one in Settings → AI Providers.</string>
 
 	<!--
 	  Automation, as in Vela/Info.plist, except that Vela Dev answers

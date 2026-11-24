@@ -13,6 +13,9 @@ import VelaTheme
 struct AIConsentRequest: Identifiable {
     let id = UUID()
     let providerID: String
+    /// The Allow button: "Allow and Continue" where a summary is waiting,
+    /// "Allow" from Settings → AI Privacy.
+    var allowTitle = "Allow and Continue"
     let onAllow: @MainActor () -> Void
 }
 
@@ -41,14 +44,14 @@ enum AIConsentText {
         }
         let address = entry.apiBaseURL.map(hostAndPort) ?? "the address you entered"
         switch entry.serverLocation {
-        case .thisMac: return "They go to the server at \(address), on this Mac."
+        case .thisMac: return "They stay on this Mac, with the server at \(address)."
         case .localNetwork: return "They go to the server at \(address), on your network. Its owner's rules apply."
         case .internet: return "They go to the server at \(address), over the internet. Its owner's rules apply."
         }
     }
 
     static func footer(_ entry: AIProviderEntry) -> String {
-        "Vela asks once for \(entry.name). You can take it back in Settings → Intelligence."
+        "Vela asks once for \(entry.name). You can take it back in Settings → AI Privacy."
     }
 
     static func hostAndPort(_ url: URL) -> String {
@@ -93,33 +96,13 @@ struct AIConsentSheet: View {
                     .foregroundStyle(theme[ThemeKey.popoverForeground])
                     .accessibilityAddTraits(.isHeader)
             }
-            Text(AIConsentText.intro(entry))
-                .font(.system(size: 13))
-                .foregroundStyle(theme[ThemeKey.popoverForeground])
-            VStack(alignment: .leading, spacing: 8) {
-                bullet(AIConsentText.sent, systemImage: "text.bubble")
-                bullet(AIConsentText.neverSent, systemImage: "eye.slash")
-            }
-            Text(AIConsentText.destination(entry))
-                .font(.system(size: 12.5))
-                .foregroundStyle(theme[ThemeKey.popoverForeground])
-                .fixedSize(horizontal: false, vertical: true)
-            if let policy = entry.kind.dataPolicyURL {
-                SettingsLinkButton("\(entry.kind.displayName)'s data policy", systemImage: "arrow.up.right.square") {
-                    NSWorkspace.shared.open(policy)
-                }
-                .accessibilityHint("Opens it in your browser")
-            }
-            Text(AIConsentText.footer(entry))
-                .font(.system(size: 11.5))
-                .foregroundStyle(theme[ThemeKey.popoverForeground].opacity(0.7))
-                .fixedSize(horizontal: false, vertical: true)
+            AIConsentDetails(entry: entry, foregroundKey: ThemeKey.popoverForeground)
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .buttonStyle(ThemedButtonStyle())
                     .keyboardShortcut(.cancelAction)
-                Button("Allow and Continue") {
+                Button(request.allowTitle) {
                     intelligence.models.grantConsent(entry.id)
                     dismiss()
                     request.onAllow()
@@ -132,6 +115,44 @@ struct AIConsentSheet: View {
         .frame(width: 440)
         .accessibilityElement(children: .contain)
     }
+}
+
+/// What the consent sheet says, below its title: what's sent and what
+/// never is, where it goes, the provider's data policy and how to take it
+/// back. The setup sheet shows the same before you allow a new provider.
+struct AIConsentDetails: View {
+    @Environment(\.theme) private var theme
+    let entry: AIProviderEntry
+    /// The text color: the popover's on the consent sheet, Settings' on the
+    /// setup sheet.
+    var foregroundKey = ThemeKey.popoverForeground
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(AIConsentText.intro(entry))
+                .font(.system(size: 13))
+                .foregroundStyle(theme[foregroundKey])
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 8) {
+                bullet(AIConsentText.sent, systemImage: "text.bubble")
+                bullet(AIConsentText.neverSent, systemImage: "eye.slash")
+            }
+            Text(AIConsentText.destination(entry))
+                .font(.system(size: 12.5))
+                .foregroundStyle(theme[foregroundKey])
+                .fixedSize(horizontal: false, vertical: true)
+            if let policy = entry.kind.dataPolicyURL {
+                SettingsLinkButton("\(entry.kind.displayName)'s data policy", systemImage: "arrow.up.right.square") {
+                    NSWorkspace.shared.open(policy)
+                }
+                .accessibilityHint("Opens it in your browser")
+            }
+            Text(AIConsentText.footer(entry))
+                .font(.system(size: 11.5))
+                .foregroundStyle(theme[foregroundKey].opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
     private func bullet(_ text: String, systemImage: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -142,7 +163,7 @@ struct AIConsentSheet: View {
                 .accessibilityHidden(true)
             Text(text)
                 .font(.system(size: 12.5))
-                .foregroundStyle(theme[ThemeKey.popoverForeground])
+                .foregroundStyle(theme[foregroundKey])
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)

@@ -113,7 +113,7 @@ struct RecapSummaryView: View {
             RecapNoteCallout(
                 systemImage: "apple.intelligence",
                 text: "Summaries need Apple Intelligence, or a model of your own.",
-                detail: "\(status.detail) You can also add a provider such as OpenAI, Anthropic, Google Gemini or Ollama in Settings → Intelligence."
+                detail: "\(status.detail) You can also add a provider such as OpenAI, Anthropic, Google Gemini or Ollama in Settings → AI Providers."
             ) {
                 HStack(spacing: 8) {
                     Button("Show Log") { showLog() }

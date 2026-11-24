@@ -21,8 +21,9 @@ public final class IntelligenceServices {
     @ObservationIgnored public let recapSummarizer: any RecapSummarizer
     /// Recap windows asked for from outside a window (Siri, Shortcuts).
     public let recaps = RecapRequests()
-    /// Your own providers and the model each feature uses (Settings →
-    /// Intelligence → Models). Apple's alone in demo mode.
+    /// Your own providers and the model each feature uses (Settings → AI
+    /// Providers, and each feature's section in Settings → Intelligence).
+    /// Apple's alone in demo mode.
     @ObservationIgnored public let models: AIModels
 
     public init(
