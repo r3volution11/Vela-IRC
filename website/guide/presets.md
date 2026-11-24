@@ -36,6 +36,8 @@ You can also choose from:
 
 ### Focus
 
+<Screenshot src="/screenshots/layout-focus.webp" alt="The Focus layout: no sidebar and no tabs, only the channel's name, member count and topic above the conversation, with the member list on the right" caption="Focus, with the member list showing." />
+
 Focus takes away everything you use to move between channels, so the conversation has the whole window, with the channel's name, how many people are in it and its topic above it. Pick its card here, choose **View → Layout → Focus**, or use the **Focus** card under **Navigation** in **Settings → Layout**. To switch channels:
 
 - press <kbd>⌘P</kbd> (or <kbd>⌘K</kbd>) for **Go to Conversation…** and type a few letters of the channel (network consoles are there too);

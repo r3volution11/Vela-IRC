@@ -34,7 +34,7 @@ With **Match System Appearance** on, the theme you pick becomes the theme for th
 
 ## Accent color {#accent-color}
 
-<Screenshot src="/screenshots/settings-accent.webp" alt="Settings → Appearance: the Message box section with its Border and Border color rows, then the Accent color row above the theme gallery, with round swatches from Palenight's colors and a ring around Cyan" caption="Accent color, at the top of the theme gallery." />
+<Screenshot src="/screenshots/settings-accent.webp" alt="Settings → Appearance: the Presets menus, the Message box section with its Border and Border color rows, then the Accent color row above the theme gallery, with round swatches from Palenight's colors and a ring around Cyan, and the first row of theme cards" caption="Accent color, at the top of the theme gallery." />
 
 Every theme has an **accent color**, used for buttons, the selected channel, links, mention highlights, focus rings and more. To use a different one, pick it from **Accent color** at the top of **Settings → Appearance → Theme**.
 

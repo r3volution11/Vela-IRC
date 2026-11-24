@@ -9,7 +9,7 @@ description: Settings → Integrations lists what works with Vela, from Alfred a
 
 Everything on this pane runs on your Mac. Vela checks which apps are installed when you open the pane and when you come back to Vela, and only asks macOS, so it never sends anything anywhere.
 
-<!-- Screenshot to come: Settings → Integrations (website/scripts/screenshots.sh shoots settings-integrations). -->
+<Screenshot src="/screenshots/settings-integrations.webp" alt="Settings → Integrations: the Alfred card with Install Workflow…, Source code and Learn more; the Raycast card with View on GitHub and Get Raycast; and the Shortcuts and Siri card with Open Shortcuts, things to ask Siri and every action in Shortcuts" caption="The top of Settings → Integrations." />
 
 You can also open the pane from the [command palette](/guide/command-palette): **Settings: Integrations**, or from **Settings → Intelligence**, which links here. (Siri, Shortcuts and the Spotlight settings were in **Settings → Intelligence** before Vela 1.5.)
 

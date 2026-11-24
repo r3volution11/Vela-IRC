@@ -7,7 +7,7 @@ description: What Vela sends to Apple Intelligence and to the AI providers you a
 
 **Settings → AI Privacy** says, in plain words, what Vela sends to AI models and where. Open it with <kbd>⌘,</kbd>, run **Settings: AI Privacy** from the [command palette](/guide/command-palette), or click **AI Privacy** in **Settings → Intelligence** or on a provider in **Settings → AI Providers**.
 
-<!-- Screenshot to come: Settings → AI Privacy (website/scripts/screenshots.sh shoots settings-ai-privacy). -->
+<Screenshot src="/screenshots/settings-ai-privacy.webp" alt="Settings → AI Privacy: Apple Intelligence for Catch me up and Recap, Translation and Writing Tools; what a provider gets: Sent, Never sent and Your keys; Your providers, reading No providers; and Spotlight" caption="Settings → AI Privacy, with no providers added." />
 
 The short version: **until you add a provider, your messages go nowhere.** Apple Intelligence summarizes them on your Mac. Add one, and it's sent nothing until you've agreed and you ask for a summary, and then only the messages you asked about, to the model you chose. Vela has no server of its own, keeps no record of what it sends, and has no analytics.
 

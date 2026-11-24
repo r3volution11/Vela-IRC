@@ -9,7 +9,7 @@ Vela works with Siri, the Shortcuts app and Spotlight without any setup. Ask Sir
 
 Their settings are in **Settings → Integrations**, under **Shortcuts and Siri** and **Spotlight**, beside Alfred, Raycast and AppleScript. See [Integrations](/guide/integrations).
 
-<!-- Screenshot to come: Settings → Integrations, scrolled to Shortcuts and Siri and Spotlight (website/scripts/screenshots.sh shoots settings-siri). -->
+<Screenshot src="/screenshots/settings-siri.webp" alt="Settings → Integrations, scrolled to the Shortcuts and Siri card, with Open Shortcuts, things to ask Siri and the actions in Shortcuts, and the Spotlight card with Show channels in Spotlight on and Search messages in Spotlight dimmed until message history is saved" />
 
 ## Ask Siri {#siri}
 

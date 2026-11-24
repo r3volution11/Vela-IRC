@@ -54,7 +54,7 @@ Prefer a calmer sidebar? Turn off **Settings → Layout → Unread counts** and 
 
 Vela's Dock icon can show a badge counting what you haven't read, a mark when a network goes offline, and bounce when someone wants you. Choose all of it in **Settings → Notifications → Dock**.
 
-<Screenshot src="/screenshots/settings-dock.webp" alt="Settings → Notifications: the Dock section, with the badge switch on, Count set to Mentions and highlight words and Private messages, Style set to 99+, the offline mark switch on beside a small Vela icon wearing the amber mark, and Bounce the Dock icon set to Off" caption="The Dock section of Settings → Notifications." />
+<Screenshot src="/screenshots/settings-dock.webp" alt="Settings → Notifications: the Dock section, with the badge switch on, Count set to Mentions and highlight words and Private messages, Style set to 99+, the offline mark switch on beside a small Vela icon wearing the amber mark, and Bounce the Dock icon set to Off, then the Highlight words section" caption="The Dock section of Settings → Notifications." />
 
 ### The badge {#dock-badge}
 

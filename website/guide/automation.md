@@ -12,6 +12,8 @@ Vela can be driven from outside the app in two ways:
 
 For Siri, the Shortcuts app and Spotlight, see [Siri, Shortcuts & Spotlight](/guide/siri-shortcuts). Vela's own Alfred workflow and Raycast extension, built on both, are in [Alfred & Raycast](/guide/alfred-and-raycast). **Settings → [Integrations](/guide/integrations)** has all of them, with a few links to try.
 
+<Screenshot src="/screenshots/settings-automation.webp" alt="The end of Settings → Integrations: the Spotlight card, then the AppleScript and vela:// links card with Scripting version 1, Open Dictionary, and four links to try, each with a copy button" />
+
 ## vela:// links {#links}
 
 Open one from the terminal with `open`, from a browser, or from any app that opens links:

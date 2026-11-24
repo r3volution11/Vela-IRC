@@ -555,7 +555,7 @@ Vela explains what's wrong, and keeps using the last version of the file that wo
 
 ### Settings → Appearance says "Parts of my-theme.json were ignored" {#problems}
 
-<Screenshot src="/screenshots/settings-theme-problems.webp" alt="Settings → Appearance: below Make your own, a red callout titled Parts of harbor.json were ignored, listing that fontSize isn't a theme key because themes only contain colors, that glass isn't a vibrancy value and the three valid values, and that colors.sidebar.backgroud isn't a theme color token with the suggestion sidebar.background, then The rest of the theme works and a Show in Finder button" caption="A theme file with three mistakes. The theme still loads." />
+<Screenshot src="/screenshots/settings-theme-problems.webp" alt="Settings → Appearance: the Make your own section, then a red callout titled Parts of harbor.json were ignored, listing that fontSize isn't a theme key because themes only contain colors, that glass isn't a vibrancy value and the three valid values, and that colors.sidebar.backgroud isn't a theme color token with the suggestion sidebar.background, then The rest of the theme works and a Show in Finder button, and the Dock icon section below it" caption="A theme file with three mistakes. The theme still loads." />
 
 The theme loaded and works, but Vela skipped part of the file: a key or token name it doesn't know (usually a typo) or a value it can't use. Everything else in the file is used. The same list shows at the top of the [theme editor](/customize/theme-editor) when you open the theme there, and `vela-theme-tool check` prints it too. The theme's card gets a small warning triangle.
 

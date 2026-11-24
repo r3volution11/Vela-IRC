@@ -26,7 +26,7 @@ Catch me up, Recap's summaries and Writing Tools use **Apple Intelligence**, so 
 
 ## The Settings pane {#settings}
 
-<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Intelligence: the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages, the Recap section with Offer Recap on, and the start of the Translation section" caption="Settings → Intelligence." />
+<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Intelligence: the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages; the Recap section with Offer Recap on; Translation; Writing Tools; links to AI Providers and AI Privacy; and a link to Integrations for Siri, Shortcuts and Spotlight" caption="Settings → Intelligence." />
 
 **Settings → Intelligence** is about what the features do: it has a section each for Catch me up, [Recap](/guide/recap), Translation and Writing Tools, then links to the two panes after it, and to [Siri, Shortcuts and Spotlight](/guide/siri-shortcuts) in **Settings → [Integrations](/guide/integrations)**. Its subtitle says where summaries are made.
 
