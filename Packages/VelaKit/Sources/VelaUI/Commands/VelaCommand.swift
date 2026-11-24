@@ -44,6 +44,8 @@ struct VelaCommand: Identifiable {
         case chat = "Chat"
         case go = "Go"
         case help = "Help"
+        /// Settings → Integrations: Alfred and Raycast.
+        case integrations = "Integrations"
         /// Window layouts (Settings → Presets).
         case layout = "Layout"
         case media = "Media"

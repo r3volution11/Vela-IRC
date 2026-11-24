@@ -11,7 +11,9 @@ import VelaTheme
 
 /// Settings → Intelligence: Apple Intelligence's status, your own models
 /// (providers and the default model), Catch me up, Recap, translation,
-/// Writing Tools and Siri & Shortcuts. Each feature owns its section view.
+/// Writing Tools, and Siri & Shortcuts, which links to Settings →
+/// Integrations, where Siri, Shortcuts and Spotlight are. Each feature owns
+/// its section view.
 struct IntelligencePane: View {
     @Environment(AppModel.self) private var app
     @Environment(IntelligenceServices.self) private var intelligence
@@ -41,7 +43,15 @@ struct IntelligencePane: View {
                     SettingsLinkButton("Messages → Typing", systemImage: "text.bubble") { navigate(.messages) }
                 }
             }
-            IntelligenceSiriSection()
+            SettingsSection("Siri & Shortcuts") {
+                SettingsRow(
+                    "Siri, Shortcuts and Spotlight",
+                    detail: "What to ask Siri, Vela's actions in Shortcuts, and what Spotlight shows, with Alfred, Raycast and AppleScript."
+                ) {
+                    SettingsLinkButton("Integrations", systemImage: SettingsPane.integrations.systemImage) { navigate(.integrations) }
+                        .accessibilityHint("Opens Settings → Integrations.")
+                }
+            }
         }
     }
 
