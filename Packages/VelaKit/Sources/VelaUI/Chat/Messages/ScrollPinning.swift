@@ -221,9 +221,10 @@ nonisolated struct ScrollPinning: Sendable {
     /// says it's there: it got shorter while following the newest line.
     ///
     /// The composer growing a line, a reply bar or bottom tabs appearing
-    /// and the window getting shorter all take height from the list. Its
-    /// bottom anchor then moves the offset down by as much, and SwiftUI
-    /// reports the list at the bottom. But on the Mac that move can be lost:
+    /// and the window getting shorter all take height from the list.
+    /// SwiftUI then moves the offset down by as much, to keep the space
+    /// after the last row (the list's scroll position) at the bottom, and
+    /// reports the list there. But on the Mac that move can be lost:
     /// it reaches the scroll view while the scroll view is still its old
     /// height, where it would scroll past the end, so it's held at the old
     /// end. The list then shows the newest line under its bottom edge (by as

@@ -107,10 +107,6 @@ final class MessageListController {
         if lineTracker == nil { lineTracker = LineTracker(lines: buffer.lines) }
     }
 
-    /// Whether content-size changes keep the bottom in place. Observed (the
-    /// list's scroll anchor depends on it), so only written when it flips.
-    private(set) var anchorsToBottom = true
-
     /// Where the rows end (`ScrollMetrics.contentEnd`) when the space after
     /// the last row was laid out in the visible rect of `metrics`; nil when
     /// it's somewhere else, or nowhere, or that's out of date (`ListEnd`).
@@ -135,7 +131,6 @@ final class MessageListController {
         let previous = pinning.metrics
         let driver = scrollDriver
         let follow = pinning.update(metrics, driver: driver)
-        syncAnchor()
         if pinning.mustScrollToBottomAnew(from: previous, to: metrics, driver: driver) { return .scrollAnew }
         return follow ? .scroll : .stay
     }
@@ -295,7 +290,6 @@ final class MessageListController {
         isUserScrolling = scrolling
         guard ended else { return false }
         let follow = pinning.gestureEnded()
-        syncAnchor()
         if let pending = pendingHover {
             pendingHover = nil
             pending.apply(true)
@@ -324,16 +318,10 @@ final class MessageListController {
 
     func pin() {
         pinning.pin()
-        syncAnchor()
     }
 
     func unpin() {
         pinning.unpin()
-        syncAnchor()
-    }
-
-    private func syncAnchor() {
-        if anchorsToBottom != pinning.isPinned { anchorsToBottom = pinning.isPinned }
     }
 
     /// Marks a programmatic scroll as running for `seconds`: geometry
@@ -352,7 +340,6 @@ final class MessageListController {
             try? await Task.sleep(for: .seconds(seconds))
             guard let self, generation == self.programmaticScrollGeneration else { return }
             let follow = self.pinning.settle(followsNearBottom: followsNearBottom)
-            self.syncAnchor()
             completion(follow)
         }
     }

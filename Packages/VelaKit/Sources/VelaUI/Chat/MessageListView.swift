@@ -138,13 +138,10 @@ struct MessageListView: View {
         .modifier(ListScrollPosition(position: $position))
         .defaultScrollAnchor(.bottom, for: .initialOffset)
         .defaultScrollAnchor(.bottom, for: .alignment)
-        // Pinned: growth keeps the newest line in view. Loading history:
-        // rows inserted above don't move what's on screen. Otherwise the
-        // top stays put, so arriving messages never drag the reader along.
-        .defaultScrollAnchor(
-            controller.anchorsToBottom || controller.holdsAnchorForHistory || buffer.isLoadingHistory ? .bottom : .top,
-            for: .sizeChanges
-        )
+        // Loading history: rows inserted above don't move what's on screen.
+        // Otherwise no anchor for size changes, even while following the
+        // newest line (`sizeChangeAnchor`).
+        .defaultScrollAnchor(sizeChangeAnchor, for: .sizeChanges)
         .onScrollGeometryChange(for: ScrollMetrics.self, of: ScrollMetrics.init) { old, new in
             scrollMetricsChanged(from: old, to: new)
         }
@@ -235,10 +232,11 @@ struct MessageListView: View {
     }
 
     /// Someone started typing, or everyone stopped: show or hide the line
-    /// and the room for it in one animation. Pinned, the list's bottom
-    /// anchor carries the conversation up (or down) with the room; the
-    /// pinning logic stands back until that's done, so it doesn't snap to
-    /// the end mid-animation.
+    /// and the room for it in one animation. Pinned, the list holds the
+    /// space after the last row at the bottom (`scrollToBottom()`), which
+    /// carries the conversation up (or down) with the room; the pinning
+    /// logic stands back until that's done, so it doesn't snap to the end
+    /// mid-animation.
     private func typingChanged(_ active: Bool, animated: Bool) {
         guard typingShown != active else { return }
         let animation = animated && !reduceMotion ? ListEndSpacing.typingAnimation : nil
@@ -251,6 +249,30 @@ struct MessageListView: View {
     }
 
     // MARK: Scrolling
+
+    /// What SwiftUI keeps in place as the list's content or its own height
+    /// changes: the bottom while older history is being inserted above,
+    /// so what's on screen doesn't move; otherwise nothing of ours.
+    ///
+    /// Following the newest line doesn't anchor the bottom. On macOS 26 that
+    /// could freeze Vela for good: the main thread never left one SwiftUI
+    /// update, at 100% CPU, with none of Vela's code running, the lazy stack
+    /// changing which rows it lays out on every pass. In a long channel where
+    /// one-line messages sit between video players and long messages, its
+    /// estimate of the rows it hasn't laid out swings by tens of thousands
+    /// of points as it lays out others, and each swing is a size change the
+    /// anchor answered by moving the list. Seen after the list changed size
+    /// (a line arriving, the message box growing, the window resized), about
+    /// once in 12 runs of a fuzz test that does those things as fast as it
+    /// can; without the anchor, never.
+    ///
+    /// The list follows the newest line all the same: it scrolls to the
+    /// space after the last row as lines arrive and holds that space as its
+    /// position (`scrollToBottom()`), and the pinning logic scrolls back
+    /// after any other change (`ScrollPinning`).
+    private var sizeChangeAnchor: UnitPoint? {
+        controller.holdsAnchorForHistory || buffer.isLoadingHistory ? .bottom : nil
+    }
 
     private func scrollMetricsChanged(from old: ScrollMetrics, to new: ScrollMetrics) {
         var new = new
