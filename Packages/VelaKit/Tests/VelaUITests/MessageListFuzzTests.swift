@@ -39,6 +39,7 @@ import VelaTheme
 ///   display: in a VM, never on your own screen.
 /// - `VELA_LIST_FUZZ_HISTORY=1`: older history arrives above too (kind 17),
 ///   while the list keeps what's on screen in place.
+/// - `VELA_LIST_FUZZ_LONGEST`: the longest message, in sentences (30).
 ///
 /// Each step goes to standard error as `FUZZ <time> op <n> kind <kind>`.
 @MainActor
@@ -50,6 +51,9 @@ struct MessageListFuzzTests {
     private static let only = environment["VELA_LIST_FUZZ_ONLY"].map { $0.split(separator: ",").compactMap { Int($0) } }
     private static let scrolls = environment["VELA_LIST_FUZZ_SCROLLING"] == "1"
     private static let history = environment["VELA_LIST_FUZZ_HISTORY"] == "1"
+    /// The longest message, in times the 60-character sentence (30: far
+    /// past what one IRC line holds, about 7).
+    private static let longest = max(1, Int(environment["VELA_LIST_FUZZ_LONGEST"] ?? "") ?? 30)
     private static let onScreen = environment["VELA_LIST_FUZZ_ONSCREEN"] == "1"
 
     private static var lineNumber = 0
@@ -72,7 +76,7 @@ struct MessageListFuzzTests {
     private static func text(_ index: Int) -> String {
         if index % 9 == 0 { return "watch this https://www.youtube.com/watch?v=aqz-KE-bpKQ&t=\(index)" }
         if index % 7 == 2 {
-            return String(repeating: "a long message that wraps over several lines, number \(index), ", count: 1 + (index * 7919) % 30)
+            return String(repeating: "a long message that wraps over several lines, number \(index), ", count: 1 + (index * 7919) % longest)
         }
         return "message number \(index)"
     }
