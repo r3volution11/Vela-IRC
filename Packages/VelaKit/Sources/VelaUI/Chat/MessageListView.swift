@@ -270,8 +270,9 @@ struct MessageListView: View {
     /// of points as it lays out others, and each swing is a size change the
     /// anchor answered by moving the list. Seen after the list changed size
     /// (a line arriving, the message box growing, the window resized), about
-    /// once in 12 runs of a fuzz test that does those things as fast as it
-    /// can; without the anchor, never.
+    /// once in a dozen 45-second runs of `MessageListFuzzTests` doing those
+    /// things as fast as it can (`scripts/fuzz-message-list.sh --stress`);
+    /// without the anchor, never.
     ///
     /// The list follows the newest line all the same: it scrolls to the
     /// space after the last row as lines arrive and holds that space as its
