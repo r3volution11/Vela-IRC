@@ -40,6 +40,8 @@ import VelaTheme
 /// - `VELA_LIST_FUZZ_HISTORY=1`: older history arrives above too (kind 17),
 ///   while the list keeps what's on screen in place.
 /// - `VELA_LIST_FUZZ_LONGEST`: the longest message, in sentences (30).
+/// - `VELA_LIST_FUZZ_PRESETS`: only these presets, comma-separated
+///   (`focus,classic,tabbed,modern`), to run one over and over.
 ///
 /// Each step goes to standard error as `FUZZ <time> op <n> kind <kind>`.
 @MainActor
@@ -55,6 +57,7 @@ struct MessageListFuzzTests {
     /// past what one IRC line holds, about 7).
     private static let longest = max(1, Int(environment["VELA_LIST_FUZZ_LONGEST"] ?? "") ?? 30)
     private static let onScreen = environment["VELA_LIST_FUZZ_ONSCREEN"] == "1"
+    private static let presets = environment["VELA_LIST_FUZZ_PRESETS"].map { $0.split(separator: ",").map(String.init) }
 
     private static var lineNumber = 0
 
@@ -141,6 +144,7 @@ struct MessageListFuzzTests {
 
     @Test(arguments: [(2, "focus"), (3, "classic"), (4, "tabbed"), (5, "modern")])
     func fuzz(_ seed: Int, _ preset: String) async throws {
+        if let presets = Self.presets, !presets.contains(preset) { return }
         var rng = SystemRandomNumberGenerator()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("VelaListFuzz-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
