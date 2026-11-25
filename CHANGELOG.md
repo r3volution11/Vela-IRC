@@ -4,6 +4,8 @@ All notable changes to Vela are listed here. Vela follows [Semantic Versioning](
 
 ## Unreleased
 
+## 1.5.0 - 2026-11-25
+
 Vela 1.5 brings presets you mix yourself, AI models of your own, and Vela in the rest of your Mac. The highlights:
 
 - **Mix your own setup.** **Settings → Presets** now has three rows that combine freely: a window layout, a message style and a density. The new **Focus** layout leaves only the conversation.
