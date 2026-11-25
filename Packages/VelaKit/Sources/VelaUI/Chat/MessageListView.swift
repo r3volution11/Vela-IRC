@@ -261,23 +261,25 @@ struct MessageListView: View {
     /// changes: the bottom while older history is being inserted above,
     /// so what's on screen doesn't move; otherwise nothing of ours.
     ///
-    /// Following the newest line doesn't anchor the bottom. On macOS 26 that
-    /// could freeze Vela for good: the main thread never left one SwiftUI
-    /// update, at 100% CPU, with none of Vela's code running, the lazy stack
-    /// changing which rows it lays out on every pass. In a long channel where
-    /// one-line messages sit between video players and long messages, its
-    /// estimate of the rows it hasn't laid out swings by tens of thousands
-    /// of points as it lays out others, and each swing is a size change the
-    /// anchor answered by moving the list. Seen after the list changed size
-    /// (a line arriving, the message box growing, the window resized), about
-    /// once in a dozen 45-second runs of `MessageListFuzzTests` doing those
-    /// things as fast as it can (`scripts/fuzz-message-list.sh --stress`);
-    /// without the anchor, never.
+    /// No anchor, not even the bottom while following the newest line (nor
+    /// the top while the reader is scrolled up). On macOS 26 one could freeze
+    /// Vela for good: the main thread never left one SwiftUI update, at 100%
+    /// CPU, with none of Vela's code running, the lazy stack changing which
+    /// rows it lays out on every pass. In a long channel where one-line
+    /// messages sit between video players and long messages, its estimate of
+    /// the rows it hasn't laid out swings by tens of thousands of points as
+    /// it lays out others, and each swing is a size change the anchor
+    /// answered by moving the list. Seen after the list changed size (a line
+    /// arriving, the message box growing, the window resized), about once in
+    /// a dozen 45-second runs of `MessageListFuzzTests` doing those things as
+    /// fast as it can (`scripts/fuzz-message-list.sh --stress`); without the
+    /// anchor, never.
     ///
     /// The list follows the newest line all the same: it scrolls to the
     /// space after the last row as lines arrive and holds that space as its
     /// position (`scrollToBottom()`), and the pinning logic scrolls back
-    /// after any other change (`ScrollPinning`).
+    /// after any other change (`ScrollPinning`). Scrolled up, the list stays
+    /// where the reader left it, as lines arrive below.
     private var sizeChangeAnchor: UnitPoint? {
         controller.holdsAnchorForHistory || buffer.isLoadingHistory ? .bottom : nil
     }
