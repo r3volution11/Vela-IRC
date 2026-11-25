@@ -327,6 +327,29 @@ nonisolated struct BottomSettle: Equatable, Sendable {
         case done(settleBack: Bool)
     }
 
+    /// Whether the tries are stuck past the end of the list: no rows in
+    /// view, the space after the last row out of date (`ListEnd`), and the
+    /// list where the last try left it, `tries` times running. A scroll to
+    /// the space by id then lands at the stack's estimate again; scrolling
+    /// back to where the space was last laid out is all that's left
+    /// (`MessageListView.settleAtBottom`).
+    struct Stuck: Equatable, Sendable {
+        static let tries = 2
+        private(set) var count = 0
+        private var lastMetrics: ScrollMetrics?
+
+        /// Before a try: whether to scroll back to the space's last frame.
+        mutating func check(_ metrics: ScrollMetrics?, showsNoRows: Bool, endIsOutOfDate: Bool) -> Bool {
+            defer { lastMetrics = metrics }
+            guard showsNoRows, endIsOutOfDate, let metrics, metrics == lastMetrics else {
+                count = 0
+                return false
+            }
+            count += 1
+            return count >= Self.tries
+        }
+    }
+
     /// Checking time spent so far, not counting other scrolls.
     private(set) var spent: TimeInterval = 0
     private(set) var tries = 0

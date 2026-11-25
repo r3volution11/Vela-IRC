@@ -666,4 +666,30 @@ struct BottomSettleTests {
         #expect(Array(waits.prefix(BottomSettle.lateTries.count)) == BottomSettle.lateTries)
         #expect(settle.lateTriesMade == BottomSettle.lateTries.count)
     }
+
+    /// Seen on macOS 26 as the composer grew a line: the list at the
+    /// stack's estimate of the bottom (5529.5), 600 pt past the last row,
+    /// nothing in view, the space after the last row judged out of date,
+    /// and each scroll to it by id changing nothing. Twice like that, it's
+    /// stuck.
+    @Test func stuckPastTheEndScrollsBack() {
+        let past = ScrollMetrics(visibleMinY: 5529.5, visibleMaxY: 6032.5, contentHeight: 6033, containerHeight: 503)
+        var stuck = BottomSettle.Stuck()
+        var results: [Bool] = []
+        for _ in 0..<3 { results.append(stuck.check(past, showsNoRows: true, endIsOutOfDate: true)) }
+        #expect(results == [false, false, true])
+
+        // A try that moved the list starts the count again.
+        var moved = past
+        moved.visibleMinY = 5400
+        results = (0..<2).map { _ in stuck.check(moved, showsNoRows: true, endIsOutOfDate: true) }
+        #expect(results == [false, false])
+        // Rows in view, or a space that isn't out of date: never stuck.
+        var rows = BottomSettle.Stuck()
+        results = (0..<4).map { _ in rows.check(past, showsNoRows: false, endIsOutOfDate: true) }
+        #expect(!results.contains(true))
+        var current = BottomSettle.Stuck()
+        results = (0..<4).map { _ in current.check(past, showsNoRows: true, endIsOutOfDate: false) }
+        #expect(!results.contains(true))
+    }
 }

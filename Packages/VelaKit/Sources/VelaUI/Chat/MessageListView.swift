@@ -408,8 +408,18 @@ struct MessageListView: View {
     /// end. Landing where that frame was doesn't prove the list got there
     /// either: if the space isn't laid out there, its frame is out of date
     /// (`ListEnd`), and the list goes to it by id instead.
-    private func scrollBackFromPastTheEnd() -> Bool {
-        guard !controller.end.isOutOfDate, let end = controller.end.frame, let metrics = controller.metrics,
+    ///
+    /// `evenIfOutOfDate`: the checks after a scroll to the bottom found the
+    /// list stuck past the end, with no rows in view, and scrolling to the
+    /// space by id not moving it (`settleAtBottom`). The frame may be out of
+    /// date, but it's where rows were; anywhere else shows nothing.
+    ///
+    /// Judged where the clip view shows the list (`ClipViewSync.shown`). On
+    /// macOS 26 SwiftUI went on reporting the list short of the space's
+    /// frame while the clip view showed it 500 pt past it, nothing in view,
+    /// and scrolls to the space by id changed nothing.
+    private func scrollBackFromPastTheEnd(evenIfOutOfDate: Bool = false) -> Bool {
+        guard evenIfOutOfDate || !controller.end.isOutOfDate, let end = controller.end.frame, let metrics = controller.shownMetrics,
               !metrics.fitsWithoutScrolling else { return false }
         // Partly past it: the end is in view (so where it is is current),
         // with empty space under it.
@@ -423,9 +433,19 @@ struct MessageListView: View {
 
     /// Checks that the list got to the bottom and scrolls there again until
     /// it does, as `BottomSettle` says.
+    ///
+    /// On macOS 26 a scroll to the bottom can land at the stack's estimate
+    /// of where the space after the last row is, far past the last row,
+    /// with nothing laid out, while the space's real frame has been judged
+    /// out of date (`ListEnd`): the composer growing a line re-estimated the
+    /// content 1,100 pt taller. Scrolling to the space by id again lands
+    /// there again and changes nothing, and the list showed only empty
+    /// space. Stuck like that for two tries, it scrolls back to where the
+    /// space was last laid out.
     private func settleAtBottom(firstAnchor: CGFloat) async {
         var settle = BottomSettle(firstAnchor: firstAnchor)
         var lastCheck = Date()
+        var stuck = BottomSettle.Stuck()
         while true {
             try? await Task.sleep(for: .seconds(settle.wait))
             guard !Task.isCancelled, controller.isPinnedToBottom else { return }
@@ -446,7 +466,8 @@ struct MessageListView: View {
             case .wait:
                 continue
             case .scroll(let anchor):
-                if !scrollBackFromPastTheEnd() {
+                let pastTheEnd = stuck.check(controller.metrics, showsNoRows: controller.showsNoRows, endIsOutOfDate: controller.end.isOutOfDate)
+                if !scrollBackFromPastTheEnd(evenIfOutOfDate: pastTheEnd) {
                     position.scrollTo(id: DisplayItemID.end, anchor: UnitPoint(x: 0.5, y: anchor))
                 }
             case .done(let settleBack):
