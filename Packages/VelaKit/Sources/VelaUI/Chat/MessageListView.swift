@@ -147,8 +147,15 @@ struct MessageListView: View {
         }
         .onScrollPhaseChange { _, phase in
             switch phase {
-            case .tracking, .interacting, .decelerating: _ = controller.scrollPhaseChanged(isUserScrolling: true)
-            default: if controller.scrollPhaseChanged(isUserScrolling: false) { scrollToBottom() }
+            case .tracking, .interacting, .decelerating:
+                _ = controller.scrollPhaseChanged(isUserScrolling: true)
+            default:
+                let gestureEnded = controller.isUserScrolling
+                if controller.scrollPhaseChanged(isUserScrolling: false) {
+                    scrollToBottom()
+                } else if gestureEnded {
+                    holdEndIfAtBottom()
+                }
             }
             updatePill()
         }
@@ -272,6 +279,17 @@ struct MessageListView: View {
     /// after any other change (`ScrollPinning`).
     private var sizeChangeAnchor: UnitPoint? {
         controller.holdsAnchorForHistory || buffer.isLoadingHistory ? .bottom : nil
+    }
+
+    /// The reader's gesture brought the list back to the newest line: holds
+    /// the space after the last row as the position, as following it does,
+    /// so the list stays there as it changes size (someone starts typing, a
+    /// preview loads). SwiftUI took the row at the top as the position
+    /// during the gesture. The list is already there, so nothing moves.
+    private func holdEndIfAtBottom() {
+        guard controller.isPinnedToBottom, controller.metrics.map(ScrollPinning.isAtBottom) == true,
+              position.viewID(type: DisplayItemID.self) != .end else { return }
+        position.scrollTo(id: DisplayItemID.end, anchor: .bottom)
     }
 
     private func scrollMetricsChanged(from old: ScrollMetrics, to new: ScrollMetrics) {
