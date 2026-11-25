@@ -37,6 +37,8 @@ import VelaTheme
 ///   and the mouse wheel scroll only a window on screen, which
 ///   `VELA_LIST_FUZZ_ONSCREEN=1` puts at the bottom left of the main
 ///   display: in a VM, never on your own screen.
+/// - `VELA_LIST_FUZZ_HISTORY=1`: older history arrives above too (kind 17),
+///   while the list keeps what's on screen in place.
 ///
 /// Each step goes to standard error as `FUZZ <time> op <n> kind <kind>`.
 @MainActor
@@ -47,6 +49,7 @@ struct MessageListFuzzTests {
     private static let pause = Int(environment["VELA_LIST_FUZZ_PAUSE"] ?? "") ?? 60
     private static let only = environment["VELA_LIST_FUZZ_ONLY"].map { $0.split(separator: ",").compactMap { Int($0) } }
     private static let scrolls = environment["VELA_LIST_FUZZ_SCROLLING"] == "1"
+    private static let history = environment["VELA_LIST_FUZZ_HISTORY"] == "1"
     private static let onScreen = environment["VELA_LIST_FUZZ_ONSCREEN"] == "1"
 
     private static var lineNumber = 0
@@ -182,7 +185,7 @@ struct MessageListFuzzTests {
         }
         try await Task.sleep(for: .milliseconds(600))
         func composer() -> ComposerNSTextView? { Self.findAll(in: host) { $0 is ComposerNSTextView }.first as? ComposerNSTextView }
-        let kinds = Self.only ?? Array(0..<(Self.scrolls ? 17 : 16))
+        let kinds = Self.only ?? Array(0..<16) + (Self.scrolls ? [16] : []) + (Self.history ? [17] : [])
         let began = Date()
         var ops = 0
         var index = count
@@ -260,6 +263,20 @@ struct MessageListFuzzTests {
                     try await Task.sleep(for: .milliseconds(Int.random(in: 0...100, using: &rng)))
                     app.select(buffer)
                 }
+            case 17:
+                // Older history arrives above, as when the reader scrolls
+                // to the top (`MessageListView.loadOlderHistory`).
+                buffer.isLoadingHistory = true
+                try await Task.sleep(for: .milliseconds(Int.random(in: 0...150, using: &rng)))
+                let first = buffer.lines.first?.time ?? Date()
+                // Not trimmed like new lines: kept to about as many.
+                let older = buffer.lines.count < 800 ? Int.random(in: 10...60, using: &rng) : 0
+                buffer.insertSorted((0..<older).map { step in
+                    index += 1
+                    return Self.line("old", Self.text(index), at: first.addingTimeInterval(-Double(step + 1)), isHistory: true)
+                })
+                try await Task.sleep(for: .milliseconds(Int.random(in: 0...150, using: &rng)))
+                buffer.isLoadingHistory = false
             case 16:
                 // The reader scrolls, mostly up.
                 let distance = Double(Int.random(in: 40...1600, using: &rng)) * (Int.random(in: 0..<3, using: &rng) == 0 ? -1 : 1)
