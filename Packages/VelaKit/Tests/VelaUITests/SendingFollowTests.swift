@@ -452,4 +452,44 @@ struct SendingFollowTests {
         let followed = try await settled(hosted, newest: next)
         #expect(followed.showsTheNewestLineAtTheBottom, "\(change) pt wider: the list stopped following: \(followed)")
     }
+
+    /// A message sent a moment after a jump to an older line (a search
+    /// result, a reply's quote): your line shows, and the list follows. The
+    /// jump goes on correcting where the line sits for a moment, as the rows
+    /// around it are measured; those corrections stand down once anything
+    /// else has moved the list. They used to scroll back up to the line
+    /// after the send had taken the list down (and the list then followed
+    /// again): a tug of war, and on macOS 26 most of the list's last
+    /// freezes in `MessageListFuzzTests` came within a moment of a jump.
+    @Test(arguments: [10, 60, 110])
+    func aSendJustAfterAJumpShowsYourLine(_ delay: Int) async throws {
+        let hosted = try host(Setup(preset: "tabbed"))
+        defer { hosted.close() }
+        try await Task.sleep(for: .milliseconds(800))
+        let opened = try await settled(hosted, newest: .mention, within: 10)
+        try #require(opened.showsTheNewestLineAtTheBottom, "the list didn't open at the newest line within 10 s: \(opened)")
+
+        hosted.uiState.scrollTarget = hosted.buffer.lines[hosted.buffer.lines.count - 90].id
+        try await Task.sleep(for: .milliseconds(delay))
+        try await perform(hosted, [.send()], echoMessage: true)
+        // Watched as it goes: once the send has brought the list down to
+        // the newest lines, it never goes back up to the line jumped to.
+        let scrollViews = Self.findAll(in: hosted.host) { $0 is NSScrollView }.compactMap { $0 as? NSScrollView }
+        let list = try #require(scrollViews.max { $0.frame.height < $1.frame.height })
+        var deadline = RunningDeadline(.milliseconds(600))
+        var reachedBottom = false
+        var wentBackUp: CGFloat?
+        while deadline.hasTimeLeft(), wentBackUp == nil {
+            let fromBottom = (list.documentView?.frame.height ?? 0) - list.contentView.bounds.maxY
+            if fromBottom < 200 { reachedBottom = true } else if reachedBottom, fromBottom > 600 { wentBackUp = fromBottom }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(wentBackUp == nil, "sent \(delay) ms after a jump: the list went back up \(wentBackUp ?? 0) pt from the bottom")
+        let after = try await settled(hosted, newest: .mine)
+        #expect(after.showsTheNewestLineAtTheBottom, "sent \(delay) ms after a jump: your line isn't at the bottom after \(Int(Self.settleSeconds)) s: \(after)")
+
+        let next = try await perform(hosted, [.incoming(mention: true)], echoMessage: true)
+        let followed = try await settled(hosted, newest: next)
+        #expect(followed.showsTheNewestLineAtTheBottom, "sent \(delay) ms after a jump: the list stopped following: \(followed)")
+    }
 }

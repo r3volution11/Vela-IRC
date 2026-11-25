@@ -616,7 +616,7 @@ struct MessageListView: View {
             // (An equal ScrollPosition is ignored, hence the nudged anchors.)
             for nudge in [0.2001, 0.2] {
                 try? await Task.sleep(for: .milliseconds(60))
-                guard !controller.isUserScrolling else { return }
+                guard stillHolds(target) else { return }
                 position.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: nudge))
             }
         }
@@ -638,7 +638,7 @@ struct MessageListView: View {
             // (An equal ScrollPosition is ignored, hence the nudged anchors.)
             for nudge in [0.0801, 0.08] {
                 try? await Task.sleep(for: .milliseconds(80))
-                guard !controller.isUserScrolling else { return }
+                guard stillHolds(target) else { return }
                 position.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: nudge))
             }
         }
@@ -672,6 +672,7 @@ struct MessageListView: View {
             Task {
                 for nudge in [0.499, 0.5, 0.499] {
                     try? await Task.sleep(for: .milliseconds(50))
+                    guard stillHolds(id) else { return }
                     position.scrollTo(id: id, anchor: UnitPoint(x: 0.5, y: nudge))
                 }
                 try? await Task.sleep(for: .milliseconds(100))
@@ -679,6 +680,19 @@ struct MessageListView: View {
             }
         }
         controller.flash(lineID, reduceMotion: reduceMotion)
+    }
+
+    /// A landing's corrections go on only while nothing else has moved the
+    /// list since: the position still holds the row it went to, and the
+    /// reader isn't scrolling or following the newest line. A message sent,
+    /// End, Page Up or another jump in the meantime wins. Corrections that
+    /// went on regardless pulled the list back to the row after a send had
+    /// taken it to the newest line, and the list then followed again: a
+    /// tug of war. On macOS 26 most of the freezes left after dropping the
+    /// size-change anchor came within a moment of a jump
+    /// (`MessageListFuzzTests`).
+    private func stillHolds(_ id: DisplayItemID) -> Bool {
+        position.viewID(type: DisplayItemID.self) == id && !controller.isPinnedToBottom && !controller.isUserScrolling
     }
 
     /// Once a jump to a line has landed, the scroll position holds where the
