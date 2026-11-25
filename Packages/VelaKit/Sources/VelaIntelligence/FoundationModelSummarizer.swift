@@ -38,7 +38,7 @@ public final class FoundationModelSummarizer: ConversationSummarizer {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let router = try await self.router(checkingAvailability: true)
+                    let router = try await self.router(checkingAvailability: true, model: Self.appleModel(request.model))
                     let summary = try await self.lane.run {
                         try await router.run(request) { continuation.yield($0) }
                     }
@@ -53,23 +53,31 @@ public final class FoundationModelSummarizer: ConversationSummarizer {
     }
 
     public nonisolated func plan(_ request: CatchUpRequest) async -> CatchUpPlan {
-        guard let router = try? await router(checkingAvailability: false) else {
+        guard let router = try? await router(checkingAvailability: false, model: Self.appleModel(request.model)) else {
             return CatchUpPlan(passes: 1, transcriptTokens: 0)
         }
         return await router.plan(request)
     }
 
     /// Where summaries go now: Private Cloud Compute is offered to the
-    /// router only while the setting is on and the system has it.
-    func router(checkingAvailability: Bool) throws -> CatchUpRouter {
+    /// router only while the setting is on and the system has it, and
+    /// `model` isn't "this Mac" (`"apple/on-device"`). Chosen as the model
+    /// (`"apple/private-cloud-compute"`), it takes every stretch.
+    func router(checkingAvailability: Bool, model: AppleModel = .automatic) throws -> CatchUpRouter {
         if checkingAvailability {
             availability.refresh()
             guard availability.status.isAvailable else { throw CatchUpError.unavailable(availability.status) }
         }
-        return CatchUpRouter(
-            onDevice: FoundationModelsCatchUpModel(),
-            cloud: usesPrivateCloudCompute() ? Self.privateCloudCompute(timings: cloudTimings) : nil
-        )
+        let cloud = model != .onDevice && usesPrivateCloudCompute() ? Self.privateCloudCompute(timings: cloudTimings) : nil
+        var router = CatchUpRouter(onDevice: FoundationModelsCatchUpModel(), cloud: cloud)
+        router.alwaysCloud = model == .privateCloudCompute
+        return router
+    }
+
+    /// The Apple model a request asks for (``ModelRoutingSummarizer``
+    /// passes it on): Automatic when it doesn't say.
+    nonisolated static func appleModel(_ choice: AIModelChoice?) -> AppleModel {
+        if case .apple(let model) = choice { model } else { .automatic }
     }
 
     /// Private Cloud Compute, where the system has it (macOS 27+), in

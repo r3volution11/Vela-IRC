@@ -155,6 +155,16 @@ extension AppModel {
         #endif
     }
 
+    /// Networks, in sidebar order, as Siri, Shortcuts and AppleScript see
+    /// them (Vela Dev's simulator network stays out of them).
+    public var automationSessions: [NetworkSession] {
+        #if DEBUG
+        return sessions.filter { !DevSimulator.isSimulated($0.id) }
+        #else
+        return sessions
+        #endif
+    }
+
     /// The buffer and its session for `bufferID`, if it's open.
     public func lookup(_ bufferID: BufferID) -> (session: NetworkSession, buffer: BufferModel)? {
         guard let session = session(for: bufferID.networkID), let buffer = session.buffer(id: bufferID) else { return nil }
@@ -317,7 +327,7 @@ extension AppModel {
 
     /// `input` as a channel name: trimmed, with "#" added when it has no
     /// channel prefix. Spaces, commas and BEL aren't allowed in channel names.
-    nonisolated static func channelName(_ input: String, isChannel: (String) -> Bool) throws -> String {
+    nonisolated public static func channelName(_ input: String, isChannel: (String) -> Bool) throws -> String {
         let name = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, !name.contains(where: { $0.isWhitespace || $0 == "," || $0 == "\u{07}" }) else {
             throw AppActionError.invalidChannelName(input)

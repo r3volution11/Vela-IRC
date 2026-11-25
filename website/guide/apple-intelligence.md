@@ -12,23 +12,30 @@ Vela uses Apple's built-in intelligence to help with busy channels and other lan
 - **[Translate](#translate-messages)** shows messages from other languages in yours.
 - **[Writing Tools](#writing-tools)** proofreads and rewrites what you type.
 
-Summaries, Recaps and translations are made on your Mac. Vela doesn't send your conversations to Apple, to a server of its own or anywhere else. See [Privacy](#privacy) for the details. ([Private Cloud Compute](#private-cloud-compute) for long catch-ups, which you'll be able to turn on, comes in a later version.)
+Summaries, Recaps and translations are made on your Mac. Vela doesn't send your conversations to Apple, to a server of its own or anywhere else, unless you choose [a model of your own](/guide/ai-models) for Catch me up or Recap: a model on your Mac with Ollama or LM Studio, or OpenAI, Anthropic or Google Gemini. See [Privacy](#privacy) and [AI privacy](/guide/ai-privacy) for the details. ([Private Cloud Compute](#private-cloud-compute) for long catch-ups, which you'll be able to turn on, comes in a later version.)
 
 ## What you need {#requirements}
 
-Catch me up and Writing Tools use **Apple Intelligence**, so they need:
+Catch me up, Recap's summaries and Writing Tools use **Apple Intelligence**, so they need:
 
 - a Mac with Apple silicon;
 - Apple Intelligence turned on in **System Settings → Apple Intelligence & Siri**, with its model downloaded (macOS downloads it after you turn Apple Intelligence on);
 - a language Apple Intelligence supports.
 
-**Translation doesn't need Apple Intelligence**, so it also works on Macs that can't run it.
+**Translation doesn't need Apple Intelligence**, so it also works on Macs that can't run it. Neither do Catch me up and Recap when they use [a model of your own](/guide/ai-models).
 
 ## The Settings pane {#settings}
 
-<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Apple Intelligence: a green “Apple Intelligence is on” box, then the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages, the Recap section with Offer Recap on, and the start of the Translation section" caption="Settings → Apple Intelligence." />
+<Screenshot src="/screenshots/settings-intelligence.webp" alt="Settings → Intelligence: the Catch me up section, with Offer Catch me up in busy channels on and Show the button after 25 new messages; the Recap section with Offer Recap on; Translation; Writing Tools; links to AI Providers and AI Privacy; and a link to Integrations for Siri, Shortcuts and Spotlight" caption="Settings → Intelligence." />
 
-**Settings → Apple Intelligence** has a section each for Catch me up, [Recap](/guide/recap), Translation, Writing Tools and [Siri & Shortcuts](/guide/siri-shortcuts). At the top, a box says whether Apple Intelligence is ready:
+**Settings → Intelligence** is about what the features do: it has a section each for Catch me up, [Recap](/guide/recap), Translation and Writing Tools, then links to the two panes after it, and to [Siri, Shortcuts and Spotlight](/guide/siri-shortcuts) in **Settings → [Integrations](/guide/integrations)**. Its subtitle says where summaries are made.
+
+The AI panes come next in the Settings sidebar:
+
+- **Settings → [AI Providers](/guide/ai-models)**: where the models come from. Apple Intelligence's status, the default model, OpenAI, Anthropic or Google Gemini with your own key, and Ollama or LM Studio on your Mac, which Vela finds for you.
+- **Settings → [AI Privacy](/guide/ai-privacy)**: what's sent where, plainly, with each provider's permission and policies.
+
+At the top of **AI Providers**, a box says whether Apple Intelligence is ready. While it isn't, and Catch me up or Recap uses it, **Intelligence** shows the same box, with **AI Providers** to choose a model of your own instead:
 
 | Status | What it means |
 | --- | --- |
@@ -38,7 +45,7 @@ Catch me up and Writing Tools use **Apple Intelligence**, so they need:
 | **Apple Intelligence is getting ready** | macOS is still downloading the model. Catch me up is ready, and this box says so, as soon as the download finishes. |
 | **Language not supported yet** | Apple Intelligence doesn't support your Mac's language yet. **Open System Settings** takes you there. |
 
-While Apple Intelligence isn't available, the Catch me up settings are dimmed.
+While Apple Intelligence isn't available, the Catch me up settings are dimmed, unless Catch me up uses [a model of your own](/guide/ai-models).
 
 ## Catch me up
 
@@ -60,10 +67,10 @@ The buttons at the top of the card copy the summary (**Copy Summary**), write a 
 
 The **Catch me up** button shows when all of these are true:
 
-- **Offer Catch me up in busy channels** is on in **Settings → Apple Intelligence**. It's on by default.
-- Apple Intelligence is ready.
+- **Offer Catch me up in busy channels** is on in **Settings → Intelligence**. It's on by default.
+- Apple Intelligence is ready, or Catch me up uses [a model of your own](/guide/ai-models).
 - At least **25** messages are new. Change the number with **Show the button after**: 10, 25, 50 or 100 new messages.
-- The **New** line is showing. The button sits on it, so with **Show the New line** turned off in **Settings → Messages → Unread messages** (as the Classic IRC preset does), there's no button. See [Unread messages](/guide/messages-and-layouts#unread-messages).
+- The **New** line is showing. The button sits on it, so with **Show the New line** turned off in **Settings → Messages → Unread messages**, there's no button. See [Unread messages](/guide/messages-and-layouts#unread-messages).
 
 You can also catch up whenever you like, however little is new, even with the button or the New line turned off:
 
@@ -79,9 +86,15 @@ Without the New line, the card opens where the new messages start, just above th
 
 In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#intelligence.catchUp) and the number is [`intelligence.catchUpThreshold`](/reference/settings#intelligence.catchUpThreshold), which takes any number.
 
+### Another model {#models}
+
+Catch me up uses the **Default model** in **Settings → AI Providers**, which is **Automatic (Apple)** until you choose another, or the **Model** in its own section of **Settings → Intelligence** (there once you've added a provider). The card's footer says which model wrote the summary, such as "Summarized by Claude Opus 5.5 (Anthropic).", and once you've added a provider, **Change** writes it again with another. **Buffer: Catch Me Up With…** in the command palette picks the model first, and Siri uses Catch me up's model too.
+
+The first time Catch me up would use a provider you haven't allowed, Vela shows what it would be sent and waits for your OK. OpenAI, Anthropic and Gemini usually read the whole stretch in one pass, so the parts and timings below are Apple Intelligence's. See [AI providers](/guide/ai-models).
+
 ### What it reads, and how long it takes {#catch-up-limits}
 
-- **The new messages, actions and notices** after the New marker (or where it would be, with the New line off). Joins, parts, other events and deleted messages are left out, and links are reduced to the site they point to.
+- **The new messages, actions and notices** after the New marker (or where it would be, with the New line off). Joins, parts, other events, deleted messages, and anything the server, the network or a bouncer sent the channel itself (a server notice, say) are left out, and links are reduced to the site they point to.
 - **At most the latest 600.** For a longer stretch, the card says "Covers the latest 600 messages." A [Recap](/guide/recap) reads up to 2,000.
 - **It takes a while.** On a fast Mac, about 10 seconds for a few dozen messages and about a minute for 600, most of it spent reading the parts. A slower Mac, or one on macOS 26.0–26.3 (whose model reads less at a time), can take a few minutes for a long stretch. You can go to another channel meanwhile.
 - **Long stretches are read in parts.** The card counts them ("Reading… 3 of 8"), then says "Writing the summary…" until the first words appear. Before that, a short stretch says "Reading 40 messages…".
@@ -97,7 +110,7 @@ In settings.json, the switch is [`intelligence.catchUp`](/reference/settings#int
 In this version of Vela, every catch-up is summarized on your Mac, and there's no Private Cloud Compute switch. Apps need Apple's permission to use Private Cloud Compute, and Vela is waiting for it. Until then, it's only in development builds.
 :::
 
-*In a later version of Vela (see above).* On macOS 27 or later, **Use Private Cloud Compute for long catch-ups** in **Settings → Apple Intelligence** lets a long catch-up use Apple's [Private Cloud Compute](https://security.apple.com/blog/private-cloud-compute/): the larger Apple Intelligence model that runs on Apple's servers. It's **off by default**.
+*In a later version of Vela (see above).* On macOS 27 or later, **Use Private Cloud Compute for long catch-ups** in **Settings → Intelligence** lets a long catch-up use Apple's [Private Cloud Compute](https://security.apple.com/blog/private-cloud-compute/): the larger Apple Intelligence model that runs on Apple's servers. It's **off by default**.
 
 - **Only long catch-ups go.** A stretch the model on your Mac reads in one pass (on macOS 27, up to a couple of hundred messages of ordinary chat) is summarized on your Mac as always. One that would take several passes goes to Private Cloud Compute, which reads far more at once, so a few hundred messages are usually read in one go: quicker, and without the parts.
 - **What's sent:** the messages in that stretch, with their nicks (links reduced to the site they point to, as always), and your nick, so the summary can say when you were mentioned. Not the channel's or the network's name.
@@ -108,7 +121,7 @@ In this version of Vela, every catch-up is summarized on your Mac, and there's n
 
 In settings.json, it's [`intelligence.privateCloudCompute`](/reference/settings#intelligence.privateCloudCompute), which only development builds know for now. It has no effect on macOS 26.
 
-If something goes wrong, the card says why and offers **Try Again**, or **Open System Settings** when Apple Intelligence needs attention. When people are writing in a language Apple Intelligence can't summarize yet, the card says "This conversation's language isn't supported for summaries yet." That's about the conversation, not your Mac's language, so there's nothing to change in System Settings.
+If something goes wrong, the card says why and offers **Try Again**, or **Open System Settings** when Apple Intelligence needs attention. With a model of your own, see [When something goes wrong](/guide/ai-models#problems). When people are writing in a language Apple Intelligence can't summarize yet, the card says "This conversation's language isn't supported for summaries yet." That's about the conversation, not your Mac's language, so there's nothing to change in System Settings.
 
 ::: warning Summaries can contain mistakes
 A summary can misread a conversation or leave out something that matters. Click a topic to read the messages behind it before you act on it.
@@ -134,11 +147,11 @@ Right-click a channel or conversation and choose **Translate Messages Automatica
 - **A translation you hide stays hidden.**
 - **Languages macOS can't translate**, or whose download you declined, are skipped quietly. A declined language comes back once you translate one of its messages by hand and download it.
 
-**Settings → Apple Intelligence → Translation** counts where it's on ("Translated automatically in 2 channels"), and **Clear** turns it off everywhere. In settings.json it's [`translation.autoTranslate`](/reference/settings#translation.autoTranslate).
+**Settings → Intelligence → Translation** counts where it's on ("Translated automatically in 2 channels"), and **Clear** turns it off everywhere. In settings.json it's [`translation.autoTranslate`](/reference/settings#translation.autoTranslate).
 
 ### Languages and downloads {#languages}
 
-**Translate into** (in **Settings → Apple Intelligence → Translation**) starts as **Same as Mac**, your Mac's first preferred language. You can choose any language Apple supports, regional variants included. When you change it, translations on screen are redone in the new language, and the rest as they scroll back into view. In settings.json it's [`translation.language`](/reference/settings#translation.language).
+**Translate into** (in **Settings → Intelligence → Translation**) starts as **Same as Mac**, your Mac's first preferred language. You can choose any language Apple supports, regional variants included. When you change it, translations on screen are redone in the new language, and the rest as they scroll back into view. In settings.json it's [`translation.language`](/reference/settings#translation.language).
 
 The first time you translate from a language, **macOS asks to download it**. That's Apple's own prompt: macOS downloads each language once, from Apple, and translation happens on your Mac from then on.
 
@@ -155,11 +168,12 @@ Writing Tools leaves commands, nicks, channel names, links and code alone, and i
 
 ## Privacy
 
-- **Catch me up and Recap run on your Mac,** on the Apple Intelligence model that macOS keeps on it. The messages they read and the summaries they write stay on your Mac, and summaries are kept only in memory: a Recap only as long as its window is open.
-- **Apple Intelligence reads the messages and your nick,** so the summary can say what was asked of "you". It isn't told the channel's or the network's name, or who a Recap is about.
+- **With Apple Intelligence, Catch me up and Recap run on your Mac,** on the model that macOS keeps on it. The messages they read and the summaries they write stay on your Mac, and summaries are kept only in memory: a Recap only as long as its window is open.
+- **Apple Intelligence reads the messages and your nick,** so the summary can say what was asked of "you". It isn't told the channel's, the network's or the server's name, or who a Recap is about, and what the server itself sent a channel isn't read at all.
 - **Private Cloud Compute comes in a later version.** In it, you'll be able to send a catch-up too long for one pass on your Mac to Apple's Private Cloud Compute (macOS 27 or later, off by default): encrypted, used only to write the summary, not stored, and not readable by Apple. See [Private Cloud Compute for long catch-ups](#private-cloud-compute).
 - **Translation runs on your Mac,** with Apple's Translation framework, and so does working out a message's language. Only the language downloads come from Apple, and macOS asks before each one. Translations are kept only in memory.
 - **Writing Tools is Apple's.** Vela hands it the text in the message field, and Apple Intelligence handles it as it does in any app.
+- **Your own models get what Apple Intelligence gets,** and only once you've agreed: the messages you ask about, their nicks and your nick, never a channel's, network's or server's name. They go to the provider you chose, under its policy, or stay on your Mac with Ollama or LM Studio. With no provider added, nothing goes to one. **Settings → AI Privacy** lists each one, and takes your OK back. See [AI privacy](/guide/ai-privacy).
 - **There's no Vela server.** None of these features sends anything to Vela's developers.
 
 See [Privacy](/help/privacy) for everything else Vela does and doesn't do.

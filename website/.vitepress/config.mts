@@ -34,8 +34,13 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       { text: 'User menu & moderation', link: '/guide/user-menu' },
       { text: 'Chat logs', link: '/guide/chat-logs' },
       { text: 'Apple Intelligence & translation', link: '/guide/apple-intelligence' },
+      { text: 'AI providers', link: '/guide/ai-models' },
+      { text: 'AI privacy', link: '/guide/ai-privacy' },
       { text: 'Recap', link: '/guide/recap' },
+      { text: 'Integrations', link: '/guide/integrations' },
       { text: 'Siri, Shortcuts & Spotlight', link: '/guide/siri-shortcuts' },
+      { text: 'Links & AppleScript', link: '/guide/automation' },
+      { text: 'Alfred & Raycast', link: '/guide/alfred-and-raycast' },
     ],
   },
   {

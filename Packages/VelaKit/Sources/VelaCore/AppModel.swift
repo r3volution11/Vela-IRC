@@ -53,6 +53,10 @@ public final class AppModel: SessionHost {
     /// Called when you send a message from the composer (not a command).
     /// The scene layer donates it to Siri so it learns where you talk.
     @ObservationIgnored public var onComposerMessage: ((BufferModel, NetworkSession) -> Void)?
+    /// Spotlight's index of messages (`intelligence.spotlightMessages`):
+    /// hears about saved messages arriving and going away. Nil while it's
+    /// off. See SavedMessages.swift.
+    @ObservationIgnored public weak var savedMessagesObserver: (any SavedMessagesObserver)?
     /// Whether the Dock icon shows the offline mark: `dock.showOffline` is
     /// on and a network Vela means to be connected to has been offline for
     /// longer than the grace period. The scene layer's `DockIconController`
@@ -246,6 +250,18 @@ public final class AppModel: SessionHost {
         prunePreviewCache()
     }
 
+    /// For a script reading networks or conversations, which Cocoa
+    /// scripting can't wait for: starts Vela if it hasn't been (a script
+    /// can launch it before the main window appears), and while it's still
+    /// launching, restores each network's channels and conversations from
+    /// the store now. Their history and unread counts arrive as usual. Does
+    /// nothing once Vela is ready.
+    public func restoreConversationsNow() {
+        guard !isReady else { return }
+        start()
+        for session in sessions { session.restoreBuffersNow() }
+    }
+
     /// Starts Vela if it hasn't been (Siri and Shortcuts can run before the
     /// main window appears) and waits until saved networks and buffers are
     /// restored, and each buffer's recent lines have loaded from the
@@ -266,9 +282,12 @@ public final class AppModel: SessionHost {
 
     /// Asks the scene layer to show `bufferID`: select it, activate Vela,
     /// and open the main window if it's closed. A `draft` replaces the
-    /// buffer's unsent text (Siri's "draft a message").
-    public func requestShow(_ bufferID: BufferID, draft: String? = nil) {
-        showRequest = ShowRequest(bufferID: bufferID, draft: draft)
+    /// buffer's unsent text (Siri's "draft a message"), or with
+    /// `appendingDraft` goes after it (a `vela://` link never throws away
+    /// what you were typing). With a `line`, the message list scrolls to
+    /// that message, loading older history to find it if need be.
+    public func requestShow(_ bufferID: BufferID, draft: String? = nil, appendingDraft: Bool = false, line: LineReference? = nil) {
+        showRequest = ShowRequest(bufferID: bufferID, draft: draft, appendsDraft: appendingDraft, line: line)
     }
 
     // MARK: SessionHost
@@ -551,6 +570,7 @@ public final class AppModel: SessionHost {
         }
         if selectedBufferID?.networkID == id { selectedBufferID = nil }
         forgetClosed(inNetwork: id)
+        savedMessagesObserver?.networkRemoved(id)
         for purpose in [Keychain.SecretPurpose.serverPassword, .saslPassword, .nickServPassword] {
             keychain.deleteSecret(account: Keychain.account(networkID: id, purpose: purpose))
         }
@@ -970,11 +990,47 @@ nonisolated struct DatabasePreviewCache: LinkPreviewCache {
     }
 }
 
-/// A request to bring a buffer on screen; see ``AppModel/requestShow(_:)``.
+/// A request to bring a buffer on screen; see ``AppModel/requestShow(_:draft:appendingDraft:line:)``.
 /// Each request is distinct, so asking twice for the same buffer still fires.
 nonisolated public struct ShowRequest: Equatable, Sendable {
     public let id = UUID()
     public let bufferID: BufferID
     /// Text to put in the buffer's composer.
     public var draft: String?
+    /// Put ``draft`` after the composer's text rather than in its place.
+    public var appendsDraft = false
+    /// A message to scroll to.
+    public var line: LineReference?
+}
+
+nonisolated extension ShowRequest {
+    /// What the message box holds once `draft` is put in it, given what it
+    /// holds now (`existing`). Replacing, it's `draft` as is. Appending
+    /// (a `vela://draft` link, AppleScript's `draft`), what you were typing
+    /// stays, with the draft after it, and a draft that would start the box
+    /// with "/" gets the composer's "//" escape, so pressing Return sends it
+    /// as text rather than running it as a command. Nil when appending to a
+    /// command you're typing, which is left alone.
+    public static func composerText(existing: String?, draft: String, appending: Bool) -> String? {
+        guard appending else { return draft }
+        let current = existing ?? ""
+        if current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return draft.hasPrefix("/") ? "/" + draft : draft
+        }
+        if current.drop(while: \.isWhitespace).hasPrefix("/") { return nil }
+        if current.last?.isWhitespace == true { return current + draft }
+        return current + (draft.contains(where: \.isNewline) ? "\n" : " ") + draft
+    }
+}
+
+/// One message in a buffer: its line id, and its time, which tells how far
+/// back to load history to find it.
+nonisolated public struct LineReference: Equatable, Hashable, Sendable {
+    public var id: UUID
+    public var time: Date
+
+    public init(id: UUID, time: Date) {
+        self.id = id
+        self.time = time
+    }
 }

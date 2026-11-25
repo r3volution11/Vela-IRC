@@ -13,7 +13,7 @@ Chat logs are **off by default**. They're separate from Vela's [message history]
 
 Open **Settings → Messages**, scroll to **Chat logs** and turn on **Save chat logs**. Vela starts logging straight away, from the next line in each channel.
 
-<Screenshot src="/screenshots/settings-chat-logs.webp" alt="Settings → Messages: the Chat logs section, with Save chat logs on, the folder set to Vela's folder with Choose… and Reveal in Finder buttons, Start a new file at 10 MB (recommended), Files to keep 5 files (recommended), Include channel events on and Include server messages off" caption="The Chat logs section of Settings → Messages." />
+<Screenshot src="/screenshots/settings-chat-logs.webp" alt="Settings → Messages: the end of the History section, then the Chat logs section, with Save chat logs on, the folder set to Vela's folder with Choose… and Reveal in Finder buttons, Start a new file at 10 MB (recommended), Files to keep 5 files (recommended), Include channel events on and Include server messages off" caption="The Chat logs section of Settings → Messages." />
 
 You can also run **Chat: Save Chat Logs** from the [command palette](/guide/command-palette), or set [`logging.enabled`](/reference/settings#logging.enabled) in settings.json.
 

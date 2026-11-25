@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting & FAQ
-description: Fix common Vela problems, such as connecting, TLS errors, ZNC logins, link previews, notifications, Catch me up, translation and Siri, and find or reset Vela's settings files.
+description: Fix common Vela problems, such as connecting, TLS errors, ZNC logins, link previews, notifications, Catch me up, AI providers, Siri, links and scripts, and find or reset Vela's settings files.
 ---
 
 # Troubleshooting & FAQ
@@ -11,7 +11,7 @@ Ask in **#vela** on **Libera.Chat**, Vela's own channel. See [Where can I get he
 
 ## Can't connect {#cant-connect}
 
-Start with the network's **server console**: click the network's name in the sidebar (or its first tab). Vela writes connection errors there.
+Start with the network's **server console**: click the network's name in the sidebar (or its first tab; in the [Focus layout](/guide/presets#focus), press <kbd>⌘P</kbd> and choose the network's console). Vela writes connection errors there.
 
 **TLS turned on for a plain-text port, or off for a TLS port.** This is the most common cause. Most networks use **6697 with TLS** and **6667 without**. Bouncers use whatever port their listener was configured with, and some listeners have TLS turned off. If the connection hangs and times out, try toggling **Use TLS** in the network's settings (right-click it → **Edit Network…**).
 
@@ -61,6 +61,10 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 - Vela doesn't notify you about the conversation you're looking at while Vela is in front.
 - Muted channels only notify you when someone mentions you.
 
+## The sidebar and tabs are gone {#focus}
+
+You're probably using the **Focus** layout, which shows only the conversation. Switch channels with <kbd>⌘P</kbd> or <kbd>⌘1</kbd>–<kbd>⌘9</kbd>, or bring the sidebar or tabs back with **View → Layout → Sidebar** (or **Tabs on Top**, or **Tabs in Title Bar**). See [Focus](/guide/presets#focus).
+
 ## Spelling or autocorrect doesn't behave as expected {#typing}
 
 - **Check Settings → Messages → Typing.** Autocorrect, text replacements, and smart quotes and dashes follow your Mac's keyboard settings until you change them in Vela (or in the **Edit** menu, or by right-clicking the message field). After that, they stay the way you set them. Click **Use macOS Setting** to follow macOS again.
@@ -68,14 +72,14 @@ They need the server, and any bouncer in between, to support IRCv3 message tags.
 
 ## Catch me up doesn't appear {#catch-me-up}
 
-- **Is Apple Intelligence ready?** The box at the top of **Settings → Apple Intelligence** says. Catch me up needs a Mac with Apple silicon, Apple Intelligence turned on in System Settings, its model downloaded, and a supported language. See [What you need](/guide/apple-intelligence#requirements).
+- **Is Apple Intelligence ready?** The box at the top of **Settings → AI Providers** says. Catch me up needs a Mac with Apple silicon, Apple Intelligence turned on in System Settings, its model downloaded, and a supported language. See [What you need](/guide/apple-intelligence#requirements).
 - **Are enough messages new?** The button waits for 25 new messages by default (**Show the button after**). To catch up on fewer, right-click the channel and choose **Catch Me Up**.
 - **Is Offer Catch me up in busy channels on?** Turned off, it removes Catch me up everywhere: the button, the right-click menu, the command palette and Siri.
 - **Is anything new?** The button sits on the **New** marker, so it only appears in a channel with messages you haven't read. **Catch Me Up** in the right-click menu or the command palette works either way: with nothing new, it shows the summary you made there earlier, or says there's nothing new and when the button will be back.
 - **Using a bouncer?** Messages ZNC, soju or a server with chat history replays when Vela connects count as new once they're newer than where you stopped reading. A channel Vela has never had open starts counting when it first joins, so its older history stays read. See [Bouncers](/guide/bouncers).
 - **Did you go to another channel?** A summary keeps going while you're elsewhere, and its card is there when you come back. After you've read the channel, choose **Catch Me Up** again to see it.
 - **Does the card say "Waiting…"?** Summaries are written one at a time, in the order you asked for them, so a card waits while another channel's summary is written. It starts on its own when its turn comes; dismiss it to take it out of line.
-- **Is the New line turned off?** With **Show the New line** off (Settings → Messages → Unread messages, or the Classic IRC preset) there's no button. Right-click the channel and choose **Catch Me Up**, or use the command palette.
+- **Is the New line turned off?** With **Show the New line** off (Settings → Messages → Unread messages) there's no button. Right-click the channel and choose **Catch Me Up**, or use the command palette.
 
 If a summary looks wrong, click a topic to read the messages behind it, or click **Regenerate**. Summaries can contain mistakes.
 
@@ -83,10 +87,36 @@ If the card says it skipped some messages, Apple Intelligence's safety checks de
 
 ## Translate isn't offered {#translate}
 
-- **It's for other people's messages** in a language other than the one in **Settings → Apple Intelligence → Translate into**.
+- **It's for other people's messages** in a language other than the one in **Settings → Intelligence → Translate into**.
 - **The message needs enough words** for its language to be clear. Short replies, emoji and bare links aren't offered.
 - **macOS must be able to translate between the two languages.**
 - **A declined download** stops automatic translation from that language. Choose **Translate** on one of its messages to be asked again.
+
+## Ollama or LM Studio isn't found {#local-models}
+
+- **Is it running?** Ollama's server starts when you open Ollama (its icon is in the menu bar). LM Studio's server has to be turned on, in its **Developer** tab. Then click **Look Again** in **Settings → AI Providers → On this Mac**.
+- **Is it on its usual port?** Vela looks on `127.0.0.1`, at port 11434 for Ollama and 1234 for LM Studio. For another port, or a server on another Mac, add it by hand: **Add Provider → Other OpenAI-Compatible Server**. See [Other servers](/guide/ai-models#local-servers).
+- **No models yet?** Vela still finds it, and says it has no models. Download one in Ollama or LM Studio, then **Test** it in **Settings → AI Providers**.
+
+## A key doesn't pass Test Connection {#api-key}
+
+- **"Didn't accept this key":** copy the whole key again from the provider's page (**Get a Key** opens it), or make a new one. Each provider's keys start the same way: `sk-` for OpenAI, `sk-ant-` for Anthropic and `AIza` for Google Gemini, and the sheet says when a key looks like another provider's.
+- **"Out of credit or over its limit":** OpenAI and Anthropic need credit on your account; Gemini's free tier has limits. Check billing with the provider.
+- **"Couldn't reach":** check your internet connection. It also appears when the provider is busy or slow to answer. **Continue Anyway** adds the provider, and Vela tries the key when it's first used.
+
+## Catch me up or a Recap fails with your own model {#ai-provider-errors}
+
+The card or the Recap says what went wrong, with **Try Again**, **Try with Apple Intelligence** where it can run, and **Open Settings** when a key, an address or a model needs fixing. Vela never switches to another provider on its own.
+
+- **"Vela needs your OK before it sends messages to …":** click **Review…**, then **Allow and Continue**, or **Allow…** in **Settings → AI Privacy**. Siri can't ask for your OK, so catch up in Vela once first.
+- **"… didn't accept your API key" or "There's no API key for …":** on the provider's row in **Settings → AI Providers**, click **Remove Key** and paste a new one.
+- **"Your … account is out of credit or over its usage limit":** add credit, or check your plan, on the provider's website.
+- **"Couldn't connect to …":** the server isn't running, or its address is wrong. Open Ollama, or turn on LM Studio's server in its **Developer** tab.
+- **"… doesn't offer the model …":** click **Test** on the provider's row to refresh its list, then choose another model.
+- **"… is turned off in Settings → AI Providers" or "The model chosen for this isn't set up any more":** turn the provider back on, or choose another model.
+- **A model on your Mac seems to miss part of the conversation:** set the server's **Context** to what it loads models with.
+
+See [When something goes wrong](/guide/ai-models#problems) for every message.
 
 ## Siri or Shortcuts doesn't find Vela {#siri}
 
@@ -94,9 +124,15 @@ Open Vela once, so macOS registers its actions. If Vela's actions still don't ap
 
 **Siri doesn't understand "Catch me up in Vela" and the other phrases.** They're in English, so they work when Siri's language is English (**System Settings → Apple Intelligence & Siri → Language**). In other languages, use Vela's actions in the **Shortcuts** app instead.
 
+## A vela:// link or a script doesn't work {#links-and-scripts}
+
+- **A link brings Vela forward with a note instead.** The note says why: a channel you're not in, a name on more than one network (add `network=` to the link), or a part of the link Vela doesn't know. See [What links can't do](/guide/automation#link-safety).
+- **Alfred, Raycast or a script isn't allowed to control Vela.** Turn on **Vela** under that app in **System Settings → Privacy & Security → Automation**. See [Alfred & Raycast](/guide/alfred-and-raycast#troubleshooting).
+- **A script's error** has a number and says what's wrong. See [Errors](/guide/automation#errors).
+
 ## macOS asks about the Keychain
 
-Vela keeps passwords, channel keys and client certificates in your login keychain, where macOS lets only the copy of Vela that saved them read them. Every release is signed by the same developer, so updating Vela never asks.
+Vela keeps passwords, channel keys, client certificates and AI providers' API keys in your login keychain, where macOS lets only the copy of Vela that saved them read them. Every release is signed by the same developer, so updating Vela never asks.
 
 macOS does ask, once for each saved password, when a differently signed copy saved them: for example, if you built Vela yourself and then installed a release. Enter your Mac password and click **Always Allow**, and it won't ask about that item again. If you click **Deny**, Vela can't read the password, and logging in fails until you allow it.
 
@@ -124,7 +160,7 @@ Vela is sandboxed, so everything lives in its container:
 | `vela.sqlite` | Your channels and read positions, plus message history and cached link previews if [Save message history](/guide/messages-and-layouts#scrollback-and-history) is on |
 | `Logs/` | [Chat logs](/guide/chat-logs), if you turned them on and didn't choose another folder |
 
-**Settings → Advanced → ⋯ → Reveal Data Folder** opens it in Finder. Passwords, channel keys and certificates are in your login keychain, under `io.github.r3volution11.Vela`.
+**Settings → Advanced → ⋯ → Reveal Data Folder** opens it in Finder. Passwords, channel keys, certificates and AI providers' API keys are in your login keychain, under `io.github.r3volution11.Vela`.
 
 ## Resetting Vela {#reset}
 
@@ -152,11 +188,11 @@ If you used Vela before this setting existed, nothing changed for you: your hist
 
 ### Which macOS versions does Vela support?
 
-macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writing Tools need Apple Intelligence, which needs Apple silicon; [translation](/guide/apple-intelligence#translate-messages) doesn't. On macOS 27, [Siri can do more](/guide/siri-shortcuts#macos-27) with Vela.
+macOS 26 Tahoe or later, on Apple silicon and Intel Macs. Catch me up and Writing Tools need Apple Intelligence, which needs Apple silicon (Catch me up and Recap also work with [a model of your own](/guide/ai-models), on any Mac); [translation](/guide/apple-intelligence#translate-messages) doesn't. On macOS 27, [Siri can do more](/guide/siri-shortcuts#macos-27) with Vela.
 
 ### Does Vela send my messages to an AI service?
 
-No. [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. A later version will let you send long catch-ups to Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) (macOS 27 or later, off by default), where requests are encrypted and not stored, and Apple can't read them. This version never does. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
+Not unless you set one up. You can choose [a model of your own](/guide/ai-models) (OpenAI, Anthropic, Google Gemini, or Ollama or LM Studio on your Mac) for Catch me up and Recap; Vela then asks first, and sends it the messages you ask about, their nicks and your nick, never channel or network names. **Settings → AI Privacy** says what each one gets, and takes your OK back. See [AI privacy](/guide/ai-privacy). Otherwise, [Catch me up](/guide/apple-intelligence#catch-me-up) summaries and [translations](/guide/apple-intelligence#translate-messages) are made on your Mac by Apple's on-device models, and Vela has no server of its own. A later version will let you send long catch-ups to Apple's [Private Cloud Compute](/guide/apple-intelligence#private-cloud-compute) (macOS 27 or later, off by default), where requests are encrypted and not stored, and Apple can't read them. This version never does. [Writing Tools](/guide/sending-messages#writing-tools), which you start yourself, is Apple's feature, and Apple Intelligence handles it as it does in any app. See [Privacy](/help/privacy#apple-intelligence).
 
 ### Is Vela free?
 
@@ -170,9 +206,13 @@ Yes, from version 1.1. It checks once a day and offers a new version when you op
 
 Make sure Vela is in your **Applications** folder and you opened it from there. An app running from the disk image or from **Downloads** can't replace itself. See [Updates](/guide/updates#troubleshooting).
 
-### Can I upload images, search my history or sync between Macs?
+### Can I search my messages?
 
-Not yet. Image uploads, a search window, iCloud sync, DCC and scripting are on the [roadmap](https://github.com/r3volution11/Vela-IRC/blob/main/ROADMAP.md). While **Save message history** is on, your history is stored with a full-text index, ready for search.
+Yes. Run **Search Messages…** from the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>) to search your saved history and what your open channels hold. See [Message search](/guide/automation#message-search). With **Save message history** on, you can also let [Spotlight](/guide/siri-shortcuts#messages-in-spotlight) search them.
+
+### Can I upload images or sync between Macs?
+
+Not yet. Image uploads, iCloud sync and DCC are on the [roadmap](https://github.com/r3volution11/Vela-IRC/blob/main/ROADMAP.md). To script Vela, see [Links & AppleScript](/guide/automation).
 
 ### How do I register my nickname?
 

@@ -24,6 +24,7 @@ extension AppModel {
         in buffer: BufferModel
     ) {
         chatLogs.recordRedaction(of: line, by: nick, reason: reason, at: time, isHistory: isHistory, in: buffer, session: session)
+        savedMessagesObserver?.messageRedacted(line.id, time: line.time, in: buffer.id)
     }
 
     /// Whether `bufferID` is left out of chat logs, by itself or through

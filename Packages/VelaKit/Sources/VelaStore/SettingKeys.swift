@@ -717,11 +717,11 @@ extension SettingKey where Value == SystemFollowingBool {
 extension SettingKey where Value == Bool {
     public static var intelligenceCatchUp: SettingKey<Bool> {
         .init("intelligence.catchUp", default: true,
-              summary: "Offer \"Catch me up\": an Apple Intelligence summary of what you missed in a busy channel, made on your Mac. Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri.")
+              summary: "Offer \"Catch me up\": a summary of what you missed in a busy channel, by Apple Intelligence on your Mac or the model you choose (intelligence.catchUpModel). Off hides it everywhere: the button on the New line, the right-click menu, the command palette and Siri; links and scripts say it's off.")
     }
     public static var intelligenceRecap: SettingKey<Bool> {
         .init("intelligence.recap", default: true,
-              summary: "Offer Recap: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a span you pick, written by Apple Intelligence on your Mac or shown as a log. Reports are kept only while their window is open. Off hides it everywhere: the menus, the command palette, the Catch me up card and Siri.")
+              summary: "Offer Recap: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a span you pick, written by Apple Intelligence on your Mac or the model you choose (intelligence.recapModel), or shown as a log. Reports are kept only while their window is open. Off hides it everywhere: the menus, the command palette, the Catch me up card and Siri; links and scripts say it's off.")
     }
     public static var intelligencePrivateCloudCompute: SettingKey<Bool> {
         .init("intelligence.privateCloudCompute", default: false,
@@ -731,12 +731,38 @@ extension SettingKey where Value == Bool {
         .init("intelligence.spotlightChannels", default: true,
               summary: "List your channels and conversations in Spotlight's results. Names only, never messages. Siri finds them by name either way.")
     }
+    public static var intelligenceSpotlightMessages: SettingKey<Bool> {
+        .init("intelligence.spotlightMessages", default: false,
+              summary: "Let Spotlight search your saved messages: the newest 5,000 of each network when you turn it on, then each new one as it's saved. Needs history.save. Turning it off, turning off history.save, deleting saved history, or removing a channel, conversation or network takes those messages out of Spotlight.")
+    }
 }
 
 extension SettingKey where Value == Int {
     public static var intelligenceCatchUpThreshold: SettingKey<Int> {
         .init("intelligence.catchUpThreshold", default: 25,
               summary: "Show the Catch me up button when a channel has at least this many new messages.")
+    }
+}
+
+extension SettingKey where Value == String {
+    public static var intelligenceModel: SettingKey<String> {
+        .init("intelligence.model", default: "apple",
+              summary: "The model Catch me up and Recap use unless their own setting picks another. \"apple\" is Automatic (Apple): Apple Intelligence on your Mac, with Private Cloud Compute for long ones where it's on. \"apple/on-device\" always uses your Mac. Or one of your providers' models, as \"<provider id>/<model id>\", such as \"anthropic/claude-opus-5-5\" (see intelligence.providers).")
+    }
+    public static var intelligenceCatchUpModel: SettingKey<String> {
+        .init("intelligence.catchUpModel", default: "",
+              summary: "The model Catch me up uses, written like intelligence.model. Empty uses intelligence.model.")
+    }
+    public static var intelligenceRecapModel: SettingKey<String> {
+        .init("intelligence.recapModel", default: "",
+              summary: "The model Recap uses, written like intelligence.model. Empty uses intelligence.model.")
+    }
+}
+
+extension SettingKey where Value == [AIProviderEntry] {
+    public static var intelligenceProviders: SettingKey<[AIProviderEntry]> {
+        .init("intelligence.providers", default: [],
+              summary: "Your own AI providers for Catch me up and Recap, set up in Settings → AI Providers. Each is an object: \"id\" (used in model choices, such as \"anthropic\"), \"kind\" (\"openai\", \"anthropic\", \"gemini\" or \"openAICompatible\" for a server such as Ollama or LM Studio), \"name\", \"baseURL\" (custom servers, such as `http://localhost:11434/v1`), \"enabled\", \"consent\" (you agreed to send it messages; withdrawn in Settings → AI Privacy) and \"contextTokens\" (how much a custom server reads at once). API keys are never stored here: they're in your Keychain.")
     }
 }
 
@@ -883,7 +909,12 @@ public enum SettingsCatalog {
             SettingKey.intelligenceCatchUpThreshold.descriptor,
             SettingKey.intelligenceRecap.descriptor,
             SettingKey.intelligencePrivateCloudCompute.descriptor,
+            SettingKey.intelligenceModel.descriptor,
+            SettingKey.intelligenceCatchUpModel.descriptor,
+            SettingKey.intelligenceRecapModel.descriptor,
+            SettingKey.intelligenceProviders.descriptor,
             SettingKey.intelligenceSpotlightChannels.descriptor,
+            SettingKey.intelligenceSpotlightMessages.descriptor,
             SettingKey.translationLanguage.descriptor,
             SettingKey.translationAutoTranslate.descriptor,
 

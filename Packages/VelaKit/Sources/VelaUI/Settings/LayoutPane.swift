@@ -14,7 +14,9 @@ struct LayoutPane: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        let usesTabs = settings[.navigationStyle] == .tabs
+        let navigation = settings[.navigationStyle]
+        let usesTabs = navigation == .tabs
+        let usesSidebar = navigation == .sidebar
 
         SettingsPage("Layout", subtitle: "Choose how you move between networks and channels, and how much room each pane gets.", pane: .layout) {
             VStack(alignment: .leading, spacing: 8) {
@@ -22,6 +24,7 @@ struct LayoutPane: View {
                 HStack(alignment: .top, spacing: 14) {
                     navigationCard(.sidebar, title: "Sidebar", subtitle: "A compact tree of networks and channels that can collapse to an icon rail.")
                     navigationCard(.tabs, title: "Tabs", subtitle: "Vivaldi-style tab stacks: one row for networks, one for the selected network's channels.")
+                    navigationCard(.focus, title: "Focus", subtitle: "Neither: just the conversation. Switch with Go to Conversation (⌘P) or ⌘1\u{2060}–\u{2060}⌘9.")
                 }
             }
 
@@ -69,7 +72,7 @@ struct LayoutPane: View {
 
             SettingsSection(
                 "Sidebar",
-                footer: usesTabs ? "These apply when navigation is set to Sidebar." : nil
+                footer: usesSidebar ? nil : "These apply when navigation is set to Sidebar."
             ) {
                 SettingsToggle(
                     "Collapse to icon rail",
@@ -91,7 +94,7 @@ struct LayoutPane: View {
                 )
                 SettingsToggle("Unread counts", detail: "Show the number of unread messages next to each channel.", isOn: $settings[.sidebarShowUnreadCounts])
             }
-            .opacity(usesTabs ? 0.6 : 1)
+            .opacity(usesSidebar ? 1 : 0.6)
 
             SettingsSection("Member list") {
                 SettingsToggle("Show member list", detail: "The list of people in the current channel, on the right.", isOn: $settings[.memberListVisible])
@@ -122,7 +125,9 @@ struct LayoutPane: View {
             title,
             subtitle: subtitle,
             isSelected: app.settings[.navigationStyle] == style,
-            action: { withAnimation(.snappy(duration: 0.2)) { app.settings[.navigationStyle] = style } },
+            // Not animated: switching lays the whole main window out once,
+            // not on every frame of an animation (see MainWindowView).
+            action: { app.settings[.navigationStyle] = style },
             preview: {
                 LayoutSchematic(config: config, theme: theme)
                     .overlay(

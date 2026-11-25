@@ -123,6 +123,7 @@ nonisolated final class InstantSleeper: Sendable {
 @Suite("Spotlight indexer", .serialized)
 struct SpotlightIndexerTests {
     private let channel = FakeSpotlightIndex.name(ChannelEntity.self)
+    private let person = FakeSpotlightIndex.name(PersonEntity.self)
 
     private struct Setup {
         let app: AppModel
@@ -179,10 +180,14 @@ struct SpotlightIndexerTests {
 
     @Test func firstPassReplacesWhatAnEarlierRunLeft() async throws {
         let setup = await start()
-        let count = ChannelEntity.all(in: setup.app).count
-        await settle { setup.index.calls(for: channel).count == 2 }
-        // Each kind is emptied, then filled, so nothing stale survives a relaunch.
-        for type in [channel] + siriTypes() {
+        let all = ChannelEntity.all(in: setup.app)
+        await settle { setup.index.calls(for: person).count == 2 }
+        // Each kind is emptied, then filled, so nothing stale survives a
+        // relaunch. Spotlight shows channels as channels and private
+        // conversations as people; Siri knows them all by name.
+        let expected = [channel: all.filter { !$0.isPrivate }.count, person: all.filter(\.isPrivate).count]
+            .merging(siriTypes().map { ($0, all.count) }) { first, _ in first }
+        for (type, count) in expected {
             let calls = setup.index.calls(for: type)
             #expect(calls.count == 2)
             #expect(calls.first == .deleteAll(type))
@@ -190,9 +195,34 @@ struct SpotlightIndexerTests {
                 Issue.record("\(type) wasn't indexed")
                 continue
             }
-            #expect(items.count == count)
+            #expect(items.count == count, "\(type)")
         }
         #expect(setup.sleeper.delays == [SpotlightChannelIndexer.debounce])
+    }
+
+    /// A private conversation is a person in Spotlight, and stays one
+    /// after you close it, until Vela quits.
+    @Test func peopleYouTalkTo() async throws {
+        let setup = await start()
+        await settle { setup.index.calls(for: person).count == 2 }
+        guard case .index(_, let people) = setup.index.calls(for: person).last else {
+            Issue.record("People weren't indexed")
+            return
+        }
+        #expect(people == ["marisol — Private conversation on Libera.Chat"])
+        guard case .index(_, let channels) = setup.index.calls(for: channel).last else {
+            Issue.record("Channels weren't indexed")
+            return
+        }
+        #expect(!channels.contains { $0.hasPrefix("marisol") })
+        setup.index.clear()
+
+        let session = try libera(setup.app)
+        setup.app.close(try #require(session.buffer(named: "marisol")))
+        await settle { !setup.index.calls(for: person).isEmpty }
+        await drain()
+        // Still there: it's in Recently Closed, so choosing it reopens it.
+        #expect(PersonEntity.all(in: setup.app).map(\.nick) == ["marisol"])
     }
 
     // MARK: The setting
@@ -205,13 +235,13 @@ struct SpotlightIndexerTests {
         setup.app.settings[.intelligenceSpotlightChannels] = false
         await settle { !setup.index.calls.isEmpty }
         await drain()
-        // Siri's lookup entries stay: only the channels Spotlight shows go.
-        #expect(setup.index.calls == [.deleteAll(channel)])
+        // Siri's lookup entries stay: only the channels and people Spotlight shows go.
+        #expect(setup.index.calls == [.deleteAll(channel), .deleteAll(person)])
     }
 
     @Test func turningOnDeletesThenIndexes() async throws {
         let setup = await start { app in app.settings[.intelligenceSpotlightChannels] = false }
-        await settle { setup.index.calls(for: channel).count == 1 }
+        await settle { setup.index.calls(for: person).count == 1 }
         #expect(setup.index.calls(for: channel) == [.deleteAll(channel)])
         // Siri's entries are indexed while the setting is off.
         for type in siriTypes() {
@@ -220,17 +250,18 @@ struct SpotlightIndexerTests {
         setup.index.clear()
 
         setup.app.settings[.intelligenceSpotlightChannels] = true
-        await settle { setup.index.calls.count == 2 }
+        await settle { setup.index.calls.count == 4 }
         await drain()
-        let calls = setup.index.calls
+        let calls = setup.index.calls(for: channel)
         #expect(calls.count == 2)
         #expect(calls.first == .deleteAll(channel))
         if case .index(let type, let items) = calls.last {
             #expect(type == channel)
-            #expect(items.count == ChannelEntity.all(in: setup.app).count)
+            #expect(items.count == ChannelEntity.all(in: setup.app).filter { !$0.isPrivate }.count)
         } else {
             Issue.record("Channels weren't indexed: \(calls)")
         }
+        #expect(setup.index.calls(for: person).count == 2)
     }
 
     @Test func externalSettingsEditsReachTheIndex() async throws {
@@ -245,7 +276,7 @@ struct SpotlightIndexerTests {
         #expect(SpotlightChannelIndexer.snapshot(of: setup.app).isEnabled == false)
         await settle { !setup.index.calls.isEmpty }
         await drain()
-        #expect(setup.index.calls == [.deleteAll(channel)])
+        #expect(setup.index.calls == [.deleteAll(channel), .deleteAll(person)])
     }
 
     // MARK: Channel changes

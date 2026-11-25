@@ -7,14 +7,15 @@ description: A tour of Vela's main window, the sidebar and its collapsible rail,
 
 <Screenshot src="/screenshots/preset-modern.webp" alt="Vela's main window: the sidebar on the left, the conversation in the middle and the member list on the right" caption="The sidebar, the conversation and the member list, in Palenight." eager />
 
-Vela's window has up to three panes: **navigation** on the left (or tabs along the top), the **conversation** in the middle and the **member list** on the right. Every part of it, down to the title bar, is drawn with your [theme](/customize/themes).
+Vela's window has up to three panes: **navigation** on the left (or tabs along the top, or none in the Focus layout), the **conversation** in the middle and the **member list** on the right. Every part of it, down to the title bar, is drawn with your [theme](/customize/themes).
 
-## Sidebar or tabs
+## Sidebar, tabs or Focus {#sidebar-or-tabs}
 
-Choose how you move between networks and channels in **Settings → Layout**, or with **View → Navigation**:
+Choose how you move between networks and channels with a [window layout](/guide/presets#window-layout) in **Settings → Presets** or **View → Layout**, or with the **Sidebar**, **Tabs** and **Focus** cards under **Navigation** in **Settings → Layout**:
 
 - **Sidebar** (the default) suits many networks and channels.
-- **Tabs** gives you [Vivaldi](https://vivaldi.com)-style [tab stacks](/guide/tab-stacks), great for one network and a few channels.
+- **Tabs on Top** and **Tabs in Title Bar** give you [Vivaldi](https://vivaldi.com)-style [tab stacks](/guide/tab-stacks), great for one network and a few channels.
+- **Focus** shows neither, just the conversation. Switch channels with **Go to Conversation…** (<kbd>⌘P</kbd>) or <kbd>⌘1</kbd>–<kbd>⌘9</kbd>. See [Focus](/guide/presets#focus).
 
 ## The sidebar
 
@@ -45,7 +46,7 @@ The red, yellow and green window buttons stack vertically when the rail is showi
 
 ## Arranging networks and channels
 
-Drag a network, channel or conversation to put it where you want it. This works in the sidebar, the rail, the [tab bars](/guide/tab-stacks) and **Settings → Networks**, and the order is the same everywhere. The others slide aside to show where it will land; let go to drop it, or press <kbd>Esc</kbd> to put it back. From the keyboard, **Network → Move Channel Up** and **Move Channel Down** (<kbd>⌥⇧⌘[</kbd> and <kbd>⌥⇧⌘]</kbd>) move the selected channel or conversation, and **Move Network Up** and **Move Network Down** (<kbd>⌃⌥⌘[</kbd> and <kbd>⌃⌥⌘]</kbd>) move its network. With tabs they say Left and Right.
+Drag a network, channel or conversation to put it where you want it. This works in the sidebar, the rail, the [tab bars](/guide/tab-stacks) and **Settings → Networks**, and the order is the same everywhere. The others slide aside to show where it will land; let go to drop it, or press <kbd>Esc</kbd> to put it back. From the keyboard, **Network → Move Channel Up** and **Move Channel Down** (<kbd>⌥⇧⌘[</kbd> and <kbd>⌥⇧⌘]</kbd>) move the selected channel or conversation, and **Move Network Up** and **Move Network Down** (<kbd>⌃⌥⌘[</kbd> and <kbd>⌃⌥⌘]</kbd>) move its network. With tabs they say Left and Right. In [Focus](/guide/presets#focus), with no sidebar or tabs to move them in, they're dimmed.
 
 - **Networks** move among each other. Networks provided by a [soju bouncer](/guide/bouncers#soju) stay under their bouncer and move among themselves there; moving the bouncer takes them along.
 - **Channels** always come before **private conversations**. A channel moves among its network's channels, and a conversation among its conversations.

@@ -34,7 +34,7 @@ With **Match System Appearance** on, the theme you pick becomes the theme for th
 
 ## Accent color {#accent-color}
 
-<Screenshot src="/screenshots/settings-accent.webp" alt="Settings → Appearance: the Message box section with its Border and Border color rows, then the Accent color row above the theme gallery, with round swatches from Palenight's colors and a ring around Cyan" caption="Accent color, at the top of the theme gallery." />
+<Screenshot src="/screenshots/settings-accent.webp" alt="Settings → Appearance: the Presets menus, the Message box section with its Border and Border color rows, then the Accent color row above the theme gallery, with round swatches from Palenight's colors and a ring around Cyan, and the first row of theme cards" caption="Accent color, at the top of the theme gallery." />
 
 Every theme has an **accent color**, used for buttons, the selected channel, links, mention highlights, focus rings and more. To use a different one, pick it from **Accent color** at the top of **Settings → Appearance → Theme**.
 
@@ -102,5 +102,5 @@ The theme's colors tint the material, so it still looks like the theme. **Settin
 
 ## What themes don't change
 
-- **Layout, fonts, sizes and spacing** aren't part of themes. Set them in **Settings → Layout** and **Settings → Messages**, or all at once with a [preset](/guide/presets).
+- **Layout, fonts, sizes and spacing** aren't part of themes. Set them in **Settings → Layout** and **Settings → Messages**, or pick a layout, message style and density in [Settings → Presets](/guide/presets).
 - **Menus, context menus, alerts and file pickers** are drawn by macOS. They follow the theme's light or dark type, not its colors.

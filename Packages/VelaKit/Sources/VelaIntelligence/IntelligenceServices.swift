@@ -6,9 +6,10 @@ import Foundation
 import Observation
 import VelaStore
 
-/// The Apple Intelligence services one Vela instance uses. Created by the
-/// scene layer, put in the SwiftUI environment, and registered with App
-/// Intents so Siri and Shortcuts use the same instances.
+/// The Apple Intelligence services one Vela instance uses, and your own AI
+/// models (``models``). Created by the scene layer, put in the SwiftUI
+/// environment, and registered with App Intents so Siri and Shortcuts use
+/// the same instances.
 @Observable
 public final class IntelligenceServices {
     public let availability: IntelligenceAvailability
@@ -20,29 +21,65 @@ public final class IntelligenceServices {
     @ObservationIgnored public let recapSummarizer: any RecapSummarizer
     /// Recap windows asked for from outside a window (Siri, Shortcuts).
     public let recaps = RecapRequests()
+    /// Your own providers and the model each feature uses (Settings → AI
+    /// Providers, and each feature's section in Settings → Intelligence).
+    /// Apple's alone in demo mode.
+    @ObservationIgnored public let models: AIModels
 
     public init(
         availability: IntelligenceAvailability,
         summarizer: any ConversationSummarizer,
-        recapSummarizer: (any RecapSummarizer)? = nil
+        recapSummarizer: (any RecapSummarizer)? = nil,
+        models: AIModels? = nil
     ) {
         self.availability = availability
         self.summarizer = summarizer
         self.catchUp = CatchUpStore(summarizer: summarizer)
         self.recapSummarizer = recapSummarizer ?? (summarizer as? any RecapSummarizer) ?? CannedSummarizer(stepDelay: .zero)
+        self.models = models ?? .appleOnly(availability: availability)
     }
 
-    /// The real models: on this Mac, and Private Cloud Compute for long
+    /// The real models: on this Mac, Private Cloud Compute for long
     /// catch-ups while `settings` allow it (`intelligence.privateCloudCompute`),
-    /// in development builds only for now (`PrivateCloudComputeAvailability`).
+    /// in development builds only for now (`PrivateCloudComputeAvailability`),
+    /// and your own providers (`intelligence.providers`, keys in the
+    /// Keychain) for the features set to use them.
     public static func live(settings: SettingsStore) -> IntelligenceServices {
         let availability = IntelligenceAvailability.live()
-        return IntelligenceServices(
+        let usesPrivateCloudCompute: () -> Bool = { [weak settings] in
+            PrivateCloudComputeAvailability.isBuiltIn && (settings?[.intelligencePrivateCloudCompute] ?? false)
+        }
+        let models = AIModels(
+            settings: settings,
+            keys: AIKeyStore(keychain: .shared),
+            catalog: AIModelCatalog(cacheURL: modelListCacheURL),
             availability: availability,
-            summarizer: FoundationModelSummarizer(availability: availability) { [weak settings] in
-                PrivateCloudComputeAvailability.isBuiltIn && (settings?[.intelligencePrivateCloudCompute] ?? false)
+            offersPrivateCloudCompute: {
+                guard usesPrivateCloudCompute() else { return false }
+                if #available(macOS 27.0, *) { return true } else { return false }
             }
         )
+        let apple = FoundationModelSummarizer(availability: availability, usesPrivateCloudCompute: usesPrivateCloudCompute)
+        return IntelligenceServices(
+            availability: availability,
+            summarizer: ModelRoutingSummarizer(apple: apple, models: models),
+            models: models
+        )
+    }
+
+    /// Where providers' model lists are kept between launches: the app's
+    /// Caches folder (model names and limits only).
+    static var modelListCacheURL: URL? {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appending(path: "Vela", directoryHint: .isDirectory)
+            .appending(path: "ai-models.json", directoryHint: .notDirectory)
+    }
+
+    /// Whether `feature` can be offered now: Apple Intelligence's status
+    /// when it uses Apple's model, available when it uses one of your
+    /// providers' (see ``AIModels/status(for:)``).
+    public func status(for feature: AIFeature) -> IntelligenceStatus {
+        models.status(for: feature)
     }
 
     /// Canned results, for demo mode and screenshots (works on any Mac).

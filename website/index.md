@@ -26,7 +26,7 @@ features:
     link: /customize/themes
     linkText: Choosing a theme
   - title: Your layout, your rules
-    details: A compact sidebar or Vivaldi-style tab stacks. Classic, Modern grouped or Compact columns. One-click presets that never touch your theme.
+    details: A sidebar, tab stacks or nothing but the conversation. Modern, Classic IRC or Columns messages, at the density you like. Mix them freely; your theme never changes.
     link: /guide/presets
     linkText: Presets
   - title: Modern IRC
@@ -56,15 +56,15 @@ The title bar, sidebar, tabs, chat, input, member list, link previews and even n
   eyebrow="Layouts & presets"
   title="Classic, modern or somewhere in between"
   src="/screenshots/preset-classic.webp"
-  alt="The Classic IRC preset: one-line monospace messages with timestamps and angle-bracketed nicks"
+  alt="The Classic IRC message style: one-line monospace messages with timestamps and angle-bracketed nicks"
   link="/guide/presets"
-  linkText="Compare the presets"
+  linkText="Mix your own"
   reverse
 >
 
-Pick a message layout: Classic `[12:01] <nick> text`, Modern grouped like [Slack](https://slack.com) or [Discord](https://discord.com), or Compact columns like [irssi](https://irssi.org) and [WeeChat](https://weechat.org).
+Pick a message style: Classic IRC `[12:01] <nick> text` like [irssi](https://irssi.org), Modern like [Slack](https://slack.com) or [Discord](https://discord.com), or Columns like [WeeChat](https://weechat.org).
 
-Or start from a preset. **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** each set up navigation, layout, density and media in one click, and your theme is never changed. Fine-tune anything afterwards, down to every setting in a searchable, VS Code-style [settings editor](/customize/settings-editor).
+**Settings → Presets** puts it together in three picks that combine freely: a window layout (**Sidebar**, **Tabs on Top**, **Tabs in Title Bar** or **Focus**), a message style (**Modern**, **Classic IRC** or **Columns**) and a density (**Compact**, **Standard** or **Comfortable**). Your theme is never changed. Fine-tune anything afterwards, down to every setting in a searchable, VS Code-style [settings editor](/customize/settings-editor).
 
 </ShowcaseRow>
 
@@ -80,6 +80,8 @@ Or start from a preset. **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus
 On a lot of networks? Use the compact sidebar, which folds into a thin rail when you want more room.
 
 On just a few? Switch to **[Vivaldi](https://vivaldi.com)-style tab stacks**: networks in one row, that network's channels in the next. Put them at the top, in the title bar or above the message field, with corners anywhere from square to pill.
+
+Want nothing but the conversation? The **[Focus](/guide/presets#focus)** layout hides both, and <kbd>⌘P</kbd> takes you anywhere.
 
 </ShowcaseRow>
 
@@ -104,7 +106,7 @@ Prefer less? Switch to **compact** previews, turn media off for a channel, or al
   eyebrow="IRCv3 & bouncers"
   title="IRC, done properly"
   src="/screenshots/preset-focus.webp"
-  alt="The Focus preset: pill tabs in the title bar and compact columns of time, nick and message"
+  alt="Pill tabs in the title bar and compact columns of time, nick and message"
   link="/guide/bouncers"
   linkText="Connecting through a bouncer"
 >
@@ -130,7 +132,26 @@ Back to a busy channel? **Catch me up** summarizes what you missed, topic by top
 
 - **Translate** messages from other languages, one at a time or a whole channel as they arrive.
 - **Writing Tools** proofreads your message without touching commands, nicks or links.
-- **Siri and Shortcuts** can catch you up, check your mentions or set you away, and your channels are in Spotlight.
+- **[Your own models](/guide/ai-models)**, if you like: OpenAI, Anthropic or Google Gemini with your own key, or Ollama or LM Studio on your Mac. Nothing goes to a provider until you add one and say yes.
+
+</ShowcaseRow>
+
+<ShowcaseRow
+  eyebrow="Integrations"
+  title="Vela from anywhere on your Mac"
+  src="/screenshots/settings-integrations.webp"
+  alt="Settings → Integrations: cards for Alfred and Raycast, each with what it does, whether it's installed and buttons to set it up"
+  link="/guide/integrations"
+  linkText="Integrations"
+>
+
+Jump to a channel, send a message or catch up without switching to Vela.
+
+- **[Alfred](/guide/alfred-and-raycast#alfred) and [Raycast](/guide/alfred-and-raycast#raycast)** list your channels and conversations, mentions first. The Alfred workflow comes with Vela.
+- **Siri and Shortcuts** can catch you up, check your mentions, send a message or set you away.
+- **Spotlight** finds your channels and the people you talk to, and can search your saved messages if you turn that on.
+- **[Message search](/guide/automation#message-search)** finds what was said, newest first, and shows it in its conversation.
+- **[`vela://` links and AppleScript](/guide/automation)** for your own scripts. Links only ever show things; they never send.
 
 </ShowcaseRow>
 
@@ -141,9 +162,10 @@ Back to a busy channel? **Catch me up** summarizes what you missed, topic by top
   alt="Compact link previews: one-line titles with small thumbnails"
   link="/help/privacy"
   linkText="How Vela handles your data"
+  reverse
 >
 
-Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add, to velairc.app once a day to check for updates (sending only its version; you can turn that off), and, if you let it, to the sites behind the links people post. Summaries and translations are made on your Mac, and saving your message history on your Mac is up to you.
+Vela has no telemetry, analytics or accounts. It talks to the IRC servers you add, to velairc.app once a day to check for updates (sending only its version; you can turn that off), and, if you let it, to the sites behind the links people post. Summaries and translations are made on your Mac unless you choose an AI provider of your own, and saving your message history on your Mac is up to you.
 
 Link previews tell those sites your IP address, so you decide: automatic, click-to-load, per channel, or only from an allow list. Vela never fetches previews from addresses on your local network.
 

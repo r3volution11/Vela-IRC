@@ -125,8 +125,11 @@ build_test_app() {
   # Vela/Info.plist's update settings with the test key and the local feed.
   cp "$sparkle_info_plist" "$plist"
   /usr/libexec/PlistBuddy -c "Set :SUFeedURL $feed_url" -c "Set :SUPublicEDKey $test_public_key" "$plist"
-  # Plain http to localhost is fine for a local test (App Transport Security).
-  /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$plist"
+  # Plain http to localhost is fine for a local test (App Transport
+  # Security): Vela/Info.plist already allows it (NSAllowsLocalNetworking,
+  # for AI servers such as Ollama), so the copy needs nothing more.
+  /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity:NSAllowsLocalNetworking" "$plist" >/dev/null 2>&1 \
+    || /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$plist"
   print "    Building $display_name $version ($build_number)…"
   if ! xcodebuild build \
       -project Vela.xcodeproj -scheme Vela -configuration Release \

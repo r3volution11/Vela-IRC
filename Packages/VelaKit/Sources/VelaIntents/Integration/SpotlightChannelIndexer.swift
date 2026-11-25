@@ -34,10 +34,12 @@ final class SystemSpotlightIndex: SpotlightIndex {
 }
 
 /// Keeps Spotlight's index of channel and conversation names in step with
-/// the sidebar. Names and networks only, never messages.
+/// the sidebar. Names and networks only, never messages (those are
+/// ``SpotlightMessageIndexer``'s, and only if you turn it on).
 ///
 /// Two kinds of entries are indexed:
-/// - **Spotlight results** (``ChannelEntity``): only while
+/// - **Spotlight results**: channels (``ChannelEntity``) and the people you
+///   talk to in private (``PersonEntity``), only while
 ///   `intelligence.spotlightChannels` is on. Turning it off removes them.
 /// - **Siri's name lookup** (macOS 27: ``ConversationEntity`` and
 ///   ``MessagePersonEntity``): always, so Siri can find "#vela" or a nick by
@@ -51,7 +53,8 @@ final class SystemSpotlightIndex: SpotlightIndex {
 @MainActor
 final class SpotlightChannelIndexer {
     /// What the index reflects: the setting, and each channel's id, name
-    /// and network (not unread counts, which change all the time).
+    /// and network, and private conversations closed since launch (not
+    /// unread counts, which change all the time).
     struct Snapshot: Equatable {
         var isEnabled: Bool
         var channels: [String]
@@ -78,6 +81,7 @@ final class SpotlightChannelIndexer {
     /// at first and after a failure: the next update starts from scratch.
     private var applied: Snapshot?
     private var spotlightIDs: Set<String> = []
+    private var personIDs: Set<String> = []
     private var siriIDs: Set<String> = []
     /// The channel list App Shortcuts' parameters were last refreshed for.
     private var shortcutChannels: [String]?
@@ -111,7 +115,7 @@ final class SpotlightChannelIndexer {
             channels: app.conversationBuffers.map { buffer in
                 let network = app.session(for: buffer.id.networkID)?.displayName ?? ""
                 return "\(buffer.id.description)\t\(buffer.name)\t\(network)"
-            }
+            } + app.recentlyClosed.filter { $0.kind == .query }.map { "closed\t\($0.id.description)\t\($0.name)" }
         )
     }
 
@@ -190,8 +194,14 @@ final class SpotlightChannelIndexer {
     /// Brings the index from `previous` (nil: unknown) to `snapshot`. The
     /// entities are read before the first wait, so they match `snapshot`.
     private func apply(_ snapshot: Snapshot, over previous: Snapshot?) async throws {
-        let channels = ChannelEntity.all(in: app)
-        let ids = Set(channels.map(\.id))
+        let all = ChannelEntity.all(in: app)
+        let ids = Set(all.map(\.id))
+        // Spotlight shows channels as channels and private conversations
+        // as people.
+        let channels = all.filter { !$0.isPrivate }
+        let channelIDs = Set(channels.map(\.id))
+        let talkedTo = PersonEntity.all(in: app)
+        let talkedToIDs = Set(talkedTo.map(\.id))
 
         // Siri's lookup by name, whatever the setting. On a first pass
         // (or after a failure) everything an earlier run left is replaced;
@@ -207,12 +217,16 @@ final class SpotlightChannelIndexer {
 
         // Spotlight results: only while the setting is on.
         if snapshot.isEnabled {
-            let stale: [String]? = previous?.isEnabled == true ? Array(spotlightIDs.subtracting(ids)) : nil
-            try await replace(channels, stale: stale)
-            spotlightIDs = ids
+            let wasEnabled = previous?.isEnabled == true
+            try await replace(channels, stale: wasEnabled ? Array(spotlightIDs.subtracting(channelIDs)) : nil)
+            spotlightIDs = channelIDs
+            try await replace(talkedTo, stale: wasEnabled ? Array(personIDs.subtracting(talkedToIDs)) : nil)
+            personIDs = talkedToIDs
         } else if previous?.isEnabled != false {
             try await index.deleteAll(ofType: ChannelEntity.self)
             spotlightIDs = []
+            try await index.deleteAll(ofType: PersonEntity.self)
+            personIDs = []
         }
     }
 

@@ -694,62 +694,81 @@ private struct AccentSwatchButton: View {
     }
 }
 
-/// Compact preset chooser shown at the top of Appearance.
+/// The three preset choices as pop-up menus, at the top of Appearance.
 struct QuickPresetsStrip: View {
     @Environment(AppModel.self) private var app
-    @Environment(\.theme) private var theme
     let navigate: (SettingsPane) -> Void
 
     var body: some View {
-        let active = app.settings.matchingPreset()
+        let settings = app.settings
         SettingsSection(
-            "Layout preset",
-            footer: "Presets arrange navigation, messages and media in one click; they don't change your theme."
+            "Presets",
+            footer: "Where things live, how messages look and how much room they get, each on its own. Presets never change your theme."
         ) {
-            HStack(spacing: 8) {
-                ForEach(SettingsPreset.all) { preset in
-                    let isActive = preset.id == active?.id
-                    Button {
-                        withAnimation(.snappy(duration: 0.25)) { app.settings.apply(preset) }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: preset.systemImage)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(isActive ? theme[ThemeKey.accentForeground] : theme[ThemeKey.accent])
-                            Text(preset.name)
-                                .font(.system(size: 12, weight: isActive ? .semibold : .medium))
-                                .foregroundStyle(isActive ? theme[ThemeKey.accentForeground] : theme[ThemeKey.settingsForeground])
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(isActive ? theme[ThemeKey.accent] : theme[ThemeKey.settingsBackground])
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .strokeBorder(isActive ? .clear : theme[ThemeKey.settingsBorder])
-                        )
-                        .contentShape(Rectangle())
+            HStack(alignment: .top, spacing: 10) {
+                ForEach(PresetAxis.allCases) { axis in
+                    QuickPresetMenu(axis: axis, current: settings.currentChoice(for: axis)) { choice in
+                        settings.choose(choice)
                     }
-                    .buttonStyle(.plain)
-                    .help(preset.summary)
-                    .accessibilityLabel(preset.name)
-                    .accessibilityHint(preset.summary)
-                    .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
                 }
             }
             .padding(10)
         } accessory: {
-            HStack(spacing: 10) {
-                if active == nil {
-                    SettingsPill(text: "Custom")
-                }
-                SettingsLinkButton("All presets") { navigate(.presets) }
-            }
+            SettingsLinkButton("All presets") { navigate(.presets) }
         }
+    }
+}
+
+/// One axis: its name over a menu of its choices, the current one checked
+/// ("Customized" when none is).
+private struct QuickPresetMenu: View {
+    @Environment(\.theme) private var theme
+    let axis: PresetAxis
+    let current: PresetChoice?
+    let choose: (PresetChoice) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(axis.title)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                .accessibilityHidden(true)
+            Menu {
+                ForEach(axis.choices) { choice in
+                    Toggle(isOn: Binding(get: { choice == current }, set: { if $0 { choose(choice) } })) {
+                        Label(choice.name, systemImage: choice.systemImage)
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: current?.systemImage ?? "slider.horizontal.3")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(theme[ThemeKey.accent])
+                        .frame(width: 14)
+                    Text(current?.name ?? "Customized")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(theme[ThemeKey.settingsForeground])
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 8.5, weight: .semibold))
+                        .foregroundStyle(theme[ThemeKey.settingsSecondaryForeground])
+                }
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(theme[ThemeKey.settingsBackground]))
+                .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(theme[ThemeKey.settingsBorder]))
+                .contentShape(Rectangle())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .help(current?.summary ?? "Your \(axis.title.lowercased()) settings match none of these. Pick one to reset them.")
+            .accessibilityLabel(axis.title)
+            .accessibilityValue(current?.name ?? "Customized")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

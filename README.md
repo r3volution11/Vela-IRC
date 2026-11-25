@@ -24,17 +24,17 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/modern-palenight.png" alt="Vela with the Modern Chat preset in Palenight: grouped messages, an inline GIF, reactions and a link card" width="100%">
+  <img src="docs/screenshots/modern-palenight.png" alt="Vela in Palenight with the sidebar and Modern messages: grouped messages, an inline GIF, reactions and a link card" width="100%">
 </p>
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/focus-tabs-palenight.png" alt="Focus preset: pill tabs in the title bar and compact columns"></td>
-    <td><img src="docs/screenshots/classic-graphite.png" alt="Classic IRC preset in Vela Graphite: monospace one-line messages"></td>
+    <td><img src="docs/screenshots/focus-tabs-palenight.png" alt="Tabs in the title bar as pills, with Columns messages"></td>
+    <td><img src="docs/screenshots/classic-graphite.png" alt="Classic IRC messages in Vela Graphite: monospace one-line messages"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Focus preset · pill tab stacks in the title bar</sub></td>
-    <td align="center"><sub>Classic IRC preset · Vela Graphite</sub></td>
+    <td align="center"><sub>Tabs in the title bar · Columns</sub></td>
+    <td align="center"><sub>Classic IRC · Vela Graphite</sub></td>
   </tr>
 </table>
 
@@ -72,9 +72,10 @@ The full user guide is at **[velairc.app](https://velairc.app)**.
 IRC is simple, open and everywhere, but IRC clients on the Mac have stood still. Vela pairs IRC's simplicity with what people now expect from chat: inline media, reactions, replies and a polished native interface. It is built around one idea: **make Vela work the way you want.**
 
 - **Every pixel is themable.** You can import [VS Code](https://code.visualstudio.com) themes, edit themes live and override any color from `settings.json`.
-- **Navigation is your choice.** Use a sidebar (or a thin rail) if you're on many networks, or [Vivaldi](https://vivaldi.com)-style tab stacks if you're on a few.
-- **Three message layouts.** Pick Classic one-line, Modern grouped, or Compact columns.
-- **Presets get you started.** Each preset sets up a whole style in one click, so you don't have to get into the weeds.
+- **Navigation is your choice.** Use a sidebar (or a thin rail) if you're on many networks, [Vivaldi](https://vivaldi.com)-style tab stacks if you're on a few, or Focus for nothing but the conversation.
+- **Three message styles.** Pick Modern (grouped under each name), Classic IRC one-liners, or Columns.
+- **Presets get you started.** Pick a window layout, a message style and a density, in any combination, without getting into the weeds.
+- **It works with the rest of your Mac.** Siri, Shortcuts, Spotlight, Alfred, Raycast, AppleScript and `vela://` links can all reach your conversations.
 
 ## Features
 
@@ -96,28 +97,28 @@ IRC is simple, open and everywhere, but IRC clients on the Mac have stood still.
 ### Navigation and layout
 
 - **Sidebar:** a compact network/channel tree with unread and mention badges. It collapses to a thin icon rail, and the window buttons stack vertically to fit. Hover the rail to peek at the full tree.
+- **Focus:** no sidebar and no tabs, just the conversation with its name and topic above it. Switch with ⌘P, ⌘1–⌘9 or the **Go** menu.
 - **Tab stacks:** Vivaldi-style two-level tabs, with networks on top and that network's channels below.
   - Place them **at the top**, **in the title bar** or **above the input**.
   - Corners range from square to pill.
   - The network row hides automatically when you're on a single network.
 - **Leave, remove and reopen:** **Leave Channel** keeps a channel in the list, dimmed; a tab's × and **Remove Channel…** take it out, and off the network's auto-join list. Through ZNC or soju, leaving detaches the channel instead, so the bouncer stays in it and keeps its history, and a detached channel can be hidden. ⌘Z undoes each, and ⇧⌘T or **File → Recently Closed** reopens removed and hidden channels and closed conversations where they were.
 - **Message layouts:**
+  - **Modern** — one name header per run of messages
   - **Classic** — `[12:01] <nick> text`
-  - **Modern grouped** — one name header per run of messages
   - **Compact columns** — time, right-aligned nick, then text
-- **Density controls:** fonts (including a monospace mode), line and message spacing, timestamps, nick colors (in message text too) and optional avatars. Join/part/quit noise can be shown, collapsed into one line, or hidden.
+- **Fine-tuning:** fonts (including a monospace mode), line and message spacing, timestamps, nick colors (in message text too) and optional avatars. Join/part/quit noise can be shown, collapsed into one line, or hidden.
 - **Tabs fit the window:** when a row is too wide, the other tabs shrink, longest names first, so every tab stays in view, and the selected one keeps its whole name.
 
 ### Presets
 
-One click sets navigation, layout, density and media together. Presets never touch your theme, and you can keep tweaking afterwards.
+**Settings → Presets** has three choices that combine freely, each changing only its own settings, with picture cards drawn in your own theme and a live preview. They're in the **View** menu and the command palette too. Presets never touch your theme, and you can keep tweaking afterwards.
 
-| Preset | What you get |
+| Choice | Options |
 |---|---|
-| **Classic IRC** | Sidebar, one-line monospace messages, dense spacing, minimal link previews |
-| **Modern Chat** | Sidebar, grouped messages, roomy spacing, full inline media |
-| **Tabbed** | Tab stacks at the top, grouped messages, rounded tabs |
-| **Focus** | Pill tabs in the title bar, compact columns, no join/part noise, member list hidden |
+| **Window layout** | **Sidebar**, **Tabs on Top**, **Tabs in Title Bar**, or **Focus** (no navigation at all: switch with ⌘P or ⌘1–⌘9) |
+| **Message style** | **Modern** (grouped under each name), **Classic IRC** (`[time] <nick> message`, monospaced) or **Columns** |
+| **Density** | **Compact**, **Standard** or **Comfortable** line and message spacing (never your font size) |
 
 ### Messages and media
 
@@ -133,11 +134,13 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ### Apple Intelligence, Siri and Shortcuts
 
-- **Catch me up:** back in a busy channel, an Apple Intelligence summary of what you missed, topic by topic, made on your Mac, including what your bouncer replayed. Letting long ones use Apple's Private Cloud Compute (macOS 27, opt-in) comes in a later version; for now it's only in development builds.
+- **Catch me up:** back in a busy channel, a summary of what you missed, topic by topic, including what your bouncer replayed. Apple Intelligence writes it on your Mac, or a model of your own does. Letting long ones use Apple's Private Cloud Compute (macOS 27, opt-in) comes in a later version; for now it's only in development builds.
 - **Recap:** a report in a window of its own, for a channel, a network or everything, for anyone or one person, since your first unread message or over any span: an overview, the topics, what was for you (and whether you answered), what was decided and who'll do what, and the links shared, each linked to its message, with **More detail** on any of them. Or the same messages as a plain log, no Apple Intelligence needed. Copy or save it as Markdown; nothing is kept once you close it.
+- **Your own AI models:** have Catch me up and Recap written by OpenAI, Anthropic (Claude) or Google Gemini with your own API key, or by a model on your Mac with Ollama or LM Studio, on any Mac. **Settings → AI Providers** finds Ollama and LM Studio when they're running (**Connect**: no key, no account) and walks you through getting a key, pasting it and testing it. **Settings → AI Privacy** says what's sent where, and takes your OK back. Vela asks before a provider is first sent anything, and never sends channel, network or server names; keys stay in your Keychain.
 - **Translation:** translate a message from another language, or a whole channel as messages arrive, on your Mac with Apple's Translation framework. No Apple Intelligence needed.
 - **Writing Tools** in the message field, where Apple Intelligence is available.
-- **Siri and Shortcuts:** ask Siri to catch you up, check your mentions, send a message, open a channel or set you away, and use the same actions in your own shortcuts. Your channels show up in Spotlight (names only).
+- **Siri and Shortcuts:** ask Siri to catch you up, check your mentions, send a message, open a channel or set you away, and use the same actions in your own shortcuts.
+- **Spotlight:** your channels and the people you talk to in private show up in Spotlight, with **Search in Vela** for your messages. Spotlight can search your saved messages too, if you turn that on (off by default).
 
 ### IRC done properly
 
@@ -156,9 +159,11 @@ One click sets navigation, layout, density and media together. Presets never tou
 ### Fast to drive
 
 - **The whole window from the keyboard:** ⌥⌘1 to ⌥⌘4 (or F6) move the keyboard between the sidebar or tabs, the messages, the message box and the member list. Pick a message with the arrow keys, then reply, react, copy or translate it with one key. ⌘W closes the tab and ⇧⌘W the window, as in a browser.
-- **Command palette** (⇧⌘P) runs any command: layouts, presets, themes, network actions, settings and more.
+- **Command palette** (⇧⌘P) runs any command: layouts, message styles, densities, themes, network actions, settings and more.
 - **Settings editor:** every setting in one searchable list, VS Code style, with filters such as `@modified`, plus a JSON view of `settings.json` that suggests settings and values, flags mistakes as you type and shows docs on hover.
 - **Quick switcher** (⌘P or ⌘K) jumps to any channel or conversation with fuzzy search.
+- **Message search:** **Search Messages…** in the command palette finds messages in your saved history and your open channels, newest first, and shows each one in its conversation.
+- **Alfred and Raycast:** jump to a channel or private conversation, send a message, and open Catch me up or a Recap from Alfred (the workflow comes with Vela) or Raycast, mentions and unread first. Underneath are `vela://` links and an AppleScript dictionary, for your own scripts too. **Settings → Integrations** sets them up, with Siri, Shortcuts and Spotlight. See [Integrations](https://velairc.app/guide/integrations).
 - **Composer:** Tab completion for nicks, channels, `/commands` and `:emoji:` shortcodes, plus per-channel history and drafts. An emoji picker (⇧⌘E) and a send button. GIF search (KLIPY or GIPHY, sent as links) comes in a later version; for now it's only in development builds. Pasting multiple lines asks for confirmation before sending.
 - **Typing options:** spelling, grammar, autocorrect, text replacements and smart quotes, following your Mac's settings until you change them. Commands, nicks, channel names, links and code are never corrected.
 - **User menu:** right-click a nick in the member list or in a message for Message, Mention, Whois, Ping, CTCP, Invite and Ignore, plus the ops, voices, kicks, bans and quiets your rank in the channel allows. Select several people in the member list to act on them all.
@@ -203,7 +208,7 @@ One click sets navigation, layout, density and media together. Presets never tou
 
 ## Customizing Vela
 
-- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Apple Intelligence, Updates and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
+- **Settings** (⌘,) has panes for Presets, Appearance, Layout, Messages, Media, Networks, Notifications, Intelligence, AI Providers, AI Privacy, Integrations, Updates and Advanced. Every change applies immediately, and the search field at the top of the sidebar finds any setting.
 - **Settings → Advanced** is a VS Code-style settings editor: every setting with the right control for it, search and filters (`@modified`, `@unknown`, `@category:`, `@pane:`), and a JSON view with suggestions, inline problems, hover docs and the defaults alongside.
 - **`settings.json`** holds everything, VS Code style. Edit it in the settings editor's JSON view, or open it in your own editor from **Theme → Open settings.json**. Edits made in any editor apply live, and changes made in Vela keep your comments and formatting. Example:
 
@@ -237,8 +242,11 @@ One click sets navigation, layout, density and media together. Presets never tou
   - Set per-site rules: everything, text only or nothing.
 - **No previews from your local network.** Vela never fetches previews from private, local or LAN addresses.
 - **No GIF search in this version,** so Vela never contacts a GIF service. When GIF search arrives (it's in development builds for now), it sends what you search for, and your IP address, to KLIPY (or GIPHY, with your own key), only while the GIFs tab is open. A GIF is sent as its link, which others' clients load from the service. Turning off **Search GIFs** (`gifs.enabled`) stops it contacting anyone.
-- **Passwords, channel keys and certificates** are stored in the macOS Keychain. Vela is sandboxed.
-- **On-device intelligence.** Catch me up summaries, Recaps and translations are made on your Mac. A later version will let you send long catch-ups to Apple's Private Cloud Compute (off by default; encrypted, not stored, not readable by Apple); this one never does. Spotlight gets channel names only, and Siri learns which channels you message, never what you wrote.
+- **Passwords, channel keys, certificates and AI providers' API keys** are stored in the macOS Keychain. Vela is sandboxed.
+- **On-device intelligence.** Catch me up summaries, Recaps and translations are made on your Mac. A later version will let you send long catch-ups to Apple's Private Cloud Compute (off by default; encrypted, not stored, not readable by Apple); this one never does. Siri learns which channels you message, never what you wrote.
+- **AI providers only if you add them.** Until you add OpenAI, Anthropic, Gemini or a server of your own, your messages go to no AI service. Once you do, Vela asks before it first sends one anything, and sends only the messages you ask about, their nicks and your nick, never channel, network or server names. See [AI privacy](https://velairc.app/guide/ai-privacy).
+- **Spotlight gets names only,** your channels and the people you talk to in private, unless you turn on **Search messages in Spotlight**. Its index stays on your Mac.
+- **Links and scripts stay on your Mac.** `vela://` links only show things, and only apps you allow in **System Settings → Privacy & Security → Automation** can script Vela. The Alfred workflow and the Raycast extension have no tracking.
 - **The website is separate.** velairc.app uses Google Analytics, asks visitors in the EU, EEA, UK and Switzerland first, and honors Global Privacy Control. The app never does any of this. See [Privacy](https://velairc.app/help/privacy#this-website).
 
 ## Building from source
@@ -275,17 +283,18 @@ To build a signed and notarized release, see [docs/RELEASING.md](docs/RELEASING.
 ## Project layout
 
 ```
-Vela/                    Thin macOS app target (entry point, app icon, entitlements, the Sparkle updater)
+Vela/                    Thin macOS app target (entry point, app icon, entitlements, the Sparkle updater, the AppleScript dictionary, the bundled Alfred workflow)
 Packages/VelaKit/
   Sources/VelaIRC        IRC protocol, IRCv3 negotiation, SASL, TLS connection
   Sources/VelaStore      SQLite scrollback, settings.json, networks, Keychain, presets
   Sources/VelaTheme      Token registry, theme loading, VS Code import, live reload
   Sources/VelaMedia      Link detection, previews, images, video embeds
   Sources/VelaCore       App and session models tying it together
-  Sources/VelaIntelligence Catch me up summaries, Recaps and message translation (Apple Intelligence, Translation)
-  Sources/VelaIntents    Siri, Shortcuts and Spotlight (App Intents)
+  Sources/VelaIntelligence Catch me up summaries, Recaps and message translation (Apple Intelligence, AI providers, Translation)
+  Sources/VelaIntents    Siri, Shortcuts and Spotlight (App Intents), vela:// links and AppleScript
   Sources/VelaUI         SwiftUI views, scenes, command palette
 schemas/                 JSON Schema for theme files
+integrations/            Where the Alfred workflow and the Raycast extension live, and the record of the bundled workflow
 website/                 velairc.app (VitePress)
 docs/                    Theme authoring guide, credits, release process
 design/app-icon/         App icon generators and geometry (see its README)
@@ -298,7 +307,11 @@ Ask in **#vela** on **Libera.Chat**, Vela's own channel: server `irc.libera.chat
 
 ## Contributing
 
-Contributions are welcome, especially themes. See [CONTRIBUTING.md](CONTRIBUTING.md). The [roadmap](ROADMAP.md) lists what's planned next, including image uploads, search and iCloud sync.
+Contributions are welcome, especially themes. See [CONTRIBUTING.md](CONTRIBUTING.md). The [roadmap](ROADMAP.md) lists what's planned next, including image uploads and iCloud sync.
+
+### Working across Vela and the extensions
+
+The [Alfred workflow](https://github.com/r3volution11/vela-alfred-workflow) and the [Raycast extension](https://github.com/r3volution11/vela-raycast-extension) have their own repositories, and build on Vela's AppleScript dictionary (`Vela/Vela.sdef`). For a change that spans them, change Vela's dictionary first: additions are safe, while removals and renames come only after both are updated, and raise `scripting version`. Their CI checks their terms against `Vela.sdef` on `main` and `next`. Use branches with the same name in each repository, then refresh the workflow Vela bundles with `scripts/update-alfred-workflow.sh`. See [CONTRIBUTING.md](CONTRIBUTING.md#working-across-vela-and-the-extensions).
 
 ## License and credits
 

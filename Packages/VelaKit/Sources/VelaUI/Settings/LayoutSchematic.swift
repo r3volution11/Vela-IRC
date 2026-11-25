@@ -32,7 +32,7 @@ struct LayoutSchematicConfig: Equatable {
     init() {}
 
     /// The current settings, with `overrides` (raw settings.json values,
-    /// e.g. a preset's) layered on top.
+    /// e.g. a preset choice's) layered on top.
     init(settings: SettingsStore, overrides: [String: JSONValue] = [:]) {
         func read<Value>(_ key: SettingKey<Value>) -> Value {
             key.value(from: overrides[key.key] ?? settings.value(forKey: key.key))
@@ -54,8 +54,9 @@ struct LayoutSchematicConfig: Equatable {
         messageBoxBorder = read(.appearanceMessageBoxBorder)
     }
 
-    init(preset: SettingsPreset, settings: SettingsStore) {
-        self.init(settings: settings, overrides: preset.values)
+    /// The current settings as they'd be with `choice` picked.
+    init(choice: PresetChoice, settings: SettingsStore) {
+        self.init(settings: settings, overrides: choice.values)
     }
 }
 
@@ -276,10 +277,11 @@ struct SchematicPainter {
         let chat = CGRect(x: left, y: 0, width: right - left, height: height)
         let usesTabs = config.navigation == .tabs
 
-        // Title strip (or title-bar tabs).
+        // Title strip (or title-bar tabs). Without the sidebar, the traffic
+        // lights sit at its start.
         let titleHeight = 26.0
         let titleRect = CGRect(x: chat.minX, y: 0, width: chat.width, height: titleHeight)
-        let titleX = chat.minX + (usesTabs ? 40 : 10)
+        let titleX = chat.minX + (config.navigation == .sidebar ? 10 : 40)
         if usesTabs && config.tabPlacement == .titleBar {
             surface(&context, titleRect, ThemeKey.titleBarBackground, on: .tabs, desktop: bounds)
             fill(&context, CGRect(x: chat.minX, y: titleHeight - 1, width: chat.width, height: 1), ThemeKey.titleBarBorder)
@@ -331,8 +333,41 @@ struct SchematicPainter {
         }
         let messages = CGRect(x: chat.minX + 9, y: top + 7, width: chat.width - 18, height: bottom - top - 10)
         drawMessages(in: &context, rect: messages, bleed: 9)
+        // Focus: no navigation, so channels are switched with the palette.
+        if config.navigation == .focus {
+            drawPaletteHint(in: &context, over: conversation)
+        }
 
         drawTrafficLights(in: &context, vertical: usesRail)
+    }
+
+    /// The command palette over the conversation, as Focus switches
+    /// channels: a search field and two results, the first selected.
+    private func drawPaletteHint(in context: inout GraphicsContext, over conversation: CGRect) {
+        let width = min(conversation.width * 0.62, 150)
+        let panel = CGRect(x: conversation.midX - width / 2, y: conversation.minY + 9, width: width, height: 47)
+        var shadow = context
+        shadow.addFilter(.shadow(color: .black.opacity(theme.kind == .dark ? 0.5 : 0.18), radius: 5, y: 2))
+        shadow.fill(Path(roundedRect: panel, cornerRadius: 6, style: .continuous), with: .color(color(ThemeKey.popoverBackground)))
+        stroke(&context, panel, ThemeKey.popoverBorder, radius: 6, width: 0.6)
+
+        let field = CGRect(x: panel.minX + 5, y: panel.minY + 5, width: panel.width - 10, height: 11)
+        fill(&context, field, ThemeKey.inputBackground, radius: 3)
+        context.stroke(
+            Path(ellipseIn: CGRect(x: field.minX + 3.5, y: field.midY - 2.25, width: 4.5, height: 4.5)),
+            with: .color(color(ThemeKey.inputPlaceholder)),
+            lineWidth: 0.8
+        )
+        bar(&context, field.minX + 11, field.midY - 1.25, min(34, field.width - 16), 2.5, color(ThemeKey.inputPlaceholder))
+
+        for (index, length) in [38.0, 28].enumerated() {
+            let row = CGRect(x: panel.minX + 4, y: field.maxY + 3 + Double(index) * 12, width: panel.width - 8, height: 10)
+            if index == 0 {
+                fill(&context, row, ThemeKey.chatSelectionBackground, radius: 2.5)
+            }
+            bar(&context, row.minX + 4, row.midY - 1.5, 3, 3, color(ThemeKey.popoverForeground).opacity(0.55))
+            bar(&context, row.minX + 10, row.midY - 1.5, min(length, row.width - 14), 3, color(ThemeKey.popoverForeground).opacity(index == 0 ? 0.9 : 0.6))
+        }
     }
 
     private func drawTrafficLights(in context: inout GraphicsContext, vertical: Bool) {

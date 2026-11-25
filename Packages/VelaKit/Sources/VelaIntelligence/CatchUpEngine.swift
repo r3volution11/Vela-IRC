@@ -47,6 +47,8 @@ nonisolated enum CatchUpModelError: Error, Equatable {
     /// limit, or anything else it reports): ``CatchUpRouter`` summarizes
     /// on this Mac instead. Never reaches the reader.
     case cloudUnavailable(CatchUpCloudFallback)
+    /// One of your providers failed: offline, a bad key, over quota…
+    case provider(AIProviderFailure)
     case failed(String)
 
     var catchUpError: CatchUpError {
@@ -59,6 +61,7 @@ nonisolated enum CatchUpModelError: Error, Equatable {
         case .unavailable: .unavailable(.modelNotReady)
         case .rateLimited: .rateLimited
         case .cloudUnavailable: .failed("Private Cloud Compute isn't available.")
+        case .provider(let failure): .provider(failure)
         case .failed(let message): .failed(message)
         }
     }

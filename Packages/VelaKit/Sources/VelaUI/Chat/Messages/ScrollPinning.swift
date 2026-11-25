@@ -53,6 +53,75 @@ nonisolated struct ScrollMetrics: Equatable, Sendable {
     var fitsWithoutScrolling: Bool { contentHeight <= containerHeight + 1 }
 }
 
+// MARK: The end of the list
+
+/// Where the space after the last row (`DisplayItemID.end`) is: where it
+/// was last laid out, whether the lazy stack holds it now, and whether that
+/// frame is known to be out of date.
+///
+/// Its frame is in content coordinates, and those move whenever rows above
+/// it are measured anew. When the list gets narrower or wider (a scroll bar
+/// appearing, the window resized), rows that had been estimated end up at
+/// their real height, and in a long channel everything below moves by a
+/// thousand points or more. The stack reports the space's new frame only
+/// while it holds it, so once it's out of view, its last frame can be far
+/// from where it is.
+///
+/// Taken at its word, such a frame put the list's end where older rows now
+/// were. The list scrolled there (`MessageListView.scrollBackFromPastTheEnd`),
+/// found that frame at the bottom of its visible rect, judged itself at the
+/// bottom and stopped, showing older messages until the next line came in.
+///
+/// A frame in the visible rect while the stack doesn't hold the space is
+/// usually just early: scrolled back into view, the space is laid out a
+/// moment after the scroll is reported. Still out of the stack on the next
+/// turn, it isn't there at all (`MessageListController.queueEndCheck`): its
+/// frame no longer counts as where the list ends (`contentEnd`), and the
+/// list goes to the space by id.
+nonisolated struct ListEnd: Equatable, Sendable {
+    /// Where the space was last laid out, in content coordinates.
+    private(set) var frame: CGRect?
+    /// The lazy stack holds the space: its frame is current.
+    private(set) var isLaidOut = false
+    /// The space wasn't in the stack where its frame put it in view.
+    private(set) var isOutOfDate = false
+
+    /// The space was laid out at `frame`.
+    mutating func laidOut(at frame: CGRect) {
+        self.frame = frame
+        isLaidOut = true
+        isOutOfDate = false
+    }
+
+    /// The stack took the space in again. If it's somewhere else now, its
+    /// new frame is reported too (`laidOut(at:)`). Returns whether its frame
+    /// counts again, having been out of date.
+    mutating func appeared() -> Bool {
+        isLaidOut = true
+        defer { isOutOfDate = false }
+        return isOutOfDate
+    }
+
+    /// The stack let the space go: from now on, rows measured above it can
+    /// move it without a word.
+    mutating func disappeared() {
+        isLaidOut = false
+    }
+
+    /// The space isn't in the stack, though its frame says it's in view.
+    mutating func markOutOfDate() {
+        if !isLaidOut { isOutOfDate = true }
+    }
+
+    /// The bottom of the space (`ScrollMetrics.contentEnd`) while its frame
+    /// is between `visibleMinY` and `visibleMaxY`; nil when it's elsewhere,
+    /// or out of date.
+    func contentEnd(visibleMinY: CGFloat, visibleMaxY: CGFloat) -> CGFloat? {
+        guard !isOutOfDate, let frame, frame.maxY > visibleMinY, frame.minY < visibleMaxY else { return nil }
+        return frame.maxY
+    }
+}
+
 // MARK: Pinning
 
 /// Decides when the message list follows the newest line.
@@ -152,9 +221,10 @@ nonisolated struct ScrollPinning: Sendable {
     /// says it's there: it got shorter while following the newest line.
     ///
     /// The composer growing a line, a reply bar or bottom tabs appearing
-    /// and the window getting shorter all take height from the list. Its
-    /// bottom anchor then moves the offset down by as much, and SwiftUI
-    /// reports the list at the bottom. But on the Mac that move can be lost:
+    /// and the window getting shorter all take height from the list.
+    /// SwiftUI then moves the offset down by as much, to keep the space
+    /// after the last row (the list's scroll position) at the bottom, and
+    /// reports the list there. But on the Mac that move can be lost:
     /// it reaches the scroll view while the scroll view is still its old
     /// height, where it would scroll past the end, so it's held at the old
     /// end. The list then shows the newest line under its bottom edge (by as
@@ -258,6 +328,29 @@ nonisolated struct BottomSettle: Equatable, Sendable {
         case done(settleBack: Bool)
     }
 
+    /// Whether the tries are stuck past the end of the list: no rows in
+    /// view, the space after the last row out of date (`ListEnd`), and the
+    /// list where the last try left it, `tries` times running. A scroll to
+    /// the space by id then lands at the stack's estimate again; scrolling
+    /// back to where the space was last laid out is all that's left
+    /// (`MessageListView.settleAtBottom`).
+    struct Stuck: Equatable, Sendable {
+        static let tries = 2
+        private(set) var count = 0
+        private var lastMetrics: ScrollMetrics?
+
+        /// Before a try: whether to scroll back to the space's last frame.
+        mutating func check(_ metrics: ScrollMetrics?, showsNoRows: Bool, endIsOutOfDate: Bool) -> Bool {
+            defer { lastMetrics = metrics }
+            guard showsNoRows, endIsOutOfDate, let metrics, metrics == lastMetrics else {
+                count = 0
+                return false
+            }
+            count += 1
+            return count >= Self.tries
+        }
+    }
+
     /// Checking time spent so far, not counting other scrolls.
     private(set) var spent: TimeInterval = 0
     private(set) var tries = 0
@@ -343,6 +436,25 @@ nonisolated struct ClipViewSync: Equatable, Sendable {
     /// difference, whatever it is, is scrolled for again.
     mutating func observe(reportedMinY: CGFloat, clipMinY: CGFloat) {
         if Self.agree(reportedMinY: reportedMinY, clipMinY: clipMinY) { resynced = nil }
+    }
+
+    /// `reported` as the clip view at `clipMinY` shows the list: what the
+    /// reader sees. The visible rect is moved there, and where the rows end
+    /// (`ScrollMetrics.contentEnd`) is judged in it from `end`.
+    ///
+    /// The report can also be the one out of step. On macOS 26 SwiftUI
+    /// reported the list 74 pt short of the bottom while the clip view
+    /// showed the bottom, and kept reporting that: a scroll to the bottom
+    /// changed nothing, so nothing new was reported. Scrolling by a page
+    /// from the reported offset then went a page and 74 pt, and a page
+    /// back stopped 74 pt short of where it started.
+    static func shown(_ reported: ScrollMetrics, clipMinY: CGFloat, end: ListEnd) -> ScrollMetrics {
+        guard !agree(reportedMinY: reported.visibleMinY, clipMinY: clipMinY) else { return reported }
+        var shown = reported
+        shown.visibleMinY = clipMinY
+        shown.visibleMaxY = clipMinY + (reported.visibleMaxY - reported.visibleMinY)
+        shown.contentEnd = end.contentEnd(visibleMinY: shown.visibleMinY, visibleMaxY: shown.visibleMaxY)
+        return shown
     }
 }
 

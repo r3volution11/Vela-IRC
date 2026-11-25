@@ -113,6 +113,9 @@ public struct VelaScenes: Scene {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
         .commandsRemoved()
+        // A vela:// link never opens a Recap window by itself (an empty
+        // one, with no Recap); links go to LinkEventHandler.
+        .handlesExternalEvents(matching: [])
 
         // Vela → About Vela, in place of the standard About panel.
         Window("About Vela", id: WindowID.about) {
@@ -159,6 +162,10 @@ private final class AppInstances {
     /// Shows the chosen Dock icon (`appearance.appIcon`) and the offline
     /// mark. Snapshot runs leave the Dock alone.
     let dockIcon: DockIconController?
+    /// vela:// links, AppleScript and Spotlight search (kept alive here).
+    let automation: VelaAutomation
+    let automationPresenter: AutomationPresenterBridge
+    let links: LinkEventHandler
 
     private static var current: AppInstances?
 
@@ -220,6 +227,25 @@ private final class AppInstances {
         let recaps = RecapWindowRouter(intelligence: services.intelligence)
         RecapWindowRouter.shared = recaps
         self.recaps = recaps
+        // vela:// links, AppleScript and Spotlight's search: one automation
+        // layer over the model, and the window's half of it. Demo runs for
+        // automation tests (--no-activate) never take the focus.
+        AppActivation.isSuppressed = demo && arguments.contains("--no-activate")
+        let automation = VelaAutomation(app: app, services: services.intelligence)
+        let presenter = AutomationPresenterBridge(uiState: uiState)
+        automation.presenter = presenter
+        self.automationPresenter = presenter
+        ScriptingSupport.register(automation)
+        AppDependencyManager.shared.add(dependency: automation)
+        let links = LinkEventHandler(router: VelaLinkRouter(automation: automation))
+        links.install()
+        LinkEventHandler.shared = links
+        self.links = links
+        self.automation = automation
+        #if DEBUG
+        // Vela Dev, demo mode: --automation-self-test (DevTools).
+        AutomationSelfTest.scheduleIfAsked(app: app)
+        #endif
         // Applies updates.checkAutomatically and updates.installAutomatically,
         // then starts the updater (nothing for Vela Dev or a stand-in).
         if !automated {
@@ -375,13 +401,30 @@ final class ShowRequestRouter {
     private func handle() {
         guard let request = app.showRequest, request.id != handled else { return }
         handled = request.id
-        if let draft = request.draft { uiState.drafts[request.bufferID] = draft }
+        if let draft = request.draft {
+            // A link's or a script's text goes after what you were typing;
+            // never into a command you're typing.
+            if let text = ShowRequest.composerText(existing: uiState.drafts[request.bufferID], draft: draft, appending: request.appendsDraft) {
+                uiState.drafts[request.bufferID] = text
+            } else {
+                uiState.automationNotice = AutomationNotice(message: "The text wasn't added: you're typing a command in that message box.")
+            }
+        }
         // Select first: the window shows the selection when it opens.
         app.select(bufferID: request.bufferID)
-        NSApp.activate()
-        // Opens the main window, or brings it forward if it's open.
+        bringForward()
+        if let line = request.line, let target = app.lookup(request.bufferID) {
+            MessageJump.jump(to: line, in: target.buffer, session: target.session, uiState: uiState)
+        } else {
+            uiState.focusInput()
+        }
+    }
+
+    /// Activates Vela and opens the main window, or brings it forward if
+    /// it's open.
+    func bringForward() {
+        AppActivation.activate()
         openWindow?(id: WindowID.main)
-        uiState.focusInput()
     }
 }
 

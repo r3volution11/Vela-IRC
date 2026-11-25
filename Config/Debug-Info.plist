@@ -10,5 +10,41 @@
 	<!-- The GIF picker's KLIPY key (Config/Vela.xcconfig). -->
 	<key>VelaKLIPYAPIKey</key>
 	<string>$(VELA_KLIPY_API_KEY)</string>
+	<!--
+	  AI servers such as Ollama or LM Studio over plain http: localhost,
+	  .local names and IP addresses only (as in Vela/Info.plist).
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Vela connects to an AI server on your network only when you add one in Settings → AI Providers.</string>
+
+	<!--
+	  Automation, as in Vela/Info.plist, except that Vela Dev answers
+	  vela-dev:// links, so a vela:// link always opens the Vela you use
+	  every day, never a development build.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.github.r3volution11.Vela.dev.link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>vela-dev</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+		</dict>
+	</array>
+	<key>NSAppleScriptEnabled</key>
+	<true/>
+	<key>OSAScriptingDefinition</key>
+	<string>Vela.sdef</string>
+	<key>CoreSpotlightContinuation</key>
+	<true/>
 </dict>
 </plist>

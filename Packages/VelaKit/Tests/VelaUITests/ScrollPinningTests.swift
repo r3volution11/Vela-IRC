@@ -6,6 +6,7 @@ import CoreGraphics
 import Foundation
 import Testing
 import VelaCore
+import VelaStore
 @testable import VelaUI
 
 @Suite("Scroll pinning")
@@ -353,6 +354,152 @@ struct ClipViewSyncTests {
         let more = sync.needsScroll(reportedMinY: 2618, clipMinY: 2616)
         #expect(more)
     }
+
+    /// Seen on macOS 26 under load: SwiftUI reported the list at 4472,
+    /// 74 pt short of the bottom, while the clip view showed the bottom at
+    /// 4545.5. Where the list is shown, it's at the bottom, and a page up
+    /// from there is a page from what the reader sees.
+    @Test func theListIsWhereTheClipViewShowsIt() {
+        var end = ListEnd()
+        end.laidOut(at: CGRect(x: 0, y: 5070.5, width: 883, height: 10))
+        var reported = ScrollMetrics(visibleMinY: 4472, visibleMaxY: 5007, contentHeight: 5081, containerHeight: 535)
+        reported.contentEnd = end.contentEnd(visibleMinY: reported.visibleMinY, visibleMaxY: reported.visibleMaxY)
+        #expect(!ScrollPinning.isAtBottom(reported))
+        #expect(reported.distanceFromBottom == 74)
+
+        let shown = ClipViewSync.shown(reported, clipMinY: 4545.5, end: end)
+        #expect(shown.visibleMinY == 4545.5)
+        #expect(shown.visibleMaxY == 5080.5)
+        #expect(shown.contentEnd == 5080.5)
+        #expect(ScrollPinning.isAtBottom(shown))
+        #expect(shown.contentHeight == reported.contentHeight)
+        #expect(shown.containerHeight == reported.containerHeight)
+
+        // In step (within a point), the report stands.
+        #expect(ClipViewSync.shown(reported, clipMinY: 4472.5, end: end) == reported)
+        // Out of date, the end's frame says nothing about where the list ends.
+        end.disappeared()
+        end.markOutOfDate()
+        #expect(ClipViewSync.shown(reported, clipMinY: 4545.5, end: end).contentEnd == nil)
+    }
+}
+
+@Suite("The end of the list")
+struct ListEndTests {
+    /// Where the list sits at the bottom, in content coordinates, with the
+    /// space after the last row at 3035–3045 (as in the sending test).
+    private let bottom = ScrollMetrics(visibleMinY: 2575, visibleMaxY: 3045, contentHeight: 3078, containerHeight: 470)
+    private let endFrame = CGRect(x: 0, y: 3035, width: 900, height: 10)
+
+    private func metrics(_ base: ScrollMetrics, contentHeight: CGFloat? = nil, end: ListEnd) -> ScrollMetrics {
+        var metrics = base
+        if let contentHeight { metrics.contentHeight = contentHeight }
+        metrics.contentEnd = end.contentEnd(visibleMinY: metrics.visibleMinY, visibleMaxY: metrics.visibleMaxY)
+        return metrics
+    }
+
+    @Test func aFrameCountsUntilItTurnsOutOfDate() {
+        var end = ListEnd()
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == nil)
+        end.laidOut(at: endFrame)
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == 3045)
+        // Out of the visible rect.
+        #expect(end.contentEnd(visibleMinY: 1000, visibleMaxY: 1470) == nil)
+        // Out of the stack, usually only for a moment: it still counts…
+        end.disappeared()
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == 3045)
+        // …until it's found not to be there.
+        end.markOutOfDate()
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == nil)
+        // Still known, for what it's worth.
+        #expect(end.frame == endFrame)
+        // Back in the stack where it was (no new frame reported): it counts
+        // again, and says so.
+        let countsAgain = end.appeared()
+        #expect(countsAgain)
+        #expect(end.contentEnd(visibleMinY: 2575, visibleMaxY: 3045) == 3045)
+        // In the stack, it's never out of date.
+        end.markOutOfDate()
+        #expect(!end.isOutOfDate)
+        let unchanged = end.appeared()
+        #expect(!unchanged)
+        // Laid out somewhere else, it counts there.
+        end.disappeared()
+        end.markOutOfDate()
+        end.laidOut(at: CGRect(x: 0, y: 4035, width: 883, height: 10))
+        #expect(!end.isOutOfDate)
+        #expect(end.contentEnd(visibleMinY: 3575, visibleMaxY: 4045) == 4045)
+    }
+
+    /// Seen on CI and reproduced by narrowing the list just before a send:
+    /// the rows were measured anew and everything moved down a thousand
+    /// points, the space after the last row out of the stack with it, its
+    /// frame unreported. SwiftUI then reported the list at its old offset,
+    /// where that old frame sat at the bottom of the visible rect: the list
+    /// judged itself at the bottom and stopped, older messages in view. Once
+    /// the space is found missing there, it isn't, and it follows the
+    /// newest line.
+    @Test func aFrameFromBeforeTheRowsMovedIsNotTheBottom() {
+        var end = ListEnd()
+        end.laidOut(at: endFrame)
+        var pinning = ScrollPinning(isPinned: true)
+        let follows = pinning.update(metrics(bottom, end: end), driver: .idle)
+        #expect(!follows)
+
+        // The rows are measured anew: the space leaves the stack, unreported,
+        // and SwiftUI reports the old offset. By the old frame, that's the
+        // bottom…
+        end.disappeared()
+        #expect(ScrollPinning.isAtBottom(metrics(bottom, contentHeight: 4067, end: end)))
+        // …but the space isn't there (`MessageListController.queueEndCheck`).
+        end.markOutOfDate()
+        let moved = metrics(bottom, contentHeight: 4067, end: end)
+        #expect(moved.contentEnd == nil)
+        #expect(!ScrollPinning.isAtBottom(moved))
+        let followsAgain = pinning.update(moved, driver: .idle)
+        #expect(followsAgain)
+        #expect(pinning.isPinned)
+
+        // Once it's laid out at the bottom again, the list is there.
+        end.laidOut(at: CGRect(x: 0, y: 4035, width: 883, height: 10))
+        let there = metrics(ScrollMetrics(visibleMinY: 3575, visibleMaxY: 4045, contentHeight: 4045, containerHeight: 470), end: end)
+        let followsThere = pinning.update(there, driver: .idle)
+        #expect(!followsThere)
+    }
+
+    /// The check a turn later: a space that's back in the stack by then was
+    /// only early; one still missing is out of date, and the list judges
+    /// its position again.
+    @MainActor
+    @Test func theEndIsCheckedOnTheNextTurn() async throws {
+        let session = NetworkSession(config: NetworkConfig(name: "Test", host: "irc.test", nick: "doug"), database: nil)
+        let controller = MessageListController(buffer: session.ensureBuffer(name: "#end", kind: .channel, persist: false), session: session)
+        controller.isShown = true
+        controller.end.laidOut(at: endFrame)
+        _ = controller.scrollGeometryChanged(metrics(bottom, end: controller.end))
+        #expect(controller.metrics.map(ScrollPinning.isAtBottom) == true)
+
+        // Back in time: nothing to do.
+        var judgedAgain = 0
+        controller.end.disappeared()
+        controller.queueEndCheck { judgedAgain += 1 }
+        _ = controller.end.appeared()
+        let early = await RunningDeadline.wait(timeout: .seconds(1)) { judgedAgain > 0 }
+        #expect(!early)
+        #expect(!controller.end.isOutOfDate)
+
+        // Still missing a turn later: out of date, judged again.
+        controller.end.disappeared()
+        controller.queueEndCheck { judgedAgain += 1 }
+        // Asked again before then: one check.
+        controller.queueEndCheck { judgedAgain += 1 }
+        let checked = await RunningDeadline.wait(timeout: .seconds(5)) { judgedAgain > 0 }
+        #expect(checked)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(judgedAgain == 1)
+        #expect(controller.end.isOutOfDate)
+        #expect(controller.contentEnd(in: bottom) == nil)
+    }
 }
 
 @Suite("Line tracking")
@@ -518,5 +665,31 @@ struct BottomSettleTests {
         } while step != .done(settleBack: true) && step != .done(settleBack: false)
         #expect(Array(waits.prefix(BottomSettle.lateTries.count)) == BottomSettle.lateTries)
         #expect(settle.lateTriesMade == BottomSettle.lateTries.count)
+    }
+
+    /// Seen on macOS 26 as the composer grew a line: the list at the
+    /// stack's estimate of the bottom (5529.5), 600 pt past the last row,
+    /// nothing in view, the space after the last row judged out of date,
+    /// and each scroll to it by id changing nothing. Twice like that, it's
+    /// stuck.
+    @Test func stuckPastTheEndScrollsBack() {
+        let past = ScrollMetrics(visibleMinY: 5529.5, visibleMaxY: 6032.5, contentHeight: 6033, containerHeight: 503)
+        var stuck = BottomSettle.Stuck()
+        var results: [Bool] = []
+        for _ in 0..<3 { results.append(stuck.check(past, showsNoRows: true, endIsOutOfDate: true)) }
+        #expect(results == [false, false, true])
+
+        // A try that moved the list starts the count again.
+        var moved = past
+        moved.visibleMinY = 5400
+        results = (0..<2).map { _ in stuck.check(moved, showsNoRows: true, endIsOutOfDate: true) }
+        #expect(results == [false, false])
+        // Rows in view, or a space that isn't out of date: never stuck.
+        var rows = BottomSettle.Stuck()
+        results = (0..<4).map { _ in rows.check(past, showsNoRows: false, endIsOutOfDate: true) }
+        #expect(!results.contains(true))
+        var current = BottomSettle.Stuck()
+        results = (0..<4).map { _ in current.check(past, showsNoRows: true, endIsOutOfDate: false) }
+        #expect(!results.contains(true))
     }
 }

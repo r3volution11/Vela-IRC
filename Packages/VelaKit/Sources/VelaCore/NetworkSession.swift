@@ -35,6 +35,12 @@ public protocol SessionHost: AnyObject {
     /// (`history.save`). Read for every line, so keep it cheap. Optional:
     /// hosts that don't say save and load, as Vela always used to.
     var historyStorage: HistoryStorage { get }
+    /// Where messages just written to the database go (Spotlight's index
+    /// of messages), read once per batch written. Optional: nil.
+    var savedMessagesSink: (any SavedMessagesSink)? { get }
+    /// A channel was removed or a conversation closed (``NetworkSession/close(_:)``).
+    /// Optional.
+    func session(_ session: NetworkSession, didClose buffer: BufferModel)
 }
 
 /// User preferences that influence protocol behavior.
@@ -91,6 +97,10 @@ public final class NetworkSession: Identifiable {
     /// haven't disconnected since.
     @ObservationIgnored private var wantsConnection = false
     @ObservationIgnored private var connectedAt: Date?
+    /// The name the server gave itself when you connected (the source of
+    /// its welcome), such as `tantalum.libera.chat`. Kept across
+    /// reconnects; see ``serverNames``.
+    @ObservationIgnored public private(set) var serverName: String?
     @ObservationIgnored var bufferIndex: [String: BufferModel] = [:]
     @ObservationIgnored private var pendingNames: [String: [String: Member]] = [:]
     @ObservationIgnored private var historyBatches: [String: HistoryBatch] = [:]
@@ -174,6 +184,21 @@ public final class NetworkSession: Identifiable {
         return isupport.network ?? config.host
     }
 
+    /// The names this network and its server go by, folded as the network
+    /// compares nicks: the address you connect to, the server's own name,
+    /// the network's name (yours for it, and the one it announces), and a
+    /// bouncer's service (`*status`, BouncerServ). A line "from" one of
+    /// these is the server or network talking, never a person: Catch me up
+    /// and Recap leave such lines out of what they send to an AI model,
+    /// which is never told a server's or network's name.
+    public var serverNames: Set<String> {
+        let names = [config.host, serverName, config.name, isupport.network, bouncerServiceNick]
+        return Set(names.compactMap { name in
+            guard let name = name?.trimmingCharacters(in: .whitespaces), !name.isEmpty else { return nil }
+            return fold(name)
+        })
+    }
+
     public var isConnected: Bool { connectionState == .connected }
 
     /// Not connected, but a connection is on its way: connecting or
@@ -252,10 +277,27 @@ public final class NetworkSession: Identifiable {
 
     /// Restores buffers known from previous runs (offline, unjoined).
     /// Detached channels come back detached, and hidden ones stay out of
-    /// the list (``hiddenChannels``).
+    /// the list (``hiddenChannels``). Once: a second call, or one that
+    /// finishes after ``restoreBuffersNow()``, does nothing.
     public func restoreBuffers() async {
-        guard let database else { return }
+        guard let database, !hasRestoredBuffers else { return }
         guard let records = try? await database.buffers(networkID: id) else { return }
+        applyRestoredBuffers(records)
+    }
+
+    /// ``restoreBuffers()`` at once, reading the store on the main thread:
+    /// for a script that asks for conversations while Vela is launching,
+    /// which Cocoa scripting can't wait for.
+    public func restoreBuffersNow() {
+        guard let database, !hasRestoredBuffers, let records = try? database.buffersNow(networkID: id) else { return }
+        applyRestoredBuffers(records)
+    }
+
+    @ObservationIgnored private var hasRestoredBuffers = false
+
+    private func applyRestoredBuffers(_ records: [BufferRecord]) {
+        guard !hasRestoredBuffers else { return }
+        hasRestoredBuffers = true
         for record in records where record.kind != BufferKind.server.rawValue {
             let folded = fold(record.name)
             autoRejoin[folded] = record.autoRejoin
@@ -898,6 +940,7 @@ public final class NetworkSession: Identifiable {
 
         switch message.command {
         case "001", "002", "003", "004", "251", "252", "253", "254", "255", "265", "266", "250", "042", "396":
+            if message.command == "001", let source = message.source?.nick, !source.isEmpty { serverName = source }
             info(text, in: serverBuffer)
         case "005":
             break
@@ -1499,6 +1542,7 @@ public final class NetworkSession: Identifiable {
         let key = buffer.id.storeKey
         writeBuffer { try await $0.deleteBuffer(key, keepMessages: true) }
         host?.sessionDidChangeUnreadCounts(self)
+        host?.session(self, didClose: buffer)
     }
 
     /// Leaves a channel but keeps it in the list, not joined, with its
@@ -1980,7 +2024,17 @@ public final class NetworkSession: Identifiable {
         pendingRecords = []
         // Saving may have been turned off while these waited.
         guard historyStorage.saves, !records.isEmpty else { return }
-        writeBuffer { _ = try await $0.append(records) }
+        // Spotlight's index of messages, when it's on, hears about the ones
+        // that were new once they're written (off the main actor).
+        guard let sink = host?.savedMessagesSink else {
+            writeBuffer { _ = try await $0.append(records) }
+            return
+        }
+        let context = savedMessagesContext(for: records)
+        writeBuffer { database in
+            let inserted = try await database.append(records)
+            if !inserted.isEmpty { sink.didSave(inserted, context: context) }
+        }
     }
 
     /// Writes lines still waiting for the next batch, and waits until every

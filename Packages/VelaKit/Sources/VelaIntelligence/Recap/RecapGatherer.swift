@@ -53,6 +53,9 @@ public struct RecapGatherer {
         /// Its oldest lines were dropped to keep to the scrollback limit
         /// (`chat.scrollbackInMemory`).
         var isTrimmed = false
+        /// The names its network and server go by, folded
+        /// (`NetworkSession.serverNames`): lines from them are left out.
+        var serverNames: Set<String> = []
     }
 
     /// Everything ``collect(_:)`` needs, taken on the main actor.
@@ -94,7 +97,8 @@ public struct RecapGatherer {
                 caseMapping: session.isupport.caseMapping,
                 lines: buffer.lines,
                 unreadStart: unreadStart(buffer),
-                isTrimmed: buffer.lines.count >= limit
+                isTrimmed: buffer.lines.count >= limit,
+                serverNames: session.serverNames
             )
         }
         return Request(
@@ -229,7 +233,7 @@ public struct RecapGatherer {
         collectingSince: Date = .distantFuture
     ) -> RecapConversation {
         let own = buffer.caseMapping.fold(buffer.ownNick)
-        var lines = merged(memory: buffer.lines, saved: saved, ownNick: own, caseMapping: buffer.caseMapping)
+        var lines = merged(memory: buffer.lines, saved: saved, ownNick: own, caseMapping: buffer.caseMapping, serverNames: buffer.serverNames)
 
         // Where the stretch starts here.
         var start = requestedStart
@@ -276,22 +280,29 @@ public struct RecapGatherer {
 
     /// The conversation lines in memory and saved history, once each,
     /// oldest first. Saved copies of lines in memory (same id or msgid) are
-    /// dropped; deleted (redacted) lines are left out.
-    nonisolated static func merged(memory: [ChatLine], saved: [MessageRecord], ownNick: String, caseMapping: CaseMapping) -> [RecapLine] {
+    /// dropped; deleted (redacted) lines are left out, and so is anything
+    /// the server or network sent rather than a person (``PromptSpeaker``,
+    /// with `serverNames`).
+    nonisolated static func merged(memory: [ChatLine], saved: [MessageRecord], ownNick: String, caseMapping: CaseMapping, serverNames: Set<String> = []) -> [RecapLine] {
         var seenIDs = Set<UUID>()
         var seenMsgids = Set<String>()
         var lines: [RecapLine] = []
         lines.reserveCapacity(memory.count + saved.count)
+        func isOwn(_ nick: String) -> Bool { !ownNick.isEmpty && caseMapping.fold(nick) == ownNick }
+        func isFromAPerson(_ nick: String, isSelf: Bool) -> Bool {
+            isSelf || PromptSpeaker.isPerson(nick, serverNames: serverNames, caseMapping: caseMapping)
+        }
         for line in memory where line.kind.isConversation && !line.isRedacted {
             seenIDs.insert(line.id)
             if let msgid = line.msgid { seenMsgids.insert(msgid) }
+            guard isFromAPerson(line.nick ?? "", isSelf: line.isSelf) else { continue }
             lines.append(RecapLine(
                 id: line.id,
                 time: line.time,
                 nick: line.nick ?? "",
                 text: IRCFormatting.strip(line.text),
                 kind: RecapLine.Kind(rawValue: line.kind.rawValue) ?? .message,
-                isSelf: line.isSelf || (!ownNick.isEmpty && caseMapping.fold(line.nick ?? "") == ownNick),
+                isSelf: line.isSelf || isOwn(line.nick ?? ""),
                 isHighlight: line.isHighlight,
                 msgid: line.msgid,
                 replyTo: line.replyTo
@@ -301,7 +312,9 @@ public struct RecapGatherer {
         var added = false
         for record in saved where !record.isRedacted && !seenIDs.contains(record.id) {
             if let msgid = record.msgid, seenMsgids.contains(msgid) { continue }
-            guard let kind = RecapLine.Kind(rawValue: record.kind) else { continue }
+            guard let kind = RecapLine.Kind(rawValue: record.kind),
+                  isFromAPerson(record.nick ?? "", isSelf: record.isSelf)
+            else { continue }
             added = true
             lines.append(RecapLine(
                 id: record.id,
@@ -309,7 +322,7 @@ public struct RecapGatherer {
                 nick: record.nick ?? "",
                 text: IRCFormatting.strip(record.text),
                 kind: kind,
-                isSelf: record.isSelf || (!ownNick.isEmpty && caseMapping.fold(record.nick ?? "") == ownNick),
+                isSelf: record.isSelf || isOwn(record.nick ?? ""),
                 isHighlight: record.isHighlight,
                 msgid: record.msgid,
                 replyTo: record.replyTo

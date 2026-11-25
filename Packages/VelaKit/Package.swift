@@ -92,12 +92,15 @@ let package = Package(
         // Resources/CHANGELOG.md is a symbolic link to the repository's
         // CHANGELOG.md, for What's New; SwiftPM and Xcode both copy the file
         // it points to. The welcome scene draws through Savage (on screen
-        // and as SVG).
+        // and as SVG). Settings → Integrations reads the bundled Alfred
+        // workflow's version with ZIPFoundation (already in the app for
+        // VelaTheme's .vsix import).
         .target(
             name: "VelaUI",
             dependencies: [
                 "VelaCore", "VelaTheme", "VelaMedia", "VelaIRC", "VelaStore", "VelaIntelligence", "VelaIntents",
                 .product(name: "Savage", package: "Savage"),
+                .product(name: "ZIPFoundation", package: "ZIPFoundation"),
             ],
             resources: [.copy("Resources/AppIcons"), .copy("Resources/KLIPY"), .copy("Resources/CHANGELOG.md")],
             swiftSettings: mainActorByDefault
@@ -108,6 +111,11 @@ let package = Package(
 
         // Generates the website's supported media sites page from MediaSites.swift.
         .executableTarget(name: "VelaMediaTool", dependencies: ["VelaMedia"]),
+
+        // Test runs make no sound: as a test bundle loads, it silences
+        // Vela's beeps (`Beep`) and AppKit's alert sound. Linked into the
+        // test targets that open windows and send keys.
+        .target(name: "VelaTestSupport", path: "Tests/VelaTestSupport"),
 
         .testTarget(name: "VelaFoundationTests", dependencies: ["VelaFoundation"]),
         .testTarget(name: "VelaIRCTests", dependencies: ["VelaIRC"]),
@@ -135,7 +143,7 @@ let package = Package(
         ),
         .testTarget(
             name: "VelaUITests",
-            dependencies: ["VelaUI", "VelaCore", "VelaStore", "VelaTheme", "VelaIRC"],
+            dependencies: ["VelaUI", "VelaCore", "VelaStore", "VelaTheme", "VelaIRC", "VelaTestSupport"],
             swiftSettings: mainActorByDefault
         ),
     ]

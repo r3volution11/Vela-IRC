@@ -41,8 +41,12 @@ nonisolated struct CatchUpTranscript: Sendable, Equatable {
     ) {
         let usable = lines.compactMap { line -> (CatchUpLine, String)? in
             let nick = line.nick.trimmingCharacters(in: .whitespaces)
+            // Never a server's name where a nick goes (``PromptSpeaker``):
+            // the requests leave those lines out, and this holds whatever
+            // builds one.
+            guard PromptSpeaker.isPerson(nick) else { return nil }
             let text = Self.clean(line.text, maximumLength: maximumLineLength)
-            guard !nick.isEmpty, !text.isEmpty else { return nil }
+            guard !text.isEmpty else { return nil }
             var copy = line
             copy.nick = nick
             return (copy, text)

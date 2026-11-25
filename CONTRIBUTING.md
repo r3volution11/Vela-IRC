@@ -31,9 +31,27 @@ Thanks for helping build Vela! This guide covers the basics.
   swift run --package-path Packages/VelaKit vela-theme-tool schema > schemas/vela-theme.schema.json
   ```
 - **Tag new surfaces for the inspector.** A new kind of row, bar or panel gets a `.devTag("Name", tokens: […])` after its padding and background, naming the tokens it draws with (see [Developer tools](#developer-tools-vela-dev)). It costs nothing in release builds.
-- **Tests use Swift Testing** (`import Testing`). Protocol code should be covered by `MockTransport`-driven tests.
+- **Tests use Swift Testing** (`import Testing`), and they make no sound (see [Tests](#tests)). Protocol code should be covered by `MockTransport`-driven tests.
 - **Scrolling has a budget.** Vela must scroll smoothly on the slowest Macs it supports (2019–2020 Intel Macs, an 8 GB M1). If you change the message list, its rows or inline media, run `scripts/benchmark-scroll.sh` before and after: it scrolls a big, fixed channel in a Release build and compares the numbers with `benchmarks/scroll-baseline.json`. Its window is invisible and never takes the focus or the pointer, so you can keep working while it runs (about 12 minutes). See [docs/RELEASING.md](docs/RELEASING.md#scroll-benchmark).
+- **The message list mustn't freeze.** On macOS 26, SwiftUI's lazy stack could lock up the main thread for good when the list kept its bottom in place through size changes (see `sizeChangeAnchor` in `MessageListView.swift`). If you change how the list scrolls (its scroll position, anchors or stack), run `scripts/fuzz-message-list.sh --stress --hours 2` on macOS 26, in a VM: it drives the real list as fast as it goes, a few runs at a time, and samples any run that stops. Before the fix it froze about once every dozen runs of 45 seconds. The test behind it, `MessageListFuzzTests`, runs only with `VELA_LIST_FUZZ=1`.
 - Keep pull requests focused. One feature or fix per PR is easiest to review.
+
+## Tests
+
+`swift test --package-path Packages/VelaKit` runs every test target.
+
+**Test runs make no sound.** The hosted UI tests open real windows (offscreen) and send them keys and commands, and one with nothing to do beeps: Tab with no completion, an arrow past the end of the message list, a command nothing handles. So:
+
+- **App code beeps through `Beep`:** `Beep.play()` (`VelaUI/Foundation/Beep.swift`), never `NSSound.beep()` or `NSBeep()` itself. `SilentTestRunTests` fails when a file in `Packages/VelaKit/Sources` or `Vela/` beeps directly.
+- **The test run silences every beep once,** as the test bundle loads and before any test runs, so suites need no setup. `VelaTestSupport` (`Packages/VelaKit/Tests/VelaTestSupport`) turns `Beep` off, and AppKit's alert sound too: AppKit beeps by itself, through `NSBeep()`, for a key or a command nothing handles. `VelaUITests` links it; a new test target that opens windows or sends keys should too. `SilentTestRunTests` fails if the run isn't silent.
+- **No test relies on a real beep.** To count beeps, swap the hook and put it back afterwards (`Beep.sound = { … }`), or a controller's own, like `MessageListController.beep`.
+- **For work that's about sound,** keep it on: `VELA_TEST_SOUNDS=1 swift test --package-path Packages/VelaKit`.
+
+To check that a run is silent, watch the alert sounds macOS plays while it runs. There's one line per sound, naming the process that asked for it (`swiftpm-testing-helper` or `xctest` for a test run). Look for `Incoming Request`: the `audio file path` line appears only when the sound is first loaded, not for every beep.
+
+```sh
+/usr/bin/log stream --style compact --predicate 'process == "systemsoundserverd" AND eventMessage CONTAINS "Incoming Request"'
+```
 
 ## Developer tools (Vela Dev)
 
@@ -57,6 +75,17 @@ The menu's **State Simulator** section puts the window into states that are hard
 - **Remove Simulator Network**.
 
 All of it happens on a network of its own, **Simulator**, which the first of these adds. Your real networks are never touched, and nothing is saved: the network isn't in `networks.json` and has no message history, chat logs or Keychain items; it's never the channel Vela reopens at launch; Spotlight, Siri and Shortcuts never see it; and its connection is a stand-in that never opens a socket (**Connect** fails at once). Quitting forgets it. The states go through `NetworkSession`'s own event handling, the same code a server's lines go through. A mention posts a real notification, as one from a real network would. The code is `DevSimulator` in VelaCore.
+
+### Checking links and the AppleScript dictionary
+
+`Vela/Vela.sdef` is an interface the Alfred workflow, the Raycast extension and people's scripts build on: only ever add to it (never rename a term, code or cocoa key without [updating the extensions first](#working-across-vela-and-the-extensions)). `ScriptingDictionaryTests` check it against the code, but not Cocoa scripting itself, and `osascript` needs your terminal to be allowed to control Vela Dev (a permission prompt). Instead, Vela Dev in demo mode can drive its own dictionary, and a `vela-dev://` link, from inside the app, where macOS asks nothing, and write a report:
+
+```sh
+open -g -n build/DerivedData/Build/Products/Debug/Vela.app --args --demo --no-activate --automation-self-test
+cat ~/Library/Containers/io.github.r3volution11.Vela.dev/Data/tmp/AutomationSelfTest.txt
+```
+
+`--no-activate` keeps it from taking the focus. The code is `AutomationSelfTest` in `Packages/VelaKit/Sources/VelaUI/DevTools/`, Debug builds only.
 
 ### Tagging views
 
@@ -90,6 +119,15 @@ VELA=build/DerivedData-release/Build/Products/Release/Vela.app/Contents/MacOS/Ve
 nm -a "$VELA" | grep -c 'DevTag\|DevTools\|DevSimulator\|devToolsHost'
 strings -a "$VELA" | grep -c 'Inspect Element\|simulator.invalid\|Message row'
 ```
+
+## Working across Vela and the extensions
+
+The Alfred workflow and the Raycast extension live in their own repositories, [vela-alfred-workflow](https://github.com/r3volution11/vela-alfred-workflow) and [vela-raycast-extension](https://github.com/r3volution11/vela-raycast-extension). Both talk to Vela through its AppleScript dictionary (`Vela/Vela.sdef`) and its `vela://` links, and **Settings → Integrations** offers them. For a change that touches Vela and either of them:
+
+1. **Change Vela's dictionary first.** Additions are safe: a new term, property or command breaks nothing. A removal or a rename (of a term, a four-character code or a cocoa key), or a command that behaves differently, comes only after both extensions have been updated not to need the old one, and raises the application's `scripting version` (`VelaAutomation.scriptingVersion`), which the extensions read. `ScriptingDictionaryTests` check the dictionary against Vela's code.
+2. **The extensions' CI checks their terms against `Vela.sdef`** on Vela's `main` and `next`, so a term they use that Vela doesn't have (yet, or any more) fails there.
+3. **Use the same branch name in every repository** for one cross-cutting change, so it's easy to see what goes together, and merge Vela's side first.
+4. **Refresh the workflow Vela bundles** once the workflow's change is released: `scripts/update-alfred-workflow.sh --release latest` (or `--local` to try an unreleased build from a checkout next to Vela's), then commit `Vela/Integrations/Vela.alfredworkflow` and `integrations/alfred-workflow.json` together. CI fails when they don't match. See [integrations/README.md](integrations/README.md).
 
 ## Media sites
 

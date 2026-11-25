@@ -75,7 +75,7 @@ If you're offline, or you've left the channel, the field says so (**Offline — 
 
 ## Typing options {#typing}
 
-<Screenshot src="/screenshots/settings-typing.webp" alt="Settings → Messages → Typing: switches for spelling, grammar, autocorrect, text replacements, smart quotes and dashes, Writing Tools, the send button and typing indicators, some marked Same as macOS" caption="Settings → Messages → Typing." />
+<Screenshot src="/screenshots/settings-typing.webp" alt="Settings → Messages → Typing: switches for spelling, grammar, autocorrect, text replacements, smart quotes and dashes, Writing Tools, the send button and typing indicators, some marked Same as macOS, then the Memory section" caption="Settings → Messages → Typing." />
 
 macOS can check and correct what you type in the message field, as it does in Mail or Notes, and Vela makes sure it never breaks IRC. The switches are in **Settings → Messages → Typing**:
 

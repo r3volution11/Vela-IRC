@@ -41,12 +41,13 @@ public enum RecapSpanOption: String, AppEnum, Sendable {
 
 /// Opens a Recap in Vela: a report of a channel, a network or everything,
 /// for anyone or one person, over a span. Vela opens to it; the summary is
-/// written there (on this Mac), or the log shows when Apple Intelligence
-/// isn't available. Nothing is said aloud from the messages.
+/// written there, by Apple Intelligence on this Mac or the model you chose,
+/// or the log shows when that model can't run. Nothing is said aloud from
+/// the messages.
 public struct RecapIntent: AppIntent {
     public static let title: LocalizedStringResource = "Open Recap"
     public static let description = IntentDescription(
-        "Opens a Recap in Vela: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a time span. Apple Intelligence writes it on this Mac, or Vela shows the messages as a log.",
+        "Opens a Recap in Vela: a report of what was said in a channel, on a network or everywhere, by anyone or one person, since your first unread message or over a time span. Apple Intelligence writes it on this Mac, or the model you chose in Vela's settings; otherwise Vela shows the messages as a log.",
         categoryName: "Messages",
         searchKeywords: ["recap", "summary", "summarize", "report", "log", "history", "apple intelligence"]
     )
@@ -110,19 +111,10 @@ public struct RecapIntent: AppIntent {
         app: AppModel,
         services: IntelligenceServices
     ) throws -> RecapScope {
-        let person = person?.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: "@"))
-        let place: RecapScope.Place
-        if let channel {
-            let (session, buffer) = try app.target(for: channel)
-            place = person?.isEmpty == false ? .network(session.id) : .buffer(buffer.id)
-        } else if let network {
-            place = .network(try app.session(for: network).id)
-        } else {
-            place = .everywhere
-        }
-        services.availability.refresh()
-        let output: RecapScope.Output = services.availability.status.isAvailable ? .summary : .log
-        return RecapScope(place: place, person: person, span: span.span, output: output)
+        // The same Recap as a vela://recap link or AppleScript's open recap.
+        let conversation = try channel.map { try app.target(for: $0).buffer.id }
+        let networkID = try network.map { try app.session(for: $0).id }
+        return VelaAutomation.recapScope(conversation: conversation, network: networkID, person: person, span: span, services: services)
     }
 
     /// "Opening a Recap of #vela in Vela."

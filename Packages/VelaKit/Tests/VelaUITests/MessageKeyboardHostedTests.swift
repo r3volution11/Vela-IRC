@@ -653,10 +653,34 @@ extension LinkSelectionTests {
 
         // MARK: The message box
 
+        /// Where the list is shown: the clip view's offset, what the reader
+        /// sees. SwiftUI's report of it can be out of step
+        /// (`ClipViewSync.shown`).
         private func scrollOffset(_ hosted: Hosted) throws -> CGFloat {
-            try #require(hosted.controller?.metrics?.visibleMinY)
+            try #require(shownOffset(hosted))
         }
 
+        private func shownOffset(_ hosted: Hosted) -> CGFloat? {
+            hosted.controller?.scrollView?.contentView.bounds.minY
+        }
+
+        /// The list shows the newest line at the bottom, nothing under it.
+        private static func showsTheBottom(_ controller: MessageListController) -> Bool {
+            controller.shownMetrics.map(ScrollPinning.isAtBottom) == true
+        }
+
+        /// Whether `condition` comes true within `timeout` of running time
+        /// (`RunningDeadline`): a scroll glides for a quarter of a second,
+        /// and settles a moment later.
+        private func eventually(within timeout: Duration = .seconds(3), _ condition: () throws -> Bool) async rethrows -> Bool {
+            try await RunningDeadline.wait(timeout: timeout, until: condition)
+        }
+
+        /// Page Up and back down from the bottom: a page each way, measured
+        /// where the list is shown. On macOS 26, with other list tests
+        /// running, SwiftUI reported the list 74 pt short of the bottom the
+        /// clip view showed; paging from that report came back 74 pt short,
+        /// no longer following the newest line (`ClipViewSync.shown`).
         @Test func pageKeysInTheMessageBoxScrollTheMessages() async throws {
             let hosted = try await host()
             defer { hosted.close() }
@@ -665,25 +689,34 @@ extension LinkSelectionTests {
             composer.string = "half a thought"
             let controller = try #require(hosted.controller)
             #expect(controller.isPinnedToBottom)
+            let opened = await eventually { Self.showsTheBottom(controller) }
+            #expect(opened, "\(String(describing: controller.shownMetrics))")
             let bottom = try scrollOffset(hosted)
             let height = try #require(controller.metrics?.containerHeight)
-            try await press(.pageUp, in: hosted, settling: 600)
-            let up = try scrollOffset(hosted)
             // A page, less a little.
-            #expect(abs((bottom - up) - KeyboardPaging.distance(containerHeight: height)) < 2, "moved \(bottom - up) of \(height)")
+            let page = KeyboardPaging.distance(containerHeight: height)
+            try await press(.pageUp, in: hosted)
+            let pagedUp = try await eventually {
+                try abs((bottom - scrollOffset(hosted)) - page) < 2 && controller.scrollDriver == .idle
+            }
+            #expect(pagedUp, "moved \(bottom - (shownOffset(hosted) ?? .nan)) of \(height)")
             #expect(!controller.isPinnedToBottom)
-            #expect(controller.showsJumpToPresent)
+            #expect(await eventually { controller.showsJumpToPresent })
             // The text and the focus stay.
             #expect(composer.string == "half a thought")
             #expect(hosted.window.firstResponder === composer)
-            try await press(.pageDown, in: hosted, settling: 800)
-            #expect(controller.isPinnedToBottom)
-            #expect(abs(try scrollOffset(hosted) - bottom) < 2)
-            try await press(.home, in: hosted, settling: 800)
-            #expect(try scrollOffset(hosted) < 600)
-            try await press(.end, in: hosted, settling: 1200)
-            #expect(controller.isPinnedToBottom)
-            #expect(controller.metrics.map(ScrollPinning.isAtBottom) == true)
+            // Back down to the bottom, following the newest line again.
+            try await press(.pageDown, in: hosted)
+            let pagedDown = try await eventually {
+                try controller.isPinnedToBottom && abs(scrollOffset(hosted) - bottom) < 2
+            }
+            #expect(pagedDown, "at \(String(describing: shownOffset(hosted))), bottom \(bottom), pinned \(controller.isPinnedToBottom)")
+            try await press(.home, in: hosted)
+            let top = try await eventually { try scrollOffset(hosted) < 600 }
+            #expect(top, "at \(String(describing: shownOffset(hosted)))")
+            try await press(.end, in: hosted)
+            let end = await eventually(within: .seconds(5)) { controller.isPinnedToBottom && Self.showsTheBottom(controller) }
+            #expect(end, "pinned \(controller.isPinnedToBottom), \(String(describing: controller.shownMetrics))")
         }
 
         @Test func escWithNothingToCancelJumpsToThePresent() async throws {
@@ -693,20 +726,23 @@ extension LinkSelectionTests {
             hosted.window.makeFirstResponder(composer)
             let controller = try #require(hosted.controller)
             try await press(.pageUp, in: hosted, settling: 300)
-            try await press(.pageUp, in: hosted, settling: 600)
-            #expect(!controller.isPinnedToBottom)
+            try await press(.pageUp, in: hosted)
+            let away = await eventually { !controller.isPinnedToBottom && controller.scrollDriver == .idle }
+            #expect(away)
             let scrolledTo = try scrollOffset(hosted)
             // A reply to cancel: Esc cancels it, and the list stays.
             hosted.uiState.replyTargets[hosted.buffer.id] = hosted.lines.newest
             try await settle(hosted, for: 300)
-            try await press(.escape, in: hosted, settling: 600)
-            #expect(hosted.uiState.replyTargets[hosted.buffer.id] == nil)
+            try await press(.escape, in: hosted)
+            #expect(await eventually { hosted.uiState.replyTargets[hosted.buffer.id] == nil })
+            // Given the time a jump would take: the list stays.
+            try await settle(hosted, for: 600)
             #expect(!controller.isPinnedToBottom)
             #expect(abs(try scrollOffset(hosted) - scrolledTo) < 2)
             // Nothing left to cancel: back to the newest message.
-            try await press(.escape, in: hosted, settling: 1200)
-            #expect(controller.isPinnedToBottom)
-            #expect(controller.metrics.map(ScrollPinning.isAtBottom) == true)
+            try await press(.escape, in: hosted)
+            let present = await eventually(within: .seconds(5)) { controller.isPinnedToBottom && Self.showsTheBottom(controller) }
+            #expect(present, "pinned \(controller.isPinnedToBottom), \(String(describing: controller.shownMetrics))")
             #expect(hosted.window.firstResponder === composer)
         }
     }

@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import Foundation
+import VelaStore
 
 /// Recaps with Apple's Foundation Models: the ``RecapEngine`` on the same
 /// on-device model as Catch me up (and Private Cloud Compute for long ones,
@@ -10,7 +11,7 @@ import Foundation
 /// summary at a time (``ModelLane``).
 extension FoundationModelSummarizer: RecapSummarizer {
     public nonisolated func plan(_ input: RecapInput) async -> RecapPlan {
-        guard let router = try? await recapRouter(checkingAvailability: false) else {
+        guard let router = try? await recapRouter(checkingAvailability: false, model: Self.appleModel(input.model)) else {
             return RecapPlan(passes: 1, transcriptTokens: 0, estimatedSeconds: 0)
         }
         return await router.plan(input)
@@ -20,7 +21,7 @@ extension FoundationModelSummarizer: RecapSummarizer {
         AsyncThrowingStream { continuation in
             let task = Task(priority: .utility) {
                 do {
-                    let router = try await self.recapRouter(checkingAvailability: true)
+                    let router = try await self.recapRouter(checkingAvailability: true, model: Self.appleModel(input.model))
                     let total = min(input.lineCount, RecapLimits.summaryLines)
                     let summary = try await self.lane.run(waiting: {
                         continuation.yield(RecapSummary(progress: RecapProgress(messagesRead: 0, messagesTotal: total, isWaiting: true)))
@@ -56,8 +57,10 @@ extension FoundationModelSummarizer: RecapSummarizer {
     }
 
     /// The Catch me up router's models, with this session's Recap timings.
-    func recapRouter(checkingAvailability: Bool) throws -> RecapRouter {
-        let catchUp = try router(checkingAvailability: checkingAvailability)
-        return RecapRouter(onDevice: catchUp.onDevice, cloud: catchUp.cloud, timings: recapTimings)
+    func recapRouter(checkingAvailability: Bool, model: AppleModel = .automatic) throws -> RecapRouter {
+        let catchUp = try router(checkingAvailability: checkingAvailability, model: model)
+        var router = RecapRouter(onDevice: catchUp.onDevice, cloud: catchUp.cloud, timings: recapTimings)
+        router.alwaysCloud = catchUp.alwaysCloud
+        return router
     }
 }

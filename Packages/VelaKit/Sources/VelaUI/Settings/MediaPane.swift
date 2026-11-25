@@ -276,7 +276,9 @@ struct MediaPane: View {
             title,
             subtitle: subtitle,
             isSelected: isSelected,
-            action: { withAnimation(.snappy(duration: 0.2)) { select() } },
+            // Not animated: every preview in the main window lays out again
+            // once, not on every frame of an animation.
+            action: select,
             preview: {
                 preview
                     .overlay(

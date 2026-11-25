@@ -6,7 +6,11 @@
 #   scripts/demo-screenshot.sh <Vela.app> <out.png> [demo args…]
 #   scripts/demo-screenshot.sh build/Vela.app shot.png --theme Lighter --preset tabbed --size 1280x800
 #
-# Demo args: --theme <name>, --preset classic|modern|tabbed|focus,
+# Demo args: --theme <name>,
+#            --layout sidebar|tabsOnTop|tabsInTitleBar|focus,
+#            --message-style modern|classic|columns,
+#            --density compact|standard|comfortable (Settings → Presets),
+#            --preset classic|modern|tabbed|focus (Vela 1.0–1.4's whole setups),
 #            --set key=value (any settings.json key), --size WxH,
 #            --snapshot-delay <seconds> (default 3; raise it for remote images),
 #            --select <buffer> ("#swift" or "OFTC/#debian"), --catch-up,
@@ -14,9 +18,9 @@
 #            --no-selection (the demo's networks with no conversation open),
 #            --accent <name> (one of the theme's accent swatches, e.g. Cyan),
 #            --settings-pane <pane> (presets, appearance, layout, messages,
-#              media, networks, notifications, intelligence, updates,
-#              advanced; renders the Settings window instead, 820x600
-#              unless --size is given),
+#              media, networks, notifications, intelligence, aiProviders,
+#              aiPrivacy, integrations, updates, advanced; renders the
+#              Settings window instead, 820x600 unless --size is given),
 #            --settings-scroll <points> (scroll the pane down first),
 #            --theme-editor <theme> (renders the Theme Editor started from
 #              that theme, 760x680 unless --size is given),

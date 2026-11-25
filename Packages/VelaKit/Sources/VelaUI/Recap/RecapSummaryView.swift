@@ -15,8 +15,12 @@ import VelaTheme
 /// once; the rest fill in as Apple Intelligence writes them.
 struct RecapSummaryView: View {
     @Environment(AppModel.self) private var app
+    @Environment(IntelligenceServices.self) private var intelligence
+    @Environment(UIState.self) private var uiState: UIState?
     @Environment(\.theme) private var theme
     @Environment(\.recapTypography) private var type
+    @Environment(\.openSettings) private var openSettings
+    @Environment(\.askForAIConsent) private var askForAIConsent
     let session: RecapSession
     let format: RecapFormat
 
@@ -106,12 +110,20 @@ struct RecapSummaryView: View {
         case .idle:
             EmptyView()
         case .unavailable(let status):
-            RecapNoteCallout(systemImage: "apple.intelligence", text: "Summaries need Apple Intelligence.", detail: status.detail) {
+            RecapNoteCallout(
+                systemImage: "apple.intelligence",
+                text: "Summaries need Apple Intelligence, or a model of your own.",
+                detail: "\(status.detail) You can also add a provider such as OpenAI, Anthropic, Google Gemini or Ollama in Settings → AI Providers."
+            ) {
                 HStack(spacing: 8) {
                     Button("Show Log") { showLog() }
                         .buttonStyle(ThemedButtonStyle(prominent: true))
                     if let url = status.settingsURL {
                         Button("Open System Settings") { NSWorkspace.shared.open(url) }
+                            .buttonStyle(ThemedButtonStyle())
+                    }
+                    if let uiState {
+                        Button("Manage Providers…") { AIModelActions.openSettings(uiState: uiState, openSettings: openSettings) }
                             .buttonStyle(ThemedButtonStyle())
                     }
                 }
@@ -123,7 +135,7 @@ struct RecapSummaryView: View {
             RecapNoteCallout(
                 systemImage: "clock",
                 text: estimate(plan),
-                detail: "Apple Intelligence reads \(RecapFormat.messages(min(session.input?.lineCount ?? 0, RecapLimits.summaryLines))) in \(plan.passes) passes. You can keep using Vela meanwhile, and Stop any time. The log is ready now."
+                detail: Self.confirmationDetail(plan, messages: min(session.input?.lineCount ?? 0, RecapLimits.summaryLines))
             ) {
                 HStack(spacing: 8) {
                     Button("Start") { session.confirm() }
@@ -142,6 +154,21 @@ struct RecapSummaryView: View {
         case .stopped:
             RecapNoteCallout(systemImage: "stop.circle", text: "Stopped. What was written so far is below; Regenerate starts again.")
                 .padding(.bottom, 8)
+        case .failed(let error) where error.needsConsent:
+            RecapNoteCallout(systemImage: "hand.raised", text: error.errorDescription ?? "") {
+                HStack(spacing: 8) {
+                    Button("Review…") { askForAIConsent?() }
+                        .buttonStyle(ThemedButtonStyle(prominent: true))
+                        .accessibilityHint("Shows what would be sent, and asks to allow it")
+                    if intelligence.models.isAppleAvailable {
+                        Button("Use Apple Intelligence") { session.rerun(with: .automatic) }
+                            .buttonStyle(ThemedButtonStyle())
+                    }
+                    Button("Show Log") { showLog() }
+                        .buttonStyle(ThemedButtonStyle())
+                }
+            }
+            .padding(.bottom, 8)
         case .failed(let error):
             RecapNoteCallout(
                 systemImage: "exclamationmark.circle",
@@ -150,6 +177,15 @@ struct RecapSummaryView: View {
                 HStack(spacing: 8) {
                     Button("Try Again") { session.regenerate() }
                         .buttonStyle(ThemedButtonStyle(prominent: true))
+                    if error.providerFailure != nil, intelligence.models.isAppleAvailable {
+                        Button("Try with Apple Intelligence") { session.rerun(with: .automatic) }
+                            .buttonStyle(ThemedButtonStyle())
+                            .accessibilityHint("Writes the Recap on this Mac instead")
+                    }
+                    if error.providerFailure?.isFixedInSettings == true, let uiState {
+                        Button("Open Settings") { AIModelActions.openSettings(uiState: uiState, openSettings: openSettings) }
+                            .buttonStyle(ThemedButtonStyle())
+                    }
                     Button("Show Log") { showLog() }
                         .buttonStyle(ThemedButtonStyle())
                 }
@@ -158,9 +194,31 @@ struct RecapSummaryView: View {
         }
     }
 
-    /// "About 2 minutes on this Mac", or with Private Cloud Compute.
+    /// The model asked for in this window, or the one Recap uses.
+    private var currentModel: AIModelChoice {
+        session.model ?? intelligence.models.modelSettings.choice(for: .recap)
+    }
+
+    /// "About 2 minutes on this Mac", with Private Cloud Compute, or with
+    /// one of your providers.
+    /// What asking before a long Recap says: the model that will read it,
+    /// Apple Intelligence or yours ("Claude Opus 5.5 (Anthropic) reads
+    /// 2,000 messages in 3 passes…").
+    static func confirmationDetail(_ plan: RecapPlan, messages: Int) -> String {
+        let reader = switch plan.venue {
+        case .onDevice, .privateCloudCompute: "Apple Intelligence"
+        case .provider(let label): label.title
+        }
+        let passes = plan.passes == 1 ? "in one pass" : "in \(plan.passes) passes"
+        return "\(reader) reads \(RecapFormat.messages(messages)) \(passes). You can keep using Vela meanwhile, and Stop any time. The log is ready now."
+    }
+
     private func estimate(_ plan: RecapPlan) -> String {
-        let place = plan.venue == .privateCloudCompute ? "with Private Cloud Compute" : "on this Mac"
+        let place = switch plan.venue {
+        case .onDevice: "on this Mac"
+        case .privateCloudCompute: "with Private Cloud Compute"
+        case .provider(let label): "with \(label.providerName)"
+        }
         return "\(RecapFormat.duration(plan.estimatedSeconds)) \(place)."
     }
 
@@ -187,16 +245,24 @@ struct RecapSummaryView: View {
     private func footer(_ summary: RecapSummary) -> some View {
         var parts: [String] = []
         if summary.skippedMessages > 0 {
-            parts.append("Skipped \(RecapFormat.messages(summary.skippedMessages)) that Apple Intelligence wouldn't summarize.")
+            parts.append("Skipped \(RecapFormat.messages(summary.skippedMessages)) that \(summary.writerName) wouldn't summarize.")
         }
         parts.append(summary.provenance)
         parts.append("May contain mistakes, so check the messages behind anything you act on.")
+        let models = intelligence.models
         return VStack(alignment: .leading, spacing: 10) {
             Rectangle().fill(theme[ThemeKey.chatSecondaryForeground].opacity(0.18)).frame(height: 1)
             Text(parts.joined(separator: " "))
                 .font(type.small)
                 .foregroundStyle(theme[ThemeKey.chatSecondaryForeground])
                 .fixedSize(horizontal: false, vertical: true)
+            if models.hasChoices || currentModel != .automatic {
+                AIModelChangeMenu(current: currentModel, title: "Change Model") { choice in
+                    session.rerun(with: choice)
+                }
+                .foregroundStyle(theme[ThemeKey.accentText])
+                .disabled(session.summaryPhase == .running)
+            }
         }
         .padding(.top, 34)
     }

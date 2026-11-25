@@ -35,6 +35,7 @@ extension AppModel {
     /// Vela quits. Chat logs aren't touched.
     public func deleteSavedHistory() async throws {
         ImageLoader.removeDiskCache()
+        savedMessagesObserver?.savedHistoryDeleted()
         guard let database else { return }
         do {
             try await database.deleteSavedHistory()

@@ -39,6 +39,10 @@ nonisolated struct CatchUpRouter: Sendable {
     let onDevice: any CatchUpLanguageModel
     /// Nil while Private Cloud Compute is off, or on a system without it.
     let cloud: (any CatchUpCloud)?
+    /// Private Cloud Compute was chosen as the model (`"apple/private-cloud-compute"`):
+    /// every stretch goes there, not only long ones. It still falls back
+    /// to this Mac when it can't take one.
+    var alwaysCloud = false
 
     /// Where and in how many passes `request` would be summarized. Counts
     /// tokens once (on the Mac's tokenizer); asks Private Cloud Compute
@@ -47,7 +51,7 @@ nonisolated struct CatchUpRouter: Sendable {
         let transcript = CatchUpTranscript(request)
         let local = await CatchUpEngine(model: onDevice).measure(transcript)
         let onDevicePlan = CatchUpPlan(passes: local.passes, transcriptTokens: local.totalTokens)
-        guard let cloud, !transcript.isEmpty, !local.fitsOnePass else { return onDevicePlan }
+        guard let cloud, !transcript.isEmpty, alwaysCloud || !local.fitsOnePass else { return onDevicePlan }
         switch await cloud.prepare() {
         case .notReady(let reason):
             var plan = onDevicePlan
@@ -75,7 +79,7 @@ nonisolated struct CatchUpRouter: Sendable {
         guard !transcript.isEmpty else { throw CatchUpError.nothingToSummarize }
         let device = CatchUpEngine(model: onDevice)
         let local = await device.measure(transcript)
-        guard let cloud, !local.fitsOnePass else {
+        guard let cloud, alwaysCloud || !local.fitsOnePass else {
             return try await device.run(request, measured: local, progress: progress)
         }
 

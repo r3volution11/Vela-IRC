@@ -4,6 +4,7 @@
 
 import Foundation
 import VelaCore
+import VelaStore
 
 // Recap: a report of a stretch of conversation, in a window of its own.
 // Catch me up is a small card for one channel's unread messages; a Recap
@@ -231,6 +232,10 @@ nonisolated public struct RecapInput: Sendable, Hashable {
     public var matchingLines: Int
     /// Message history is read from disk (`history.save` on, or kept).
     public var readsSavedHistory: Bool
+    /// The model to write it with, when it isn't the one Recap's setting
+    /// picks (the window's Change menu, "Recap With…"). Nil follows the
+    /// settings.
+    public var model: AIModelChoice?
 
     public init(
         scope: RecapScope,
@@ -433,6 +438,9 @@ nonisolated public struct RecapSummary: Sendable, Hashable {
         notes.filter { $0.kind == kind }
     }
 
+    /// Who wrote it, for "…that Apple Intelligence wouldn't summarize".
+    public var writerName: String { venue.writerName }
+
     /// Where it was written, as Catch me up says it.
     public var provenance: String {
         CatchUpSummary(
@@ -489,11 +497,15 @@ nonisolated public struct RecapDetailRequest: Sendable, Hashable {
     public var lines: [RecapLine]
     public var ownNick: String
     public var focus: String
+    /// The model the Recap was written with, so More detail asks the same
+    /// one. Nil follows Recap's setting.
+    public var model: AIModelChoice?
 
-    public init(lines: [RecapLine], ownNick: String, focus: String) {
+    public init(lines: [RecapLine], ownNick: String, focus: String, model: AIModelChoice? = nil) {
         self.lines = lines
         self.ownNick = ownNick
         self.focus = focus
+        self.model = model
     }
 }
 

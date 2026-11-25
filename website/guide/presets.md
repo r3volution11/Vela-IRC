@@ -1,54 +1,112 @@
 ---
 title: Presets
-description: Vela's four one-click presets, Classic IRC, Modern Chat, Tabbed and Focus, and exactly which settings each one changes. Presets never change your theme.
+description: Pick Vela's window layout, message style (Modern, Classic IRC or Columns) and density, each on its own. Presets never change your theme.
 ---
 
 # Presets
 
-A preset sets up navigation, message layout, density, media and how unread messages show in one click, so you can get a whole style without visiting every setting. **Presets never change your theme**, and they only touch the settings listed below, so anything else you've customized stays as it is.
+**Settings → Presets** sets up Vela's window in three choices that combine freely:
 
-Apply one from **Settings → Presets**, the **View → Presets** menu, or the [command palette](/guide/command-palette) (type "preset"). Afterwards, change anything you like. The preset stays checked as long as your settings still match it.
+- a **window layout**: where your networks and channels live;
+- a **message style**: how each message is laid out;
+- a **density**: how much room messages get.
 
-## Classic IRC
+Pick any layout with any style and any density. Each row changes only its own settings, in one go, so choosing a layout never touches your message style, your font, your media settings or anything else you've set. **Presets never change your theme.**
 
-<Screenshot src="/screenshots/preset-classic.webp" alt="The Classic IRC preset: a sidebar and one-line monospace messages" />
+<Screenshot src="/screenshots/settings-presets.webp" alt="Settings → Presets: four window layout cards, three message style cards, the density control and a preview of messages" />
 
-Sidebar tree, one-line messages in a monospace font, dense spacing, minimal link previews and image thumbnails. Feels like [Textual](https://www.textualapp.com) or [irssi](https://irssi.org). Join and part messages are shown individually, and videos get a one-line row whose player opens underneath when you press ▶.
+The cards are drawn in your own theme and with your own settings, so each one shows what you'd get. The **Preview** under them is your chat as it looks now, with your theme, font and other message settings. **Make it yours**, at the bottom, links to **Layout**, **Messages**, **Media** and **Themes** for everything else.
 
-Messages are simply there as they came in: channels open at the newest messages, with no **New** line marking what you haven't read and no **Jump to present** button to press. Unread counts in the sidebar still work. See [Unread messages](/guide/messages-and-layouts#unread-messages). The other presets open channels at the first unread message, with the New line.
+The cards work from the keyboard: <kbd>Tab</kbd> goes from row to row, <kbd>←</kbd> and <kbd>→</kbd> move between the cards in a row (<kbd>Home</kbd> and <kbd>End</kbd> go to the first and the last), and <kbd>Space</kbd> or <kbd>Return</kbd> picks one. VoiceOver reads each card as a button, says which one is selected, and says when a row is customized.
 
-::: tip Used Classic IRC before?
-Apply it again to get these two settings. Until you do, Settings → Presets shows your setup as Custom.
-:::
+You can also choose from:
 
-## Modern Chat
+- the **View** menu: **View → Layout**, **View → Message Style** and **View → Density**, with a checkmark next to the choice your settings match. **View → Layout** also has **Tabs at Bottom** and **Always Show Server Row** (with tabs only), and **View → Message Style** has **Show**, **Collapse** and **Hide Join/Part Messages**.
+- the [command palette](/guide/command-palette) (<kbd>⇧⌘P</kbd>): **Layout: Tabs on Top**, **Message Style: Columns**, **Density: Compact** and the rest. Type "layout", "message style" or "density" to list them.
+- the **Presets** section at the top of **Settings → Appearance**: a menu each for **Window layout**, **Message style** and **Density**, which reads **Customized** when no choice matches. **All presets** brings you here.
 
-<Screenshot src="/screenshots/preset-modern.webp" alt="The Modern Chat preset: a sidebar, grouped messages and full inline media" />
+## Window layout
 
-Vela's defaults: a sidebar with grouped messages (one name header per run of messages), roomy spacing between lines and messages, and full inline media: full-size images, standard link previews and video players. Joins and parts are collapsed into one line.
+| Layout | What you get |
+| --- | --- |
+| **Sidebar** | Networks and channels in a list on the left, which can fold down to an icon rail (<kbd>⌃⌘S</kbd>). Vela's default. |
+| **Tabs on Top** | Browser-style [tab stacks](/guide/tab-stacks) under the channel title bar: a row of networks over a row of channels. |
+| **Tabs in Title Bar** | Compact tabs in the title bar, beside the window buttons. The topic moves behind the **ⓘ** button. The most room for the conversation with tabs. |
+| **Focus** | No sidebar and no tabs: just the conversation, with the channel's name and topic above it. |
 
-::: info Modern Chat in Vela 1.0
-Vela 1.1 gave Modern Chat more room: 4 points between lines and 12 between messages, up from 2 and 6. If you applied it in 1.0 and kept its spacing, Vela moved yours to the new values when it updated, and What's New said so. Spacing you'd changed stays as you set it.
-:::
+### Focus
 
-## Tabbed
+<Screenshot src="/screenshots/layout-focus.webp" alt="The Focus layout: no sidebar and no tabs, only the channel's name, member count and topic above the conversation, with the member list on the right" caption="Focus, with the member list showing." />
 
-<Screenshot src="/screenshots/preset-tabbed.webp" alt="The Tabbed preset: rounded tab stacks across the top instead of a sidebar" />
+Focus takes away everything you use to move between channels, so the conversation has the whole window, with the channel's name, how many people are in it and its topic above it. Pick its card here, choose **View → Layout → Focus**, or use the **Focus** card under **Navigation** in **Settings → Layout**. To switch channels:
 
-[Tab stacks](/guide/tab-stacks) across the top instead of a sidebar, grouped messages and rounded tabs, with the member list hidden and the same media as Modern Chat. Great for one network and a few channels.
+- press <kbd>⌘P</kbd> (or <kbd>⌘K</kbd>) for **Go to Conversation…** and type a few letters of the channel (network consoles are there too);
+- press <kbd>⌘1</kbd>–<kbd>⌘9</kbd> for the network's first nine channels and conversations, in the order the tabs would show them;
+- use **Go → Next Unread** (<kbd>⌥⇧⌘↓</kbd>), **Next Conversation** (<kbd>⌥⌘↓</kbd>), **Next Network** (<kbd>⌃⌘]</kbd>) and the rest of the **Go** menu.
 
-## Focus
+With no sidebar or tabs to show unread counts, **Go to Conversation…** shows them instead, with a badge for mentions, and the [Dock icon's badge](/guide/notifications#dock-badge) and notifications tell you about new messages. With no **+** button, add a network or join a channel from the **File** menu (<kbd>⇧⌘N</kbd> and <kbd>⌘J</kbd>). What a channel's right-click menu does is in the [command palette](/guide/command-palette) too, such as **Buffer: Mute** and **Channel: Leave #channel**.
 
-<Screenshot src="/screenshots/preset-focus.webp" alt="The Focus preset: pill tabs in the title bar and compact columns" />
+**Go → Focus Sidebar** (<kbd>⌥⌘1</kbd>) has nothing to go to in Focus, so <kbd>F6</kbd> goes round the messages, the message box and the member list. **View → Collapse Sidebar**, **Show Channel Title Bar**, **View → Layout → Always Show Server Row**, **Network → Move Channel** and **Move Network** are for the other layouts, so they're dimmed, and the command palette leaves them out.
 
-Pill tabs in the title bar, compact columns, no avatars or join/part noise, and the member list hidden. Link previews are minimal and images are thumbnails, but videos still get a full player. Maximum text, minimum chrome.
+Earlier versions of Vela don't know Focus: if one of them reads your settings.json, it shows the sidebar.
 
-## What each preset sets
+### Tabs at the bottom
 
-A dash means the preset leaves that setting alone. Click a setting to read what it does.
+Tabs can also sit at the bottom, above the message box (**View → Layout → Tabs at Bottom**, or **Settings → Layout → Placement**). It isn't one of the four cards, so the Window layout row says **Customized** while they're there.
+
+## Message style
+
+| Style | What you get |
+| --- | --- |
+| **Modern** | The name and time on one line, the message below, and one name for a run of messages from the same person, like Slack or Discord. Vela's default. |
+| **Classic IRC** | `[time] <nick> message` on one line, in a monospaced font, like [Textual](https://www.textualapp.com) or [irssi](https://irssi.org). |
+| **Columns** | The time, a right-aligned column of names, then the message, like [WeeChat](https://weechat.org). |
+
+A style sets the [message layout](/guide/messages-and-layouts) and whether chat uses the monospaced font. Classic IRC turns the monospaced font on; Modern and Columns turn it off. Everything else about messages, like timestamps, avatars, nick colors and join and part messages, stays as you have it.
+
+The **Layout** cards in **Settings → Messages** change only the layout, not the font. So the Classic layout without the monospaced font, or Modern with it, shows as a customized message style.
+
+## Density
+
+**Compact**, **Standard** and **Comfortable** set the space between the lines of a message and the space between messages together:
+
+| Density | Between lines | Between messages |
+| --- | --- | --- |
+| **Compact** | 2 points | 4 points |
+| **Standard** | 4 points | 12 points |
+| **Comfortable** | 6 points | 18 points |
+
+Standard is Vela's default. Compact fits the most messages on screen while keeping Modern's groups apart; Comfortable is for easy reading. For tighter spacing still, set it in **Settings → Messages** (the row then shows **Customized**).
+
+**Density never changes your font size**, so it never undoes a size you chose yourself. Change that with **View → Bigger** (<kbd>⌘+</kbd>) and **Smaller** (<kbd>⌘−</kbd>), or in **Settings → Messages**.
+
+## Customized
+
+Each row shows which choice your settings match. If you've changed one of a row's settings yourself, say the message spacing in **Settings → Messages**, no card is selected and the row says **Customized**. Under it, a line says what's different ("Customized: 2 pt between lines and 6 pt between messages", say), with **Fine-tune in Layout** or **Fine-tune in Messages** to go where you can change it.
+
+Picking a card again resets just that row's settings and leaves the other rows alone. Your own changes elsewhere, like your font size, media and unread settings, are never touched.
+
+## What each choice sets
+
+Every choice writes only the settings in its row. A dash means it leaves that setting alone. Click a setting to read what it does.
 
 <!--@include: ../_generated/presets.md-->
 
+A choice that matches Vela's default is removed from [settings.json](/customize/settings-json) rather than written, so it keeps following the default. Choosing **Sidebar**, **Modern** and **Standard** on a new install leaves settings.json as it was.
+
+## Coming from an earlier version
+
+Vela 1.5 replaced the four one-click presets (Classic IRC, Modern Chat, Tabbed and Focus) with these three rows. Updating changes nothing on screen: your settings stay exactly as they were, and each row shows the choice they match.
+
+| If you used | Window layout | Message style | Density |
+| --- | --- | --- | --- |
+| **Classic IRC** | Sidebar | Classic IRC | Customized (1 and 2 points) |
+| **Modern Chat** | Sidebar | Modern | Standard |
+| **Tabbed** | Tabs on Top | Modern | Customized (2 and 8 points) |
+| **Focus** | Tabs in Title Bar | Columns | Customized (2 and 3 points) |
+
+The old presets also set things like the font size, media sizes and how unread messages show. Those stay as they were; change them in **Settings → Messages** and **Settings → Media**. If you used the old **Focus** preset, the new **Focus** layout goes further: no tabs at all.
+
 ## Making your own
 
-There's no "save as preset" yet, but every value is a key in [settings.json](/customize/settings-json), so you can keep your favorite setup in a file and paste it back whenever you like.
+There's no "save as preset", but every value is a key in [settings.json](/customize/settings-json), so you can keep your favorite setup in a file and paste it back whenever you like.

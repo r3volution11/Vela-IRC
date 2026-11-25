@@ -14,6 +14,9 @@ import VelaStore
 struct RecapWindowValue: Codable, Hashable {
     var scope: RecapScope
     var choosesPerson = false
+    /// The model to write it with ("Recap With…"); nil follows Recap's
+    /// setting.
+    var model: AIModelChoice?
 }
 
 /// Opening Recaps, naming them, jumping from them to a message, and Copy
@@ -34,10 +37,11 @@ enum RecapActions {
         return RecapScope(place: place, output: preferredOutput(intelligence))
     }
 
-    /// Summary, or Log when Apple Intelligence can't run.
+    /// Summary, or Log when Recap's model can't run (Apple Intelligence
+    /// off, with no provider's model chosen instead).
     static func preferredOutput(_ intelligence: IntelligenceServices?) -> RecapScope.Output {
         guard let intelligence else { return .summary }
-        return intelligence.availability.status.isAvailable ? .summary : .log
+        return intelligence.status(for: .recap).isAvailable ? .summary : .log
     }
 
     static func open(_ value: RecapWindowValue, openWindow: OpenWindowAction) {
@@ -114,7 +118,7 @@ enum RecapActions {
             notes.append("Shows the newest \(RecapLimits.gatheredLines.formatted()) of \(input.matchingLines.formatted()) matching messages.")
         }
         if output == .summary, input.lineCount > RecapLimits.summaryLines {
-            notes.append("Apple Intelligence reads the latest \(RecapLimits.summaryLines.formatted()) of these \(input.lineCount.formatted()) messages. Narrow the Recap to a channel, a person or a shorter span to cover the rest.")
+            notes.append("The summary reads the latest \(RecapLimits.summaryLines.formatted()) of these \(input.lineCount.formatted()) messages. Narrow the Recap to a channel, a person or a shorter span to cover the rest.")
         }
         return notes
     }
@@ -136,22 +140,7 @@ enum RecapActions {
         guard let (session, buffer) = app.lookup(reference.conversation) else { return }
         app.select(buffer)
         openWindow(id: WindowID.main)
-        if buffer.lines.contains(where: { $0.id == reference.lineID }) {
-            uiState.scrollTarget = reference.lineID
-            return
-        }
-        Task {
-            for _ in 0..<30 {
-                if buffer.lines.contains(where: { $0.id == reference.lineID }) { break }
-                guard buffer.hasMoreHistory, (buffer.lines.first?.time ?? .distantFuture) >= reference.time else { break }
-                if buffer.isLoadingHistory {
-                    try? await Task.sleep(for: .milliseconds(100))
-                    continue
-                }
-                await session.loadOlderHistory(for: buffer)
-            }
-            uiState.scrollTarget = reference.lineID
-        }
+        MessageJump.jump(to: LineReference(id: reference.lineID, time: reference.time), in: buffer, session: session, uiState: uiState)
     }
 
     // MARK: Copy and Save
@@ -240,7 +229,7 @@ final class RecapWindowRouter {
     private func handle() {
         guard let request = intelligence.recaps.latest, request.id != handled, let openWindow else { return }
         handled = request.id
-        NSApp.activate()
+        AppActivation.activate()
         openWindow(value: RecapWindowValue(scope: request.scope))
     }
 }

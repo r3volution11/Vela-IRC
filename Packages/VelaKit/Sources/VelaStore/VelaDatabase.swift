@@ -368,19 +368,28 @@ public final class VelaDatabase: Sendable {
 
     /// Saved buffers of a network, ordered by `sortOrder` then name.
     public func buffers(networkID: UUID) async throws -> [BufferRecord] {
-        try await writer.read { db in
-            try Row.fetchAll(
-                db,
-                sql: """
-                    SELECT network_id, folded_name, name, kind, last_read_at, is_pinned, is_muted, sort_order,
-                           auto_rejoin, is_detached, is_hidden,
-                           left_auto_join_name, left_auto_join_has_key, left_auto_join_index
-                    FROM buffers WHERE network_id = ?
-                    ORDER BY sort_order, folded_name
-                    """,
-                arguments: [networkID.uuidString]
-            ).compactMap(Self.buffer(from:))
-        }
+        try await writer.read { db in try Self.buffers(networkID: networkID, in: db) }
+    }
+
+    /// ``buffers(networkID:)``, read now, blocking the caller: for a script
+    /// that asks for conversations while Vela is still launching, which
+    /// Cocoa scripting can't wait for. One small table, once.
+    public func buffersNow(networkID: UUID) throws -> [BufferRecord] {
+        try writer.read { db in try Self.buffers(networkID: networkID, in: db) }
+    }
+
+    private static func buffers(networkID: UUID, in db: Database) throws -> [BufferRecord] {
+        try Row.fetchAll(
+            db,
+            sql: """
+                SELECT network_id, folded_name, name, kind, last_read_at, is_pinned, is_muted, sort_order,
+                       auto_rejoin, is_detached, is_hidden,
+                       left_auto_join_name, left_auto_join_has_key, left_auto_join_index
+                FROM buffers WHERE network_id = ?
+                ORDER BY sort_order, folded_name
+                """,
+            arguments: [networkID.uuidString]
+        ).compactMap(buffer(from:))
     }
 
     public func upsertBuffer(_ buffer: BufferRecord) async throws {

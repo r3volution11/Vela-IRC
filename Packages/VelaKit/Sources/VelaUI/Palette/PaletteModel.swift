@@ -4,12 +4,14 @@
 
 import Foundation
 import VelaCore
+import VelaIntelligence
+import VelaStore
 import VelaTheme
 
 /// What the palette is listing. Unlike `CommandPaletteMode` (how it was
 /// opened) this follows the query: `>` turns conversations into commands.
 enum PaletteList: Equatable {
-    case buffers, commands, themes
+    case buffers, commands, themes, models
 }
 
 /// One thing the palette can list, prepared for matching once when the
@@ -19,6 +21,7 @@ struct PaletteItem: Identifiable {
         case buffer(BufferModel, NetworkSession)
         case command(VelaCommand)
         case theme(ThemeInfo)
+        case model(AIModelMenuItem)
     }
 
     let id: String
@@ -36,9 +39,10 @@ struct PaletteItem: Identifiable {
     let order: Int
     /// Index in the recently-used list (0 = most recent), if present.
     var recency: Int?
-    /// The selected conversation, or the theme in use when the palette opened.
+    /// The selected conversation, the theme in use when the palette
+    /// opened, or the model in use.
     var isCurrent = false
-    /// Themes: 0 dark, 1 light.
+    /// Themes: 0 dark, 1 light. Models: Apple's, then each provider's.
     var group = 0
 }
 
@@ -104,6 +108,31 @@ enum PaletteSource {
         }
     }
 
+    /// Every model that can be chosen, grouped by provider (Apple's
+    /// first), with the provider's name after each. Apple's are left out
+    /// while Apple Intelligence can't run.
+    static func modelItems(_ sections: [AIModelMenuSection], current: AIModelChoice?, appleAvailable: Bool) -> [PaletteItem] {
+        var items: [PaletteItem] = []
+        for (index, section) in sections.enumerated() {
+            for model in section.items where appleAvailable || !model.isApple {
+                let label = model.title
+                var item = PaletteItem(
+                    id: "model:\(model.id)",
+                    payload: .model(model),
+                    label: FuzzyTarget(label),
+                    detail: section.title,
+                    combined: FuzzyTarget("\(label) \(section.title)"),
+                    keywords: model.isRecommended ? [FuzzyMatcher.prepareQuery("recommended")] : [],
+                    order: items.count
+                )
+                item.group = index
+                item.isCurrent = model.choice == current
+                items.append(item)
+            }
+        }
+        return items
+    }
+
     /// `themes` is already sorted by name.
     static func themeItems(_ themes: [ThemeInfo], currentID: String?) -> [PaletteItem] {
         themes.enumerated().map { index, info in
@@ -157,6 +186,7 @@ enum PaletteRanker {
         }
         var rows = scored.map(\.row)
         if list == .themes { labelThemeGroups(&rows) }
+        if list == .models { labelModelGroups(&rows) }
         return rows
     }
 
@@ -181,6 +211,10 @@ enum PaletteRanker {
         case .themes:
             var rows = items.sorted { ($0.group, $0.order) < ($1.group, $1.order) }.map { PaletteRow(item: $0) }
             labelThemeGroups(&rows)
+            return rows
+        case .models:
+            var rows = items.sorted { ($0.group, $0.order) < ($1.group, $1.order) }.map { PaletteRow(item: $0) }
+            labelModelGroups(&rows)
             return rows
         case .buffers, .commands:
             let recent = items
@@ -214,9 +248,22 @@ enum PaletteRanker {
         }
     }
 
-    /// Where the highlight starts: the theme in use, otherwise the top row.
+    /// Each provider's models start a section named after it.
+    private static func labelModelGroups(_ rows: inout [PaletteRow]) {
+        var lastGroup: Int?
+        for index in rows.indices {
+            let group = rows[index].item.group
+            guard group != lastGroup else { continue }
+            rows[index].sectionLabel = rows[index].item.detail?.lowercased()
+            rows[index].startsSection = lastGroup != nil
+            lastGroup = group
+        }
+    }
+
+    /// Where the highlight starts: the theme or model in use, otherwise
+    /// the top row.
     static func initialSelection(in rows: [PaletteRow], list: PaletteList, query: String) -> Int {
-        if list == .themes, query.isEmpty, let current = rows.firstIndex(where: { $0.item.isCurrent }) {
+        if list == .themes || list == .models, query.isEmpty, let current = rows.firstIndex(where: { $0.item.isCurrent }) {
             return current
         }
         return 0

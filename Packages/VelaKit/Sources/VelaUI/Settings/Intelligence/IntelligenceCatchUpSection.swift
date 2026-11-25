@@ -7,10 +7,11 @@ import VelaCore
 import VelaIntelligence
 import VelaStore
 
-/// Settings → Apple Intelligence → Catch me up: the button on the New
-/// marker, how many new messages it waits for and, on macOS 27 or later in
-/// development builds, Private Cloud Compute for long catch-ups. Dimmed while Apple
-/// Intelligence isn't available (the pane's status callout says why).
+/// Settings → Intelligence → Catch me up: the button on the New marker, how
+/// many new messages it waits for, its model (where there's a choice) and,
+/// on macOS 27 or later in development builds, Private Cloud Compute for
+/// long catch-ups. Dimmed while its model can't run (Apple Intelligence
+/// off, with no provider's model chosen); the model stays choosable.
 struct IntelligenceCatchUpSection: View {
     @Environment(AppModel.self) private var app
     @Environment(IntelligenceServices.self) private var intelligence
@@ -20,26 +21,39 @@ struct IntelligenceCatchUpSection: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        let available = intelligence.availability.status.isAvailable
+        let available = intelligence.status(for: .catchUp).isAvailable
         let usesCloud = Self.offersPrivateCloudCompute && settings[.intelligencePrivateCloudCompute]
+        let usesProvider = !settings.usesAppleModel(for: .catchUp)
         SettingsSection(
             "Catch me up",
-            footer: Self.footer(showsNewLine: settings[.chatShowUnreadMarker], privateCloudCompute: usesCloud)
+            footer: Self.footer(showsNewLine: settings[.chatShowUnreadMarker], privateCloudCompute: usesCloud, provider: usesProvider)
         ) {
-            SettingsToggle("Offer Catch me up in busy channels", isOn: $settings[.intelligenceCatchUp])
-            SettingsMenuRow(
-                title: "Show the button after",
-                selection: $settings[.intelligenceCatchUpThreshold],
-                options: Self.options(including: settings[.intelligenceCatchUpThreshold])
-            )
-            .disabled(!settings[.intelligenceCatchUp])
-            .opacity(settings[.intelligenceCatchUp] ? 1 : 0.5)
+            Group {
+                SettingsToggle("Offer Catch me up in busy channels", isOn: $settings[.intelligenceCatchUp])
+                SettingsMenuRow(
+                    title: "Show the button after",
+                    selection: $settings[.intelligenceCatchUpThreshold],
+                    options: Self.options(including: settings[.intelligenceCatchUpThreshold])
+                )
+                .disabled(!settings[.intelligenceCatchUp])
+                .opacity(settings[.intelligenceCatchUp] ? 1 : 0.5)
+            }
+            .disabled(!available)
+            .opacity(available ? 1 : 0.55)
+            if intelligence.models.hasChoices || settings.isSet(.intelligenceCatchUpModel) {
+                AIModelSettingRow(
+                    title: "Model",
+                    detail: "Which model writes the summary. The card's Change menu tries another for one summary.",
+                    key: .intelligenceCatchUpModel,
+                    followsDefault: true
+                )
+            }
             if Self.offersPrivateCloudCompute {
                 privateCloudComputeToggle
+                    .disabled(!available)
+                    .opacity(available ? 1 : 0.55)
             }
         }
-        .disabled(!available)
-        .opacity(available ? 1 : 0.55)
     }
 
     /// The switch for `intelligence.privateCloudCompute`. Release builds
@@ -73,8 +87,10 @@ struct IntelligenceCatchUpSection: View {
     /// The button lives on the New line; with the line turned off
     /// (`chat.showUnreadMarker`), say where Catch me up is instead. Where
     /// summaries are made follows `privateCloudCompute`.
-    static func footer(showsNewLine: Bool, privateCloudCompute: Bool = false) -> String {
-        let privacy = privateCloudCompute
+    static func footer(showsNewLine: Bool, privateCloudCompute: Bool = false, provider: Bool = false) -> String {
+        let privacy = provider
+            ? "Summaries are made by the model you chose, which gets the messages and nicks (never the channel's or network's name), and can contain mistakes."
+            : privateCloudCompute
             ? "Summaries are made on this Mac, long ones with Private Cloud Compute, and can contain mistakes."
             : "Summaries are made on this Mac and can contain mistakes."
         guard showsNewLine else {

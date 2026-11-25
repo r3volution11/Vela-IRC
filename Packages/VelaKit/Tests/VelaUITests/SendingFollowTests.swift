@@ -249,11 +249,21 @@ struct SendingFollowTests {
     /// the main actor goes to other tests' setup for 15 to 30 s at a time.
     static let settleSeconds: Double = 8
 
-    private func settled(_ hosted: Hosted, newest: Newest, within seconds: Double = settleSeconds) async throws -> Look {
+    /// With `shownBefore` (`listPicture`), the list also has to show
+    /// something else than that: the line at the bottom before can be of
+    /// the newest line's kind (a mention after a mention), and a list that
+    /// hasn't caught up yet, held back by other tests' setup, still shows
+    /// it there.
+    private func settled(_ hosted: Hosted, newest: Newest, changedFrom shownBefore: Data? = nil, within seconds: Double = settleSeconds) async throws -> Look {
         var deadline = RunningDeadline(.seconds(seconds))
         try await Task.sleep(for: .milliseconds(150))
+        func done(_ look: Look) throws -> Bool {
+            guard look.showsTheNewestLineAtTheBottom else { return false }
+            guard let shownBefore else { return true }
+            return try listPicture(hosted) != shownBefore
+        }
         var look = try look(hosted, for: newest)
-        while !look.showsTheNewestLineAtTheBottom, deadline.hasTimeLeft() {
+        while try !done(look), deadline.hasTimeLeft() {
             try await Task.sleep(for: .milliseconds(50))
             look = try self.look(hosted, for: newest)
         }
@@ -386,7 +396,7 @@ struct SendingFollowTests {
                 let before = try look(hosted, for: .mention).offset
                 let shownBefore = try listPicture(hosted)
                 let newest = try await perform(hosted, steps, echoMessage: echoMessage)
-                let after = try await settled(hosted, newest: newest)
+                let after = try await settled(hosted, newest: newest, changedFrom: shownBefore)
                 // Return sends at once; the box empties on SwiftUI's next
                 // update, which a busy CI machine can hold back for a while.
                 let cleared = try await composerEmpties(hosted)
@@ -397,7 +407,7 @@ struct SendingFollowTests {
                 // by its offset: on macOS 26 that can shrink by thousands of
                 // points as rows above are measured, with the list showing
                 // the newest lines all along.)
-                #expect(try listPicture(hosted) != shownBefore, "\(scenario): the list didn't move: offset \(before) → \(after.offset)")
+                #expect(try listPicture(hosted) != shownBefore, "\(scenario): the list didn't move in \(Int(Self.settleSeconds)) s: offset \(before) → \(after.offset)")
 
                 // Still following: the next line is brought into view.
                 hosted.buffer.updateTyping(nick: "gus", state: .done)
@@ -412,5 +422,74 @@ struct SendingFollowTests {
                 }
             }
         }
+    }
+
+    /// The list getting narrower or wider just before a send: a scroll bar
+    /// appearing (always-shown scroll bars, as with a mouse), or the window
+    /// resized. Every row is measured anew, and here everything
+    /// below the rows in view moves by a thousand points, the space after
+    /// the last row with it, out of view and unreported. The list used to
+    /// take that space's old frame at its word: it scrolled back to it,
+    /// found it at the bottom and stopped there, older messages in view,
+    /// until the next line came in (`ListEnd`).
+    @Test(arguments: [-17.0, 17.0])
+    func aWidthChangeJustBeforeASendKeepsYourLineInView(_ change: Double) async throws {
+        let hosted = try host(Setup(preset: "tabbed"))
+        defer { hosted.close() }
+        try await Task.sleep(for: .milliseconds(800))
+        let opened = try await settled(hosted, newest: .mention, within: 10)
+        try #require(opened.showsTheNewestLineAtTheBottom, "the list didn't open at the newest line within 10 s: \(opened)")
+
+        var frame = hosted.window.frame
+        frame.size.width += change
+        hosted.window.setFrame(frame, display: false)
+        // Your line comes back on the next turn, as the server echoes it.
+        try await perform(hosted, [.send()], echoMessage: true)
+        let after = try await settled(hosted, newest: .mine)
+        #expect(after.showsTheNewestLineAtTheBottom, "\(change) pt wider: your line isn't at the bottom after \(Int(Self.settleSeconds)) s: \(after)")
+
+        let next = try await perform(hosted, [.incoming(mention: true)], echoMessage: true)
+        let followed = try await settled(hosted, newest: next)
+        #expect(followed.showsTheNewestLineAtTheBottom, "\(change) pt wider: the list stopped following: \(followed)")
+    }
+
+    /// A message sent a moment after a jump to an older line (a search
+    /// result, a reply's quote): your line shows, and the list follows. The
+    /// jump goes on correcting where the line sits for a moment, as the rows
+    /// around it are measured; those corrections stand down once anything
+    /// else has moved the list. They used to scroll back up to the line
+    /// after the send had taken the list down (and the list then followed
+    /// again): a tug of war, and on macOS 26 most of the list's last
+    /// freezes in `MessageListFuzzTests` came within a moment of a jump.
+    @Test(arguments: [10, 60, 110])
+    func aSendJustAfterAJumpShowsYourLine(_ delay: Int) async throws {
+        let hosted = try host(Setup(preset: "tabbed"))
+        defer { hosted.close() }
+        try await Task.sleep(for: .milliseconds(800))
+        let opened = try await settled(hosted, newest: .mention, within: 10)
+        try #require(opened.showsTheNewestLineAtTheBottom, "the list didn't open at the newest line within 10 s: \(opened)")
+
+        hosted.uiState.scrollTarget = hosted.buffer.lines[hosted.buffer.lines.count - 90].id
+        try await Task.sleep(for: .milliseconds(delay))
+        try await perform(hosted, [.send()], echoMessage: true)
+        // Watched as it goes: once the send has brought the list down to
+        // the newest lines, it never goes back up to the line jumped to.
+        let scrollViews = Self.findAll(in: hosted.host) { $0 is NSScrollView }.compactMap { $0 as? NSScrollView }
+        let list = try #require(scrollViews.max { $0.frame.height < $1.frame.height })
+        var deadline = RunningDeadline(.milliseconds(600))
+        var reachedBottom = false
+        var wentBackUp: CGFloat?
+        while deadline.hasTimeLeft(), wentBackUp == nil {
+            let fromBottom = (list.documentView?.frame.height ?? 0) - list.contentView.bounds.maxY
+            if fromBottom < 200 { reachedBottom = true } else if reachedBottom, fromBottom > 600 { wentBackUp = fromBottom }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(wentBackUp == nil, "sent \(delay) ms after a jump: the list went back up \(wentBackUp ?? 0) pt from the bottom")
+        let after = try await settled(hosted, newest: .mine)
+        #expect(after.showsTheNewestLineAtTheBottom, "sent \(delay) ms after a jump: your line isn't at the bottom after \(Int(Self.settleSeconds)) s: \(after)")
+
+        let next = try await perform(hosted, [.incoming(mention: true)], echoMessage: true)
+        let followed = try await settled(hosted, newest: next)
+        #expect(followed.showsTheNewestLineAtTheBottom, "sent \(delay) ms after a jump: the list stopped following: \(followed)")
     }
 }

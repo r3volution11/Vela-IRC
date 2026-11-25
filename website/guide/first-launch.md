@@ -1,6 +1,6 @@
 ---
 title: First launch
-description: What you see the first time you open Vela, how to add your first IRC network, and how to pick a preset and theme that suit you.
+description: What you see the first time you open Vela, how to add your first IRC network, and how to pick a layout, message style and theme that suit you.
 ---
 
 # First launch
@@ -25,24 +25,27 @@ Press <kbd>⌘J</kbd>, type a channel name such as `#libera` (Libera.Chat's help
 
 Out of the box, Vela follows your Mac's light or dark appearance with the **Palenight** and **Lighter** themes, uses a sidebar for navigation and groups messages under each sender's name. If that's not you:
 
-- **Try a preset.** Open **Settings** (<kbd>⌘,</kbd>) → **Presets** and pick Classic IRC, Modern Chat, Tabbed or Focus. Presets change layout, density and media, never your theme. See [Presets](/guide/presets).
+- **Pick a layout and a style.** Open **Settings** (<kbd>⌘,</kbd>) → **Presets** and choose a window layout (Sidebar, Tabs on Top, Tabs in Title Bar or Focus), a message style (Modern, Classic IRC or Columns) and a density (Compact, Standard or Comfortable), in any combination. Presets never change your theme. See [Presets](/guide/presets).
 - **Pick a theme.** Press <kbd>⌃⌘T</kbd> and move through the list with the arrow keys. Each theme previews live; Return keeps it. Then try a different [accent color](/customize/themes#accent-color) or a quieter [message box border](/customize/themes#message-box-border) in **Settings → Appearance**. See [Choosing a theme](/customize/themes).
 - **Fine-tune anything** in Settings. Every change applies immediately, and every option is also a key in [settings.json](/customize/settings-json). To find a setting fast, type in the **Search** field at the top of the Settings sidebar.
 
 ## A quick tour of Settings
 
-Settings (<kbd>⌘,</kbd>) has ten panes:
+Settings (<kbd>⌘,</kbd>) has thirteen panes:
 
 | Pane | What's there |
 | --- | --- |
-| **Presets** | The four one-click setups, and which one matches your current settings. |
+| **Presets** | A window layout, a message style and a density, each chosen on its own, with a live preview. |
 | **Appearance** | The theme gallery, the theme's accent color, the message box border, light/dark matching, the theme editor and theme import. |
-| **Layout** | Sidebar or tabs, tab placement and roundness, sidebar and member list sizes. |
+| **Layout** | Sidebar, tabs or Focus, tab placement and roundness, sidebar and member list sizes. |
 | **Messages** | Message layout, fonts, spacing, timestamps, join/part display, nick colors and avatars; typing: spelling, autocorrect, Writing Tools, typing indicators and the send button; whether message history is saved, and for how long; and chat logs. |
 | **Media** | Link preview size, video players, images, the adult-site filter, blurring and site rules. |
 | **Networks** | Add, edit, connect and remove networks and bouncers, whether to reconnect automatically, whether to ask before leaving or removing a channel, and moderation defaults. |
 | **Notifications** | Highlights, private messages and sounds; the Dock icon's badge, offline mark and bouncing; and your highlight words. |
-| **Apple Intelligence** | Catch me up summaries, translation, Writing Tools, and Siri, Shortcuts and Spotlight. |
+| **Intelligence** | Catch me up and Recap summaries (and the model each uses), translation and Writing Tools. See [Apple Intelligence](/guide/apple-intelligence). |
+| **AI Providers** | Where Catch me up and Recap's models come from: Apple Intelligence's status, the default model, OpenAI, Anthropic or Google Gemini with your own key, and Ollama or LM Studio on your Mac. See [AI providers](/guide/ai-models). |
+| **AI Privacy** | What's sent to AI models and where, and which providers may be sent messages. See [AI privacy](/guide/ai-privacy). |
+| **Integrations** | Alfred, Raycast, Shortcuts and Siri, Spotlight, and AppleScript and `vela://` links: what's installed and how to set each up. See [Integrations](/guide/integrations). |
 | **Updates** | Whether Vela is up to date, **Check for Updates**, and whether to check for and install new versions automatically. See [Updates](/guide/updates). |
 | **Advanced** | The [settings editor](/customize/settings-editor): every setting in one searchable list, and settings.json itself. |
 

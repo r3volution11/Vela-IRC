@@ -18,14 +18,14 @@ How Vela looks is split between the theme and your settings:
 | A theme decides | Your settings decide |
 | --- | --- |
 | Every color: backgrounds, text, borders, badges, buttons, highlights, link previews, the Settings window | [Sidebar or tab stacks](/guide/the-window#sidebar-or-tabs), tab placement and roundness |
-| The palette nicknames are colored from | The [message layout](/guide/messages-and-layouts): Classic, Modern grouped or Compact columns |
+| The palette nicknames are colored from | The [message layout](/guide/messages-and-layouts): Classic, Modern or Compact columns |
 | The 99 [mIRC](https://www.mirc.com) colors other people's colored text uses | Fonts, text size, line spacing and density |
 | Whether it's a dark or a light theme, which macOS follows for menus and alerts | Avatars, timestamps and their format, and whether nicks are colored at all |
 | Translucency (`vibrancy`) | The member list, link previews, images and videos |
 
-So a theme you design with the Modern Chat preset also looks right in Classic IRC, Tabbed or Focus, and trying a new theme never resets your fonts or layout. Think of a Vela theme as a palette: your settings decide the shape of the window, the theme decides its colors.
+So a theme you design with the sidebar and Modern messages also looks right with tabs, Focus, Classic IRC or Columns, and trying a new theme never resets your fonts or layout. Think of a Vela theme as a palette: your settings decide the shape of the window, the theme decides its colors.
 
-Theme files have no keys for anything else. If a file has one anyway (say, `"font": "Menlo"`), Vela loads the theme, ignores that key and says so in **Settings → Appearance**: "“font” isn't a theme key, so it's ignored. Themes only contain colors: fonts, sizes and layout are settings." (See [Typos and skipped values](#problems).) To change layout or type, use **Settings** (<kbd>⌘,</kbd>), the [settings reference](/reference/settings) or a [preset](/guide/presets).
+Theme files have no keys for anything else. If a file has one anyway (say, `"font": "Menlo"`), Vela loads the theme, ignores that key and says so in **Settings → Appearance**: "“font” isn't a theme key, so it's ignored. Themes only contain colors: fonts, sizes and layout are settings." (See [Typos and skipped values](#problems).) To change layout or type, use **Settings** (<kbd>⌘,</kbd>), the [settings reference](/reference/settings) or [Settings → Presets](/guide/presets).
 
 ## Quick start {#quick-start}
 
@@ -486,8 +486,8 @@ A card is a summary. It doesn't show selections, hover colors, link previews, th
 
 A theme has to work with every layout, so try yours in more than one. With your theme in use and the file open in your editor:
 
-1. **All three message layouts.** Switch between **Classic**, **Modern grouped** and **Compact columns** in **View → Message Layout**. Also try **Use a monospace font** in **Settings → Messages**, which many people pair with Classic.
-2. **The presets.** Apply **Classic IRC**, **Modern Chat**, **Tabbed** and **Focus** from **View → Presets**. Tabbed is the easiest way to check the `tab.*` colors. A preset changes your layout settings (never your theme), so if you've arranged yours by hand, keep a copy of your [settings.json](/customize/settings-json) to go back to.
+1. **All three message styles.** Switch between **Modern**, **Classic IRC** and **Columns** in **View → Message Style**, and try each **Density** too. Also try **Use a monospace font** in **Settings → Messages** with Modern or Columns.
+2. **The window layouts.** Try **Sidebar**, **Tabs on Top**, **Tabs in Title Bar** and **Focus** from **View → Layout**. Tabs on Top is the easiest way to check the `tab.*` colors. A layout changes only where things live (never your theme), and picking yours again puts it back.
 3. **The sidebar's other forms.** Collapse the sidebar to the rail with <kbd>⌃⌘S</kbd>, and try tab stacks at the top, in the title bar and at the bottom (**Settings → Layout**).
 4. **Light and dark.** If you made a pair, switch macOS between Dark Mode and Light Mode, and check that menus and alerts match each theme.
 5. **States.** Look at the selected channel, unread and mention badges, a disconnected network, a message that mentions you, your own messages, the New line, day dividers, notices, `/me` actions and errors.
@@ -524,7 +524,7 @@ To propose a theme for Vela's built-in collection, open a [theme submission](htt
 
 1. **No contrast issues.** Every built-in theme passes every [check](#checking-contrast).
 2. **An `author` and a one-sentence `description`**, which appears on the [Built-in themes](/reference/built-in-themes) page.
-3. **Screenshots** of all three message layouts: Classic, Modern grouped and Compact columns.
+3. **Screenshots** of all three message layouts: Classic, Modern and Compact columns.
 4. **For a port of someone else's theme, a license that allows it**, and attribution in [THEME-CREDITS.md](https://github.com/r3volution11/Vela-IRC/blob/main/docs/THEME-CREDITS.md).
 
 A pull request adds the file to `Packages/VelaKit/Sources/VelaTheme/BuiltInThemes/` and a row to the built-in themes table in [THEMES.md](https://github.com/r3volution11/Vela-IRC/blob/main/docs/THEMES.md#built-in-themes). See [CONTRIBUTING.md](https://github.com/r3volution11/Vela-IRC/blob/main/CONTRIBUTING.md).
@@ -555,7 +555,7 @@ Vela explains what's wrong, and keeps using the last version of the file that wo
 
 ### Settings → Appearance says "Parts of my-theme.json were ignored" {#problems}
 
-<Screenshot src="/screenshots/settings-theme-problems.webp" alt="Settings → Appearance: below Make your own, a red callout titled Parts of harbor.json were ignored, listing that fontSize isn't a theme key because themes only contain colors, that glass isn't a vibrancy value and the three valid values, and that colors.sidebar.backgroud isn't a theme color token with the suggestion sidebar.background, then The rest of the theme works and a Show in Finder button" caption="A theme file with three mistakes. The theme still loads." />
+<Screenshot src="/screenshots/settings-theme-problems.webp" alt="Settings → Appearance: the Make your own section, then a red callout titled Parts of harbor.json were ignored, listing that fontSize isn't a theme key because themes only contain colors, that glass isn't a vibrancy value and the three valid values, and that colors.sidebar.backgroud isn't a theme color token with the suggestion sidebar.background, then The rest of the theme works and a Show in Finder button, and the Dock icon section below it" caption="A theme file with three mistakes. The theme still loads." />
 
 The theme loaded and works, but Vela skipped part of the file: a key or token name it doesn't know (usually a typo) or a value it can't use. Everything else in the file is used. The same list shows at the top of the [theme editor](/customize/theme-editor) when you open the theme there, and `vela-theme-tool check` prints it too. The theme's card gets a small warning triangle.
 
@@ -583,4 +583,4 @@ Colors are stricter: a malformed color stops the theme from loading, as in the t
 
 ### The fonts, sizes or layout didn't change
 
-That's by design: a theme only sets colors. Change fonts and text size in **Settings → Messages**, the layout in **Settings → Layout**, or everything at once with a [preset](/guide/presets). See [Colors only, by design](#colors-only).
+That's by design: a theme only sets colors. Change fonts and text size in **Settings → Messages**, the layout in **Settings → Layout**, or a layout, message style and density in [Settings → Presets](/guide/presets). See [Colors only, by design](#colors-only).

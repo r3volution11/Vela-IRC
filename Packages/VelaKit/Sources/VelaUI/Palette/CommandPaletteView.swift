@@ -193,7 +193,13 @@ struct CommandPaletteView: View {
         case .buffers: .buffers
         case .commands: .commands
         case .themes: .themes
+        case .models: .models
         }
+    }
+
+    /// What a model picked here is for.
+    private var modelPurpose: AIModelPickerPurpose? {
+        if case .models(let purpose) = mode { purpose } else { nil }
     }
 
     private var title: String {
@@ -201,6 +207,12 @@ struct CommandPaletteView: View {
         case .buffers: "Go to Conversation"
         case .commands: "Command Palette"
         case .themes: "Select Theme"
+        case .models:
+            switch modelPurpose {
+            case .catchUp: "Catch Me Up With"
+            case .recap: "Recap With"
+            case .defaultModel, nil: "Set Default Model"
+            }
         }
     }
 
@@ -209,6 +221,7 @@ struct CommandPaletteView: View {
         case .buffers: "magnifyingglass"
         case .commands: "chevron.right"
         case .themes: "paintpalette"
+        case .models: "sparkles"
         }
     }
 
@@ -217,6 +230,12 @@ struct CommandPaletteView: View {
         case .buffers: "Search conversations by name (type > for commands)"
         case .commands: "Type a command"
         case .themes: "Select Theme (↑↓ to preview)"
+        case .models:
+            switch modelPurpose {
+            case .catchUp: "Catch me up with a model"
+            case .recap: "Write the Recap with a model"
+            case .defaultModel, nil: "Default model for Catch me up and Recap"
+            }
         }
     }
 
@@ -225,6 +244,7 @@ struct CommandPaletteView: View {
         case .buffers: "No matching conversations"
         case .commands: "No matching commands"
         case .themes: "No matching themes"
+        case .models: "No matching models"
         }
     }
 
@@ -251,6 +271,11 @@ struct CommandPaletteView: View {
             var parts = [info.name, info.kind == .dark ? "dark theme" : "light theme"]
             if row.item.isCurrent { parts.append("current") }
             return parts.joined(separator: ", ")
+        case .model(let model):
+            var parts = [model.title, row.item.detail ?? ""]
+            if model.isRecommended { parts.append("recommended") }
+            if row.item.isCurrent { parts.append("current") }
+            return parts.filter { !$0.isEmpty }.joined(separator: ", ")
         }
     }
 
@@ -270,6 +295,9 @@ struct CommandPaletteView: View {
             items = PaletteSource.commandItems(catalog.all, history: PaletteHistory.shared.commandIDs)
         case .themes:
             items = PaletteSource.themeItems(themeStore.themes, currentID: themeStore.currentInfo?.id)
+        case .models:
+            let models = intelligence.models
+            items = PaletteSource.modelItems(models.menuSections(), current: currentModel, appleAvailable: models.isAppleAvailable)
         }
         rerank()
     }
@@ -353,6 +381,42 @@ struct CommandPaletteView: View {
             previewTask?.cancel()
             ThemeFileActions.select(info, settings: app.settings, systemAppearance: themeStore.systemAppearance)
             close()
+        case .model(let model):
+            close()
+            choose(model.choice)
+        }
+    }
+
+    /// The model checked in the list: the default, or the one the feature uses.
+    private var currentModel: AIModelChoice? {
+        let settings = intelligence.models.modelSettings
+        switch modelPurpose {
+        case .defaultModel: return settings.defaultModel
+        case .catchUp: return settings.choice(for: .catchUp)
+        case .recap: return settings.choice(for: .recap)
+        case nil: return nil
+        }
+    }
+
+    /// Uses the model picked: as the default, or for one Catch me up card
+    /// or one Recap (which ask for consent first if the provider needs it).
+    private func choose(_ choice: AIModelChoice) {
+        switch modelPurpose {
+        case .defaultModel:
+            if choice == .automatic {
+                app.settings.reset(.intelligenceModel)
+            } else {
+                app.settings[.intelligenceModel] = choice.settingValue
+            }
+        case .catchUp(let bufferID):
+            guard let session = app.session(for: bufferID.networkID), let buffer = session.buffer(id: bufferID) else { return }
+            CatchUpActions.open(buffer, session: session, app: app, store: intelligence.catchUp, model: choice)
+        case .recap(let scope):
+            var scope = scope
+            scope.output = .summary
+            openWindow(value: RecapWindowValue(scope: scope, model: choice))
+        case nil:
+            break
         }
     }
 

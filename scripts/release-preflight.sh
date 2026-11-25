@@ -30,6 +30,10 @@
 #   Generated      The settings reference generator changes no committed file;
 #                  the theme schema, the token table in docs/THEMES.md and the
 #                  supported media sites page match what the code generates.
+#   Alfred         The Alfred workflow bundled with the app
+#                  (Vela/Integrations/Vela.alfredworkflow) is a valid workflow
+#                  and matches integrations/alfred-workflow.json, its SHA-256
+#                  and version (scripts/update-alfred-workflow.sh --check).
 #   Tests          swift test --package-path Packages/VelaKit
 #   Website        npm ci (only if node_modules is missing), npm run docs:build,
 #                  npm run docs:check
@@ -573,6 +577,25 @@ check_generated() {
   fi
 }
 
+# ---------------------------------------------------------------- Alfred workflow
+# The workflow Settings → Integrations installs: the committed file must be
+# the one its record describes (docs/RELEASING.md, "The Alfred workflow").
+check_alfred_workflow() {
+  check_section "Alfred workflow"
+  local output
+  if output=$(scripts/update-alfred-workflow.sh --check 2>&1); then
+    output=${output#*: }
+    if [[ "$output" == *"from local build" ]]; then
+      check_pass "Bundled workflow" "${output%, from local build}, a local build (scripts/update-alfred-workflow.sh --release bundles a published one)"
+    else
+      check_pass "Bundled workflow" "$output"
+    fi
+  else
+    check_fail "Bundled workflow" "$(print -r -- "$output" | sed $'s/\x1b\\[[0-9;]*m//g; s/^error: //' | tr '\n' ' ' | sed 's/ *$//')" \
+      "Bundle the workflow again with scripts/update-alfred-workflow.sh --release <tag> (or --local) and commit both files (docs/RELEASING.md, \"The Alfred workflow\")."
+  fi
+}
+
 # ---------------------------------------------------------------- tests
 check_tests() {
   check_section "Tests"
@@ -707,6 +730,7 @@ check_updates
 check_ci
 check_adult_domains
 check_generated
+check_alfred_workflow
 check_tests
 check_website
 check_media_sites

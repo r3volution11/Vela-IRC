@@ -87,6 +87,56 @@ struct RecapPrivacyTests {
         check(model.calls.value)
     }
 
+    /// What the server, the network or a bouncer sent the channel itself
+    /// is never gathered, so its name never stands where a nick would
+    /// (``ServerLineFixture``). Catch me up's request leaves it out too.
+    @MainActor
+    @Test func serverLinesNeverReachAPrompt() async throws {
+        let fixture = try await ServerLineFixture.make()
+        defer { fixture.remove() }
+        fixture.expectServerLinesShown()
+        func checkNames(_ calls: [FakeCatchUpModel.Call]) {
+            #expect(!calls.isEmpty)
+            for call in calls {
+                let (prompt, instructions) = switch call {
+                case .digest(let prompt, let instructions, _), .summarize(let prompt, let instructions, _): (prompt, instructions)
+                }
+                for name in ServerLineFixture.names {
+                    #expect(!prompt.localizedCaseInsensitiveContains(name), "\(name) in \(prompt)")
+                    #expect(!instructions.localizedCaseInsensitiveContains(name), "\(name) in \(instructions)")
+                }
+            }
+        }
+
+        let recap = FakeCatchUpModel(finalText: { _ in ["OVERVIEW: Talk.\nTOPIC: [1-3] | Build | Talked. | alice"] })
+        let input = await fixture.recapInput()
+        #expect(input.conversations.flatMap(\.lines).map(\.nick) == ["alice", "bob", "alice"])
+        _ = try await RecapEngine(model: recap).run(input)
+        checkNames(recap.calls.value)
+
+        let catchUp = FakeCatchUpModel()
+        _ = try await CatchUpEngine(model: catchUp).run(fixture.catchUpRequest)
+        checkNames(catchUp.calls.value)
+    }
+
+    /// A transcript never quotes a server's name as a speaker, whatever
+    /// builds the request: a name with a dot, or a bouncer's `*` module.
+    @Test func transcriptsQuotePeopleOnly() {
+        let lines = [
+            CatchUpLine(id: UUID(), time: Date(), nick: "irc.example.org", text: "*** Server restarting"),
+            CatchUpLine(id: UUID(), time: Date(), nick: "*buffextras", text: "bob!b@irc.example.org joined"),
+            CatchUpLine(id: UUID(), time: Date(), nick: "alice", text: "hi doug"),
+        ]
+        let transcript = CatchUpTranscript(lines: lines, ownNick: "doug")
+        #expect(transcript.text == "[1] alice: hi doug")
+        #expect(PromptSpeaker.isPerson("alice"))
+        #expect(PromptSpeaker.isPerson("[m]bridge_user|away"))
+        #expect(!PromptSpeaker.isPerson("tantalum.libera.chat"))
+        #expect(!PromptSpeaker.isPerson("*status"))
+        #expect(!PromptSpeaker.isPerson(""))
+        #expect(!PromptSpeaker.isPerson("IRCd", serverNames: ["ircd"], caseMapping: .rfc1459))
+    }
+
     @Test func planningSendsNothing() async {
         let model = FakeCatchUpModel(context: 2048)
         _ = await RecapRouter(onDevice: model, cloud: nil).plan(input(lineCount: 600))

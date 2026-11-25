@@ -61,7 +61,9 @@ struct TimestampPositionRows: View {
         let key = SettingKey<TimestampPosition>.chatTimestampPosition(for: layout)
         return Binding(
             get: { settings[key] },
-            set: { position in withAnimation(.snappy(duration: 0.2)) { settings[key] = position } }
+            // Not animated: every message lays out again once, not on
+            // every frame of an animation.
+            set: { position in settings[key] = position }
         )
     }
 

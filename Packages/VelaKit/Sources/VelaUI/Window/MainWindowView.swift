@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import AppKit
+import CoreSpotlight
 import SwiftUI
 import VelaCore
 import VelaIntelligence
@@ -69,7 +70,13 @@ struct MainWindowView: View {
             if let mode = uiState.commandPalette {
                 CommandPaletteView(mode: mode)
                     .id(mode)
+            } else if let search = uiState.messageSearch {
+                MessageSearchPanel(request: search)
+                    .id(search.id)
             }
+        }
+        .overlay(alignment: .top) {
+            AutomationNoticeOverlay()
         }
         .themedWindowBorder()
         .background(WindowBackdrop())
@@ -83,7 +90,10 @@ struct MainWindowView: View {
         .ignoresSafeArea()
         .frame(minWidth: 640, minHeight: 420)
         .animation(.snappy(duration: 0.2), value: showMembers)
-        .animation(.snappy(duration: 0.2), value: style.navigationStyle)
+        // A new layout (navigation.style) isn't animated: an animation here
+        // covered the whole window, resizing the chat column and laying out
+        // the message list on every frame for its whole length. Switching
+        // lays it out once.
         .onChange(of: appearsActive, initial: true) { _, active in
             app.isWindowActive = active
         }
@@ -108,6 +118,19 @@ struct MainWindowView: View {
         .onDisappear {
             EmbedPlayerStore.shared.stopAll()
         }
+        // vela:// links normally arrive through LinkEventHandler; one that
+        // launched Vela may come this way first (the router ignores the
+        // same link twice).
+        .onOpenURL { url in
+            LinkEventHandler.shared?.router.open(url)
+        }
+        // A message chosen in Spotlight, or "Search in Vela".
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            SpotlightActivity.open(activity, app: app, uiState: uiState)
+        }
+        .onContinueUserActivity(CSQueryContinuationActionType) { activity in
+            SpotlightActivity.open(activity, app: app, uiState: uiState)
+        }
         .sheet(item: $uiState.networkEditor) { target in
             NetworkEditorView(target: target)
         }
@@ -116,6 +139,9 @@ struct MainWindowView: View {
         }
         .sheet(item: $uiState.kickRequest) { request in
             KickReasonSheet(request: request)
+        }
+        .sheet(item: $uiState.aiConsent) { request in
+            AIConsentSheet(request: request)
         }
         .confirmationDialog(
             "Remove \(uiState.networkPendingRemoval.flatMap { app.session(for: $0)?.displayName } ?? "network")?",

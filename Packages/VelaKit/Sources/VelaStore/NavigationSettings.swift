@@ -11,6 +11,10 @@ public enum NavigationStyle: String, Codable, Sendable, CaseIterable, SettingVal
     case sidebar
     /// Vivaldi-style two-level tab stacks: servers, then the selected server's channels.
     case tabs
+    /// Neither: just the conversation (Settings → Presets → Focus). The
+    /// command palette and ⌘1–⌘9 switch channels. Versions before 1.5 read
+    /// it as the sidebar.
+    case focus
 }
 
 /// Where the tab stacks are drawn when `navigation.style` is `tabs`.
@@ -35,7 +39,7 @@ public enum ServerTabRowMode: String, Codable, Sendable, CaseIterable, SettingVa
 extension SettingKey where Value == NavigationStyle {
     public static var navigationStyle: SettingKey<NavigationStyle> {
         .init("navigation.style", default: .sidebar,
-              summary: "Navigate servers and channels with the sidebar or with tab stacks.")
+              summary: "Navigate servers and channels with the sidebar, with tab stacks, or with neither (focus): then the command palette and ⌘1–⌘9 switch channels.")
     }
 }
 
@@ -94,9 +98,15 @@ enum NavigationSettingsCatalog {
 
 // MARK: Presets
 
-/// A one-click configuration of navigation, message layout, density, media
-/// and how unread messages show. Presets never change the theme; they only
-/// write the keys they list, so anything else the user customized is kept.
+/// A whole-window setup from Vela 1.0–1.4: navigation, message layout,
+/// density, media and how unread messages show, in one bundle.
+///
+/// Settings → Presets no longer offers these: since Vela 1.5 it chooses a
+/// window layout, a message style and a density independently
+/// (``PresetAxis``, ``PresetChoice``). They're kept for `--preset` in demo
+/// mode (screenshots, the scroll benchmark), for tests that want a whole
+/// setup, and so migrations can recognize setups they made. They never
+/// change the theme.
 public struct SettingsPreset: Identifiable, Hashable, Sendable {
     public let id: String
     public let name: String
@@ -220,11 +230,9 @@ public struct SettingsPreset: Identifiable, Hashable, Sendable {
 }
 
 extension SettingsStore {
-    /// Writes every key of `preset`.
+    /// Writes every key of `preset` (demo mode's `--preset`, tests).
     public func apply(_ preset: SettingsPreset) {
-        for (key, value) in preset.values {
-            setValue(value, forKey: key)
-        }
+        setValues(preset.values.mapValues { Optional($0) })
     }
 
     /// The preset whose values all match the current settings (defaults

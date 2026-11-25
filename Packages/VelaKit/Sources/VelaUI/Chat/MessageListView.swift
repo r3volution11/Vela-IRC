@@ -107,12 +107,21 @@ struct MessageListView: View {
                 // Room under the last row (and for the typing line), and the
                 // target for scrolling to the bottom. Inside the stack, so
                 // scrolling here lays out the real last rows rather than
-                // estimated space. Where it ends is where the list ends.
+                // estimated space. Where it ends is where the list ends
+                // (`ListEnd`).
                 Color.clear
                     .frame(height: ListEndSpacing.height(typingLine: shownTypingLineHeight))
                     .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named(Self.contentSpace)) }) { frame in
-                        controller.endFrame = frame
+                        controller.end.laidOut(at: frame)
                         endChanged()
+                    }
+                    .onAppear {
+                        if controller.end.appeared() { endChanged() }
+                    }
+                    .onDisappear {
+                        controller.end.disappeared()
+                        // In view, by its frame: make sure it comes back.
+                        if controller.metrics?.contentEnd != nil { checkEnd() }
                     }
                     .id(DisplayItemID.end)
                     .accessibilityHidden(true)
@@ -129,20 +138,24 @@ struct MessageListView: View {
         .modifier(ListScrollPosition(position: $position))
         .defaultScrollAnchor(.bottom, for: .initialOffset)
         .defaultScrollAnchor(.bottom, for: .alignment)
-        // Pinned: growth keeps the newest line in view. Loading history:
-        // rows inserted above don't move what's on screen. Otherwise the
-        // top stays put, so arriving messages never drag the reader along.
-        .defaultScrollAnchor(
-            controller.anchorsToBottom || controller.holdsAnchorForHistory || buffer.isLoadingHistory ? .bottom : .top,
-            for: .sizeChanges
-        )
+        // Loading history: rows inserted above don't move what's on screen.
+        // Otherwise no anchor for size changes, even while following the
+        // newest line (`sizeChangeAnchor`).
+        .defaultScrollAnchor(sizeChangeAnchor, for: .sizeChanges)
         .onScrollGeometryChange(for: ScrollMetrics.self, of: ScrollMetrics.init) { old, new in
             scrollMetricsChanged(from: old, to: new)
         }
         .onScrollPhaseChange { _, phase in
             switch phase {
-            case .tracking, .interacting, .decelerating: _ = controller.scrollPhaseChanged(isUserScrolling: true)
-            default: if controller.scrollPhaseChanged(isUserScrolling: false) { scrollToBottom() }
+            case .tracking, .interacting, .decelerating:
+                _ = controller.scrollPhaseChanged(isUserScrolling: true)
+            default:
+                let gestureEnded = controller.isUserScrolling
+                if controller.scrollPhaseChanged(isUserScrolling: false) {
+                    scrollToBottom()
+                } else if gestureEnded {
+                    holdEndIfAtBottom()
+                }
             }
             updatePill()
         }
@@ -170,11 +183,13 @@ struct MessageListView: View {
             }
         }
         .onAppear {
+            controller.isShown = true
             controller.trackLines()
             listOpened(items)
             linkToken = messageListLink?.register(buffer.id) { scroll in keyboardScroll(scroll) }
         }
         .onDisappear {
+            controller.isShown = false
             controller.bottomCheck?.cancel()
             if let linkToken { messageListLink?.unregister(buffer.id, token: linkToken) }
         }
@@ -224,10 +239,11 @@ struct MessageListView: View {
     }
 
     /// Someone started typing, or everyone stopped: show or hide the line
-    /// and the room for it in one animation. Pinned, the list's bottom
-    /// anchor carries the conversation up (or down) with the room; the
-    /// pinning logic stands back until that's done, so it doesn't snap to
-    /// the end mid-animation.
+    /// and the room for it in one animation. Pinned, the list holds the
+    /// space after the last row at the bottom (`scrollToBottom()`), which
+    /// carries the conversation up (or down) with the room; the pinning
+    /// logic stands back until that's done, so it doesn't snap to the end
+    /// mid-animation.
     private func typingChanged(_ active: Bool, animated: Bool) {
         guard typingShown != active else { return }
         let animation = animated && !reduceMotion ? ListEndSpacing.typingAnimation : nil
@@ -240,6 +256,44 @@ struct MessageListView: View {
     }
 
     // MARK: Scrolling
+
+    /// What SwiftUI keeps in place as the list's content or its own height
+    /// changes: the bottom while older history is being inserted above,
+    /// so what's on screen doesn't move; otherwise nothing of ours.
+    ///
+    /// No anchor, not even the bottom while following the newest line (nor
+    /// the top while the reader is scrolled up). On macOS 26 one could freeze
+    /// Vela for good: the main thread never left one SwiftUI update, at 100%
+    /// CPU, with none of Vela's code running, the lazy stack changing which
+    /// rows it lays out on every pass. In a long channel where one-line
+    /// messages sit between video players and long messages, its estimate of
+    /// the rows it hasn't laid out swings by tens of thousands of points as
+    /// it lays out others, and each swing is a size change the anchor
+    /// answered by moving the list. Seen after the list changed size (a line
+    /// arriving, the message box growing, the window resized), about once in
+    /// a dozen 45-second runs of `MessageListFuzzTests` doing those things as
+    /// fast as it can (`scripts/fuzz-message-list.sh --stress`); without the
+    /// anchor, never.
+    ///
+    /// The list follows the newest line all the same: it scrolls to the
+    /// space after the last row as lines arrive and holds that space as its
+    /// position (`scrollToBottom()`), and the pinning logic scrolls back
+    /// after any other change (`ScrollPinning`). Scrolled up, the list stays
+    /// where the reader left it, as lines arrive below.
+    private var sizeChangeAnchor: UnitPoint? {
+        controller.holdsAnchorForHistory || buffer.isLoadingHistory ? .bottom : nil
+    }
+
+    /// The reader's gesture brought the list back to the newest line: holds
+    /// the space after the last row as the position, as following it does,
+    /// so the list stays there as it changes size (someone starts typing, a
+    /// preview loads). SwiftUI took the row at the top as the position
+    /// during the gesture. The list is already there, so nothing moves.
+    private func holdEndIfAtBottom() {
+        guard controller.isPinnedToBottom, controller.metrics.map(ScrollPinning.isAtBottom) == true,
+              position.viewID(type: DisplayItemID.self) != .end else { return }
+        position.scrollTo(id: DisplayItemID.end, anchor: .bottom)
+    }
 
     private func scrollMetricsChanged(from old: ScrollMetrics, to new: ScrollMetrics) {
         var new = new
@@ -256,6 +310,7 @@ struct MessageListView: View {
     /// Feeds where the list is to the pinning logic, which may ask to follow
     /// the newest line.
     private func positionChanged(_ metrics: ScrollMetrics) {
+        if metrics.contentEnd != nil, !controller.end.isLaidOut { checkEnd() }
         let follow = controller.scrollGeometryChanged(metrics)
         if follow == .scrollAnew, !controller.isUserScrolling {
             // The list got shorter (the composer grew a line). Right away,
@@ -284,9 +339,17 @@ struct MessageListView: View {
         controller.queueClipCheck { scrollToBottom(anew: true) }
     }
 
-    /// The space after the last row was laid out somewhere else. That can
-    /// happen without the scroll geometry changing (rows above it measured
-    /// at other heights than estimated), so the position is judged again.
+    /// Judged by where the space after the last row was last laid out, with
+    /// the stack not holding it: makes sure, on the next turn, that the
+    /// space is there (`ListEnd`).
+    private func checkEnd() {
+        controller.queueEndCheck { endChanged() }
+    }
+
+    /// The space after the last row was laid out somewhere else, or where
+    /// it was turned out to be out of date. That can happen without the
+    /// scroll geometry changing (rows above it measured at other heights
+    /// than estimated), so the position is judged again.
     private func endChanged() {
         guard var metrics = controller.metrics else { return }
         let end = controller.contentEnd(in: metrics)
@@ -383,10 +446,24 @@ struct MessageListView: View {
     ///
     /// Only with no rows in view: while the end is out of view its frame is
     /// where it was last laid out, and rows measured above it since (a
-    /// channel opening) can have moved it down. Rows in view mean the list
-    /// isn't past its end.
-    private func scrollBackFromPastTheEnd() -> Bool {
-        guard let end = controller.endFrame, let metrics = controller.metrics, !metrics.fitsWithoutScrolling else { return false }
+    /// channel opening, the list getting narrower) can have moved it, by a
+    /// thousand points or more. Rows in view mean the list isn't past its
+    /// end. Landing where that frame was doesn't prove the list got there
+    /// either: if the space isn't laid out there, its frame is out of date
+    /// (`ListEnd`), and the list goes to it by id instead.
+    ///
+    /// `evenIfOutOfDate`: the checks after a scroll to the bottom found the
+    /// list stuck past the end, with no rows in view, and scrolling to the
+    /// space by id not moving it (`settleAtBottom`). The frame may be out of
+    /// date, but it's where rows were; anywhere else shows nothing.
+    ///
+    /// Judged where the clip view shows the list (`ClipViewSync.shown`). On
+    /// macOS 26 SwiftUI went on reporting the list short of the space's
+    /// frame while the clip view showed it 500 pt past it, nothing in view,
+    /// and scrolls to the space by id changed nothing.
+    private func scrollBackFromPastTheEnd(evenIfOutOfDate: Bool = false) -> Bool {
+        guard evenIfOutOfDate || !controller.end.isOutOfDate, let end = controller.end.frame, let metrics = controller.shownMetrics,
+              !metrics.fitsWithoutScrolling else { return false }
         // Partly past it: the end is in view (so where it is is current),
         // with empty space under it.
         let partly = metrics.contentEnd != nil && metrics.distancePastEnd > 1
@@ -399,9 +476,19 @@ struct MessageListView: View {
 
     /// Checks that the list got to the bottom and scrolls there again until
     /// it does, as `BottomSettle` says.
+    ///
+    /// On macOS 26 a scroll to the bottom can land at the stack's estimate
+    /// of where the space after the last row is, far past the last row,
+    /// with nothing laid out, while the space's real frame has been judged
+    /// out of date (`ListEnd`): the composer growing a line re-estimated the
+    /// content 1,100 pt taller. Scrolling to the space by id again lands
+    /// there again and changes nothing, and the list showed only empty
+    /// space. Stuck like that for two tries, it scrolls back to where the
+    /// space was last laid out.
     private func settleAtBottom(firstAnchor: CGFloat) async {
         var settle = BottomSettle(firstAnchor: firstAnchor)
         var lastCheck = Date()
+        var stuck = BottomSettle.Stuck()
         while true {
             try? await Task.sleep(for: .seconds(settle.wait))
             guard !Task.isCancelled, controller.isPinnedToBottom else { return }
@@ -422,7 +509,8 @@ struct MessageListView: View {
             case .wait:
                 continue
             case .scroll(let anchor):
-                if !scrollBackFromPastTheEnd() {
+                let pastTheEnd = stuck.check(controller.metrics, showsNoRows: controller.showsNoRows, endIsOutOfDate: controller.end.isOutOfDate)
+                if !scrollBackFromPastTheEnd(evenIfOutOfDate: pastTheEnd) {
                     position.scrollTo(id: DisplayItemID.end, anchor: UnitPoint(x: 0.5, y: anchor))
                 }
             case .done(let settleBack):
@@ -528,7 +616,7 @@ struct MessageListView: View {
             // (An equal ScrollPosition is ignored, hence the nudged anchors.)
             for nudge in [0.2001, 0.2] {
                 try? await Task.sleep(for: .milliseconds(60))
-                guard !controller.isUserScrolling else { return }
+                guard stillHolds(target) else { return }
                 position.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: nudge))
             }
         }
@@ -550,7 +638,7 @@ struct MessageListView: View {
             // (An equal ScrollPosition is ignored, hence the nudged anchors.)
             for nudge in [0.0801, 0.08] {
                 try? await Task.sleep(for: .milliseconds(80))
-                guard !controller.isUserScrolling else { return }
+                guard stillHolds(target) else { return }
                 position.scrollTo(id: target, anchor: UnitPoint(x: 0.5, y: nudge))
             }
         }
@@ -584,6 +672,7 @@ struct MessageListView: View {
             Task {
                 for nudge in [0.499, 0.5, 0.499] {
                     try? await Task.sleep(for: .milliseconds(50))
+                    guard stillHolds(id) else { return }
                     position.scrollTo(id: id, anchor: UnitPoint(x: 0.5, y: nudge))
                 }
                 try? await Task.sleep(for: .milliseconds(100))
@@ -593,14 +682,28 @@ struct MessageListView: View {
         controller.flash(lineID, reduceMotion: reduceMotion)
     }
 
+    /// A landing's corrections go on only while nothing else has moved the
+    /// list since: the position still holds the row it went to, and the
+    /// reader isn't scrolling or following the newest line. A message sent,
+    /// End, Page Up or another jump in the meantime wins. Corrections that
+    /// went on regardless pulled the list back to the row after a send had
+    /// taken it to the newest line, and the list then followed again: a
+    /// tug of war. On macOS 26 most of the freezes left after dropping the
+    /// size-change anchor came within a moment of a jump
+    /// (`MessageListFuzzTests`).
+    private func stillHolds(_ id: DisplayItemID) -> Bool {
+        position.viewID(type: DisplayItemID.self) == id && !controller.isPinnedToBottom && !controller.isUserScrolling
+    }
+
     /// Once a jump to a line has landed, the scroll position holds where the
     /// list is rather than the line: SwiftUI keeps placing a line it holds
     /// as the list changes size, and on macOS 26 it misplaces it (the
     /// composer growing three lines moved a reader who'd jumped back by four
     /// messages). Only if nothing else has taken over the position since.
+    /// Where the clip view shows the list (`ClipViewSync.shown`).
     private func releaseJumpTarget(_ id: DisplayItemID) {
         guard position.viewID(type: DisplayItemID.self) == id, !controller.isPinnedToBottom,
-              !controller.isUserScrolling, let metrics = controller.metrics else { return }
+              !controller.isUserScrolling, let metrics = controller.shownMetrics else { return }
         position.scrollTo(y: metrics.visibleMinY)
     }
 
@@ -628,8 +731,14 @@ struct MessageListView: View {
     /// A page up or down, less `KeyboardPaging.overlap`, so the line at the
     /// edge stays in view. A page down that reaches the newest line jumps
     /// to the present, which follows new lines again.
+    ///
+    /// From where the clip view shows the list, the page the reader sees.
+    /// SwiftUI's report can be out of step with it (`ClipViewSync.shown`),
+    /// and a page up from there and a page back down stopped short of the
+    /// bottom it started from: the newest line under the bottom edge, and
+    /// the list no longer following.
     private func scrollPage(up: Bool, glides: Bool) {
-        guard let metrics = controller.metrics, !metrics.fitsWithoutScrolling else { return }
+        guard let metrics = controller.shownMetrics, !metrics.fitsWithoutScrolling else { return }
         let page = KeyboardPaging.distance(containerHeight: metrics.containerHeight)
         if up {
             guard metrics.visibleMinY > 0.5 else { return }
@@ -644,7 +753,7 @@ struct MessageListView: View {
     /// Home: the oldest line loaded, at the top, from where older history
     /// loads as it does when scrolling there.
     private func scrollToTop(glides: Bool) {
-        guard let metrics = controller.metrics, !metrics.fitsWithoutScrolling, metrics.visibleMinY > 0.5 else { return }
+        guard let metrics = controller.shownMetrics, !metrics.fitsWithoutScrolling, metrics.visibleMinY > 0.5 else { return }
         controller.unpin()
         // Long animated scrolls through a lazy stack land unreliably (rows
         // are estimated); animate only short trips.
@@ -687,7 +796,7 @@ struct MessageListView: View {
             var corrections = 0
             for attempt in 1...12 {
                 try? await Task.sleep(for: .milliseconds(inView ? 20 : 40))
-                guard controller.selection?.id == id, !controller.isUserScrolling else { return }
+                guard controller.selection?.id == id, !controller.isUserScrolling, !followsNewest else { return }
                 guard let distance = controller.selectedRowScrollDistance() else {
                     // Still not laid out where the first scroll left it.
                     if attempt == 5 { scrollNear(id, at: edge) }
@@ -698,6 +807,13 @@ struct MessageListView: View {
                 scrollSelection(by: distance)
             }
         }
+    }
+
+    /// The list went back to following the newest line (a message sent,
+    /// End): a reveal's corrections stand down rather than pull it back to
+    /// the selected row, as a jump's do (`stillHolds`).
+    private var followsNewest: Bool {
+        controller.isPinnedToBottom && position.viewID(type: DisplayItemID.self) == .end
     }
 
     /// Scrolls the selected row `id`, out of view, to the top or bottom edge

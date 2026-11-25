@@ -10,9 +10,9 @@
 #
 # Before archiving (after the quick certificate checks), it runs the preflight
 # checks (scripts/release-preflight.sh): git, version and changelog, CI, the
-# adult-domain list, generated files, the package tests, the website, the
-# media sites (scripts/check-media-sites.sh) and the scroll benchmark
-# (scripts/benchmark-scroll.sh). If one fails, no release is built. Once the DMG is made, notarized and stapled, scripts/verify-release.sh
+# adult-domain list, generated files, the bundled Alfred workflow, the package
+# tests, the website, the media sites (scripts/check-media-sites.sh) and the
+# scroll benchmark (scripts/benchmark-scroll.sh). If one fails, no release is built. Once the DMG is made, notarized and stapled, scripts/verify-release.sh
 # checks the app inside it, and a failure there stops the release too. A
 # summary of every check ends the output. See docs/RELEASING.md,
 # "Release checks", for what each check needs.
@@ -22,10 +22,10 @@
 # 1Password into a pipe), adds the release to the update feed
 # (website/public/appcast.xml) and commits it, tags the commit it built as
 # v<version>, pushes the tag to origin, creates the GitHub release with
-# Vela.dmg and SHA256SUMS, marked Latest, checks that the website's download
-# link (releases/latest/download/Vela.dmg) gives this DMG, then pushes the
-# feed's commit to main and waits for velairc.app to serve it. The feed goes
-# last, so the updater never offers a release whose download isn't there
+# Vela.dmg and SHA256SUMS, marked Latest, checks that
+# the website's download link (releases/latest/download/Vela.dmg) gives this
+# DMG, then pushes the feed's commit to main and waits for velairc.app to
+# serve it. The feed goes last, so the updater never offers a release whose download isn't there
 # yet. The tag is signed when git has a signing key (user.signingkey or
 # tag.gpgSign), and annotated otherwise. The release notes are CHANGELOG.md's
 # section for the version followed by scripts/release-notes-footer.md, written
@@ -78,6 +78,11 @@
 #                        Where the update signing key is in 1Password
 #                        (default: my.1password.com, Personal,
 #                        "Vela - Sparkle - Mac Update Signing Key")
+#
+# The app carries the Alfred workflow (Vela/Integrations/Vela.alfredworkflow,
+# which the preflight checks against integrations/alfred-workflow.json); the
+# workflow's own repository publishes its releases, so a Vela release has
+# just the DMG.
 #
 # Output: build/release/Vela.dmg (+ SHA256SUMS),
 # and with --publish (without --notes) build/release/release-notes.md, plus
@@ -306,8 +311,8 @@ fi
 
 # ---------------------------------------------------------------- preflight
 # Git, version and changelog, CI, the adult-domain list, generated files, the
-# tests, the website, the media sites and the scroll benchmark (docs/RELEASING.md,
-# "Release checks").
+# bundled Alfred workflow, the tests, the website, the media sites and the
+# scroll benchmark (docs/RELEASING.md, "Release checks").
 if (( publish )); then
   built_commit=$(git rev-parse HEAD)
 fi

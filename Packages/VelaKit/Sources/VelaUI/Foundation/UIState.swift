@@ -5,6 +5,8 @@
 import Observation
 import SwiftUI
 import VelaCore
+import VelaIntelligence
+import VelaIntents
 import VelaStore
 
 /// Window-level UI state that isn't persisted in settings.json.
@@ -18,6 +20,13 @@ public final class UIState {
     public var networkEditor: NetworkEditorTarget?
     /// Network whose "Join Channel…" sheet is showing.
     public var joinChannelNetwork: UUID?
+    /// The channel name the next Join Channel sheet starts with (a
+    /// `vela://join` link), taken when the sheet appears.
+    var joinChannelPrefill: String?
+    /// Message search, while it's open, and what it opened with.
+    var messageSearch: MessageSearchRequest?
+    /// A short notice at the top of the main window (a link Vela couldn't follow).
+    var automationNotice: AutomationNotice?
     /// Network awaiting removal confirmation.
     public var networkPendingRemoval: UUID?
     /// The settings editor in Settings → Advanced: UI or JSON view, search
@@ -60,6 +69,9 @@ public final class UIState {
     var composerPickerToken = 0
     /// A Settings section to scroll to when its pane shows (Media's GIFs).
     var settingsSectionReveal: SettingsReveal?
+    /// One of your AI providers waiting for your OK before Vela sends it
+    /// messages: the main window's consent sheet.
+    var aiConsent: AIConsentRequest?
     /// Where the tabs were last shown outside the title bar, top or bottom,
     /// this session: **Show Channel Title Bar** puts them back there
     /// (`ChannelTitleBar`). Not saved, and read only by that command, so
@@ -114,6 +126,8 @@ struct SettingsReveal: Equatable {
     var section: String
 
     static let gifs = SettingsReveal(pane: .media, section: "gifs")
+    /// AI Providers' list of your providers.
+    static let aiModels = SettingsReveal(pane: .aiProviders, section: "models")
 }
 
 public struct MentionRequest: Equatable {
@@ -174,6 +188,19 @@ public enum CommandPaletteMode: Hashable {
     case buffers
     /// "Select Theme…": arrowing previews each theme live; Esc reverts.
     case themes
+    /// Pick a model: "AI: Set Default Model…", "Catch Me Up With…",
+    /// "Recap With…".
+    case models(AIModelPickerPurpose)
+}
+
+/// What a model picked in the palette is for.
+public enum AIModelPickerPurpose: Hashable {
+    /// `intelligence.model`.
+    case defaultModel
+    /// Catch me up in this buffer, with the model picked.
+    case catchUp(BufferID)
+    /// A Recap of this scope, with the model picked.
+    case recap(RecapScope)
 }
 
 public enum NetworkEditorTarget: Identifiable, Hashable {

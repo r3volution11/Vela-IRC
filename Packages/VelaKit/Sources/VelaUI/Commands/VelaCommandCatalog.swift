@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import VelaCore
+import VelaIntents
 import VelaIntelligence
 import VelaStore
 import VelaTheme
@@ -144,6 +145,19 @@ struct VelaCommandCatalog {
         }
     }
 
+    /// Message search, also opened by vela://search, AppleScript's
+    /// `search` and Spotlight's "Search in Vela".
+    var searchMessages: VelaCommand {
+        VelaCommand(
+            id: "go.searchMessages", category: .go, title: "Search Messages…",
+            keywords: ["find", "search", "history", "grep", "look up"]
+        ) { [context] in
+            context.uiState.commandPalette = nil
+            context.uiState.messageSearch = MessageSearchRequest(query: "")
+            context.openWindow(id: WindowID.main)
+        }
+    }
+
     // MARK: View
 
     var toggleSidebar: VelaCommand {
@@ -202,81 +216,92 @@ struct VelaCommandCatalog {
         }
     }
 
-    // MARK: Navigation & tabs
+    // MARK: Presets: layout, message style and density
 
-    var navigationStyles: [VelaCommand] {
-        let current = settings[.navigationStyle]
-        let settings = settings
-        return [
-            VelaCommand(
-                id: "navigation.sidebar", category: .navigation, title: "Use Sidebar",
-                menuTitle: "Sidebar", keywords: ["tree"], isChecked: current == .sidebar
-            ) { settings[.navigationStyle] = .sidebar },
-            VelaCommand(
-                id: "navigation.tabs", category: .navigation, title: "Use Tabs",
-                menuTitle: "Tabs", keywords: ["tab stacks"], isChecked: current == .tabs
-            ) { settings[.navigationStyle] = .tabs },
-        ]
+    /// Every choice of every preset axis, as Settings → Presets offers them.
+    var presetCommands: [VelaCommand] { Self.presetCommands(settings) }
+
+    func presetCommands(for axis: PresetAxis) -> [VelaCommand] {
+        Self.presetCommands(for: axis, settings: settings)
     }
 
-    var tabPlacements: [VelaCommand] {
-        let usesTabs = settings[.navigationStyle] == .tabs
-        let current = settings[.tabsPlacement]
-        let settings = settings
-        func command(_ placement: TabStackPlacement, _ id: String, _ title: String, _ menuTitle: String) -> VelaCommand {
+    /// "Layout: Tabs on Top", "Message Style: Columns", "Density: Compact"…
+    /// Each writes only its axis's settings, in one change, and is checked
+    /// while the settings match it (none is, for a customized axis). Static
+    /// so tests can build them from a bare settings store.
+    static func presetCommands(_ settings: SettingsStore) -> [VelaCommand] {
+        PresetAxis.allCases.flatMap { presetCommands(for: $0, settings: settings) }
+    }
+
+    static func presetCommands(for axis: PresetAxis, settings: SettingsStore) -> [VelaCommand] {
+        let current = settings.currentChoice(for: axis)
+        return axis.choices.map { choice in
             VelaCommand(
-                id: "tabs.\(id)", category: .tabs, title: title, menuTitle: menuTitle,
-                keywords: ["placement", "position"],
-                isChecked: usesTabs && current == placement
-            ) {
-                settings[.tabsPlacement] = placement
-                settings[.navigationStyle] = .tabs
-            }
+                id: "\(commandIDPrefix(for: axis)).\(choice.id)", category: commandCategory(for: axis), title: choice.name,
+                keywords: presetKeywords[choice.qualifiedID, default: []] + ["preset"],
+                isChecked: current == choice
+            ) { settings.choose(choice) }
         }
-        return [
-            command(.top, "moveToTop", "Move to Top", "Tabs at Top"),
-            command(.titleBar, "moveToTitleBar", "Move to Title Bar", "Tabs in Title Bar"),
-            command(.bottom, "moveToBottom", "Move to Bottom", "Tabs at Bottom"),
-        ]
     }
 
+    static func commandCategory(for axis: PresetAxis) -> VelaCommand.Category {
+        switch axis {
+        case .windowLayout: .layout
+        case .messageStyle: .messageStyle
+        case .density: .density
+        }
+    }
+
+    private static func commandIDPrefix(for axis: PresetAxis) -> String {
+        switch axis {
+        case .windowLayout: "layout"
+        case .messageStyle: "messageStyle"
+        case .density: "density"
+        }
+    }
+
+    /// Words the palette also finds each choice by.
+    private static let presetKeywords: [String: [String]] = [
+        PresetChoice.sidebar.qualifiedID: ["navigation", "tree", "channel list"],
+        PresetChoice.tabsOnTop.qualifiedID: ["navigation", "tab stacks", "browser"],
+        PresetChoice.tabsInTitleBar.qualifiedID: ["navigation", "tab stacks", "compact", "topic"],
+        PresetChoice.focus.qualifiedID: ["navigation", "hide sidebar", "hide tabs", "minimal", "distraction free", "zen"],
+        PresetChoice.modern.qualifiedID: ["message layout", "grouped", "slack", "discord"],
+        PresetChoice.classicIRC.qualifiedID: ["message layout", "irc", "one line", "monospace", "terminal"],
+        PresetChoice.columns.qualifiedID: ["message layout", "aligned", "nick column"],
+        PresetChoice.compact.qualifiedID: ["spacing", "dense", "tight"],
+        PresetChoice.standard.qualifiedID: ["spacing", "default"],
+        PresetChoice.comfortable.qualifiedID: ["spacing", "roomy", "airy", "relaxed"],
+    ]
+
+    // MARK: Tabs
+
+    /// Tabs at the bottom, above the message box: a placement of its own,
+    /// so the window layout reads Customized.
+    var tabsAtBottom: VelaCommand {
+        let isOn = settings[.navigationStyle] == .tabs && settings[.tabsPlacement] == .bottom
+        let settings = settings
+        return VelaCommand(
+            id: "tabs.moveToBottom", category: .tabs, title: "Move to Bottom", menuTitle: "Tabs at Bottom",
+            keywords: ["placement", "position", "layout"], isChecked: isOn
+        ) {
+            settings.setValues([
+                SettingKey<NavigationStyle>.navigationStyle.key: .string(NavigationStyle.tabs.rawValue),
+                SettingKey<TabStackPlacement>.tabsPlacement.key: .string(TabStackPlacement.bottom.rawValue),
+            ])
+        }
+    }
+
+    /// Tabs only: the sidebar and Focus have no server row, so it's dimmed
+    /// there (and out of the palette).
     var toggleServerTabRow: VelaCommand {
         let always = settings[.tabsServerRow] == .always
         let settings = settings
         return VelaCommand(
             id: "tabs.toggleServerRow", category: .tabs, title: "Always Show Server Row",
-            keywords: ["networks"], isChecked: always
+            keywords: ["networks"], isEnabled: settings[.navigationStyle] == .tabs, isChecked: always
         ) {
             settings[.tabsServerRow] = always ? .auto : .always
-        }
-    }
-
-    // MARK: Layout & presets
-
-    var chatLayouts: [VelaCommand] {
-        let current = settings[.chatLayout]
-        let settings = settings
-        func command(_ layout: ChatLayout, _ title: String, keywords: [String]) -> VelaCommand {
-            VelaCommand(
-                id: "layout.\(layout.rawValue)", category: .layout, title: title,
-                keywords: ["message layout"] + keywords, isChecked: current == layout
-            ) { settings[.chatLayout] = layout }
-        }
-        return [
-            command(.classic, "Classic", keywords: ["irc", "one line"]),
-            command(.grouped, "Modern Grouped", keywords: ["slack", "discord"]),
-            command(.columns, "Compact Columns", keywords: ["aligned"]),
-        ]
-    }
-
-    var presets: [VelaCommand] {
-        let matching = settings.matchingPreset()?.id
-        let settings = settings
-        return SettingsPreset.all.map { preset in
-            VelaCommand(
-                id: "preset.\(preset.id)", category: .preset, title: preset.name,
-                keywords: ["configuration", "setup"], isChecked: matching == preset.id
-            ) { settings.apply(preset) }
         }
     }
 
@@ -568,13 +593,15 @@ struct VelaCommandCatalog {
 
     // MARK: Focus
 
-    /// ⌥⌘1: the sidebar (or its rail), or the tabs.
+    /// ⌥⌘1: the sidebar (or its rail), or the tabs. The Focus layout has
+    /// neither.
     var focusNavigation: VelaCommand {
         let uiState = uiState
-        let usesSidebar = settings[.navigationStyle] == .sidebar
+        let navigation = settings[.navigationStyle]
         return VelaCommand(
-            id: "go.focusNavigation", category: .go, title: usesSidebar ? "Focus Sidebar" : "Focus Tabs",
-            shortcut: Shortcuts.focusNavigation, keywords: ["keyboard", "sidebar", "tabs", "channel list", "rail"]
+            id: "go.focusNavigation", category: .go, title: navigation == .tabs ? "Focus Tabs" : "Focus Sidebar",
+            shortcut: Shortcuts.focusNavigation, keywords: ["keyboard", "sidebar", "tabs", "channel list", "rail"],
+            isEnabled: navigation != .focus
         ) { uiState.focus(.navigation) }
     }
 
@@ -654,7 +681,8 @@ struct VelaCommandCatalog {
         let buffer = app.selectedBuffer
         let available = FocusAreas.available(
             hasBuffer: buffer != nil,
-            showsMembers: settings[.memberListVisible] && buffer?.kind == .channel
+            showsMembers: settings[.memberListVisible] && buffer?.kind == .channel,
+            hasNavigation: settings[.navigationStyle] != .focus
         )
         guard let area = FocusAreas.adjacent(to: uiState.focusedArea, forward: forward, in: available) else { return }
         uiState.focus(area)
@@ -897,14 +925,14 @@ struct VelaCommandCatalog {
 
     /// The selected channel or conversation one place back or on among its
     /// siblings: "Left" and "Right" with tabs, "Up" and "Down" with the
-    /// sidebar.
+    /// sidebar. Dimmed in Focus, which shows neither.
     func moveSelectedBuffer(forward: Bool) -> VelaCommand {
         let app = app
-        let usesSidebar = settings[.navigationStyle] == .sidebar
-        let direction = usesSidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
+        let navigation = settings[.navigationStyle]
+        let direction = navigation == .sidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
         let buffer = app.selectedBuffer
         var isEnabled = false
-        if let buffer, buffer.kind != .server, let session = app.session(for: buffer.id.networkID) {
+        if navigation != .focus, let buffer, buffer.kind != .server, let session = app.session(for: buffer.id.networkID) {
             let siblings = session.bufferSiblings(of: buffer)
             if let index = siblings.firstIndex(where: { $0.id == buffer.id }) {
                 isEnabled = forward ? index < siblings.count - 1 : index > 0
@@ -925,13 +953,14 @@ struct VelaCommandCatalog {
     }
 
     /// The selected network one place back or on among its siblings (a
-    /// bouncer's networks among that bouncer's).
+    /// bouncer's networks among that bouncer's). Dimmed in Focus, which
+    /// shows no networks to move.
     func moveSelectedNetwork(forward: Bool) -> VelaCommand {
         let app = app
-        let usesSidebar = settings[.navigationStyle] == .sidebar
-        let direction = usesSidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
+        let navigation = settings[.navigationStyle]
+        let direction = navigation == .sidebar ? (forward ? "Down" : "Up") : (forward ? "Right" : "Left")
         var isEnabled = false
-        if let session = app.selectedSession {
+        if navigation != .focus, let session = app.selectedSession {
             let siblings = app.networkSiblings(of: session.id)
             if let index = siblings.firstIndex(where: { $0.id == session.id }) {
                 isEnabled = forward ? index < siblings.count - 1 : index > 0
@@ -1006,14 +1035,12 @@ struct VelaCommandCatalog {
     /// Every command, for the palette (which hides disabled ones).
     var all: [VelaCommand] {
         var commands: [VelaCommand] = [
-            goToConversation,
+            goToConversation, searchMessages,
             toggleSidebar, toggleMemberList, toggleChannelTitleBar, toggleFullScreen,
         ]
-        commands += navigationStyles
-        commands += tabPlacements
+        commands += presetCommands
+        commands.append(tabsAtBottom)
         commands.append(toggleServerTabRow)
-        commands += chatLayouts
-        commands += presets
         commands += chatToggles
         commands += timestampPositionCommands
         commands += joinPartModes
@@ -1022,6 +1049,8 @@ struct VelaCommandCatalog {
         commands += [textBigger, textSmaller, textActualSize]
         commands += [selectTheme, toggleFollowSystem, themeEditor, importTheme, revealThemesFolder]
         commands += [openSettings, searchSettings, openSettingsJSON]
+        commands += aiSettingsCommands
+        commands += integrationCommands
         commands += [previousBuffer, nextBuffer, previousTab, nextTab, previousNetwork, nextNetwork, previousUnread, nextUnread]
         commands += [focusNavigation, focusMessages, focusInput, focusMembers, nextArea, previousArea]
         commands.append(emojiAndGIFs)
@@ -1032,6 +1061,7 @@ struct VelaCommandCatalog {
         commands += hiddenChannelCommands
         commands += typingCommands + messageBoxBorderCommands
         commands += catchUpCommands
+        commands += aiModelCommands
         commands.append(recap)
         commands += recapCommands
         commands += translationCommands

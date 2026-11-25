@@ -18,7 +18,11 @@ import VelaIntelligence
 ///   than ``onDeviceTokenLimit``; or
 /// - Private Cloud Compute is on and available (`intelligence.privateCloudCompute`),
 ///   reads the stretch in one pass, and is expected to take no longer
-///   than ``patience``.
+///   than ``patience``; or
+/// - Catch me up uses one of your providers' models (`intelligence.catchUpModel`),
+///   which reads it in one pass, expected within ``patience`` too. It
+///   must have your OK already: Siri can't ask for it, and says to open
+///   Vela instead.
 ///
 /// A longer stretch isn't cut short: Siri opens Vela to the channel, where
 /// the Catch me up card summarizes all of it (``Outcome/openInVela``). Siri
@@ -64,7 +68,7 @@ struct SiriCatchUp {
         switch plan.venue {
         case .onDevice:
             return plan.transcriptTokens <= onDeviceTokenLimit
-        case .privateCloudCompute:
+        case .privateCloudCompute, .provider:
             let seconds = Double(patience.components.seconds)
             return (plan.estimatedSeconds ?? .infinity) <= seconds
         }
@@ -116,7 +120,7 @@ struct SiriCatchUp {
 
     /// What Siri says once the Recap is open.
     var recapOpenedDialog: String {
-        "Here's a Recap of \(request.bufferName). Apple Intelligence is writing it now."
+        "Here's a Recap of \(request.bufferName). It's being written now."
     }
 
     /// What Siri says once Vela is in front with the card.

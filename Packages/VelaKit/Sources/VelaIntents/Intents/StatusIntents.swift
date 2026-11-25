@@ -61,7 +61,8 @@ public struct SetAwayIntent: AppIntent {
     public static let title: LocalizedStringResource = "Set Away"
     public static let description = IntentDescription(
         "Marks you as away on every network you're connected to, like /away.",
-        categoryName: "Status"
+        categoryName: "Status",
+        searchKeywords: ["away", "afk", "busy", "brb", "status", "/away"]
     )
     public static let supportedModes: IntentModes = .background
 
@@ -93,7 +94,8 @@ public struct SetBackIntent: AppIntent {
     public static let title: LocalizedStringResource = "Set Back"
     public static let description = IntentDescription(
         "Marks you as back on every network you're connected to, like /back.",
-        categoryName: "Status"
+        categoryName: "Status",
+        searchKeywords: ["back", "available", "return", "here", "status", "/back"]
     )
     public static let supportedModes: IntentModes = .background
 
@@ -118,7 +120,8 @@ public struct ConnectNetworkIntent: AppIntent {
     public static let title: LocalizedStringResource = "Connect Network"
     public static let description = IntentDescription(
         "Connects to one of your networks.",
-        categoryName: "Networks"
+        categoryName: "Networks",
+        searchKeywords: ["connect", "online", "server", "network", "reconnect"]
     )
     public static let supportedModes: IntentModes = .background
 
@@ -153,7 +156,8 @@ public struct DisconnectNetworkIntent: AppIntent {
     public static let title: LocalizedStringResource = "Disconnect Network"
     public static let description = IntentDescription(
         "Disconnects from one of your networks.",
-        categoryName: "Networks"
+        categoryName: "Networks",
+        searchKeywords: ["disconnect", "offline", "server", "network", "quit"]
     )
     public static let supportedModes: IntentModes = .background
 

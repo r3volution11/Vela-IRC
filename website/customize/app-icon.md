@@ -24,7 +24,7 @@ Go to **Settings → Appearance → Dock icon** and click an icon. The Dock chan
 | **Paper** | White, with a deep blue V and star. |
 | **Vivid** | Bright blue, with a white V. |
 
-<Screenshot src="/screenshots/settings-app-icon.webp" alt="Settings → Appearance: the Dock icon section, with the App icon row showing six small icons and a ring around Sunrise, above the note about where the icon shows" caption="Dock icon, near the bottom of Settings → Appearance." />
+<Screenshot src="/screenshots/settings-app-icon.webp" alt="Settings → Appearance: the Dock icon section, between Make your own and Details, with the App icon row showing six small icons and a ring around Sunrise, above the note about where the icon shows" caption="Dock icon, near the bottom of Settings → Appearance." />
 
 Hover an icon for its name. A ring marks the one in use, and the row's description names it.
 

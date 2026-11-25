@@ -23,6 +23,7 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
     case connection
     case moderation
     case intelligence
+    case aiProviders
     case updates
 
     public var id: String { rawValue }
@@ -39,12 +40,14 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .notifications: "Notifications"
         case .connection: "Connection"
         case .moderation: "Moderation"
-        case .intelligence: "Apple Intelligence"
+        case .intelligence: "Intelligence"
+        case .aiProviders: "AI Providers"
         case .updates: "Updates"
         }
     }
 
     /// The key prefixes (the part before the first dot) in this category.
+    /// A key listed in ``keys`` belongs to that category instead.
     public var keyPrefixes: [String] {
         switch self {
         case .appearance: ["appearance"]
@@ -58,7 +61,18 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .connection: ["connection", "channels"]
         case .moderation: ["moderation"]
         case .intelligence: ["intelligence", "translation"]
+        case .aiProviders: []
         case .updates: ["updates"]
+        }
+    }
+
+    /// Whole keys in this category, ahead of any prefix: AI Providers
+    /// holds your providers and the default model, which are
+    /// `intelligence.*` keys.
+    public var keys: [String] {
+        switch self {
+        case .aiProviders: ["intelligence.providers", "intelligence.model"]
+        default: []
         }
     }
 
@@ -73,12 +87,14 @@ public enum SettingsCategory: String, CaseIterable, Sendable, Identifiable {
         case .notifications: "notifications"
         case .connection, .moderation: "networks"
         case .intelligence: "intelligence"
+        case .aiProviders: "aiProviders"
         case .updates: "updates"
         }
     }
 
     /// The category of a settings.json key, or nil for unknown prefixes.
     public static func category(forKey key: String) -> SettingsCategory? {
+        if let category = allCases.first(where: { $0.keys.contains(key) }) { return category }
         let prefix = String(key.prefix(while: { $0 != "." }))
         return allCases.first { $0.keyPrefixes.contains(prefix) }
     }
@@ -172,7 +188,7 @@ public enum SettingsMetadata {
     static let prefixTitles: [String: String] = [
         "memberList": "Member List",
         "input": "Typing",
-        "intelligence": "Apple Intelligence",
+        "intelligence": "Intelligence",
         "highlight": "Highlights",
         "logging": "Chat Logs",
         "gifs": "GIFs",
@@ -196,6 +212,11 @@ public enum SettingsMetadata {
         "intelligence.recap": "Recap",
         "intelligence.privateCloudCompute": "Private Cloud Compute",
         "intelligence.spotlightChannels": "Channels in Spotlight",
+        "intelligence.model": "Default Model",
+        "intelligence.catchUpModel": "Catch Me Up Model",
+        "intelligence.recapModel": "Recap Model",
+        "intelligence.providers": "AI Providers",
+        "intelligence.spotlightMessages": "Messages in Spotlight",
         "translation.autoTranslate": "Auto-Translated Channels",
         "translation.language": "Translate Into",
         "input.spellCheck": "Check Spelling",

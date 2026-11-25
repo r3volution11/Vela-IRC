@@ -37,7 +37,7 @@ Every key is listed, with its description, type and default, in the [settings re
 
 ## Comments and formatting {#comments}
 
-When you change a setting in Vela, in Settings, the settings editor, a preset or the accent color picker, Vela edits settings.json the way you would: it changes only that setting's text and leaves the rest of the file alone, comments, blank lines and all.
+When you change a setting in Vela, in Settings, the settings editor, Settings → Presets or the accent color picker, Vela edits settings.json the way you would: it changes only that setting's text and leaves the rest of the file alone, comments, blank lines and all.
 
 - **A changed value** is replaced where it is.
 - **A setting reset to its default** is removed along with its line, including a comment at the end of that line. Comments on the lines above it stay.

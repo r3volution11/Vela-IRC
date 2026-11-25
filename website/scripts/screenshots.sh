@@ -66,10 +66,15 @@ shot home-lighter   1400x900 1600 --theme Lighter   --preset modern
 shot welcome-palenight 1280x800 1400 --theme Palenight --preset modern --no-networks
 shot welcome-lighter   1280x800 1400 --theme Lighter   --preset modern --no-networks
 
-# Presets, all in Palenight so they compare at a glance.
+# Whole setups, all in Palenight so they compare at a glance: Vela 1.0–1.4's
+# presets (--preset), still used across the guide for a sidebar with Modern
+# messages, Classic IRC, tabs on top and tabs in the title bar with Columns.
+# Settings → Presets itself is the settings-presets pane shot below.
 for preset in classic modern tabbed focus; do
   shot "preset-$preset" 1280x800 1400 --theme Palenight --preset "$preset"
 done
+# The Focus layout (Settings → Presets): no sidebar and no tabs.
+shot layout-focus 1280x800 1400 --theme Palenight --preset modern --layout focus
 
 # Message layouts (the grouped layout is preset-modern).
 shot layout-classic 1280x800 1400 --theme Palenight --preset modern --set chat.layout=classic
@@ -122,43 +127,59 @@ shot accent-cyan  1280x800 1400 --theme Palenight --preset modern --accent Cyan
 
 # Settings panes, 820 points wide; the heights crop each shot to whole
 # sections. --settings-scroll scrolls the pane down first, and a large number
-# scrolls to the end.
+# scrolls to the end. Keep every shot at least 560 points tall: Settings'
+# sidebar needs that much to show all its panes.
 pane() {
   local name=$1 size=$2 pane=$3
   shift 3
   shot "$name" "$size" 1200 --theme Palenight --preset modern --settings-pane "$pane" "$@"
 }
-pane settings-intelligence 820x534 intelligence
-pane settings-siri         820x640 intelligence --settings-scroll 9999
-# Timestamps, with Position for the current layout (Modern) and Other layouts.
-pane settings-timestamps   820x450 messages --settings-scroll 949
-# Typing; then Memory and History (Save message history, off as for a new
-# install); Chat logs follows them at the end of the pane.
-pane settings-typing       820x517 messages --settings-scroll 2029
-pane settings-history      820x450 messages --settings-scroll 2486
-pane settings-chat-logs    820x450 messages --settings-scroll 9999 --set logging.enabled=true
-# The network list, Connection, and Channels (asking before leaving or
-# removing a channel, and bouncers).
+# Settings → Presets: the window layouts, message styles and densities, down
+# to the preview.
+pane settings-presets      820x960 presets
+# The whole Intelligence pane: Catch me up, Recap, Translation, Writing
+# Tools, and the links to AI Providers, AI Privacy and Integrations.
+pane settings-intelligence 820x1030 intelligence
+# AI Providers and the whole of AI Privacy. Demo mode has no providers and
+# never looks for Ollama or LM Studio, so these show Apple Intelligence, the
+# default model and the empty states.
+pane settings-ai-providers 820x640 aiProviders
+pane settings-ai-privacy   820x780 aiPrivacy
+# Integrations: Alfred, Raycast, and Shortcuts and Siri; then Shortcuts and
+# Siri, and Spotlight; then Spotlight, and AppleScript and vela:// links, at
+# the end. Alfred's line says whether it's installed on this Mac.
+pane settings-integrations 820x845 integrations
+pane settings-siri         820x604 integrations --settings-scroll 452
+pane settings-automation   820x593 integrations --settings-scroll 9999
+# Timestamps, with Position for the current layout (Modern) and Other
+# layouts, and the first rows of Conversation.
+pane settings-timestamps   820x606 messages --settings-scroll 962
+# Typing and Memory; then the end of Typing, Memory and History (Save message
+# history, off as for a new install); Chat logs follows them at the end of
+# the pane.
+pane settings-typing       820x633 messages --settings-scroll 2033
+pane settings-history      820x560 messages --settings-scroll 2381
+pane settings-chat-logs    820x575 messages --settings-scroll 9999 --set logging.enabled=true
 pane settings-channels     820x736 networks
 # Updates, in the demo's "up to date" state.
-pane settings-updates      820x460 updates
-pane settings-accent       820x705 appearance --accent Cyan
+pane settings-updates      820x560 updates
+pane settings-accent       820x728 appearance --accent Cyan
 # The last two rows of theme cards, drawn from each theme's colors, down to
 # the end of "Make your own".
-pane settings-themes       820x736 appearance --settings-scroll 1375
-pane settings-app-icon     820x600 appearance --settings-scroll 9999 --set appearance.appIcon=sunrise
-pane settings-dock         820x450 notifications --settings-scroll 262
+pane settings-themes       820x725 appearance --settings-scroll 1404
+pane settings-app-icon     820x632 appearance --settings-scroll 9999 --set appearance.appIcon=sunrise
+pane settings-dock         820x580 notifications --settings-scroll 262
 # A theme file with typos (screenshot-themes/harbor.json, copied into the
 # demo's own Themes folder): what Settings → Appearance says about it.
-pane settings-theme-problems 820x450 appearance --themes-dir "$root/website/scripts/screenshot-themes" \
-  --settings-scroll 2050
+pane settings-theme-problems 820x580 appearance --themes-dir "$root/website/scripts/screenshot-themes" \
+  --settings-scroll 2082
 
 # The settings editor (Settings → Advanced): the UI view, filtered to
 # @modified, and the JSON view of a small settings.json with a typo and a
 # bad value. --settings-json-text saves the file first; the other
 # --settings-json-* flags take a UTF-16 offset into the text (ASCII here).
 pane settings-editor          820x660 advanced
-pane settings-editor-modified 820x585 advanced --settings-search "@modified"
+pane settings-editor-modified 820x600 advanced --settings-search "@modified"
 settings_json=$(cat <<'EOF'
 // Comments and trailing commas are fine.
 {
@@ -191,9 +212,9 @@ json() {
 json settings-json          1040x620 --settings-json-defaults
 json settings-json-complete 820x600 --settings-json-unsaved "$settings_json_typing" \
   --settings-json-complete $(( $(offset "$settings_json_typing" '"media.') + 7 ))
-json settings-json-problems 820x540 --settings-json-problems \
+json settings-json-problems 820x560 --settings-json-problems \
   --settings-json-hover $(( $(offset "$settings_json" '"chat.fontSzie"') + 3 ))
-json settings-json-hover    820x540 \
+json settings-json-hover    820x560 \
   --settings-json-hover $(( $(offset "$settings_json" '"history.retentionDays"') + 3 ))
 
 # One shot per built-in theme, for the theme gallery.

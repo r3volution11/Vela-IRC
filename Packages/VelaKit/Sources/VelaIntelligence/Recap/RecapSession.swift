@@ -5,6 +5,7 @@
 import Foundation
 import Observation
 import VelaCore
+import VelaStore
 
 /// One Recap window's report: reading the messages for its scope, the
 /// summary as it's written, and More detail on its topics and notes.
@@ -74,6 +75,9 @@ public final class RecapSession {
     public private(set) var summary: RecapSummary?
     /// More detail, by item id (a topic's, a note's or a "for you" line's).
     public private(set) var details: [String: DetailState] = [:]
+    /// The model asked for in this window (its Change menu, "Recap
+    /// With…"); nil follows Recap's setting.
+    public private(set) var model: AIModelChoice?
 
     @ObservationIgnored private let gatherer: @MainActor (RecapScope) async -> RecapInput
     @ObservationIgnored private let summarizer: any RecapSummarizer
@@ -89,20 +93,25 @@ public final class RecapSession {
 
     /// - Parameters:
     ///   - gather: Reads the scope's messages (``RecapGatherer/gather(_:now:)``).
-    ///   - status: Whether Apple Intelligence can run now.
+    ///   - status: Whether the summary can be written now: Apple
+    ///     Intelligence's status, or available when Recap uses one of
+    ///     your providers' models.
     ///   - linkTitles: Titles of link previews already in memory.
+    ///   - model: The model to write with; nil follows Recap's setting.
     public init(
         scope: RecapScope,
         gather: @escaping @MainActor (RecapScope) async -> RecapInput,
         summarizer: any RecapSummarizer,
         status: @escaping @MainActor () -> IntelligenceStatus,
-        linkTitles: @escaping @Sendable ([URL]) async -> [URL: String] = { _ in [:] }
+        linkTitles: @escaping @Sendable ([URL]) async -> [URL: String] = { _ in [:] },
+        model: AIModelChoice? = nil
     ) {
         self.scope = scope
         self.gatherer = gather
         self.summarizer = summarizer
         self.status = status
         self.linkTitles = linkTitles
+        self.model = model
     }
 
     // MARK: Asking
@@ -129,7 +138,8 @@ public final class RecapSession {
 
     /// Starts a long summary after its estimate.
     public func confirm() {
-        guard case .confirming = summaryPhase, let input else { return }
+        guard case .confirming = summaryPhase, var input else { return }
+        input.model = model
         summarize(input)
     }
 
@@ -145,6 +155,16 @@ public final class RecapSession {
     /// Reads the messages again (anything new included) and writes a new
     /// summary. Also Try Again.
     public func regenerate() {
+        load(scope)
+    }
+
+    /// Writes the summary again with `model` (the Change menu, Try with
+    /// Apple Intelligence); nil follows Recap's setting again. Shows the
+    /// summary if the log was showing.
+    public func rerun(with model: AIModelChoice?) {
+        guard !isClosed else { return }
+        self.model = model
+        if scope.output != .summary { scope.output = .summary }
         load(scope)
     }
 
@@ -234,8 +254,12 @@ public final class RecapSession {
 
 
 
-    private func beginSummary(_ input: RecapInput) {
-        let current = status()
+    private func beginSummary(_ gathered: RecapInput) {
+        var asked = gathered
+        asked.model = model
+        let input = asked
+        // A provider's model asked for here doesn't need Apple Intelligence.
+        let current = model.map { $0.isApple ? status() : .available } ?? status()
         guard current.isAvailable else {
             summaryPhase = .unavailable(current)
             return
@@ -302,7 +326,7 @@ public final class RecapSession {
         detailTasks.removeValue(forKey: id)?.cancel()
         details[id] = .loading(nil)
         let ownNick = input?.conversation(conversation)?.ownNick ?? ""
-        let stream = summarizer.detail(RecapDetailRequest(lines: lines, ownNick: ownNick, focus: focus))
+        let stream = summarizer.detail(RecapDetailRequest(lines: lines, ownNick: ownNick, focus: focus, model: detailModel))
         let generation = generation
         detailTasks[id] = Task { [weak self] in
             do {
@@ -324,6 +348,16 @@ public final class RecapSession {
                 self.details[id] = .failed(CatchUpStore.catchUpError(error).errorDescription ?? "Apple Intelligence couldn't look closer.")
                 self.detailTasks[id] = nil
             }
+        }
+    }
+
+    /// More detail asks the model that wrote the summary: the provider's,
+    /// or Apple's on this Mac (More detail is always one short pass).
+    private var detailModel: AIModelChoice? {
+        switch summary?.venue {
+        case .provider(let label): label.choice
+        case .onDevice, .privateCloudCompute: .apple(.automatic)
+        case nil: model
         }
     }
 
