@@ -112,6 +112,11 @@ let package = Package(
         // Generates the website's supported media sites page from MediaSites.swift.
         .executableTarget(name: "VelaMediaTool", dependencies: ["VelaMedia"]),
 
+        // Test runs make no sound: as a test bundle loads, it silences
+        // Vela's beeps (`Beep`) and AppKit's alert sound. Linked into the
+        // test targets that open windows and send keys.
+        .target(name: "VelaTestSupport", path: "Tests/VelaTestSupport"),
+
         .testTarget(name: "VelaFoundationTests", dependencies: ["VelaFoundation"]),
         .testTarget(name: "VelaIRCTests", dependencies: ["VelaIRC"]),
         .testTarget(name: "VelaStoreTests", dependencies: ["VelaStore"]),
@@ -138,7 +143,7 @@ let package = Package(
         ),
         .testTarget(
             name: "VelaUITests",
-            dependencies: ["VelaUI", "VelaCore", "VelaStore", "VelaTheme", "VelaIRC"],
+            dependencies: ["VelaUI", "VelaCore", "VelaStore", "VelaTheme", "VelaIRC", "VelaTestSupport"],
             swiftSettings: mainActorByDefault
         ),
     ]

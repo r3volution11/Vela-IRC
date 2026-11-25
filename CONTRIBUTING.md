@@ -31,9 +31,26 @@ Thanks for helping build Vela! This guide covers the basics.
   swift run --package-path Packages/VelaKit vela-theme-tool schema > schemas/vela-theme.schema.json
   ```
 - **Tag new surfaces for the inspector.** A new kind of row, bar or panel gets a `.devTag("Name", tokens: […])` after its padding and background, naming the tokens it draws with (see [Developer tools](#developer-tools-vela-dev)). It costs nothing in release builds.
-- **Tests use Swift Testing** (`import Testing`). Protocol code should be covered by `MockTransport`-driven tests.
+- **Tests use Swift Testing** (`import Testing`), and they make no sound (see [Tests](#tests)). Protocol code should be covered by `MockTransport`-driven tests.
 - **Scrolling has a budget.** Vela must scroll smoothly on the slowest Macs it supports (2019–2020 Intel Macs, an 8 GB M1). If you change the message list, its rows or inline media, run `scripts/benchmark-scroll.sh` before and after: it scrolls a big, fixed channel in a Release build and compares the numbers with `benchmarks/scroll-baseline.json`. Its window is invisible and never takes the focus or the pointer, so you can keep working while it runs (about 12 minutes). See [docs/RELEASING.md](docs/RELEASING.md#scroll-benchmark).
 - Keep pull requests focused. One feature or fix per PR is easiest to review.
+
+## Tests
+
+`swift test --package-path Packages/VelaKit` runs every test target.
+
+**Test runs make no sound.** The hosted UI tests open real windows (offscreen) and send them keys and commands, and one with nothing to do beeps: Tab with no completion, an arrow past the end of the message list, a command nothing handles. So:
+
+- **App code beeps through `Beep`:** `Beep.play()` (`VelaUI/Foundation/Beep.swift`), never `NSSound.beep()` or `NSBeep()` itself. `SilentTestRunTests` fails when a file in `Packages/VelaKit/Sources` or `Vela/` beeps directly.
+- **The test run silences every beep once,** as the test bundle loads and before any test runs, so suites need no setup. `VelaTestSupport` (`Packages/VelaKit/Tests/VelaTestSupport`) turns `Beep` off, and AppKit's alert sound too: AppKit beeps by itself, through `NSBeep()`, for a key or a command nothing handles. `VelaUITests` links it; a new test target that opens windows or sends keys should too. `SilentTestRunTests` fails if the run isn't silent.
+- **No test relies on a real beep.** To count beeps, swap the hook and put it back afterwards (`Beep.sound = { … }`), or a controller's own, like `MessageListController.beep`.
+- **For work that's about sound,** keep it on: `VELA_TEST_SOUNDS=1 swift test --package-path Packages/VelaKit`.
+
+To check that a run is silent, watch the alert sounds macOS plays while it runs. There's one line per sound, naming the process that asked for it (`swiftpm-testing-helper` or `xctest` for a test run). Look for `Incoming Request`: the `audio file path` line appears only when the sound is first loaded, not for every beep.
+
+```sh
+/usr/bin/log stream --style compact --predicate 'process == "systemsoundserverd" AND eventMessage CONTAINS "Incoming Request"'
+```
 
 ## Developer tools (Vela Dev)
 
