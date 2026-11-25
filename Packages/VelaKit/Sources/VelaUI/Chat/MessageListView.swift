@@ -796,7 +796,7 @@ struct MessageListView: View {
             var corrections = 0
             for attempt in 1...12 {
                 try? await Task.sleep(for: .milliseconds(inView ? 20 : 40))
-                guard controller.selection?.id == id, !controller.isUserScrolling else { return }
+                guard controller.selection?.id == id, !controller.isUserScrolling, !followsNewest else { return }
                 guard let distance = controller.selectedRowScrollDistance() else {
                     // Still not laid out where the first scroll left it.
                     if attempt == 5 { scrollNear(id, at: edge) }
@@ -807,6 +807,13 @@ struct MessageListView: View {
                 scrollSelection(by: distance)
             }
         }
+    }
+
+    /// The list went back to following the newest line (a message sent,
+    /// End): a reveal's corrections stand down rather than pull it back to
+    /// the selected row, as a jump's do (`stillHolds`).
+    private var followsNewest: Bool {
+        controller.isPinnedToBottom && position.viewID(type: DisplayItemID.self) == .end
     }
 
     /// Scrolls the selected row `id`, out of view, to the top or bottom edge
