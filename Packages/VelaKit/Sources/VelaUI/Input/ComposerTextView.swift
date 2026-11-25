@@ -682,7 +682,7 @@ struct ComposerTextView: NSViewRepresentable {
             let atLineStart = start == 0 || text.character(at: start - 1) == 0x0A
             let candidates = parent.actions.completions(word, atLineStart)
             guard !candidates.isEmpty else {
-                NSSound.beep()
+                Beep.play()
                 return true
             }
             let index = forward ? 0 : candidates.count - 1

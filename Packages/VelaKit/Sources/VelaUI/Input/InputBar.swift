@@ -437,7 +437,7 @@ struct InputBar: View {
     }
 
     private func reject() {
-        NSSound.beep()
+        Beep.play()
         rejectCount += 1
         AccessibilityNotification.Announcement(placeholder).post()
     }

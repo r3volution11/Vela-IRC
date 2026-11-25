@@ -490,7 +490,7 @@ final class MessageListController {
     /// (Tests stand in their own.)
     @ObservationIgnored var linkOpener: ((URL) -> Void)?
     /// A key with nothing to do (tests keep quiet).
-    @ObservationIgnored var beep: () -> Void = { NSSound.beep() }
+    @ObservationIgnored var beep: () -> Void = { Beep.play() }
 
     /// Selects the row `id` (nil: none), found at `index` in the items.
     func select(_ id: DisplayItemID?, index: Int? = nil) {
