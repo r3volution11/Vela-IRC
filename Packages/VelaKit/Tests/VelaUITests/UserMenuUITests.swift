@@ -507,7 +507,12 @@ extension LinkSelectionTests {
             Self.app.select(vela)
             #expect(Self.app.selectedBuffer?.name == "#vela")
             try await click("theo", count: 2)
-            #expect(Self.app.selectedBuffer?.name == "theo")
+            // The conversation can open a moment after the double-click on
+            // a busy CI runner, so wait for it (in running time).
+            let opened = await RunningDeadline.wait(timeout: .seconds(3), every: .milliseconds(20)) {
+                Self.app.selectedBuffer?.name == "theo"
+            }
+            #expect(opened, "selected: \(Self.app.selectedBuffer?.name ?? "nothing")")
         }
 
         @Test func aRegularMemberSeesNoModerationInTheList() async throws {
